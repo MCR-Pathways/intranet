@@ -1,0 +1,192 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useUser } from "@/hooks/use-user";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Home,
+  Newspaper,
+  Users,
+  GraduationCap,
+  MapPin,
+  Settings,
+  ChevronRight,
+  FileText,
+  Calendar,
+  ClipboardList,
+} from "lucide-react";
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  module: string | null;
+  children?: { name: string; href: string }[];
+}
+
+const navigation: NavItem[] = [
+  { name: "Dashboard", href: "/dashboard", icon: Home, module: null },
+  {
+    name: "Intranet",
+    href: "/intranet",
+    icon: Newspaper,
+    module: "intranet",
+    children: [
+      { name: "News Feed", href: "/intranet" },
+      { name: "Guides", href: "/intranet/guides" },
+      { name: "Policies", href: "/intranet/policies" },
+      { name: "Surveys", href: "/intranet/surveys" },
+    ],
+  },
+  {
+    name: "HR",
+    href: "/hr",
+    icon: Users,
+    module: "hr",
+    children: [
+      { name: "My Profile", href: "/hr/profile" },
+      { name: "Org Chart", href: "/hr/org-chart" },
+      { name: "Leave", href: "/hr/leave" },
+      { name: "Calendar", href: "/hr/calendar" },
+      { name: "My Team", href: "/hr/team" },
+    ],
+  },
+  {
+    name: "Learning",
+    href: "/learning",
+    icon: GraduationCap,
+    module: "learning",
+    children: [
+      { name: "My Courses", href: "/learning" },
+      { name: "Compliance", href: "/learning/courses/compliance" },
+      { name: "Upskilling", href: "/learning/courses/upskilling" },
+      { name: "Tool Shed", href: "/learning/tool-shed" },
+    ],
+  },
+  { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
+];
+
+interface SidebarProps {
+  className?: string;
+  onNavClick?: () => void;
+}
+
+export function Sidebar({ className, onNavClick }: SidebarProps) {
+  const pathname = usePathname();
+  const { hasModuleAccess, profile } = useUser();
+
+  // Filter navigation based on user permissions
+  const filteredNav = navigation.filter(
+    (item) => !item.module || hasModuleAccess(item.module)
+  );
+
+  // Check if user needs induction
+  const needsInduction =
+    profile && !profile.induction_completed_at;
+
+  return (
+    <aside
+      className={cn(
+        "flex h-full w-64 flex-col border-r border-border bg-card",
+        className
+      )}
+    >
+      <ScrollArea className="flex-1 py-4">
+        <nav className="flex flex-col gap-1 px-3">
+          {/* Induction prompt for new users */}
+          {needsInduction && (
+            <Link
+              href="/intranet/induction"
+              onClick={onNavClick}
+              className="mb-4 flex items-center gap-3 rounded-lg bg-secondary/10 px-3 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/20"
+            >
+              <ClipboardList className="h-5 w-5" />
+              <div>
+                <p className="font-semibold">Complete Induction</p>
+                <p className="text-xs opacity-80">Required to continue</p>
+              </div>
+            </Link>
+          )}
+
+          {filteredNav.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              pathname.startsWith(item.href + "/") ||
+              item.children?.some(
+                (child) =>
+                  pathname === child.href ||
+                  pathname.startsWith(child.href + "/")
+              );
+
+            return (
+              <div key={item.name}>
+                <Link
+                  href={item.href}
+                  onClick={onNavClick}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span className="flex-1">{item.name}</span>
+                  {isActive && item.children && (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Link>
+
+                {/* Show children when parent is active */}
+                {isActive && item.children && (
+                  <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-border pl-3">
+                    {item.children.map((child) => {
+                      const isChildActive =
+                        pathname === child.href ||
+                        pathname.startsWith(child.href + "/");
+
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onNavClick}
+                          className={cn(
+                            "rounded-md px-3 py-1.5 text-sm transition-colors",
+                            isChildActive
+                              ? "bg-muted font-medium text-foreground"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          {child.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </ScrollArea>
+
+      {/* Settings link at bottom */}
+      <div className="border-t border-border p-3">
+        <Link
+          href="/settings"
+          onClick={onNavClick}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            pathname === "/settings"
+              ? "bg-primary text-primary-foreground"
+              : "text-foreground/70 hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Settings className="h-5 w-5" />
+          Settings
+        </Link>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,300 @@
+# MCR Pathways Design Language
+
+This document defines the visual design system for MCR Pathways applications. Follow these guidelines to maintain consistency across the portal and mobile app.
+
+---
+
+## Typography
+
+### Font Family: TT Commons Pro
+
+TT Commons Pro is our primary typeface. It's a geometric sans-serif with excellent readability and a friendly, modern feel.
+
+**Adobe Fonts (Typekit) Embed:**
+```html
+<link rel="stylesheet" href="https://use.typekit.net/xef5jam.css">
+```
+
+**Async loading (recommended):**
+```html
+<link rel="preload" href="https://use.typekit.net/xef5jam.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://use.typekit.net/xef5jam.css"></noscript>
+```
+
+**CSS font-family:**
+```css
+font-family: "tt-commons-pro", sans-serif;
+```
+
+### Font Weights
+
+| Weight | Use Case |
+|--------|----------|
+| Regular (400) | Body text, paragraphs |
+| Medium (500) | Labels, form fields |
+| Semibold (600) | Headings, emphasis |
+| Bold (700) | Primary headings, CTAs |
+
+### Base Font Size
+
+The portal uses a 110% base font size for improved readability:
+```css
+html {
+  font-size: 110%;
+}
+```
+
+---
+
+## Brand Colors
+
+### Primary Palette
+
+| Name | Hex | HSL | Tailwind Class | Usage |
+|------|-----|-----|----------------|-------|
+| White | `#FFFFFF` | `0 0% 100%` | `bg-white` | Cards, backgrounds |
+| Dark Blue | `#213350` | `216 43% 22%` | `bg-primary`, `bg-mcr-dark-blue` | Primary buttons, headers, text |
+| Light Blue | `#5BC6E9` | `195 72% 64%` | `bg-accent`, `bg-mcr-light-blue` | Accents, links, highlights |
+| Orange | `#F09336` | `30 86% 58%` | `bg-secondary`, `bg-mcr-orange` | Secondary buttons, warnings |
+| Yellow | `#F8D45B` | `46 92% 66%` | `bg-mcr-yellow` | Highlights, attention |
+| Green | `#B5E046` | `142 76% 36%` | `bg-mcr-green` | CTAs only (see note below) |
+| Teal | `#2A6075` | `197 47% 31%` | `bg-mcr-teal` | Secondary accents |
+| Pink | `#FF82B2` | `340 100% 75%` | `bg-action`, `bg-mcr-pink` | Special action buttons |
+| Wine | `#751B48` | `333 63% 28%` | `bg-mcr-wine` | Deep accents |
+| Ivory | `#FDF9EA` | `47 78% 96%` | `bg-background`, `bg-mcr-ivory` | Page backgrounds |
+
+### MCR Green Usage
+
+**Important:** The MCR brand green (`#B5E046`) is a vivid lime color that can be hard to read at small sizes. Reserve it for call-to-action buttons only.
+
+| Use Case | Color | Class |
+|----------|-------|-------|
+| CTA buttons | MCR Green | `bg-mcr-green`, `text-mcr-green` |
+| Success checkmarks | Tailwind green | `text-green-500` |
+| Status indicators | Tailwind green | `text-green-500`, `bg-green-100` |
+
+```tsx
+// CTA button - use brand green
+<Button className="bg-mcr-green">Sign Up Now</Button>
+
+// Success indicator - use standard green
+<Check className="h-4 w-4 text-green-500" />
+```
+
+### Status Colors
+
+| Status | Color | Class |
+|--------|-------|-------|
+| Active | Green | `text-status-active` |
+| Pending | Yellow | `text-status-pending` |
+| Inactive | Gray | `text-status-inactive` |
+
+---
+
+## Semantic Color Roles
+
+These CSS custom properties map brand colors to UI roles:
+
+| Role | Description | Light Mode | Dark Mode |
+|------|-------------|------------|-----------|
+| `--background` | Page background | Ivory | Dark blue |
+| `--foreground` | Primary text | Dark blue | Light gray |
+| `--card` | Card backgrounds | White | Dark gray |
+| `--primary` | Primary actions | Dark Blue | Dark Blue |
+| `--secondary` | Secondary actions | Orange | Orange |
+| `--accent` | Highlights, links | Light Blue | Light Blue |
+| `--action` | Special CTAs | Pink | Pink |
+| `--destructive` | Danger, delete | Red | Red |
+| `--muted` | Subdued elements | Light ivory | Dark gray |
+
+---
+
+## Spacing & Layout
+
+### Border Radius
+
+The design uses generous, friendly rounded corners:
+
+```css
+--radius: 0.75rem; /* 12px */
+```
+
+| Size | Value | Class |
+|------|-------|-------|
+| Large | `0.75rem` | `rounded-lg` |
+| Medium | `0.5rem` | `rounded-md` |
+| Small | `0.25rem` | `rounded-sm` |
+
+### Container
+
+```css
+max-width: 1400px;
+padding: 2rem;
+```
+
+---
+
+## Components
+
+### Buttons
+
+| Type | Class | Usage |
+|------|-------|-------|
+| Primary | `bg-primary text-primary-foreground` | Main actions |
+| Secondary | `bg-secondary text-secondary-foreground` | Alternative actions |
+| Destructive | `bg-destructive text-destructive-foreground` | Delete, remove |
+| Ghost | `hover:bg-accent hover:text-accent-foreground` | Subtle actions |
+| Action | `bg-action text-action-foreground` | Special CTAs (pink) |
+
+### Modals
+
+Use consistent modal widths:
+
+| Size | Class | When to Use |
+|------|-------|-------------|
+| Standard | `sm:max-w-lg` | Most modals, forms, confirmations |
+| Large | `sm:max-w-2xl` | Complex forms, multi-section content |
+| Full-page | `sm:max-w-4xl` + `h-[90vh]` | Interview/wizard experiences |
+
+Guidelines:
+- Always use the `sm:` prefix for responsive behavior (full-width on mobile)
+- Use Tailwind classes, not custom pixel values
+- Add `max-h-[90vh]` with `<ScrollArea>` for large modals
+
+### Tabs
+
+Use the standard `<Tabs>`, `<TabsList>`, and `<TabsTrigger>` components. The default styling provides:
+
+- **Container**: MCR Dark Blue (`bg-primary`) background
+- **Inactive tabs**: White text at 80% opacity
+- **Active tab**: White background with dark blue text
+- **Focus state**: White ring for keyboard navigation
+
+```tsx
+<Tabs defaultValue="overview">
+  <TabsList className="w-full justify-start h-auto flex-wrap">
+    <TabsTrigger value="overview">Overview</TabsTrigger>
+    <TabsTrigger value="details">Details</TabsTrigger>
+  </TabsList>
+  <TabsContent value="overview">...</TabsContent>
+  <TabsContent value="details">...</TabsContent>
+</Tabs>
+```
+
+**With badge counts:**
+```tsx
+<TabsTrigger value="pending" className="gap-2">
+  Pending
+  <Badge className="ml-1 h-5 px-1.5 text-xs bg-white/20 text-primary font-semibold">
+    {count}
+  </Badge>
+</TabsTrigger>
+```
+
+### Cards
+
+Cards use white backgrounds with subtle shadows:
+
+```tsx
+<Card className="bg-card text-card-foreground rounded-lg shadow-sm">
+  <CardHeader>...</CardHeader>
+  <CardContent>...</CardContent>
+</Card>
+```
+
+---
+
+## Accessibility
+
+### Contrast Requirements
+
+All text must meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text). Our tab navigation exceeds WCAG AAA with ~12.6:1 contrast ratio.
+
+### Reduced Motion
+
+The design system respects user preferences for reduced motion:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+### Focus States
+
+All interactive elements must have visible focus indicators. The default ring color is `--ring` (Dark Blue).
+
+---
+
+## Animations
+
+### Standard Transitions
+
+```css
+transition-all duration-200
+```
+
+### Keyframe Animations
+
+| Animation | Duration | Usage |
+|-----------|----------|-------|
+| `fade-in` | 300ms | Content appearing |
+| `slide-in-left` | 300ms | Sidebar, drawers |
+| `accordion-down` | 200ms | Expanding content |
+| `accordion-up` | 200ms | Collapsing content |
+
+---
+
+## Dark Mode
+
+Dark mode is supported via the `.dark` class on the root element. Colors automatically adapt:
+
+- Background becomes dark blue (`210 50% 8%`)
+- Cards become dark gray (`210 50% 12%`)
+- Text becomes light gray (`210 20% 95%`)
+- Brand colors remain consistent for recognition
+
+---
+
+## Mobile App
+
+The mobile app (React Native/Expo) uses the same design language with local font files:
+
+- Font files: `apps/mobile/assets/fonts/`
+- Required: `TTCommonsPro-Regular.ttf`, `TTCommonsPro-Medium.ttf`, `TTCommonsPro-Bold.ttf`
+
+See `apps/mobile/assets/fonts/README.md` for font installation instructions.
+
+---
+
+## Quick Reference
+
+### Tailwind Classes for Brand Colors
+
+```
+bg-mcr-dark-blue    text-mcr-dark-blue
+bg-mcr-light-blue   text-mcr-light-blue
+bg-mcr-orange       text-mcr-orange
+bg-mcr-yellow       text-mcr-yellow
+bg-mcr-green        text-mcr-green
+bg-mcr-teal         text-mcr-teal
+bg-mcr-pink         text-mcr-pink
+bg-mcr-wine         text-mcr-wine
+bg-mcr-ivory        text-mcr-ivory
+```
+
+### Semantic Classes
+
+```
+bg-primary          Primary actions (Dark Blue)
+bg-secondary        Secondary actions (Orange)
+bg-accent           Highlights (Light Blue)
+bg-action           Special CTAs (Pink)
+bg-destructive      Danger states (Red)
+bg-muted            Subdued elements
+bg-background       Page background (Ivory)
+bg-card             Card backgrounds (White)
+```

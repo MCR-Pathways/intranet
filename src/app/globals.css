@@ -1,26 +1,225 @@
 @import "tailwindcss";
 
+/* MCR Pathways Design System */
+/* TT Commons Pro font from Adobe Fonts */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* MCR Brand Colors */
+  --mcr-dark-blue: #213350;
+  --mcr-light-blue: #5BC6E9;
+  --mcr-orange: #F09336;
+  --mcr-yellow: #F8D45B;
+  --mcr-green: #B5E046;
+  --mcr-teal: #2A6075;
+  --mcr-pink: #FF82B2;
+  --mcr-wine: #751B48;
+  --mcr-ivory: #FDF9EA;
+
+  /* Semantic Colors - Light Mode */
+  --background: var(--mcr-ivory);
+  --foreground: var(--mcr-dark-blue);
+  --card: #ffffff;
+  --card-foreground: var(--mcr-dark-blue);
+  --popover: #ffffff;
+  --popover-foreground: var(--mcr-dark-blue);
+  --primary: var(--mcr-dark-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--mcr-orange);
+  --secondary-foreground: #ffffff;
+  --accent: var(--mcr-light-blue);
+  --accent-foreground: var(--mcr-dark-blue);
+  --action: var(--mcr-pink);
+  --action-foreground: #ffffff;
+  --muted: #f5f3eb;
+  --muted-foreground: #6b7280;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: var(--mcr-dark-blue);
+
+  /* Status Colors */
+  --status-active: #22c55e;
+  --status-pending: var(--mcr-yellow);
+  --status-inactive: #9ca3af;
+
+  /* Border Radius */
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: hsl(210, 50%, 8%);
+  --foreground: hsl(210, 20%, 95%);
+  --card: hsl(210, 50%, 12%);
+  --card-foreground: hsl(210, 20%, 95%);
+  --popover: hsl(210, 50%, 12%);
+  --popover-foreground: hsl(210, 20%, 95%);
+  --primary: var(--mcr-dark-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--mcr-orange);
+  --secondary-foreground: #ffffff;
+  --accent: var(--mcr-light-blue);
+  --accent-foreground: var(--mcr-dark-blue);
+  --action: var(--mcr-pink);
+  --action-foreground: #ffffff;
+  --muted: hsl(210, 50%, 15%);
+  --muted-foreground: hsl(210, 20%, 60%);
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: hsl(210, 50%, 20%);
+  --input: hsl(210, 50%, 20%);
+  --ring: var(--mcr-light-blue);
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* MCR Brand Colors */
+  --color-mcr-dark-blue: var(--mcr-dark-blue);
+  --color-mcr-light-blue: var(--mcr-light-blue);
+  --color-mcr-orange: var(--mcr-orange);
+  --color-mcr-yellow: var(--mcr-yellow);
+  --color-mcr-green: var(--mcr-green);
+  --color-mcr-teal: var(--mcr-teal);
+  --color-mcr-pink: var(--mcr-pink);
+  --color-mcr-wine: var(--mcr-wine);
+  --color-mcr-ivory: var(--mcr-ivory);
+
+  /* Status Colors */
+  --color-status-active: var(--status-active);
+  --color-status-pending: var(--status-pending);
+  --color-status-inactive: var(--status-inactive);
+
+  /* Font */
+  --font-sans: "tt-commons-pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Border Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base Styles */
+html {
+  font-size: 110%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus States */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Custom Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 300ms ease-out;
+}
+
+.animate-accordion-down {
+  animation: accordion-down 200ms ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 200ms ease-out;
 }
