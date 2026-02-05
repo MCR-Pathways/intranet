@@ -1,11 +1,12 @@
 -- MCR Pathways Intranet - Core Tables
 -- This migration creates the core tables: teams and profiles
+-- Uses IF NOT EXISTS for idempotent execution
 
 -- ===========================================
 -- TEAMS TABLE
 -- ===========================================
 
-CREATE TABLE public.teams (
+CREATE TABLE IF NOT EXISTS public.teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
@@ -15,13 +16,13 @@ CREATE TABLE public.teams (
 );
 
 -- Index for hierarchical queries
-CREATE INDEX idx_teams_parent ON public.teams(parent_team_id);
+CREATE INDEX IF NOT EXISTS idx_teams_parent ON public.teams(parent_team_id);
 
 -- ===========================================
 -- PROFILES TABLE
 -- ===========================================
 
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
@@ -45,20 +46,24 @@ CREATE TABLE public.profiles (
 );
 
 -- Add team_lead_id to teams table (circular reference, added after profiles exists)
-ALTER TABLE public.teams ADD COLUMN team_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+DO $$ BEGIN
+  ALTER TABLE public.teams ADD COLUMN team_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_column THEN NULL;
+END $$;
 
 -- Indexes for common queries
-CREATE INDEX idx_profiles_email ON public.profiles(email);
-CREATE INDEX idx_profiles_user_type ON public.profiles(user_type);
-CREATE INDEX idx_profiles_team_id ON public.profiles(team_id);
-CREATE INDEX idx_profiles_line_manager_id ON public.profiles(line_manager_id);
-CREATE INDEX idx_profiles_status ON public.profiles(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_type ON public.profiles(user_type);
+CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_line_manager_id ON public.profiles(line_manager_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles(status);
 
 -- ===========================================
 -- MANAGER TEAMS TABLE (for multi-team managers)
 -- ===========================================
 
-CREATE TABLE public.manager_teams (
+CREATE TABLE IF NOT EXISTS public.manager_teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   manager_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
@@ -66,14 +71,14 @@ CREATE TABLE public.manager_teams (
   UNIQUE(manager_id, team_id)
 );
 
-CREATE INDEX idx_manager_teams_manager ON public.manager_teams(manager_id);
-CREATE INDEX idx_manager_teams_team ON public.manager_teams(team_id);
+CREATE INDEX IF NOT EXISTS idx_manager_teams_manager ON public.manager_teams(manager_id);
+CREATE INDEX IF NOT EXISTS idx_manager_teams_team ON public.manager_teams(team_id);
 
 -- ===========================================
 -- NOTIFICATIONS TABLE
 -- ===========================================
 
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
@@ -86,9 +91,9 @@ CREATE TABLE public.notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX idx_notifications_unread ON public.notifications(user_id, is_read) WHERE is_read = FALSE;
-CREATE INDEX idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications(user_id, is_read) WHERE is_read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
 
 -- ===========================================
 -- UPDATED_AT TRIGGER FUNCTION
@@ -102,12 +107,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply trigger to tables with updated_at
+-- Apply trigger to tables with updated_at (idempotent)
+DROP TRIGGER IF EXISTS update_teams_updated_at ON public.teams;
 CREATE TRIGGER update_teams_updated_at
   BEFORE UPDATE ON public.teams
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
@@ -154,7 +161,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to auto-create profile on signup
+-- Trigger to auto-create profile on signup (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
