@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchProfile } from "@/lib/auth/profile";
 import type { User } from "@supabase/supabase-js";
 import type { Profile, UserType } from "@/types/database.types";
 
@@ -26,23 +27,9 @@ export function useUser(): UseUserReturn {
 
   const supabase = createClient();
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (profileError) {
-      console.error("Error fetching profile:", profileError);
-      return null;
-    }
-    return data as Profile;
-  };
-
   const refreshProfile = async () => {
     if (!user) return;
-    const profileData = await fetchProfile(user.id);
+    const profileData = await fetchProfile(supabase, user.id);
     if (profileData) {
       setProfile(profileData);
     }
@@ -57,7 +44,7 @@ export function useUser(): UseUserReturn {
         setUser(authUser);
 
         if (authUser) {
-          const profileData = await fetchProfile(authUser.id);
+          const profileData = await fetchProfile(supabase, authUser.id);
           setProfile(profileData);
         }
       } catch (err) {
@@ -76,7 +63,7 @@ export function useUser(): UseUserReturn {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
+        const profileData = await fetchProfile(supabase, session.user.id);
         setProfile(profileData);
       } else {
         setProfile(null);
