@@ -75,8 +75,8 @@ SECURITY DEFINER
 STABLE
 AS $$
 DECLARE
-  v_user_type user_type;
-  v_status user_status;
+  v_user_type TEXT;
+  v_status TEXT;
   v_induction_completed BOOLEAN;
 BEGIN
   SELECT

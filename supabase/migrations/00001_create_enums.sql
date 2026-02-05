@@ -2,27 +2,11 @@
 -- This migration creates all the enum types used across the database
 -- Using DO blocks to make migrations idempotent (safe to re-run)
 
--- User type enum
-DO $$ BEGIN
-  CREATE TYPE user_type AS ENUM (
-    'staff',
-    'pathways_coordinator',
-    'new_user'
-  );
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+-- User type is now TEXT (not an enum) for simplicity
+-- Valid values: 'staff', 'pathways_coordinator', 'new_user'
 
--- User status enum
-DO $$ BEGIN
-  CREATE TYPE user_status AS ENUM (
-    'active',
-    'inactive',
-    'pending_induction'
-  );
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+-- User status is now TEXT (not an enum) for simplicity
+-- Valid values: 'active', 'inactive', 'pending_induction'
 
 -- Leave type enum
 DO $$ BEGIN

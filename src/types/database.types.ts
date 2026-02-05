@@ -310,8 +310,7 @@ export interface Database {
       };
     };
     Enums: {
-      user_type: UserType;
-      user_status: UserStatus;
+      // user_type and user_status are now TEXT columns, not enums
       leave_type: LeaveType;
       leave_status: LeaveStatus;
       work_location: WorkLocation;

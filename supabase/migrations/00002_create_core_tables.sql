@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   avatar_url TEXT,
   phone TEXT,
   job_title TEXT,
-  user_type user_type NOT NULL DEFAULT 'new_user',
-  status user_status NOT NULL DEFAULT 'pending_induction',
+  user_type TEXT NOT NULL DEFAULT 'new_user' CHECK (user_type IN ('staff', 'pathways_coordinator', 'new_user')),
+  status TEXT NOT NULL DEFAULT 'pending_induction' CHECK (status IN ('active', 'inactive', 'pending_induction')),
   start_date DATE,
   is_line_manager BOOLEAN DEFAULT FALSE,
   is_hr_admin BOOLEAN DEFAULT FALSE,
@@ -127,7 +127,7 @@ CREATE TRIGGER update_profiles_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_user_type user_type;
+  v_user_type TEXT;
   v_email TEXT;
 BEGIN
   v_email := NEW.email;
