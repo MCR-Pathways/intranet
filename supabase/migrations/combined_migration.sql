@@ -1,6 +1,7 @@
 -- ============================================
 -- MCR Pathways Intranet - Combined Migration
 -- Run this in Supabase SQL Editor
+-- This migration is idempotent (safe to re-run)
 -- ============================================
 
 -- ===========================================
@@ -8,60 +9,84 @@
 -- ===========================================
 
 -- User type enum
-CREATE TYPE user_type AS ENUM (
-  'staff',
-  'pathways_coordinator',
-  'new_user'
-);
+DO $$ BEGIN
+  CREATE TYPE user_type AS ENUM (
+    'staff',
+    'pathways_coordinator',
+    'new_user'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- User status enum
-CREATE TYPE user_status AS ENUM (
-  'active',
-  'inactive',
-  'pending_induction'
-);
+DO $$ BEGIN
+  CREATE TYPE user_status AS ENUM (
+    'active',
+    'inactive',
+    'pending_induction'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Leave type enum
-CREATE TYPE leave_type AS ENUM (
-  'annual',
-  'sick',
-  'compassionate',
-  'parental',
-  'toil',
-  'unpaid',
-  'study',
-  'jury_duty'
-);
+DO $$ BEGIN
+  CREATE TYPE leave_type AS ENUM (
+    'annual',
+    'sick',
+    'compassionate',
+    'parental',
+    'toil',
+    'unpaid',
+    'study',
+    'jury_duty'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Leave status enum
-CREATE TYPE leave_status AS ENUM (
-  'pending',
-  'approved',
-  'rejected',
-  'cancelled'
-);
+DO $$ BEGIN
+  CREATE TYPE leave_status AS ENUM (
+    'pending',
+    'approved',
+    'rejected',
+    'cancelled'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Work location enum
-CREATE TYPE work_location AS ENUM (
-  'home',
-  'glasgow_office',
-  'stevenage_office',
-  'other'
-);
+DO $$ BEGIN
+  CREATE TYPE work_location AS ENUM (
+    'home',
+    'glasgow_office',
+    'stevenage_office',
+    'other'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Course category enum
-CREATE TYPE course_category AS ENUM (
-  'compliance',
-  'upskilling',
-  'soft_skills'
-);
+DO $$ BEGIN
+  CREATE TYPE course_category AS ENUM (
+    'compliance',
+    'upskilling',
+    'soft_skills'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ===========================================
 -- PART 2: CORE TABLES
 -- ===========================================
 
 -- TEAMS TABLE
-CREATE TABLE public.teams (
+CREATE TABLE IF NOT EXISTS public.teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
@@ -70,10 +95,10 @@ CREATE TABLE public.teams (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_teams_parent ON public.teams(parent_team_id);
+CREATE INDEX IF NOT EXISTS idx_teams_parent ON public.teams(parent_team_id);
 
 -- PROFILES TABLE
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
@@ -96,18 +121,22 @@ CREATE TABLE public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add team_lead_id to teams table
-ALTER TABLE public.teams ADD COLUMN team_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+-- Add team_lead_id to teams table (safe to re-run)
+DO $$ BEGIN
+  ALTER TABLE public.teams ADD COLUMN team_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+EXCEPTION
+  WHEN duplicate_column THEN NULL;
+END $$;
 
 -- Indexes
-CREATE INDEX idx_profiles_email ON public.profiles(email);
-CREATE INDEX idx_profiles_user_type ON public.profiles(user_type);
-CREATE INDEX idx_profiles_team_id ON public.profiles(team_id);
-CREATE INDEX idx_profiles_line_manager_id ON public.profiles(line_manager_id);
-CREATE INDEX idx_profiles_status ON public.profiles(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_type ON public.profiles(user_type);
+CREATE INDEX IF NOT EXISTS idx_profiles_team_id ON public.profiles(team_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_line_manager_id ON public.profiles(line_manager_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles(status);
 
 -- MANAGER TEAMS TABLE
-CREATE TABLE public.manager_teams (
+CREATE TABLE IF NOT EXISTS public.manager_teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   manager_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
@@ -115,11 +144,11 @@ CREATE TABLE public.manager_teams (
   UNIQUE(manager_id, team_id)
 );
 
-CREATE INDEX idx_manager_teams_manager ON public.manager_teams(manager_id);
-CREATE INDEX idx_manager_teams_team ON public.manager_teams(team_id);
+CREATE INDEX IF NOT EXISTS idx_manager_teams_manager ON public.manager_teams(manager_id);
+CREATE INDEX IF NOT EXISTS idx_manager_teams_team ON public.manager_teams(team_id);
 
 -- NOTIFICATIONS TABLE
-CREATE TABLE public.notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
@@ -132,9 +161,9 @@ CREATE TABLE public.notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX idx_notifications_unread ON public.notifications(user_id, is_read) WHERE is_read = FALSE;
-CREATE INDEX idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications(user_id, is_read) WHERE is_read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
 
 -- UPDATED_AT TRIGGER FUNCTION
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -145,11 +174,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop and recreate triggers (idempotent)
+DROP TRIGGER IF EXISTS update_teams_updated_at ON public.teams;
 CREATE TRIGGER update_teams_updated_at
   BEFORE UPDATE ON public.teams
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
@@ -193,7 +225,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to auto-create profile on signup
+-- Trigger to auto-create profile on signup (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
@@ -299,34 +332,40 @@ BEGIN
 END;
 $$;
 
--- TEAMS POLICIES
+-- TEAMS POLICIES (idempotent - drop if exists before create)
+DROP POLICY IF EXISTS "Teams are viewable by authenticated users" ON public.teams;
 CREATE POLICY "Teams are viewable by authenticated users"
 ON public.teams FOR SELECT
 TO authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "HR admins can insert teams" ON public.teams;
 CREATE POLICY "HR admins can insert teams"
 ON public.teams FOR INSERT
 TO authenticated
 WITH CHECK (public.is_hr_admin());
 
+DROP POLICY IF EXISTS "HR admins can update teams" ON public.teams;
 CREATE POLICY "HR admins can update teams"
 ON public.teams FOR UPDATE
 TO authenticated
 USING (public.is_hr_admin())
 WITH CHECK (public.is_hr_admin());
 
+DROP POLICY IF EXISTS "HR admins can delete teams" ON public.teams;
 CREATE POLICY "HR admins can delete teams"
 ON public.teams FOR DELETE
 TO authenticated
 USING (public.is_hr_admin());
 
--- PROFILES POLICIES
+-- PROFILES POLICIES (idempotent)
+DROP POLICY IF EXISTS "Profiles are viewable by authenticated users" ON public.profiles;
 CREATE POLICY "Profiles are viewable by authenticated users"
 ON public.profiles FOR SELECT
 TO authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
 ON public.profiles FOR UPDATE
 TO authenticated
@@ -340,35 +379,41 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "HR admins can update any profile" ON public.profiles;
 CREATE POLICY "HR admins can update any profile"
 ON public.profiles FOR UPDATE
 TO authenticated
 USING (public.is_hr_admin());
 
--- MANAGER TEAMS POLICIES
+-- MANAGER TEAMS POLICIES (idempotent)
+DROP POLICY IF EXISTS "Managers can view own team associations" ON public.manager_teams;
 CREATE POLICY "Managers can view own team associations"
 ON public.manager_teams FOR SELECT
 TO authenticated
 USING (manager_id = auth.uid() OR public.is_hr_admin());
 
+DROP POLICY IF EXISTS "HR admins can manage team associations" ON public.manager_teams;
 CREATE POLICY "HR admins can manage team associations"
 ON public.manager_teams FOR ALL
 TO authenticated
 USING (public.is_hr_admin())
 WITH CHECK (public.is_hr_admin());
 
--- NOTIFICATIONS POLICIES
+-- NOTIFICATIONS POLICIES (idempotent)
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
 CREATE POLICY "Users can view own notifications"
 ON public.notifications FOR SELECT
 TO authenticated
 USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
 CREATE POLICY "Users can update own notifications"
 ON public.notifications FOR UPDATE
 TO authenticated
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own notifications" ON public.notifications;
 CREATE POLICY "Users can delete own notifications"
 ON public.notifications FOR DELETE
 TO authenticated
