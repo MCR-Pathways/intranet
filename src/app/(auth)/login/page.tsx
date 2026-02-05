@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Mail, Loader2 } from "lucide-react";
 
-function LoginPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -28,13 +27,9 @@ function LoginPage() {
     text: string;
   } | null>(null);
 
-  // Create Supabase client - safe to call on client
-  const supabase = createClient();
-
-  // Track mount status
+  // Track mount status for hydration
   useEffect(() => {
     setMounted(true);
-    console.log("Login page mounted!");
   }, []);
 
   const validateEmail = (email: string) => {
@@ -42,15 +37,11 @@ function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    console.log("handleGoogleSignIn called");
-
     setIsGoogleLoading(true);
     setMessage(null);
 
     try {
-      console.log("Starting Google sign in...");
-      console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
-
+      const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -61,18 +52,14 @@ function LoginPage() {
         },
       });
 
-      console.log("OAuth response:", { data, error });
-
       if (error) {
-        console.error("OAuth error:", error);
         setMessage({ type: "error", text: error.message });
         setIsGoogleLoading(false);
       } else if (data?.url) {
-        console.log("Redirecting to:", data.url);
         window.location.href = data.url;
       }
     } catch (err) {
-      console.error("Caught error:", err);
+      console.error("Google sign in error:", err);
       setMessage({ type: "error", text: "Failed to sign in with Google" });
       setIsGoogleLoading(false);
     }
@@ -93,6 +80,7 @@ function LoginPage() {
     }
 
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         email: email.toLowerCase(),
         options: {
@@ -116,6 +104,18 @@ function LoginPage() {
     }
   };
 
+  // Show loading state until client-side hydration is complete
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -134,10 +134,6 @@ function LoginPage() {
             <CardDescription className="mt-2">
               Sign in to the MCR Pathways Intranet
             </CardDescription>
-            {/* Debug: Show mount status */}
-            <p className="text-xs mt-2 text-muted-foreground">
-              {mounted ? "✓ Ready" : "Loading..."}
-            </p>
           </div>
         </CardHeader>
 
@@ -238,16 +234,3 @@ function LoginPage() {
     </div>
   );
 }
-
-// Use dynamic import with no SSR to ensure client-side only rendering
-export default dynamic(() => Promise.resolve(LoginPage), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading...</p>
-      </div>
-    </div>
-  ),
-});
