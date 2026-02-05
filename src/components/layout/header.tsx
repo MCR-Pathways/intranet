@@ -29,9 +29,10 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, profile, signOut, isStaff } = useUser();
   const router = useRouter();
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/login");
+  const handleSignOut = () => {
+    signOut().then(() => {
+      router.push("/login");
+    });
   };
 
   const getInitials = (name: string) => {
@@ -139,7 +140,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-destructive focus:text-destructive"
-                onClick={handleSignOut}
+                onSelect={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
