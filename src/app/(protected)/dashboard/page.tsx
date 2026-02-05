@@ -36,6 +36,42 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
+  // Fetch compliance courses and user's enrollments
+  const { data: complianceCourses } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("category", "compliance")
+    .eq("is_required", true)
+    .eq("is_active", true);
+
+  const { data: userEnrollments } = await supabase
+    .from("course_enrollments")
+    .select("course_id, status, due_date")
+    .eq("user_id", user.id);
+
+  // Calculate compliance stats
+  const enrollmentMap = new Map(
+    userEnrollments?.map((e) => [e.course_id, e]) || []
+  );
+
+  const complianceIds = complianceCourses?.map((c) => c.id) || [];
+  const pendingCompliance = complianceIds.filter((id) => {
+    const enrollment = enrollmentMap.get(id);
+    if (!enrollment || enrollment.status === "completed") {
+      return !enrollment; // Not enrolled = pending
+    }
+    return enrollment.status !== "completed";
+  }).length;
+
+  const dueSoonCompliance = complianceIds.filter((id) => {
+    const enrollment = enrollmentMap.get(id);
+    if (!enrollment?.due_date || enrollment.status === "completed") return false;
+    const daysUntilDue = Math.ceil(
+      (new Date(enrollment.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    return daysUntilDue <= 14 && daysUntilDue >= 0;
+  }).length;
+
   const displayName =
     profile?.preferred_name || profile?.full_name || "there";
   const isStaff = profile?.user_type === "staff";
@@ -114,8 +150,8 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold">2</p>
-                <Badge variant="warning">Due soon</Badge>
+                <p className="text-2xl font-bold">{pendingCompliance}</p>
+                {dueSoonCompliance > 0 && <Badge variant="warning">Due soon</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">
                 Compliance courses pending

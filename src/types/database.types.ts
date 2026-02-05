@@ -25,6 +25,7 @@ export type WorkLocation =
   | "stevenage_office"
   | "other";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
+export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 
 export interface Database {
   public: {
@@ -184,6 +185,100 @@ export interface Database {
           created_at?: string;
         };
       };
+      courses: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          category: CourseCategory;
+          duration_minutes: number | null;
+          is_required: boolean;
+          thumbnail_url: string | null;
+          content_url: string | null;
+          passing_score: number | null;
+          due_days_from_start: number | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          category: CourseCategory;
+          duration_minutes?: number | null;
+          is_required?: boolean;
+          thumbnail_url?: string | null;
+          content_url?: string | null;
+          passing_score?: number | null;
+          due_days_from_start?: number | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          category?: CourseCategory;
+          duration_minutes?: number | null;
+          is_required?: boolean;
+          thumbnail_url?: string | null;
+          content_url?: string | null;
+          passing_score?: number | null;
+          due_days_from_start?: number | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      course_enrollments: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          status: EnrollmentStatus;
+          progress_percent: number;
+          score: number | null;
+          enrolled_at: string;
+          started_at: string | null;
+          completed_at: string | null;
+          due_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          status?: EnrollmentStatus;
+          progress_percent?: number;
+          score?: number | null;
+          enrolled_at?: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          due_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          status?: EnrollmentStatus;
+          progress_percent?: number;
+          score?: number | null;
+          enrolled_at?: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          due_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -221,6 +316,7 @@ export interface Database {
       leave_status: LeaveStatus;
       work_location: WorkLocation;
       course_category: CourseCategory;
+      enrollment_status: EnrollmentStatus;
     };
   };
 }
@@ -230,6 +326,8 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Team = Database["public"]["Tables"]["teams"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ManagerTeam = Database["public"]["Tables"]["manager_teams"]["Row"];
+export type Course = Database["public"]["Tables"]["courses"]["Row"];
+export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"]["Row"];
 
 // Extended types with relations
 export interface ProfileWithRelations extends Profile {
@@ -241,4 +339,12 @@ export interface TeamWithRelations extends Team {
   team_lead?: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
   members?: Pick<Profile, "id" | "full_name" | "avatar_url" | "job_title">[];
   parent_team?: Pick<Team, "id" | "name"> | null;
+}
+
+export interface CourseWithEnrollment extends Course {
+  enrollment?: CourseEnrollment | null;
+}
+
+export interface EnrollmentWithCourse extends CourseEnrollment {
+  course: Course;
 }
