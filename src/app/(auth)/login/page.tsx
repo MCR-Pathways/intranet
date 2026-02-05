@@ -42,21 +42,32 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      const redirectTo = new URL(
+        "/auth/callback",
+        window.location.origin
+      ).toString();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
           queryParams: {
             hd: "mcrpathways.org",
           },
+          skipBrowserRedirect: true,
         },
       });
 
       if (error) {
         setMessage({ type: "error", text: error.message });
         setIsGoogleLoading(false);
-      } else if (data?.url) {
-        window.location.href = data.url;
+      } else if (!data?.url) {
+        setMessage({
+          type: "error",
+          text: "Failed to start Google sign in. Please try again.",
+        });
+        setIsGoogleLoading(false);
+      } else {
+        window.location.assign(data.url);
       }
     } catch (err) {
       console.error("Google sign in error:", err);
