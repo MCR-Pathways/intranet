@@ -32,8 +32,16 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  const validateEmail = (email: string) => {
-    return email.toLowerCase().endsWith("@mcrpathways.org");
+  const getAuthRedirectUrl = () => {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    return new URL("/auth/callback", baseUrl).toString();
+  };
+
+  const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+  const validateEmail = (value: string) => {
+    return normalizeEmail(value).endsWith("@mcrpathways.org");
   };
 
   const handleGoogleSignIn = async () => {
@@ -42,10 +50,7 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const redirectTo = new URL(
-        "/auth/callback",
-        window.location.origin
-      ).toString();
+      const redirectTo = getAuthRedirectUrl();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -92,10 +97,11 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      const normalizedEmail = normalizeEmail(email);
       const { error } = await supabase.auth.signInWithOtp({
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: getAuthRedirectUrl(),
         },
       });
 
