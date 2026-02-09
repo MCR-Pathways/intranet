@@ -79,6 +79,7 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .eq("is_read", false);
 
+  const notificationCount = unreadNotificationCount ?? 0;
   const displayName =
     profile?.preferred_name || profile?.full_name || "there";
   const isStaff = profile?.user_type === "staff";
@@ -214,13 +215,13 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <p className="text-2xl font-bold">{unreadNotificationCount ?? 0}</p>
-              {(unreadNotificationCount ?? 0) > 0 && (
+              <p className="text-2xl font-bold">{notificationCount}</p>
+              {notificationCount > 0 && (
                 <Badge variant="destructive">Unread</Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {(unreadNotificationCount ?? 0) === 0
+              {notificationCount === 0
                 ? "All caught up"
                 : "Notifications waiting"}
             </p>

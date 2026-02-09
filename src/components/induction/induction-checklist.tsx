@@ -162,7 +162,7 @@ export function InductionChecklist({
 
   const totalItems = inductionItems.length;
   const completedCount = completedItemIds.length;
-  const progressPercentage = Math.round((completedCount / totalItems) * 100);
+  const progressPercentage = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
   const allComplete = completedCount === totalItems;
 
   const groupedItems = groupByCategory(inductionItems);
