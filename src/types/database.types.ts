@@ -235,6 +235,26 @@ export interface Database {
           updated_at?: string;
         };
       };
+      induction_progress: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_id: string;
+          completed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_id: string;
+          completed_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          item_id?: string;
+          completed_at?: string;
+        };
+      };
       course_enrollments: {
         Row: {
           id: string;
@@ -327,6 +347,7 @@ export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ManagerTeam = Database["public"]["Tables"]["manager_teams"]["Row"];
 export type Course = Database["public"]["Tables"]["courses"]["Row"];
 export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"]["Row"];
+export type InductionProgress = Database["public"]["Tables"]["induction_progress"]["Row"];
 
 // Extended types with relations
 export interface ProfileWithRelations extends Profile {

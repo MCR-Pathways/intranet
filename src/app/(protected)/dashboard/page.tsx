@@ -72,6 +72,13 @@ export default async function DashboardPage() {
     return daysUntilDue <= 14 && daysUntilDue >= 0;
   }).length;
 
+  // Fetch unread notification count
+  const { count: unreadNotificationCount } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_read", false);
+
   const displayName =
     profile?.preferred_name || profile?.full_name || "there";
   const isStaff = profile?.user_type === "staff";
@@ -207,11 +214,15 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <p className="text-2xl font-bold">3</p>
-              <Badge variant="destructive">Unread</Badge>
+              <p className="text-2xl font-bold">{unreadNotificationCount ?? 0}</p>
+              {(unreadNotificationCount ?? 0) > 0 && (
+                <Badge variant="destructive">Unread</Badge>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Notifications waiting
+              {(unreadNotificationCount ?? 0) === 0
+                ? "All caught up"
+                : "Notifications waiting"}
             </p>
           </CardContent>
         </Card>
