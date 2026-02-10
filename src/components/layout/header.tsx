@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useUser } from "@/hooks/use-user";
+import { signOutAction } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import {
   Avatar,
@@ -19,23 +19,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Settings, LogOut, User, Menu } from "lucide-react";
-import { useRouter } from "next/navigation";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import type { Profile } from "@/types/database.types";
 
 interface HeaderProps {
+  user: SupabaseUser;
+  profile: Profile | null;
   onMobileMenuToggle?: () => void;
 }
 
-export function Header({ onMobileMenuToggle }: HeaderProps) {
-  const { user, profile, signOut, isStaff } = useUser();
-  const router = useRouter();
+export function Header({ user, profile, onMobileMenuToggle }: HeaderProps) {
+  const isStaff = profile?.user_type === "staff";
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await signOutAction();
     } catch (error) {
+      // redirect() throws NEXT_REDIRECT — this is expected
+      const err = error as Error;
+      if (err?.message?.includes("NEXT_REDIRECT")) {
+        return;
+      }
       console.error("Error signing out:", error);
-    } finally {
-      // Full page reload to clear all client state
       window.location.href = "/login";
     }
   };

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/hooks/use-user";
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/app/(protected)/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,26 +46,17 @@ function timeAgo(dateString: string): string {
 }
 
 export function NotificationBell() {
-  const { user } = useUser();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const supabase = createClient();
-
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
+    const { notifications: data, error } = await getNotifications();
 
     if (error) {
       console.error("Error fetching notifications:", error);
+      setIsLoading(false);
       return;
     }
 
@@ -71,52 +65,48 @@ export function NotificationBell() {
       (data as Notification[])?.filter((n) => !n.is_read).length || 0
     );
     setIsLoading(false);
-  }, [user, supabase]);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
   const handleMarkAllRead = async () => {
-    if (!user || unreadCount === 0) return;
+    if (unreadCount === 0) return;
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
+    try {
+      await markAllNotificationsRead();
 
-    if (error) {
+      setNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          is_read: true,
+          read_at: new Date().toISOString(),
+        }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
       console.error("Error marking notifications as read:", error);
-      return;
     }
-
-    setNotifications((prev) =>
-      prev.map((n) => ({
-        ...n,
-        is_read: true,
-        read_at: new Date().toISOString(),
-      }))
-    );
-    setUnreadCount(0);
   };
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if unread
     if (!notification.is_read) {
-      await supabase
-        .from("notifications")
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq("id", notification.id);
+      try {
+        await markNotificationRead(notification.id);
 
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notification.id
-            ? { ...n, is_read: true, read_at: new Date().toISOString() }
-            : n
-        )
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id
+              ? { ...n, is_read: true, read_at: new Date().toISOString() }
+              : n
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
+      }
     }
 
     // Navigate if there's a link

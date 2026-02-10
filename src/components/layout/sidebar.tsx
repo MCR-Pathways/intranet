@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/hooks/use-user";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Home,
@@ -13,10 +12,9 @@ import {
   MapPin,
   Settings,
   ChevronRight,
-  FileText,
-  Calendar,
   ClipboardList,
 } from "lucide-react";
+import type { Profile, UserType } from "@/types/database.types";
 
 interface NavItem {
   name: string;
@@ -68,14 +66,28 @@ const navigation: NavItem[] = [
   { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
 ];
 
+const moduleAccess: Record<string, UserType[]> = {
+  hr: ["staff"],
+  "sign-in": ["staff"],
+  learning: ["staff", "pathways_coordinator"],
+  intranet: ["staff", "pathways_coordinator"],
+};
+
 interface SidebarProps {
+  profile: Profile | null;
   className?: string;
   onNavClick?: () => void;
 }
 
-export function Sidebar({ className, onNavClick }: SidebarProps) {
+export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
   const pathname = usePathname();
-  const { hasModuleAccess, profile } = useUser();
+
+  const hasModuleAccess = (module: string): boolean => {
+    if (!profile) return false;
+    const allowedTypes = moduleAccess[module];
+    if (!allowedTypes) return true;
+    return allowedTypes.includes(profile.user_type);
+  };
 
   // Filter navigation based on user permissions
   const filteredNav = navigation.filter(

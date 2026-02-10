@@ -4,21 +4,32 @@ import { useState } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { cn } from "@/lib/utils";
+import type { User } from "@supabase/supabase-js";
+import type { Profile } from "@/types/database.types";
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  user: User;
+  profile: Profile | null;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, user, profile }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+      <Header
+        user={user}
+        profile={profile}
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      />
 
       <div className="flex">
         {/* Desktop sidebar */}
-        <Sidebar className="hidden md:flex fixed left-0 top-16 h-[calc(100vh-4rem)]" />
+        <Sidebar
+          profile={profile}
+          className="hidden md:flex fixed left-0 top-16 h-[calc(100vh-4rem)]"
+        />
 
         {/* Mobile sidebar overlay */}
         {isMobileMenuOpen && (
@@ -28,6 +39,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               onClick={() => setIsMobileMenuOpen(false)}
             />
             <Sidebar
+              profile={profile}
               className="fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] md:hidden animate-slide-in-left"
               onNavClick={() => setIsMobileMenuOpen(false)}
             />
