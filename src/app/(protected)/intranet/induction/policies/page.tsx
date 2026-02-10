@@ -2,7 +2,7 @@ import { getInductionItemStatus } from "@/components/induction/induction-page-wr
 import { InductionItemPage } from "@/components/induction/induction-item-page";
 
 export default async function KeyPoliciesPage() {
-  const { isCompleted } = await getInductionItemStatus("policies");
+  const { isCompleted, userId } = await getInductionItemStatus("policies");
 
   return (
     <InductionItemPage
@@ -12,6 +12,7 @@ export default async function KeyPoliciesPage() {
       type="document"
       category="Getting Started"
       isCompleted={isCompleted}
+      userId={userId}
     >
       <div className="prose prose-sm max-w-none">
         <div className="rounded-lg border border-dashed border-border p-8 text-center">

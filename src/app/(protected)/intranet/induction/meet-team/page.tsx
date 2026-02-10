@@ -2,7 +2,7 @@ import { getInductionItemStatus } from "@/components/induction/induction-page-wr
 import { InductionItemPage } from "@/components/induction/induction-item-page";
 
 export default async function MeetTeamPage() {
-  const { isCompleted } = await getInductionItemStatus("meet_team");
+  const { isCompleted, userId } = await getInductionItemStatus("meet_team");
 
   return (
     <InductionItemPage
@@ -12,6 +12,7 @@ export default async function MeetTeamPage() {
       type="task"
       category="Team Integration"
       isCompleted={isCompleted}
+      userId={userId}
     >
       <div className="prose prose-sm max-w-none">
         <div className="rounded-lg border border-dashed border-border p-8 text-center">

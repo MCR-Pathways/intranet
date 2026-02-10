@@ -2,7 +2,7 @@ import { getInductionItemStatus } from "@/components/induction/induction-page-wr
 import { InductionItemPage } from "@/components/induction/induction-item-page";
 
 export default async function ITSetupPage() {
-  const { isCompleted } = await getInductionItemStatus("it_setup");
+  const { isCompleted, userId } = await getInductionItemStatus("it_setup");
 
   return (
     <InductionItemPage
@@ -12,6 +12,7 @@ export default async function ITSetupPage() {
       type="task"
       category="IT Setup"
       isCompleted={isCompleted}
+      userId={userId}
     >
       <div className="prose prose-sm max-w-none">
         <div className="rounded-lg border border-dashed border-border p-8 text-center">

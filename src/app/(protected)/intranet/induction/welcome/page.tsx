@@ -2,7 +2,7 @@ import { getInductionItemStatus } from "@/components/induction/induction-page-wr
 import { InductionItemPage } from "@/components/induction/induction-item-page";
 
 export default async function WelcomePackPage() {
-  const { isCompleted } = await getInductionItemStatus("welcome");
+  const { isCompleted, userId } = await getInductionItemStatus("welcome");
 
   return (
     <InductionItemPage
@@ -12,6 +12,7 @@ export default async function WelcomePackPage() {
       type="document"
       category="Getting Started"
       isCompleted={isCompleted}
+      userId={userId}
     >
       <div className="prose prose-sm max-w-none">
         <div className="rounded-lg border border-dashed border-border p-8 text-center">

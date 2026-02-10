@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +31,7 @@ interface InductionItemPageProps {
   type: "document" | "course" | "task";
   category: string;
   isCompleted: boolean;
+  userId: string;
   children: React.ReactNode;
 }
 
@@ -43,10 +42,9 @@ export function InductionItemPage({
   type,
   category,
   isCompleted,
+  userId,
   children,
 }: InductionItemPageProps) {
-  const { user } = useUser();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completed, setCompleted] = useState(isCompleted);
 
@@ -60,15 +58,11 @@ export function InductionItemPage({
         : `Have you completed "${title}"? This will mark it as complete.`;
 
   const handleMarkComplete = async () => {
-    if (!user) {
-      console.error("No user found, cannot mark complete");
-      return;
-    }
     setIsSubmitting(true);
 
     try {
       const { error } = await supabase.from("induction_progress").insert({
-        user_id: user.id,
+        user_id: userId,
         item_id: itemId,
       });
 
@@ -79,7 +73,6 @@ export function InductionItemPage({
           window.location.href = "/intranet/induction";
         } else {
           console.error("Error marking item complete:", error);
-          alert(`Error: ${error.message}`);
         }
         return;
       }
@@ -88,7 +81,6 @@ export function InductionItemPage({
       window.location.href = "/intranet/induction";
     } catch (err) {
       console.error("Error marking item complete:", err);
-      alert(`Unexpected error: ${err}`);
     } finally {
       setIsSubmitting(false);
     }
