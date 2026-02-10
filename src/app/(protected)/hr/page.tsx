@@ -1,3 +1,4 @@
+import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -5,11 +6,14 @@ import {
   Users,
   Calendar,
   Briefcase,
-  FileText,
   User,
+  Shield,
 } from "lucide-react";
 
-export default function HRPage() {
+export default async function HRPage() {
+  const { profile } = await getCurrentUser();
+  const isHRAdmin = profile?.is_hr_admin ?? false;
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -109,6 +113,24 @@ export default function HRPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {isHRAdmin && (
+          <Link href="/hr/users">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  User Management
+                </CardTitle>
+                <Shield className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Manage staff profiles, roles, and induction
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
     </div>
   );
