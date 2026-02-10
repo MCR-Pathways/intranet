@@ -60,7 +60,10 @@ export function InductionItemPage({
         : `Have you completed "${title}"? This will mark it as complete.`;
 
   const handleMarkComplete = async () => {
-    if (!user) return;
+    if (!user) {
+      console.error("No user found, cannot mark complete");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -73,20 +76,19 @@ export function InductionItemPage({
         // If unique constraint violation, item is already completed
         if (error.code === "23505") {
           setCompleted(true);
+          window.location.href = "/intranet/induction";
         } else {
           console.error("Error marking item complete:", error);
+          alert(`Error: ${error.message}`);
         }
         return;
       }
 
       setCompleted(true);
-      // Navigate back to checklist after short delay
-      setTimeout(() => {
-        router.push("/intranet/induction");
-        router.refresh();
-      }, 500);
+      window.location.href = "/intranet/induction";
     } catch (err) {
       console.error("Error marking item complete:", err);
+      alert(`Unexpected error: ${err}`);
     } finally {
       setIsSubmitting(false);
     }
