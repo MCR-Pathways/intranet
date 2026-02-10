@@ -17,8 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Settings, LogOut, User, Menu } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { Settings, LogOut, User, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface HeaderProps {
@@ -29,10 +29,15 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
   const { user, profile, signOut, isStaff } = useUser();
   const router = useRouter();
 
-  const handleSignOut = () => {
-    signOut().then(() => {
-      router.push("/login");
-    });
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      // Full page reload to clear all client state
+      window.location.href = "/login";
+    }
   };
 
   const getInitials = (name: string) => {
@@ -76,17 +81,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
         {/* Right side - Notifications and user menu */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {/* Notification badge - would be dynamic */}
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              3
-            </Badge>
-            <span className="sr-only">Notifications</span>
-          </Button>
+          <NotificationBell />
 
           {/* User menu */}
           <DropdownMenu>
