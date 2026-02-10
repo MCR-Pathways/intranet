@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -11,20 +11,8 @@ import {
 } from "lucide-react";
 
 export default async function HRPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let isHRAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_hr_admin")
-      .eq("id", user.id)
-      .single();
-    isHRAdmin = profile?.is_hr_admin ?? false;
-  }
+  const { profile } = await getCurrentUser();
+  const isHRAdmin = profile?.is_hr_admin ?? false;
 
   return (
     <div className="space-y-6">

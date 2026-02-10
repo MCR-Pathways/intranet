@@ -1,30 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-
-async function requireHRAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_hr_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_hr_admin) {
-    throw new Error("Unauthorized: HR admin access required");
-  }
-
-  return { supabase, user };
-}
 
 export async function updateUserProfile(
   userId: string,
@@ -39,9 +16,30 @@ export async function updateUserProfile(
 ) {
   const { supabase } = await requireHRAdmin();
 
+  // Whitelist: only allow expected fields through to the database
+  const ALLOWED_FIELDS = [
+    "full_name",
+    "job_title",
+    "user_type",
+    "status",
+    "is_hr_admin",
+    "is_line_manager",
+  ] as const;
+
+  const sanitized: Record<string, unknown> = {};
+  for (const field of ALLOWED_FIELDS) {
+    if (field in data) {
+      sanitized[field] = data[field as keyof typeof data];
+    }
+  }
+
+  if (Object.keys(sanitized).length === 0) {
+    return { success: false, error: "No valid fields to update" };
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update(data)
+    .update(sanitized)
     .eq("id", userId);
 
   if (error) {

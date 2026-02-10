@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
 import {
   completeUserInduction,
   resetUserInduction,
@@ -58,14 +58,16 @@ export function UserTable({ profiles }: UserTableProps) {
   const [resetTarget, setResetTarget] = useState<Profile | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const filteredProfiles = profiles.filter((profile) => {
-    const matchesSearch =
-      profile.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      profile.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || profile.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((profile) => {
+      const matchesSearch =
+        profile.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        profile.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || profile.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [profiles, searchQuery, statusFilter]);
 
   const handleCompleteInduction = (userId: string) => {
     startTransition(async () => {
