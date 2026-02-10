@@ -24,47 +24,54 @@ interface NavItem {
   children?: { name: string; href: string }[];
 }
 
-const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, module: null },
-  {
-    name: "Intranet",
-    href: "/intranet",
-    icon: Newspaper,
-    module: "intranet",
-    children: [
-      { name: "News Feed", href: "/intranet" },
-      { name: "Guides", href: "/intranet/guides" },
-      { name: "Policies", href: "/intranet/policies" },
-      { name: "Surveys", href: "/intranet/surveys" },
-    ],
-  },
-  {
-    name: "HR",
-    href: "/hr",
-    icon: Users,
-    module: "hr",
-    children: [
-      { name: "My Profile", href: "/hr/profile" },
-      { name: "Org Chart", href: "/hr/org-chart" },
-      { name: "Leave", href: "/hr/leave" },
-      { name: "Calendar", href: "/hr/calendar" },
-      { name: "My Team", href: "/hr/team" },
-    ],
-  },
-  {
-    name: "Learning",
-    href: "/learning",
-    icon: GraduationCap,
-    module: "learning",
-    children: [
-      { name: "My Courses", href: "/learning" },
-      { name: "Compliance", href: "/learning/courses/compliance" },
-      { name: "Upskilling", href: "/learning/courses/upskilling" },
-      { name: "Tool Shed", href: "/learning/tool-shed" },
-    ],
-  },
-  { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
-];
+function getNavigation(isHRAdmin: boolean): NavItem[] {
+  const hrChildren = [
+    { name: "My Profile", href: "/hr/profile" },
+    { name: "Org Chart", href: "/hr/org-chart" },
+    { name: "Leave", href: "/hr/leave" },
+    { name: "Calendar", href: "/hr/calendar" },
+    { name: "My Team", href: "/hr/team" },
+    ...(isHRAdmin
+      ? [{ name: "User Management", href: "/hr/users" }]
+      : []),
+  ];
+
+  return [
+    { name: "Dashboard", href: "/dashboard", icon: Home, module: null },
+    {
+      name: "Intranet",
+      href: "/intranet",
+      icon: Newspaper,
+      module: "intranet",
+      children: [
+        { name: "News Feed", href: "/intranet" },
+        { name: "Guides", href: "/intranet/guides" },
+        { name: "Policies", href: "/intranet/policies" },
+        { name: "Surveys", href: "/intranet/surveys" },
+      ],
+    },
+    {
+      name: "HR",
+      href: "/hr",
+      icon: Users,
+      module: "hr",
+      children: hrChildren,
+    },
+    {
+      name: "Learning",
+      href: "/learning",
+      icon: GraduationCap,
+      module: "learning",
+      children: [
+        { name: "My Courses", href: "/learning" },
+        { name: "Compliance", href: "/learning/courses/compliance" },
+        { name: "Upskilling", href: "/learning/courses/upskilling" },
+        { name: "Tool Shed", href: "/learning/tool-shed" },
+      ],
+    },
+    { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
+  ];
+}
 
 const moduleAccess: Record<string, UserType[]> = {
   hr: ["staff"],
@@ -88,6 +95,8 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
     if (!allowedTypes) return true;
     return allowedTypes.includes(profile.user_type);
   };
+
+  const navigation = getNavigation(profile?.is_hr_admin ?? false);
 
   // Filter navigation based on user permissions
   const filteredNav = navigation.filter(
