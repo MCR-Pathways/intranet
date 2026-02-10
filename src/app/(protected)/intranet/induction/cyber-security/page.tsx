@@ -2,7 +2,7 @@ import { getInductionItemStatus } from "@/components/induction/induction-page-wr
 import { InductionItemPage } from "@/components/induction/induction-item-page";
 
 export default async function CyberSecurityPage() {
-  const { isCompleted, userId } = await getInductionItemStatus("cyber_security");
+  const { isCompleted } = await getInductionItemStatus("cyber_security");
 
   return (
     <InductionItemPage
@@ -12,7 +12,6 @@ export default async function CyberSecurityPage() {
       type="course"
       category="Compliance Training"
       isCompleted={isCompleted}
-      userId={userId}
     >
       <div className="prose prose-sm max-w-none">
         <div className="rounded-lg border border-dashed border-border p-8 text-center">

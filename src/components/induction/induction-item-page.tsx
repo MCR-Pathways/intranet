@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { markInductionItemComplete } from "@/app/(protected)/intranet/induction/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,7 +31,6 @@ interface InductionItemPageProps {
   type: "document" | "course" | "task";
   category: string;
   isCompleted: boolean;
-  userId: string;
   children: React.ReactNode;
 }
 
@@ -42,13 +41,10 @@ export function InductionItemPage({
   type,
   category,
   isCompleted,
-  userId,
   children,
 }: InductionItemPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completed, setCompleted] = useState(isCompleted);
-
-  const supabase = createClient();
 
   const confirmationMessage =
     type === "document"
@@ -61,25 +57,16 @@ export function InductionItemPage({
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("induction_progress").insert({
-        user_id: userId,
-        item_id: itemId,
-      });
-
-      if (error) {
-        // If unique constraint violation, item is already completed
-        if (error.code === "23505") {
-          setCompleted(true);
-          window.location.href = "/intranet/induction";
-        } else {
-          console.error("Error marking item complete:", error);
-        }
-        return;
-      }
-
+      await markInductionItemComplete(itemId);
+      // Server action calls redirect(), but as a fallback:
       setCompleted(true);
       window.location.href = "/intranet/induction";
     } catch (err) {
+      // Next.js redirect() throws a NEXT_REDIRECT error — this is expected
+      const error = err as Error;
+      if (error?.message?.includes("NEXT_REDIRECT")) {
+        return; // Redirect is happening, do nothing
+      }
       console.error("Error marking item complete:", err);
     } finally {
       setIsSubmitting(false);

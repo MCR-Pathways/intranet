@@ -26,6 +26,5 @@ export async function getInductionItemStatus(itemId: string) {
 
   return {
     isCompleted: !!progress,
-    userId: user.id,
   };
 }
