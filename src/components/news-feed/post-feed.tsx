@@ -72,7 +72,6 @@ export function PostFeed({
           post={post}
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
-          isStaff={isStaff}
           isHRAdmin={isHRAdmin}
         />
       ))}

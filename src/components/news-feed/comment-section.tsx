@@ -15,7 +15,6 @@ import type {
 interface CommentSectionProps {
   postId: string;
   comments: CommentWithAuthor[];
-  commentCount: number;
   currentUserId: string;
   currentUserProfile: PostAuthor;
   isHRAdmin: boolean;
@@ -35,8 +34,6 @@ interface CommentSectionProps {
 export function CommentSection({
   postId,
   comments,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  commentCount,
   currentUserId,
   currentUserProfile,
   isHRAdmin,

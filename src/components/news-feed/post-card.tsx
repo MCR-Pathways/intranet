@@ -29,7 +29,6 @@ interface PostCardProps {
   post: PostWithRelations;
   currentUserId: string;
   currentUserProfile: PostAuthor;
-  isStaff: boolean;
   isHRAdmin: boolean;
 }
 
@@ -37,8 +36,6 @@ export function PostCard({
   post,
   currentUserId,
   currentUserProfile,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  isStaff,
   isHRAdmin,
 }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -281,7 +278,6 @@ export function PostCard({
             <CommentSection
               postId={post.id}
               comments={optimisticComments}
-              commentCount={optimisticCommentCount}
               currentUserId={currentUserId}
               currentUserProfile={currentUserProfile}
               isHRAdmin={isHRAdmin}
