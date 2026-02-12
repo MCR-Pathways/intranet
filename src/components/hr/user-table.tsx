@@ -264,8 +264,9 @@ export function UserTable({ profiles }: UserTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset Induction</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reset {resetTarget?.full_name}&apos;s induction status.
-              They will be redirected to the induction flow on their next visit.
+              This will reset {resetTarget?.full_name}&apos;s induction status
+              and clear all their completed induction items. They will need to
+              redo every item from scratch when they next visit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

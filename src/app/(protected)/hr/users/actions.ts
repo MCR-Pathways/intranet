@@ -72,13 +72,10 @@ export async function completeUserInduction(userId: string) {
 export async function resetUserInduction(userId: string) {
   const { supabase } = await requireHRAdmin();
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      induction_completed_at: null,
-      status: "pending_induction",
-    })
-    .eq("id", userId);
+  // Use an atomic RPC call to delete progress items and reset profile in one transaction
+  const { error } = await supabase.rpc("reset_user_induction", {
+    target_user_id: userId,
+  });
 
   if (error) {
     return { success: false, error: error.message };
