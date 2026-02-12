@@ -86,6 +86,7 @@ export function useUser(): UseUserReturn {
     return () => {
       subscription.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is a stable singleton; fetchProfile is intentionally excluded to avoid infinite loops
   }, []);
 
   const signOut = async () => {

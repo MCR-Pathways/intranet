@@ -35,6 +35,7 @@ interface CommentSectionProps {
 export function CommentSection({
   postId,
   comments,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   commentCount,
   currentUserId,
   currentUserProfile,

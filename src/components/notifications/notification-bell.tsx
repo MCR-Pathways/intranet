@@ -53,9 +53,11 @@ export function NotificationBell() {
     setIsLoading(false);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- legitimate data-fetching-on-mount pattern */
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleMarkAllRead = async () => {
     if (unreadCount === 0) return;

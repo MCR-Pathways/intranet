@@ -14,10 +14,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockEq = vi.hoisted(() => vi.fn());
 const mockUpdate = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
+const mockRpc = vi.hoisted(() => vi.fn());
 
 // Mock Supabase client returned by requireHRAdmin
 const mockSupabase = vi.hoisted(() => ({
   from: mockFrom,
+  rpc: mockRpc,
 }));
 
 // Mock requireHRAdmin — returns { supabase, user } on success
@@ -50,6 +52,7 @@ describe("HR User Actions", () => {
     mockEq.mockResolvedValue({ error: null });
     mockUpdate.mockReturnValue({ eq: mockEq });
     mockFrom.mockReturnValue({ update: mockUpdate });
+    mockRpc.mockResolvedValue({ error: null });
 
     // Default: requireHRAdmin succeeds
     vi.mocked(requireHRAdmin).mockResolvedValue({
@@ -174,19 +177,18 @@ describe("HR User Actions", () => {
   });
 
   describe("resetUserInduction", () => {
-    it("clears induction and sets status to pending_induction", async () => {
+    it("calls the reset_user_induction RPC with the correct user ID", async () => {
       const result = await resetUserInduction("user-456");
 
       expect(result).toEqual({ success: true, error: null });
-      expect(mockUpdate).toHaveBeenCalledWith({
-        induction_completed_at: null,
-        status: "pending_induction",
+      expect(mockRpc).toHaveBeenCalledWith("reset_user_induction", {
+        target_user_id: "user-456",
       });
       expect(revalidatePath).toHaveBeenCalledWith("/hr/users");
     });
 
-    it("returns error when DB update fails", async () => {
-      mockEq.mockResolvedValue({
+    it("returns error when RPC call fails", async () => {
+      mockRpc.mockResolvedValue({
         error: { message: "Reset failed" },
       });
 

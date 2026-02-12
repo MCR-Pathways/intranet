@@ -37,6 +37,7 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
               rel="noopener noreferrer"
               className="block"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded dynamic image URLs */}
               <img
                 src={img.file_url || undefined}
                 alt={img.file_name || "Image"}

@@ -139,11 +139,12 @@ export default async function CourseCatalogPage() {
   const completedCompliance = complianceCourses.filter(
     (c) => enrollmentMap.get(c.id)?.status === "completed"
   ).length;
+  const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
   const dueSoonCompliance = complianceCourses.filter((c) => {
     const enrollment = enrollmentMap.get(c.id);
     if (!enrollment?.due_date || enrollment.status === "completed") return false;
     const daysUntilDue = Math.ceil(
-      (new Date(enrollment.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
     );
     return daysUntilDue <= 14 && daysUntilDue >= 0;
   }).length;

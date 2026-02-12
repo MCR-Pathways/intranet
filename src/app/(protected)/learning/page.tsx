@@ -69,6 +69,8 @@ export default async function LearningPage() {
     typedEnrollments.map((e) => [e.course_id, e])
   );
 
+  const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
+
   const complianceStats = {
     total: coursesByCategory.compliance.length,
     completed: coursesByCategory.compliance.filter(
@@ -79,7 +81,7 @@ export default async function LearningPage() {
       if (!enrollment || enrollment.status === "completed") return false;
       if (!enrollment.due_date) return c.is_required;
       const daysUntilDue = Math.ceil(
-        (new Date(enrollment.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
       );
       return daysUntilDue <= 14;
     }).length,
@@ -87,7 +89,7 @@ export default async function LearningPage() {
       const enrollment = enrollmentMap.get(c.id);
       if (!enrollment?.due_date || enrollment.status === "completed") return false;
       const daysUntilDue = Math.ceil(
-        (new Date(enrollment.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
       );
       return daysUntilDue < 0;
     }).length,
@@ -260,7 +262,7 @@ export default async function LearningPage() {
 
                 if (enrollment.due_date) {
                   daysUntilDue = Math.ceil(
-                    (new Date(enrollment.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
                   );
                   if (daysUntilDue < 0) dueStatus = "overdue";
                   else if (daysUntilDue <= 7) dueStatus = "due_soon";

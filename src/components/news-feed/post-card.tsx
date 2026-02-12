@@ -37,6 +37,7 @@ export function PostCard({
   post,
   currentUserId,
   currentUserProfile,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isStaff,
   isHRAdmin,
 }: PostCardProps) {

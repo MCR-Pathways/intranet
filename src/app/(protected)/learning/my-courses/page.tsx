@@ -155,10 +155,12 @@ export default async function MyCoursesPage() {
   );
 
   // Count overdue and due soon
+  const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
+
   const overdueCourses = inProgressCourses.filter((e) => {
     if (!e.due_date) return false;
     const daysUntilDue = Math.ceil(
-      (new Date(e.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(e.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
     );
     return daysUntilDue < 0;
   });
@@ -166,7 +168,7 @@ export default async function MyCoursesPage() {
   const dueSoonCourses = inProgressCourses.filter((e) => {
     if (!e.due_date) return false;
     const daysUntilDue = Math.ceil(
-      (new Date(e.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(e.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
     );
     return daysUntilDue >= 0 && daysUntilDue <= 7;
   });
