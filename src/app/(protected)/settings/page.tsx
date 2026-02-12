@@ -28,8 +28,6 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .single();
 
-  const displayName = profile?.preferred_name || profile?.full_name || "User";
-
   const statusVariant =
     profile?.status === "active"
       ? "success"

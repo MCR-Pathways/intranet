@@ -202,6 +202,7 @@ export function PostComposer({ userProfile }: PostComposerProps) {
                       <Loader2 className="h-4 w-4 animate-spin" />
                     )}
                     {att.type === "image" && att.preview && (
+                      /* eslint-disable-next-line @next/next/no-img-element -- temporary blob URL preview */
                       <img
                         src={att.preview}
                         alt=""

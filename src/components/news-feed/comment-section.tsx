@@ -15,7 +15,6 @@ import type {
 interface CommentSectionProps {
   postId: string;
   comments: CommentWithAuthor[];
-  commentCount: number;
   currentUserId: string;
   currentUserProfile: PostAuthor;
   isHRAdmin: boolean;
@@ -35,7 +34,6 @@ interface CommentSectionProps {
 export function CommentSection({
   postId,
   comments,
-  commentCount,
   currentUserId,
   currentUserProfile,
   isHRAdmin,

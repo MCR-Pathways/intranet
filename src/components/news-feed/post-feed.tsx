@@ -30,11 +30,13 @@ export function PostFeed({
   const [isPending, startTransition] = useTransition();
 
   // Sync local state when server re-renders after revalidatePath
+  /* eslint-disable react-hooks/set-state-in-effect -- syncing client state with server-provided props after revalidation */
   useEffect(() => {
     setPosts(initialPosts);
     setHasMore(initialHasMore);
     setPage(2);
   }, [initialPosts, initialHasMore]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleLoadMore = () => {
     startTransition(async () => {
@@ -70,7 +72,6 @@ export function PostFeed({
           post={post}
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
-          isStaff={isStaff}
           isHRAdmin={isHRAdmin}
         />
       ))}

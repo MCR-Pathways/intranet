@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import {
@@ -157,7 +156,6 @@ export function InductionChecklist({
   completedItemIds,
   userId,
 }: InductionChecklistProps) {
-  const router = useRouter();
   const [isCompleting, setIsCompleting] = useState(false);
 
   const totalItems = inductionItems.length;

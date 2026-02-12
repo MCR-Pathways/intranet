@@ -33,8 +33,9 @@ export function LinkPreviewCard({
     >
       {imageUrl && (
         <div className="aspect-video w-full overflow-hidden bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
           <img
-            src={imageUrl}
+            src={sanitizeUrl(imageUrl) || undefined}
             alt={title || "Link preview"}
             className="h-full w-full object-cover"
           />
