@@ -62,8 +62,8 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Redirect to induction if not completed (except for dashboard which shows limited view)
-  if (needsInduction && !pathname.startsWith("/dashboard")) {
+  // Redirect to induction if not completed
+  if (needsInduction) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/intranet/induction";
     return NextResponse.redirect(redirectUrl);
@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
       if (!allowedTypes.includes(profile.user_type)) {
         // Redirect to dashboard if user doesn't have access
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = "/dashboard";
+        redirectUrl.pathname = "/intranet";
         return NextResponse.redirect(redirectUrl);
       }
     }
@@ -84,7 +84,7 @@ export async function middleware(request: NextRequest) {
   // Root path redirect
   if (pathname === "/") {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = needsInduction ? "/intranet/induction" : "/dashboard";
+    redirectUrl.pathname = needsInduction ? "/intranet/induction" : "/intranet";
     return NextResponse.redirect(redirectUrl);
   }
 

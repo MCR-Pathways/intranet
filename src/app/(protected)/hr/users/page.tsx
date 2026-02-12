@@ -11,7 +11,7 @@ export default async function UserManagementPage() {
   }
 
   if (!profile?.is_hr_admin) {
-    redirect("/dashboard");
+    redirect("/intranet");
   }
 
   // Select only the fields needed by UserTable and UserEditDialog

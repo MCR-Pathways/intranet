@@ -22,7 +22,7 @@ export default async function InductionPage() {
 
   // If induction is already completed, redirect to dashboard
   if (profile?.induction_completed_at) {
-    redirect("/dashboard");
+    redirect("/intranet");
   }
 
   // Fetch completed induction items from the database

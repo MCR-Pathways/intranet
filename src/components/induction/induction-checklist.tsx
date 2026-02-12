@@ -186,7 +186,7 @@ export function InductionChecklist({
       }
 
       // Full page reload to clear middleware induction check
-      window.location.href = "/dashboard";
+      window.location.href = "/intranet";
     } catch (err) {
       console.error("Error completing induction:", err);
     } finally {
