@@ -72,6 +72,17 @@ export async function completeUserInduction(userId: string) {
 export async function resetUserInduction(userId: string) {
   const { supabase } = await requireHRAdmin();
 
+  // Delete all individual induction progress items so the user starts fresh
+  const { error: deleteError } = await supabase
+    .from("induction_progress")
+    .delete()
+    .eq("user_id", userId);
+
+  if (deleteError) {
+    return { success: false, error: deleteError.message };
+  }
+
+  // Reset the profile induction status
   const { error } = await supabase
     .from("profiles")
     .update({
