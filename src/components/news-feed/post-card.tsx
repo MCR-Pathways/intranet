@@ -223,6 +223,9 @@ export function PostCard({
                   )}
                   <p className="text-xs text-muted-foreground">
                     {timeAgo(post.created_at)}
+                    {post.updated_at !== post.created_at && (
+                      <span className="ml-1">(edited)</span>
+                    )}
                   </p>
                 </div>
               </div>

@@ -4,7 +4,16 @@ import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { deleteComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
 import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
 import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
@@ -32,6 +41,7 @@ export function CommentItem({
 }: CommentItemProps) {
   const [isPending, startTransition] = useTransition();
   const [showPicker, setShowPicker] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canDelete =
@@ -51,6 +61,7 @@ export function CommentItem({
   const handleDelete = () => {
     startTransition(async () => {
       await deleteComment(comment.id);
+      setShowDeleteDialog(false);
     });
   };
 
@@ -215,7 +226,7 @@ export function CommentItem({
               variant="ghost"
               size="sm"
               className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               disabled={isPending}
             >
               <Trash2 className="h-3 w-3 mr-0.5" />
@@ -224,6 +235,44 @@ export function CommentItem({
           )}
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {isReply ? "Reply" : "Comment"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this {isReply ? "reply" : "comment"}? This action cannot be undone.
+              {!isReply && comment.replies.length > 0 && (
+                <> All replies will also be removed.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Cancel
+              </Button>
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
