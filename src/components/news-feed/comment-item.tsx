@@ -3,26 +3,11 @@
 import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { deleteComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
 import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
 import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-}
 
 interface CommentItemProps {
   comment: CommentWithAuthor;
@@ -139,7 +124,7 @@ export function CommentItem({
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="inline-block">
+        <div className="relative inline-block">
           <div className="rounded-2xl bg-muted/50 px-3 py-2">
             <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
             <p className="text-sm font-normal whitespace-pre-wrap break-words">
@@ -147,9 +132,9 @@ export function CommentItem({
             </p>
           </div>
 
-          {/* Reaction summary badge (overlapping bottom-right of bubble) */}
+          {/* Reaction summary badge (bottom-right of bubble) */}
           {totalReactions > 0 && (
-            <div className="flex items-center gap-0.5 -mt-2.5 ml-auto mr-1 w-fit float-right bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
+            <div className="absolute -bottom-2.5 right-1 flex items-center gap-0.5 bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
               <span className="flex -space-x-0.5">
                 {activeReactions.map((r) => (
                   <span key={r.type} className="text-xs leading-none">
@@ -165,7 +150,7 @@ export function CommentItem({
         </div>
 
         {/* Footer: time, Like, Reply, Delete */}
-        <div className="flex items-center gap-3 mt-0.5 px-1 clear-both">
+        <div className="flex items-center gap-3 mt-1 px-1">
           <span className="text-xs text-muted-foreground">
             {timeAgo(comment.created_at)}
           </span>
@@ -185,7 +170,7 @@ export function CommentItem({
                       key={reaction.type}
                       type="button"
                       className={cn(
-                        "text-lg leading-none cursor-pointer transition-transform duration-150 hover:scale-125 p-0.5 rounded-full",
+                        "text-lg leading-none cursor-pointer transition-transform duration-150 hover:scale-125 p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full",
                         comment.user_reaction === reaction.type && "bg-muted"
                       )}
                       title={reaction.label}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { fetchWeeklyRoundupsWithClient } from "../actions";
+import { formatShortDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Calendar, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -41,11 +42,6 @@ export default async function WeeklyRoundupsPage() {
           {roundups.map((roundup) => {
             const weekStart = new Date(roundup.week_start);
             const weekEnd = new Date(roundup.week_end);
-            const formatDate = (d: Date) =>
-              d.toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-              });
 
             return (
               <Link
@@ -69,7 +65,7 @@ export default async function WeeklyRoundupsPage() {
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDate(weekStart)} — {formatDate(weekEnd)},{" "}
+                            {formatShortDate(weekStart)} — {formatShortDate(weekEnd)},{" "}
                             {weekEnd.getFullYear()}
                           </p>
                         </div>

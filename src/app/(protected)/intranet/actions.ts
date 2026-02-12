@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ReactionType,
@@ -30,6 +31,49 @@ const VALID_REACTIONS: ReactionType[] = [
   "insightful",
   "curious",
 ];
+
+// ─── SSRF Protection ──────────────────────────────────────────────────
+
+/**
+ * Checks whether an IP address belongs to a private/reserved range.
+ * Used to prevent SSRF attacks in fetchLinkPreview.
+ */
+function isPrivateIP(ip: string): boolean {
+  // IPv4
+  const parts = ip.split(".").map(Number);
+  if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
+    if (parts[0] === 10) return true; // 10.0.0.0/8
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+    if (parts[0] === 127) return true; // 127.0.0.0/8
+    if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
+    if (parts[0] === 0) return true; // 0.0.0.0/8
+  }
+  // IPv6
+  if (ip === "::1") return true; // loopback
+  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
+  if (ip.startsWith("fe80")) return true; // link-local
+  return false;
+}
+
+/**
+ * Validates that a URL does not resolve to a private/internal IP address.
+ * Prevents SSRF by resolving the hostname and checking the resulting IP.
+ */
+async function validateExternalUrl(url: string): Promise<boolean> {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname;
+
+  // If hostname is already an IP, check directly
+  if (isPrivateIP(hostname)) return false;
+
+  try {
+    const { address } = await dns.lookup(hostname);
+    return !isPrivateIP(address);
+  } catch {
+    return false; // DNS resolution failed; reject
+  }
+}
 
 function buildReactionCounts(
   reactions: { reaction_type: ReactionType }[]
@@ -128,6 +172,7 @@ export async function fetchPostsWithClient(
     )
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
+    // Fetch pageSize + 1 records (range is inclusive) to detect if more pages exist
     .range(offset, offset + pageSize);
 
   if (postsError || !posts) {
@@ -295,6 +340,7 @@ export async function fetchRoundupPostsWithClient(
 }> {
   const { data: roundup } = await supabase
     .from("weekly_roundups")
+    // post_ids is used below to fetch related posts; not included in the returned roundup object
     .select("id, title, summary, week_start, week_end, post_ids")
     .eq("id", roundupId)
     .single();
@@ -441,7 +487,7 @@ export async function createPost(data: {
     link_description?: string;
     link_image_url?: string;
   }[];
-}): Promise<{ success: boolean; error: string | null; postId?: string }> {
+}): Promise<{ success: boolean; error: string | null; postId?: string; warning?: string }> {
   const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile) {
@@ -506,6 +552,13 @@ export async function createPost(data: {
 
     if (attError) {
       console.error("Error inserting attachments:", attError);
+      revalidatePath("/intranet");
+      return {
+        success: true,
+        error: null,
+        postId: post.id,
+        warning: "Post created, but some attachments could not be saved",
+      };
     }
   }
 
@@ -580,10 +633,16 @@ export async function deletePost(
       .filter((a) => a.file_url)
       .map((a) => {
         const url = a.file_url!;
-        const bucketPath = url.split("/post-attachments/").pop();
-        return bucketPath;
+        try {
+          const parsed = new URL(url);
+          const segments = parsed.pathname.split("/post-attachments/");
+          if (segments.length < 2 || !segments[1]) return null;
+          return segments[1];
+        } catch {
+          return null;
+        }
       })
-      .filter(Boolean) as string[];
+      .filter((p): p is string => p !== null);
 
     if (filePaths.length > 0) {
       await supabase.storage.from("post-attachments").remove(filePaths);
@@ -911,6 +970,12 @@ export async function fetchLinkPreview(
     const parsed = new URL(url);
     if (!["http:", "https:"].includes(parsed.protocol)) {
       return { success: false, error: "Invalid URL protocol" };
+    }
+
+    // SSRF protection: reject URLs that resolve to private/internal IPs
+    const isExternal = await validateExternalUrl(url);
+    if (!isExternal) {
+      return { success: false, error: "URL resolves to a restricted address" };
     }
 
     const response = await fetch(url, {

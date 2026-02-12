@@ -2,6 +2,7 @@
 
 import { FileText, Download } from "lucide-react";
 import { LinkPreviewCard } from "./link-preview-card";
+import { sanitizeUrl, formatFileSize } from "@/lib/utils";
 import type { PostAttachment } from "@/types/database.types";
 
 interface AttachmentDisplayProps {
@@ -31,7 +32,7 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
           {images.map((img) => (
             <a
               key={img.id}
-              href={img.file_url || undefined}
+              href={sanitizeUrl(img.file_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="block"
@@ -52,7 +53,7 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
           {documents.map((doc) => (
             <a
               key={doc.id}
-              href={doc.file_url || undefined}
+              href={sanitizeUrl(doc.file_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
@@ -90,10 +91,4 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
       )}
     </div>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
 }

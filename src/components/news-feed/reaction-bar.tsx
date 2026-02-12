@@ -160,7 +160,7 @@ export function ReactionBar({
                     key={reaction.type}
                     type="button"
                     className={cn(
-                      "text-2xl leading-none cursor-pointer transition-transform duration-150 hover:scale-125 p-1 rounded-full",
+                      "text-2xl leading-none cursor-pointer transition-transform duration-150 hover:scale-125 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full",
                       userReaction === reaction.type && "bg-muted"
                     )}
                     title={reaction.label}

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, Pin, Sparkles } from "lucide-react";
+import { timeAgo } from "@/lib/utils";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
@@ -23,27 +24,6 @@ import type {
   CommentWithAuthor,
   ReactionType,
 } from "@/types/database.types";
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks}w ago`;
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 interface PostCardProps {
   post: PostWithRelations;
@@ -79,7 +59,7 @@ export function PostCard({
   // Stable key derived from mutable post fields — only changes when actual data differs
   const postDataKey = useMemo(
     () =>
-      `${post.id}-${post.user_reaction}-${post.comment_count}-${JSON.stringify(post.reaction_counts)}`,
+      `${post.id}-${post.user_reaction}-${post.comment_count}-${post.reaction_counts.like}:${post.reaction_counts.love}:${post.reaction_counts.celebrate}:${post.reaction_counts.insightful}:${post.reaction_counts.curious}`,
     [post.id, post.user_reaction, post.comment_count, post.reaction_counts]
   );
 

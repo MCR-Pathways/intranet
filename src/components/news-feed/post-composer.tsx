@@ -152,6 +152,9 @@ export function PostComposer({ userProfile }: PostComposerProps) {
       if (result.success) {
         setContent("");
         setAttachments([]);
+        if (result.warning) {
+          setError(result.warning);
+        }
       } else {
         setError(result.error);
       }

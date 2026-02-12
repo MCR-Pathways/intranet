@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { fetchRoundupPostsWithClient } from "../../actions";
+import { formatShortDate } from "@/lib/utils";
 import { PostCard } from "@/components/news-feed/post-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,6 @@ export default async function RoundupDetailPage({
 
   const weekStart = new Date(roundup.week_start);
   const weekEnd = new Date(roundup.week_end);
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   return (
     <div className="space-y-6">
@@ -67,7 +66,7 @@ export default async function RoundupDetailPage({
           </h1>
         </div>
         <p className="text-muted-foreground mt-1">
-          {formatDate(weekStart)} — {formatDate(weekEnd)},{" "}
+          {formatShortDate(weekStart)} — {formatShortDate(weekEnd)},{" "}
           {weekEnd.getFullYear()}
         </p>
         {roundup.summary && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import { sanitizeUrl } from "@/lib/utils";
 
 interface LinkPreviewCardProps {
   url: string;
@@ -15,9 +16,17 @@ export function LinkPreviewCard({
   description,
   imageUrl,
 }: LinkPreviewCardProps) {
+  const safeHref = sanitizeUrl(url) || "#";
+  let displayHostname = url;
+  try {
+    displayHostname = new URL(url).hostname;
+  } catch {
+    /* keep raw url as fallback */
+  }
+
   return (
     <a
-      href={url}
+      href={safeHref}
       target="_blank"
       rel="noopener noreferrer"
       className="block overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
@@ -43,7 +52,7 @@ export function LinkPreviewCard({
         <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
           <ExternalLink className="h-3 w-3" />
           <span className="truncate">
-            {new URL(url).hostname}
+            {displayHostname}
           </span>
         </div>
       </div>
