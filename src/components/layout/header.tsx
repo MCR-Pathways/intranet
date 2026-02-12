@@ -72,7 +72,7 @@ export function Header({ user, profile, onMobileMenuToggle }: HeaderProps) {
               <span className="sr-only">Toggle menu</span>
             </Button>
           )}
-          <Link href="/dashboard" className="flex items-center">
+          <Link href="/intranet" className="flex items-center">
             <Image
               src="/MCR_LOGO-1.svg"
               alt="MCR Pathways"

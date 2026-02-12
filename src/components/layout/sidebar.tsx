@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Home,
   Newspaper,
   Users,
   GraduationCap,
@@ -37,7 +36,6 @@ function getNavigation(isHRAdmin: boolean): NavItem[] {
   ];
 
   return [
-    { name: "Dashboard", href: "/dashboard", icon: Home, module: null },
     {
       name: "Intranet",
       href: "/intranet",
@@ -45,6 +43,7 @@ function getNavigation(isHRAdmin: boolean): NavItem[] {
       module: "intranet",
       children: [
         { name: "News Feed", href: "/intranet" },
+        { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
         { name: "Guides", href: "/intranet/guides" },
         { name: "Policies", href: "/intranet/policies" },
         { name: "Surveys", href: "/intranet/surveys" },

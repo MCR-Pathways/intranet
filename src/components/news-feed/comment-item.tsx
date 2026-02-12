@@ -1,0 +1,244 @@
+"use client";
+
+import { useState, useRef, useCallback, useEffect, useTransition } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
+import { deleteComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
+import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
+import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
+
+function timeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+interface CommentItemProps {
+  comment: CommentWithAuthor;
+  currentUserId: string;
+  isHRAdmin: boolean;
+  onReplyClick?: () => void;
+  isReply?: boolean;
+  onOptimisticReaction: (
+    commentId: string,
+    reactionType: ReactionType,
+    currentUserReaction: ReactionType | null
+  ) => void;
+}
+
+export function CommentItem({
+  comment,
+  currentUserId,
+  isHRAdmin,
+  onReplyClick,
+  isReply = false,
+  onOptimisticReaction,
+}: CommentItemProps) {
+  const [isPending, startTransition] = useTransition();
+  const [showPicker, setShowPicker] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const canDelete =
+    comment.author_id === currentUserId || isHRAdmin;
+
+  const displayName =
+    comment.author.preferred_name || comment.author.full_name || "User";
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      await deleteComment(comment.id);
+    });
+  };
+
+  const handleReaction = useCallback(
+    (type: ReactionType) => {
+      setShowPicker(false);
+      onOptimisticReaction(comment.id, type, comment.user_reaction);
+      startTransition(async () => {
+        await toggleCommentReaction(comment.id, type);
+      });
+    },
+    [comment.id, comment.user_reaction, onOptimisticReaction]
+  );
+
+  const handleLikeClick = useCallback(() => {
+    if (comment.user_reaction) {
+      handleReaction(comment.user_reaction); // removes it
+    } else {
+      handleReaction("like"); // default to like
+    }
+  }, [comment.user_reaction, handleReaction]);
+
+  // Hover handlers with delay
+  const handleMouseEnter = useCallback(() => {
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+    setShowPicker(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    leaveTimer.current = setTimeout(() => {
+      setShowPicker(false);
+    }, 300);
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (leaveTimer.current) {
+        clearTimeout(leaveTimer.current);
+      }
+    };
+  }, []);
+
+  const currentReaction = comment.user_reaction
+    ? REACTIONS.find((r) => r.type === comment.user_reaction)
+    : null;
+
+  const totalReactions = Object.values(comment.reaction_counts).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+
+  const activeReactions = REACTIONS.filter(
+    (r) => comment.reaction_counts[r.type] > 0
+  );
+
+  const avatarSize = isReply ? "h-6 w-6" : "h-7 w-7";
+
+  return (
+    <div className="flex gap-2 group">
+      <Avatar className={cn(avatarSize, "shrink-0")}>
+        <AvatarImage
+          src={comment.author.avatar_url || undefined}
+          alt={displayName}
+        />
+        <AvatarFallback className="bg-muted text-xs">
+          {getInitials(displayName)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="inline-block">
+          <div className="rounded-2xl bg-muted/50 px-3 py-2">
+            <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
+            <p className="text-sm font-normal whitespace-pre-wrap break-words">
+              {comment.content}
+            </p>
+          </div>
+
+          {/* Reaction summary badge (overlapping bottom-right of bubble) */}
+          {totalReactions > 0 && (
+            <div className="flex items-center gap-0.5 -mt-2.5 ml-auto mr-1 w-fit float-right bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
+              <span className="flex -space-x-0.5">
+                {activeReactions.map((r) => (
+                  <span key={r.type} className="text-xs leading-none">
+                    {r.emoji}
+                  </span>
+                ))}
+              </span>
+              {totalReactions > 1 && (
+                <span className="text-[10px] text-muted-foreground ml-0.5">{totalReactions}</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer: time, Like, Reply, Delete */}
+        <div className="flex items-center gap-3 mt-0.5 px-1 clear-both">
+          <span className="text-xs text-muted-foreground">
+            {timeAgo(comment.created_at)}
+          </span>
+
+          {/* Like link with hover picker */}
+          <div
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* Mini reaction picker */}
+            {showPicker && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-1 z-50">
+                <div className="flex items-center gap-0.5 rounded-full bg-card border border-border shadow-lg px-1.5 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  {REACTIONS.map((reaction) => (
+                    <button
+                      key={reaction.type}
+                      type="button"
+                      className={cn(
+                        "text-lg leading-none cursor-pointer transition-transform duration-150 hover:scale-125 p-0.5 rounded-full",
+                        comment.user_reaction === reaction.type && "bg-muted"
+                      )}
+                      title={reaction.label}
+                      onClick={() => handleReaction(reaction.type)}
+                      disabled={isPending}
+                    >
+                      {reaction.emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={cn(
+                "text-xs font-semibold cursor-pointer hover:underline",
+                currentReaction
+                  ? REACTION_COLORS[currentReaction.type]
+                  : "text-muted-foreground"
+              )}
+              onClick={handleLikeClick}
+              disabled={isPending}
+            >
+              {currentReaction ? currentReaction.label : "Like"}
+            </button>
+          </div>
+
+          {/* Reply link — only on top-level comments */}
+          {!isReply && onReplyClick && (
+            <button
+              type="button"
+              className="text-xs font-semibold text-muted-foreground cursor-pointer hover:underline"
+              onClick={onReplyClick}
+            >
+              Reply
+            </button>
+          )}
+
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              <Trash2 className="h-3 w-3 mr-0.5" />
+              Delete
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

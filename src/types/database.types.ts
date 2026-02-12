@@ -26,6 +26,8 @@ export type WorkLocation =
   | "other";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
+export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
+export type AttachmentType = "image" | "document" | "link";
 
 export interface Database {
   public: {
@@ -255,6 +257,195 @@ export interface Database {
           completed_at?: string;
         };
       };
+      posts: {
+        Row: {
+          id: string;
+          author_id: string;
+          content: string;
+          is_pinned: boolean;
+          is_weekly_roundup: boolean;
+          weekly_roundup_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          content: string;
+          is_pinned?: boolean;
+          is_weekly_roundup?: boolean;
+          weekly_roundup_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          content?: string;
+          is_pinned?: boolean;
+          is_weekly_roundup?: boolean;
+          weekly_roundup_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      post_attachments: {
+        Row: {
+          id: string;
+          post_id: string;
+          attachment_type: AttachmentType;
+          file_url: string | null;
+          file_name: string | null;
+          file_size: number | null;
+          mime_type: string | null;
+          link_url: string | null;
+          link_title: string | null;
+          link_description: string | null;
+          link_image_url: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          attachment_type: AttachmentType;
+          file_url?: string | null;
+          file_name?: string | null;
+          file_size?: number | null;
+          mime_type?: string | null;
+          link_url?: string | null;
+          link_title?: string | null;
+          link_description?: string | null;
+          link_image_url?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          attachment_type?: AttachmentType;
+          file_url?: string | null;
+          file_name?: string | null;
+          file_size?: number | null;
+          mime_type?: string | null;
+          link_url?: string | null;
+          link_title?: string | null;
+          link_description?: string | null;
+          link_image_url?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      post_reactions: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          reaction_type: ReactionType;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          reaction_type: ReactionType;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+          reaction_type?: ReactionType;
+          created_at?: string;
+        };
+      };
+      post_comments: {
+        Row: {
+          id: string;
+          post_id: string;
+          author_id: string;
+          content: string;
+          parent_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          author_id: string;
+          content: string;
+          parent_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          author_id?: string;
+          content?: string;
+          parent_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      comment_reactions: {
+        Row: {
+          id: string;
+          comment_id: string;
+          user_id: string;
+          reaction_type: ReactionType;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          comment_id: string;
+          user_id: string;
+          reaction_type: ReactionType;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          comment_id?: string;
+          user_id?: string;
+          reaction_type?: ReactionType;
+          created_at?: string;
+        };
+      };
+      weekly_roundups: {
+        Row: {
+          id: string;
+          week_start: string;
+          week_end: string;
+          title: string;
+          summary: string | null;
+          post_ids: string[];
+          pinned_until: string | null;
+          generated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          week_start: string;
+          week_end: string;
+          title: string;
+          summary?: string | null;
+          post_ids?: string[];
+          pinned_until?: string | null;
+          generated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          week_start?: string;
+          week_end?: string;
+          title?: string;
+          summary?: string | null;
+          post_ids?: string[];
+          pinned_until?: string | null;
+          generated_at?: string;
+          created_at?: string;
+        };
+      };
       course_enrollments: {
         Row: {
           id: string;
@@ -328,6 +519,14 @@ export interface Database {
         };
         Returns: boolean;
       };
+      generate_weekly_roundup: {
+        Args: Record<PropertyKey, never>;
+        Returns: void;
+      };
+      unpin_expired_roundups: {
+        Args: Record<PropertyKey, never>;
+        Returns: void;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums
@@ -367,4 +566,33 @@ export interface CourseWithEnrollment extends Course {
 
 export interface EnrollmentWithCourse extends CourseEnrollment {
   course: Course;
+}
+
+// News feed types
+export type Post = Database["public"]["Tables"]["posts"]["Row"];
+export type PostAttachment = Database["public"]["Tables"]["post_attachments"]["Row"];
+export type PostReaction = Database["public"]["Tables"]["post_reactions"]["Row"];
+export type PostComment = Database["public"]["Tables"]["post_comments"]["Row"];
+export type CommentReaction = Database["public"]["Tables"]["comment_reactions"]["Row"];
+export type WeeklyRoundup = Database["public"]["Tables"]["weekly_roundups"]["Row"];
+
+export type PostAuthor = Pick<Profile, "id" | "full_name" | "preferred_name" | "avatar_url" | "job_title">;
+export type CommentAuthor = Pick<Profile, "id" | "full_name" | "preferred_name" | "avatar_url">;
+
+export interface CommentWithAuthor extends PostComment {
+  author: CommentAuthor;
+  reactions: CommentReaction[];
+  reaction_counts: Record<ReactionType, number>;
+  user_reaction: ReactionType | null;
+  replies: CommentWithAuthor[];
+}
+
+export interface PostWithRelations extends Post {
+  author: PostAuthor;
+  attachments: PostAttachment[];
+  reactions: PostReaction[];
+  comments: CommentWithAuthor[];
+  reaction_counts: Record<ReactionType, number>;
+  user_reaction: ReactionType | null;
+  comment_count: number;
 }
