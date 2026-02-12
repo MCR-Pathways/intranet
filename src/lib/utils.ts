@@ -64,3 +64,26 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
+
+/**
+ * Formats a duration in minutes into a human-readable string.
+ * "short" → "45 min", "2h 30m"  (for list views)
+ * "long"  → "2 hours 30 minutes" (for detail views)
+ */
+export function formatDuration(
+  minutes: number | null,
+  style: "short" | "long" = "short"
+): string {
+  if (!minutes) return "Self-paced";
+  if (style === "long") {
+    if (minutes < 60) return `${minutes} minutes`;
+    const hours = Math.floor(minutes / 60);
+    const rem = minutes % 60;
+    const hourStr = `${hours} hour${hours > 1 ? "s" : ""}`;
+    return rem > 0 ? `${hourStr} ${rem} minutes` : hourStr;
+  }
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
+}

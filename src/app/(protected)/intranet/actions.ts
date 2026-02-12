@@ -32,6 +32,20 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
+// ─── Weekly Roundup Types ─────────────────────────────────────────────
+
+/** Base fields shared by all weekly roundup responses */
+type WeeklyRoundupBase = {
+  id: string;
+  title: string;
+  summary: string | null;
+  week_start: string;
+  week_end: string;
+};
+
+type ActiveRoundup = WeeklyRoundupBase & { pinned_until: string | null };
+type RoundupListItem = WeeklyRoundupBase & { created_at: string };
+
 // ─── SSRF Protection ──────────────────────────────────────────────────
 
 /**
@@ -172,7 +186,8 @@ export async function fetchPostsWithClient(
     )
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
-    // Fetch pageSize + 1 records (range is inclusive) to detect if more pages exist
+    // Supabase .range() is inclusive on both ends: range(0, 10) returns rows 0..10 = 11 rows.
+    // We request pageSize+1 rows to detect whether another page exists beyond this one.
     .range(offset, offset + pageSize);
 
   if (postsError || !posts) {
@@ -290,7 +305,7 @@ export async function fetchPostsWithClient(
 export async function fetchActiveRoundupWithClient(
   supabase: SupabaseClient
 ): Promise<{
-  roundup: { id: string; title: string; summary: string | null; week_start: string; week_end: string; pinned_until: string | null } | null;
+  roundup: ActiveRoundup | null;
   error: string | null;
 }> {
   const { data: roundup } = await supabase
@@ -310,7 +325,7 @@ export async function fetchActiveRoundupWithClient(
 export async function fetchWeeklyRoundupsWithClient(
   supabase: SupabaseClient
 ): Promise<{
-  roundups: { id: string; title: string; summary: string | null; week_start: string; week_end: string; created_at: string }[];
+  roundups: RoundupListItem[];
   error: string | null;
 }> {
   const { data: roundups, error } = await supabase
@@ -334,7 +349,7 @@ export async function fetchRoundupPostsWithClient(
   userId: string,
   roundupId: string
 ): Promise<{
-  roundup: { id: string; title: string; summary: string | null; week_start: string; week_end: string } | null;
+  roundup: WeeklyRoundupBase | null;
   posts: PostWithRelations[];
   error: string | null;
 }> {
@@ -551,7 +566,6 @@ export async function createPost(data: {
       .insert(attachments);
 
     if (attError) {
-      console.error("Error inserting attachments:", attError);
       revalidatePath("/intranet");
       return {
         success: true,
@@ -1024,7 +1038,7 @@ export async function fetchLinkPreview(
 // ─── Weekly Round Up ─────────────────────────────────────────────────
 
 export async function getActiveRoundup(): Promise<{
-  roundup: { id: string; title: string; summary: string | null; week_start: string; week_end: string; pinned_until: string | null } | null;
+  roundup: ActiveRoundup | null;
   error: string | null;
 }> {
   const { supabase, user } = await getCurrentUser();
@@ -1037,7 +1051,7 @@ export async function getActiveRoundup(): Promise<{
 }
 
 export async function getWeeklyRoundups(): Promise<{
-  roundups: { id: string; title: string; summary: string | null; week_start: string; week_end: string; created_at: string }[];
+  roundups: RoundupListItem[];
   error: string | null;
 }> {
   const { supabase, user } = await getCurrentUser();
@@ -1052,7 +1066,7 @@ export async function getWeeklyRoundups(): Promise<{
 export async function getRoundupPosts(
   roundupId: string
 ): Promise<{
-  roundup: { id: string; title: string; summary: string | null; week_start: string; week_end: string } | null;
+  roundup: WeeklyRoundupBase | null;
   posts: PostWithRelations[];
   error: string | null;
 }> {

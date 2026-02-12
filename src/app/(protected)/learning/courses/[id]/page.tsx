@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { Course, CourseCategory, CourseEnrollment } from "@/types/database.types";
+import { formatDuration } from "@/lib/utils";
 import { EnrollButton } from "./enroll-button";
 import { UpdateProgressButton } from "./update-progress-button";
 
@@ -26,14 +27,6 @@ const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shiel
   upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600", bgColor: "bg-blue-50" },
   soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600", bgColor: "bg-purple-50" },
 };
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes) return "Self-paced";
-  if (minutes < 60) return `${minutes} minutes`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours} hour${hours > 1 ? "s" : ""} ${remainingMinutes} minutes` : `${hours} hour${hours > 1 ? "s" : ""}`;
-}
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "N/A";
@@ -230,7 +223,7 @@ export default async function CourseDetailPage({
               <div>
                 <p className="font-medium">Duration</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDuration(course.duration_minutes)}
+                  {formatDuration(course.duration_minutes, "long")}
                 </p>
               </div>
             </div>

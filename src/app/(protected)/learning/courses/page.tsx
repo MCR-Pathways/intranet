@@ -15,20 +15,13 @@ import {
   BookOpen,
 } from "lucide-react";
 import type { Course, CourseCategory, CourseEnrollment } from "@/types/database.types";
+import { formatDuration } from "@/lib/utils";
 
 const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string }> = {
   compliance: { label: "Compliance", icon: Shield, color: "text-red-600" },
   upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600" },
   soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600" },
 };
-
-function formatDuration(minutes: number | null): string {
-  if (!minutes) return "Self-paced";
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-}
 
 function CourseCard({
   course,
