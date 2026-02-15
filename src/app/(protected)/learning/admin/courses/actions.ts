@@ -241,15 +241,15 @@ export async function reorderLessons(
 ) {
   const { supabase } = await requireLDAdmin();
 
-  for (const { id, sort_order } of lessonOrders) {
-    const { error } = await supabase
-      .from("course_lessons")
-      .update({ sort_order })
-      .eq("id", id);
+  const results = await Promise.all(
+    lessonOrders.map(({ id, sort_order }) =>
+      supabase.from("course_lessons").update({ sort_order }).eq("id", id)
+    )
+  );
 
-    if (error) {
-      return { success: false, error: error.message };
-    }
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    return { success: false, error: failed.error.message };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);

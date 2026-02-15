@@ -647,6 +647,14 @@ export interface Database {
         Args: Record<PropertyKey, never>;
         Returns: void;
       };
+      complete_lesson_and_update_progress: {
+        Args: {
+          p_user_id: string;
+          p_lesson_id: string;
+          p_course_id: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums

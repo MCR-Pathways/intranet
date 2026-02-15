@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { completeLesson } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -17,6 +17,7 @@ export function MarkCompleteButton({
   isCompleted,
 }: MarkCompleteButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   if (isCompleted) {
     return (
@@ -28,25 +29,36 @@ export function MarkCompleteButton({
   }
 
   return (
-    <Button
-      onClick={() =>
-        startTransition(async () => {
-          await completeLesson(lessonId, courseId);
-        })
-      }
-      disabled={isPending}
-    >
-      {isPending ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          Marking...
-        </>
-      ) : (
-        <>
-          <CheckCircle2 className="h-4 w-4 mr-2" />
-          Mark as Complete
-        </>
+    <div className="flex flex-col items-center gap-1">
+      <Button
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            const result = await completeLesson(lessonId, courseId);
+            if (!result.success) {
+              setError(
+                result.error ?? "Failed to mark complete. Please try again."
+              );
+            }
+          })
+        }
+        disabled={isPending}
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Marking...
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Mark as Complete
+          </>
+        )}
+      </Button>
+      {error && (
+        <p className="text-sm text-destructive text-center mt-1">{error}</p>
       )}
-    </Button>
+    </div>
   );
 }

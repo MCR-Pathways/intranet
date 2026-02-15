@@ -29,28 +29,31 @@ export default async function CourseDetailPage({
     notFound();
   }
 
-  const { data: lessons } = await supabase
-    .from("course_lessons")
-    .select(
-      "id, course_id, title, content, video_url, sort_order, is_active, created_at, updated_at"
-    )
-    .eq("course_id", id)
-    .order("sort_order");
-
-  const { data: enrollments } = await supabase
-    .from("course_enrollments")
-    .select("id, user_id, status, progress_percent, completed_at, due_date")
-    .eq("course_id", id);
-
-  const { data: assignments } = await supabase
-    .from("course_assignments")
-    .select("id, course_id, assign_type, assign_value, assigned_by, created_at")
-    .eq("course_id", id);
-
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, name")
-    .order("name");
+  const [
+    { data: lessons },
+    { data: enrollments },
+    { data: assignments },
+    { data: teams },
+  ] = await Promise.all([
+    supabase
+      .from("course_lessons")
+      .select(
+        "id, course_id, title, content, video_url, sort_order, is_active, created_at, updated_at"
+      )
+      .eq("course_id", id)
+      .order("sort_order"),
+    supabase
+      .from("course_enrollments")
+      .select("id, user_id, status, progress_percent, completed_at, due_date")
+      .eq("course_id", id),
+    supabase
+      .from("course_assignments")
+      .select(
+        "id, course_id, assign_type, assign_value, assigned_by, created_at"
+      )
+      .eq("course_id", id),
+    supabase.from("teams").select("id, name").order("name"),
+  ]);
 
   return (
     <div className="space-y-6">
