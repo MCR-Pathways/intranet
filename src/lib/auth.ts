@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_line_manager, job_title, induction_completed_at, last_sign_in_date";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, induction_completed_at, last_sign_in_date";
 
 /**
  * Get the current authenticated user and their profile.
@@ -55,6 +55,34 @@ export async function requireHRAdmin() {
 
   if (!profile?.is_hr_admin) {
     throw new Error("Unauthorized: HR admin access required");
+  }
+
+  return { supabase, user };
+}
+
+/**
+ * Require the current user to be an authenticated L&D admin.
+ * Throws if not authenticated or not an L&D admin.
+ * Returns the supabase client and user for further queries.
+ */
+export async function requireLDAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_ld_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_ld_admin) {
+    throw new Error("Unauthorized: L&D admin access required");
   }
 
   return { supabase, user };

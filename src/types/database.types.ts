@@ -46,6 +46,7 @@ export interface Database {
           start_date: string | null;
           is_line_manager: boolean;
           is_hr_admin: boolean;
+          is_ld_admin: boolean;
           line_manager_id: string | null;
           team_id: string | null;
           google_calendar_connected: boolean;
@@ -69,6 +70,7 @@ export interface Database {
           start_date?: string | null;
           is_line_manager?: boolean;
           is_hr_admin?: boolean;
+          is_ld_admin?: boolean;
           line_manager_id?: string | null;
           team_id?: string | null;
           google_calendar_connected?: boolean;
@@ -92,6 +94,7 @@ export interface Database {
           start_date?: string | null;
           is_line_manager?: boolean;
           is_hr_admin?: boolean;
+          is_ld_admin?: boolean;
           line_manager_id?: string | null;
           team_id?: string | null;
           google_calendar_connected?: boolean;
@@ -493,6 +496,87 @@ export interface Database {
           updated_at?: string;
         };
       };
+      course_lessons: {
+        Row: {
+          id: string;
+          course_id: string;
+          title: string;
+          content: string | null;
+          video_url: string | null;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          title: string;
+          content?: string | null;
+          video_url?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          course_id?: string;
+          title?: string;
+          content?: string | null;
+          video_url?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      lesson_completions: {
+        Row: {
+          id: string;
+          user_id: string;
+          lesson_id: string;
+          completed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          lesson_id: string;
+          completed_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          lesson_id?: string;
+          completed_at?: string;
+        };
+      };
+      course_assignments: {
+        Row: {
+          id: string;
+          course_id: string;
+          assign_type: string;
+          assign_value: string;
+          assigned_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          assign_type: string;
+          assign_value: string;
+          assigned_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          course_id?: string;
+          assign_type?: string;
+          assign_value?: string;
+          assigned_by?: string | null;
+          created_at?: string;
+        };
+      };
       sign_ins: {
         Row: {
           id: string;
@@ -528,6 +612,10 @@ export interface Database {
     };
     Functions: {
       is_hr_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_ld_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
@@ -578,6 +666,9 @@ export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ManagerTeam = Database["public"]["Tables"]["manager_teams"]["Row"];
 export type Course = Database["public"]["Tables"]["courses"]["Row"];
 export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"]["Row"];
+export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"];
+export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
+export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
 export type InductionProgress = Database["public"]["Tables"]["induction_progress"]["Row"];
 
 // Extended types with relations

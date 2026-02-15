@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogClose,
 } from "@/components/ui/alert-dialog";
-import { Search, Pencil, CheckCircle, RotateCcw, Shield } from "lucide-react";
+import { Search, Pencil, CheckCircle, RotateCcw, Shield, GraduationCap } from "lucide-react";
 import type { Profile } from "@/types/database.types";
 
 const statusVariants: Record<string, "success" | "destructive" | "warning"> = {
@@ -163,6 +163,9 @@ export function UserTable({ profiles }: UserTableProps) {
                         </div>
                         {profile.is_hr_admin && (
                           <Shield className="h-3.5 w-3.5 text-primary" />
+                        )}
+                        {profile.is_ld_admin && (
+                          <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
                         )}
                       </div>
                     </td>

@@ -23,7 +23,7 @@ interface NavItem {
   children?: { name: string; href: string }[];
 }
 
-function getNavigation(isHRAdmin: boolean): NavItem[] {
+function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
   const hrChildren = [
     { name: "My Profile", href: "/hr/profile" },
     { name: "Org Chart", href: "/hr/org-chart" },
@@ -66,6 +66,12 @@ function getNavigation(isHRAdmin: boolean): NavItem[] {
         { name: "Compliance", href: "/learning/courses/compliance" },
         { name: "Upskilling", href: "/learning/courses/upskilling" },
         { name: "Tool Shed", href: "/learning/tool-shed" },
+        ...(isLDAdmin
+          ? [
+              { name: "Course Management", href: "/learning/admin/courses" },
+              { name: "Reports", href: "/learning/admin/reports" },
+            ]
+          : []),
       ],
     },
     { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
@@ -95,7 +101,7 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
     return allowedTypes.includes(profile.user_type);
   };
 
-  const navigation = getNavigation(profile?.is_hr_admin ?? false);
+  const navigation = getNavigation(profile?.is_hr_admin ?? false, profile?.is_ld_admin ?? false);
 
   // Filter navigation based on user permissions
   const filteredNav = navigation.filter(
