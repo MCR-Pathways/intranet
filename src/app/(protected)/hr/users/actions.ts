@@ -11,6 +11,7 @@ export async function updateUserProfile(
     user_type?: string;
     status?: string;
     is_hr_admin?: boolean;
+    is_ld_admin?: boolean;
     is_line_manager?: boolean;
   }
 ) {
@@ -23,6 +24,7 @@ export async function updateUserProfile(
     "user_type",
     "status",
     "is_hr_admin",
+    "is_ld_admin",
     "is_line_manager",
   ] as const;
 

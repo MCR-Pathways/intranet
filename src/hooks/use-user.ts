@@ -12,6 +12,7 @@ interface UseUserReturn {
   error: Error | null;
   isStaff: boolean;
   isHRAdmin: boolean;
+  isLDAdmin: boolean;
   isLineManager: boolean;
   hasModuleAccess: (module: string) => boolean;
   signOut: () => Promise<void>;
@@ -97,6 +98,7 @@ export function useUser(): UseUserReturn {
 
   const isStaff = profile?.user_type === "staff";
   const isHRAdmin = profile?.is_hr_admin ?? false;
+  const isLDAdmin = profile?.is_ld_admin ?? false;
   const isLineManager = profile?.is_line_manager ?? false;
 
   const hasModuleAccess = (module: string): boolean => {
@@ -124,6 +126,7 @@ export function useUser(): UseUserReturn {
     error,
     isStaff,
     isHRAdmin,
+    isLDAdmin,
     isLineManager,
     hasModuleAccess,
     signOut,

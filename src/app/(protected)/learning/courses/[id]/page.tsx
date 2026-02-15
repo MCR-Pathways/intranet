@@ -17,10 +17,11 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import type { Course, CourseCategory, CourseEnrollment } from "@/types/database.types";
+import type { Course, CourseCategory, CourseEnrollment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { EnrollButton } from "./enroll-button";
 import { UpdateProgressButton } from "./update-progress-button";
+import { LessonList } from "./lesson-list";
 
 const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string; bgColor: string }> = {
   compliance: { label: "Compliance", icon: Shield, color: "text-red-600", bgColor: "bg-red-50" },
@@ -53,7 +54,7 @@ export default async function CourseDetailPage({
   // Fetch course details
   const { data: courseData, error } = await supabase
     .from("courses")
-    .select("*")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, created_at, updated_at")
     .eq("id", id)
     .eq("is_active", true)
     .single();
@@ -67,12 +68,36 @@ export default async function CourseDetailPage({
   // Fetch user's enrollment for this course
   const { data: enrollmentData } = await supabase
     .from("course_enrollments")
-    .select("*")
+    .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
     .eq("user_id", user.id)
     .eq("course_id", id)
     .single();
 
   const enrollment = enrollmentData as CourseEnrollment | null;
+
+  // Fetch lessons for this course
+  const { data: lessonsData } = await supabase
+    .from("course_lessons")
+    .select("id, course_id, title, content, video_url, sort_order, is_active, created_at, updated_at")
+    .eq("course_id", id)
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const lessons = (lessonsData as CourseLesson[]) ?? [];
+
+  // Fetch user's lesson completions if they have lessons
+  const lessonIds = lessons.map((l) => l.id);
+  let completedLessonIds: string[] = [];
+  if (lessonIds.length > 0) {
+    const { data: completions } = await supabase
+      .from("lesson_completions")
+      .select("lesson_id")
+      .eq("user_id", user.id)
+      .in("lesson_id", lessonIds);
+    completedLessonIds = completions?.map((c) => c.lesson_id) ?? [];
+  }
+
+  const hasLessons = lessons.length > 0;
 
   const config = categoryConfig[course.category];
   const Icon = config.icon;
@@ -179,7 +204,7 @@ export default async function CourseDetailPage({
 
             {/* Action buttons */}
             {!isEnrolled ? (
-              <EnrollButton courseId={course.id} userId={user.id} />
+              <EnrollButton courseId={course.id} />
             ) : isCompleted ? (
               <div className="space-y-2">
                 {course.content_url && (
@@ -302,6 +327,16 @@ export default async function CourseDetailPage({
           </Card>
         )}
       </div>
+
+      {/* Lessons section */}
+      {hasLessons && (
+        <LessonList
+          courseId={course.id}
+          lessons={lessons}
+          completedLessonIds={completedLessonIds}
+          isEnrolled={isEnrolled}
+        />
+      )}
     </div>
   );
 }
