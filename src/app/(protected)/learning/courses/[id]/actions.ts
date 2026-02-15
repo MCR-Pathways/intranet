@@ -43,74 +43,19 @@ export async function completeLesson(lessonId: string, courseId: string) {
     throw new Error("Not authenticated");
   }
 
-  // Insert lesson completion (ignore duplicate)
-  const { error } = await supabase.from("lesson_completions").insert({
-    user_id: user.id,
-    lesson_id: lessonId,
-  });
+  // Use atomic RPC to insert completion and update progress in a single transaction
+  const { data: progressPercent, error } = await supabase.rpc(
+    "complete_lesson_and_update_progress",
+    {
+      p_user_id: user.id,
+      p_lesson_id: lessonId,
+      p_course_id: courseId,
+    }
+  );
 
-  if (error && error.code !== "23505") {
-    return { success: false, error: error.message };
+  if (error) {
+    return { success: false, error: error.message, progressPercent: null };
   }
-
-  // Get total active lessons for this course
-  const { data: totalLessons } = await supabase
-    .from("course_lessons")
-    .select("id")
-    .eq("course_id", courseId)
-    .eq("is_active", true);
-
-  // Get user's completions for this course's lessons
-  const lessonIds = totalLessons?.map((l) => l.id) ?? [];
-
-  let completedCount = 0;
-  if (lessonIds.length > 0) {
-    const { data: completedLessons } = await supabase
-      .from("lesson_completions")
-      .select("id, lesson_id")
-      .eq("user_id", user.id)
-      .in("lesson_id", lessonIds);
-
-    completedCount = completedLessons?.length ?? 0;
-  }
-
-  const totalCount = lessonIds.length;
-  const progressPercent =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const isCompleted = progressPercent === 100;
-  const now = new Date().toISOString();
-
-  // Update enrollment progress
-  const updateData: Record<string, unknown> = {
-    progress_percent: progressPercent,
-    status: isCompleted
-      ? "completed"
-      : progressPercent > 0
-        ? "in_progress"
-        : "enrolled",
-  };
-
-  if (isCompleted) {
-    updateData.completed_at = now;
-  }
-
-  // Set started_at only if not already set
-  const { data: currentEnrollment } = await supabase
-    .from("course_enrollments")
-    .select("started_at")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .single();
-
-  if (currentEnrollment && !currentEnrollment.started_at) {
-    updateData.started_at = now;
-  }
-
-  await supabase
-    .from("course_enrollments")
-    .update(updateData)
-    .eq("user_id", user.id)
-    .eq("course_id", courseId);
 
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath("/learning");

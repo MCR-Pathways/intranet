@@ -12,7 +12,22 @@ interface ReportFilters {
 export async function exportReportCSV(filters: ReportFilters) {
   const { supabase } = await requireLDAdmin();
 
-  // Build enrollment query with profile joins
+  // If profile-level filters exist, resolve matching user IDs at the DB level
+  let userIdFilter: string[] | null = null;
+  if (filters.teamId || filters.userType) {
+    let profileQuery = supabase.from("profiles").select("id");
+    if (filters.teamId)
+      profileQuery = profileQuery.eq("team_id", filters.teamId);
+    if (filters.userType)
+      profileQuery = profileQuery.eq("user_type", filters.userType);
+    const { data: matchedProfiles } = await profileQuery;
+    userIdFilter = matchedProfiles?.map((p) => p.id) ?? [];
+    if (userIdFilter.length === 0) {
+      return { success: false, error: "No data to export", csv: null };
+    }
+  }
+
+  // Build enrollment query with all filters applied at DB level
   let query = supabase
     .from("course_enrollments")
     .select(
@@ -25,6 +40,9 @@ export async function exportReportCSV(filters: ReportFilters) {
   if (filters.status) {
     query = query.eq("status", filters.status);
   }
+  if (userIdFilter) {
+    query = query.in("user_id", userIdFilter);
+  }
 
   const { data: enrollments, error: enrollError } = await query;
 
@@ -36,43 +54,26 @@ export async function exportReportCSV(filters: ReportFilters) {
     return { success: false, error: "No data to export", csv: null };
   }
 
-  // Get user profiles
+  // Get user profiles and courses for the filtered enrollments
   const userIds = [...new Set(enrollments.map((e) => e.user_id))];
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, user_type, team_id")
-    .in("id", userIds);
-
-  // Get courses
   const courseIds = [...new Set(enrollments.map((e) => e.course_id))];
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("id, title, category")
-    .in("id", courseIds);
 
-  // Get teams for filtering
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, name");
+  const [{ data: profiles }, { data: courses }, { data: teams }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, user_type, team_id")
+        .in("id", userIds),
+      supabase
+        .from("courses")
+        .select("id, title, category")
+        .in("id", courseIds),
+      supabase.from("teams").select("id, name"),
+    ]);
 
   const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
   const courseMap = new Map(courses?.map((c) => [c.id, c]) ?? []);
   const teamMap = new Map(teams?.map((t) => [t.id, t]) ?? []);
-
-  // Apply profile-level filters
-  let filteredEnrollments = enrollments;
-  if (filters.teamId) {
-    filteredEnrollments = filteredEnrollments.filter((e) => {
-      const profile = profileMap.get(e.user_id);
-      return profile?.team_id === filters.teamId;
-    });
-  }
-  if (filters.userType) {
-    filteredEnrollments = filteredEnrollments.filter((e) => {
-      const profile = profileMap.get(e.user_id);
-      return profile?.user_type === filters.userType;
-    });
-  }
 
   // Build CSV
   const headers = [
@@ -90,7 +91,7 @@ export async function exportReportCSV(filters: ReportFilters) {
     "Due Date",
   ];
 
-  const rows = filteredEnrollments.map((e) => {
+  const rows = enrollments.map((e) => {
     const profile = profileMap.get(e.user_id);
     const course = courseMap.get(e.course_id);
     const team = profile?.team_id ? teamMap.get(profile.team_id) : null;

@@ -98,13 +98,14 @@ export default async function LessonPage({
         </h1>
 
         {/* Video embed */}
-        {lesson.video_url && (
+        {lesson.video_url && getEmbedUrl(lesson.video_url) && (
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="aspect-video">
                 <iframe
                   src={getEmbedUrl(lesson.video_url)}
                   className="w-full h-full rounded-lg"
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
                   allowFullScreen
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 />
@@ -173,6 +174,16 @@ export default async function LessonPage({
 
 /** Convert YouTube/Vimeo URLs to embeddable URLs */
 function getEmbedUrl(url: string): string {
+  // Protocol validation — only allow http/https
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return "";
+    }
+  } catch {
+    return "";
+  }
+
   // YouTube
   const ytMatch = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/
@@ -187,6 +198,6 @@ function getEmbedUrl(url: string): string {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
   }
 
-  // Return as-is for other URLs
+  // Return as-is for other URLs (already validated as http/https)
   return url;
 }
