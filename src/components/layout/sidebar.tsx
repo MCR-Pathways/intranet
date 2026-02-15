@@ -164,10 +164,9 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
                   <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-border pl-3">
                     {item.children.map((child) => {
                       const isChildActive =
-                        child.href === item.href
-                          ? pathname === child.href
-                          : pathname === child.href ||
-                            pathname.startsWith(child.href + "/");
+                        pathname === child.href ||
+                        (child.href !== item.href &&
+                          pathname.startsWith(child.href + "/"));
 
                       return (
                         <Link
