@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
   // Fetch user profile for permission checks
   const { data: profile } = await supabase
     .from("profiles")
-    .select("user_type, induction_completed_at, status")
+    .select("user_type, induction_completed_at, status, last_sign_in_date")
     .eq("id", user.id)
     .single();
 

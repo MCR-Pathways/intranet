@@ -31,11 +31,20 @@ interface Notification {
   created_at: string;
 }
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  initialNotifications?: Notification[];
+}
+
+export function NotificationBell({ initialNotifications }: NotificationBellProps) {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const hasInitialData = initialNotifications !== undefined;
+  const [notifications, setNotifications] = useState<Notification[]>(
+    initialNotifications ?? []
+  );
+  const [unreadCount, setUnreadCount] = useState(
+    initialNotifications?.filter((n) => !n.is_read).length ?? 0
+  );
+  const [isLoading, setIsLoading] = useState(!hasInitialData);
 
   const fetchNotifications = useCallback(async () => {
     const { notifications: data, error } = await getNotifications();
@@ -53,10 +62,22 @@ export function NotificationBell() {
     setIsLoading(false);
   }, []);
 
+  // Sync state when server-provided notifications change (e.g. after revalidatePath)
+  /* eslint-disable react-hooks/set-state-in-effect -- syncing server props to client state */
+  useEffect(() => {
+    if (initialNotifications === undefined) return;
+    setNotifications(initialNotifications);
+    setUnreadCount(initialNotifications.filter((n) => !n.is_read).length);
+    setIsLoading(false);
+  }, [initialNotifications]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Only fetch client-side if no server data was provided
   /* eslint-disable react-hooks/set-state-in-effect -- legitimate data-fetching-on-mount pattern */
   useEffect(() => {
+    if (hasInitialData) return;
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, [fetchNotifications, hasInitialData]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleMarkAllRead = async () => {

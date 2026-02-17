@@ -7,13 +7,26 @@ import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 
+interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
 interface AppLayoutProps {
   children: React.ReactNode;
   user: User;
   profile: Profile | null;
+  needsSignIn?: boolean;
+  initialNotifications?: NotificationData[];
 }
 
-export function AppLayout({ children, user, profile }: AppLayoutProps) {
+export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -21,6 +34,8 @@ export function AppLayout({ children, user, profile }: AppLayoutProps) {
       <Header
         user={user}
         profile={profile}
+        needsSignIn={needsSignIn}
+        initialNotifications={initialNotifications}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 

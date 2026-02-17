@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_line_manager, job_title, induction_completed_at";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_line_manager, job_title, induction_completed_at, last_sign_in_date";
 
 /**
  * Get the current authenticated user and their profile.
