@@ -52,6 +52,7 @@ export interface Database {
           google_refresh_token: string | null;
           induction_completed_at: string | null;
           last_sign_in_at: string | null;
+          last_sign_in_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -74,6 +75,7 @@ export interface Database {
           google_refresh_token?: string | null;
           induction_completed_at?: string | null;
           last_sign_in_at?: string | null;
+          last_sign_in_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -96,6 +98,7 @@ export interface Database {
           google_refresh_token?: string | null;
           induction_completed_at?: string | null;
           last_sign_in_at?: string | null;
+          last_sign_in_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -490,6 +493,35 @@ export interface Database {
           updated_at?: string;
         };
       };
+      sign_ins: {
+        Row: {
+          id: string;
+          user_id: string;
+          sign_in_date: string;
+          location: WorkLocation;
+          other_location: string | null;
+          signed_in_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          sign_in_date?: string;
+          location: WorkLocation;
+          other_location?: string | null;
+          signed_in_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          sign_in_date?: string;
+          location?: WorkLocation;
+          other_location?: string | null;
+          signed_in_at?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -566,6 +598,24 @@ export interface CourseWithEnrollment extends Course {
 
 export interface EnrollmentWithCourse extends CourseEnrollment {
   course: Course;
+}
+
+// Sign-in types
+export type SignIn = Database["public"]["Tables"]["sign_ins"]["Row"];
+
+export interface TeamMemberSignInEntry {
+  location: string;
+  other_location: string | null;
+  signed_in_at: string;
+}
+
+export interface TeamMemberSignIn {
+  id: string;
+  full_name: string;
+  preferred_name: string | null;
+  avatar_url: string | null;
+  job_title: string | null;
+  sign_ins: TeamMemberSignInEntry[];
 }
 
 // News feed types

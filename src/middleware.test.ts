@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
  *   - The Supabase client used for profile fetching
  *
  * The middleware then uses the returned supabase client to call:
- *   supabase.from("profiles").select("user_type, induction_completed_at, status")
+ *   supabase.from("profiles").select("user_type, induction_completed_at, status, last_sign_in_date")
  *     .eq("id", user.id).single()
  */
 
@@ -32,6 +32,16 @@ vi.mock("@/lib/supabase/middleware", () => ({
 
 import { middleware } from "@/middleware";
 
+/** Today's date in YYYY-MM-DD format (matches middleware logic) */
+const TODAY = new Date().toISOString().split("T")[0];
+
+/** Yesterday's date in YYYY-MM-DD format */
+const YESTERDAY = (() => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split("T")[0];
+})();
+
 /** Helper: create a NextRequest for a given pathname */
 function createRequest(pathname: string): NextRequest {
   return new NextRequest(new URL(pathname, "http://localhost:3000"));
@@ -42,6 +52,7 @@ function mockAuthenticatedUser(profile: {
   user_type: string;
   induction_completed_at: string | null;
   status: string;
+  last_sign_in_date?: string | null;
 }) {
   mockGetUser.mockReturnValue({ id: "user-1" });
   mockSingle.mockResolvedValue({ data: profile, error: null });
@@ -125,6 +136,7 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/hr/users"));
@@ -180,6 +192,7 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/learning"));
@@ -235,12 +248,63 @@ describe("middleware", () => {
     });
   });
 
-  describe("root redirect", () => {
-    it("redirects / to /intranet for active users", async () => {
+  describe("sign-in access", () => {
+    it("allows staff to access /sign-in", async () => {
       mockAuthenticatedUser({
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        last_sign_in_date: null,
+      });
+
+      const response = await middleware(createRequest("/sign-in"));
+      expect(response.status).toBe(200);
+    });
+
+    it("does not force sign-in redirect — staff can access routes without signing in", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: null,
+      });
+
+      const response = await middleware(createRequest("/intranet"));
+      expect(response.status).toBe(200);
+    });
+
+    it("does not force sign-in redirect — staff with yesterday's date can access routes", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: YESTERDAY,
+      });
+
+      const response = await middleware(createRequest("/intranet"));
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe("root redirect", () => {
+    it("redirects / to /intranet for active staff", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: null,
+      });
+
+      const response = await middleware(createRequest("/"));
+      expectRedirectTo(response, "/intranet");
+    });
+
+    it("redirects / to /intranet for active staff with today's sign-in", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/"));
