@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileDown, Loader2, BarChart3, Home, Building2, Globe } from "lucide-react";
+import { FileDown, Loader2, BarChart3, Home, Building2, Globe, AlertTriangle } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
 import { StatsCards } from "./stats-cards";
 import { LocationCharts } from "./location-charts";
@@ -81,6 +81,7 @@ export function ReportsPanel() {
   const [signIns, setSignIns] = useState<SignInEntry[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -97,6 +98,7 @@ export function ReportsPanel() {
       } else {
         setSignIns(result.data);
         setMembers(result.members);
+        setTruncated(result.truncated ?? false);
         setHasLoaded(true);
       }
     });
@@ -210,6 +212,16 @@ export function ReportsPanel() {
           )}
         </CardContent>
       </Card>
+
+      {/* Truncation warning */}
+      {truncated && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Results were limited to 1,000 entries. Try a shorter date range for complete data.
+          </span>
+        </div>
+      )}
 
       {/* Results */}
       {hasLoaded && (

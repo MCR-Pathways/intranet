@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Home, Building2, Globe, X, Check, Loader2 } from "lucide-react";
@@ -15,6 +16,7 @@ const locations: { id: WorkLocation; name: string; icon: typeof Home }[] = [
 ];
 
 export function SignInBanner() {
+  const pathname = usePathname();
   const [isDismissed, setIsDismissed] = useState(false);
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherLocation, setOtherLocation] = useState("");
@@ -22,7 +24,8 @@ export function SignInBanner() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (isDismissed || isSuccess) return null;
+  // Hide banner when user is already on the sign-in page
+  if (isDismissed || isSuccess || pathname === "/sign-in") return null;
 
   function handleLocationClick(location: WorkLocation) {
     if (location === "other") {

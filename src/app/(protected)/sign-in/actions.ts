@@ -14,6 +14,14 @@ const VALID_LOCATIONS: WorkLocation[] = [
 ];
 
 /**
+ * Get today's date string (YYYY-MM-DD) in UK timezone (Europe/London).
+ * Prevents UTC midnight edge-case: e.g. 11:30 PM BST should still be "today" not "tomorrow".
+ */
+function getUKToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
+/**
  * Record a new working location entry.
  * Multiple entries per day are allowed (e.g. morning at home, afternoon at office).
  * On the first entry of the day, updates the denormalized last_sign_in_date
@@ -45,7 +53,7 @@ export async function recordSignIn(
     return { success: false, error: "Please specify your location" };
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getUKToday();
 
   // Check if this will be the first sign-in of the day (before inserting)
   const { data: existingToday } = await supabase
@@ -72,12 +80,20 @@ export async function recordSignIn(
 
   // On first entry of the day: update denorm column and dismiss notifications
   if (isFirstOfDay) {
-    await supabase
+    const { error: profileError } = await supabase
       .from("profiles")
       .update({ last_sign_in_date: today })
       .eq("id", user.id);
 
-    await dismissSignInReminders(user.id);
+    if (profileError) {
+      console.error("Failed to update last_sign_in_date:", profileError.message);
+    }
+
+    try {
+      await dismissSignInReminders(user.id);
+    } catch (e) {
+      console.error("Failed to dismiss sign-in reminders:", e);
+    }
   }
 
   revalidatePath("/sign-in");
@@ -94,7 +110,7 @@ export async function getTodaySignIns() {
 
   if (!user) return [];
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getUKToday();
 
   const { data } = await supabase
     .from("sign_ins")
@@ -118,7 +134,7 @@ export async function getMonthlyHistory() {
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+  const startDate = thirtyDaysAgo.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 
   const { data } = await supabase
     .from("sign_ins")
@@ -173,7 +189,7 @@ export async function getTeamSignInsToday() {
     return { members: [], error: "Unauthorized" };
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getUKToday();
 
   // Get active direct reports
   const { data: members } = await supabase
@@ -227,7 +243,7 @@ export async function getTeamSignInHistory(filters: {
   const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile?.is_line_manager) {
-    return { data: [], members: [], error: "Unauthorized" };
+    return { data: [], members: [], error: "Unauthorized", truncated: false };
   }
 
   // Get active direct reports
@@ -239,7 +255,7 @@ export async function getTeamSignInHistory(filters: {
     .order("full_name");
 
   if (!members || members.length === 0) {
-    return { data: [], members: [], error: null };
+    return { data: [], members: [], error: null, truncated: false };
   }
 
   const memberIds = members.map((m) => m.id);
@@ -259,16 +275,20 @@ export async function getTeamSignInHistory(filters: {
     query = query.lte("sign_in_date", filters.endDate);
   }
 
-  const { data: signIns, error } = await query.limit(1000);
+  const QUERY_LIMIT = 1000;
+  const { data: signIns, error } = await query.limit(QUERY_LIMIT);
 
   if (error) {
-    return { data: [], members: [], error: error.message };
+    return { data: [], members: [], error: error.message, truncated: false };
   }
 
+  const results = signIns ?? [];
+
   return {
-    data: signIns ?? [],
+    data: results,
     members: members ?? [],
     error: null,
+    truncated: results.length >= QUERY_LIMIT,
   };
 }
 
@@ -286,7 +306,7 @@ export async function checkAndCreateSignInNudge(): Promise<boolean> {
   if (!user || !profile) return false;
   if (profile.user_type !== "staff") return false;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getUKToday();
   if (profile.last_sign_in_date === today) return false;
 
   // User hasn't signed in today — check for existing unread reminder
@@ -299,14 +319,18 @@ export async function checkAndCreateSignInNudge(): Promise<boolean> {
     .limit(1);
 
   if (!existing || existing.length === 0) {
-    // Create notification (only once per day)
-    await createNotification({
-      userId: user.id,
-      type: "sign_in_reminder",
-      title: "Where are you working today?",
-      message: "Please record your working location for today.",
-      link: "/sign-in",
-    });
+    // Create notification (only once per day — idempotent)
+    try {
+      await createNotification({
+        userId: user.id,
+        type: "sign_in_reminder",
+        title: "Where are you working today?",
+        message: "Please record your working location for today.",
+        link: "/sign-in",
+      });
+    } catch (e) {
+      console.error("Failed to create sign-in nudge notification:", e);
+    }
   }
 
   return true;

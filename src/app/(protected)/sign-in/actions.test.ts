@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
+ * Helper: get today's date in UK timezone (mirrors getUKToday() in actions.ts)
+ */
+function getUKToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+}
+
+/**
  * Mock strategy for sign-in actions:
  * - recordSignIn uses createClient() directly (for insert + profile update)
  * - Read actions use getCurrentUser() from @/lib/auth
@@ -185,6 +192,21 @@ describe("Sign-in Actions", () => {
       );
     });
 
+    it("still succeeds when dismissSignInReminders throws", async () => {
+      mockLimit.mockResolvedValue({ data: [] });
+      mockDismissSignInReminders.mockRejectedValue(new Error("Network error"));
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await recordSignIn("home");
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to dismiss sign-in reminders:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+
     it("returns error when insert fails", async () => {
       mockInsert.mockResolvedValue({
         error: { message: "Database error" },
@@ -233,10 +255,11 @@ describe("Sign-in Actions", () => {
     });
 
     it("returns array of today's sign-in records", async () => {
+      const today = getUKToday();
       const signInData = [
         {
           id: "si-1",
-          sign_in_date: new Date().toISOString().split("T")[0],
+          sign_in_date: today,
           location: "home",
           other_location: null,
           signed_in_at: "2024-01-01T09:00:00Z",
@@ -244,7 +267,7 @@ describe("Sign-in Actions", () => {
         },
         {
           id: "si-2",
-          sign_in_date: new Date().toISOString().split("T")[0],
+          sign_in_date: today,
           location: "glasgow_office",
           other_location: null,
           signed_in_at: "2024-01-01T13:00:00Z",
@@ -359,6 +382,7 @@ describe("Sign-in Actions", () => {
         data: [],
         members: [],
         error: "Unauthorized",
+        truncated: false,
       });
     });
   });
@@ -387,7 +411,7 @@ describe("Sign-in Actions", () => {
     });
 
     it("returns false when staff has signed in today", async () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getUKToday();
       mockGetCurrentUser.mockResolvedValue({
         supabase: { from: mockFrom },
         user: { id: "user-1" },
@@ -422,6 +446,32 @@ describe("Sign-in Actions", () => {
           link: "/sign-in",
         })
       );
+    });
+
+    it("returns true even when createNotification throws", async () => {
+      mockLimit.mockResolvedValue({ data: [] });
+      const mockNotifEq3 = vi.fn().mockReturnValue({ limit: mockLimit });
+      const mockNotifEq2 = vi.fn().mockReturnValue({ eq: mockNotifEq3 });
+      const mockNotifEq1 = vi.fn().mockReturnValue({ eq: mockNotifEq2 });
+      mockSelect.mockReturnValue({ eq: mockNotifEq1 });
+      mockFrom.mockReturnValue({ select: mockSelect });
+
+      mockGetCurrentUser.mockResolvedValue({
+        supabase: { from: mockFrom },
+        user: { id: "user-1" },
+        profile: { user_type: "staff", last_sign_in_date: null },
+      });
+
+      mockCreateNotification.mockRejectedValue(new Error("Service unavailable"));
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await checkAndCreateSignInNudge();
+      expect(result).toBe(true);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to create sign-in nudge notification:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
     });
 
     it("does not create duplicate notification", async () => {

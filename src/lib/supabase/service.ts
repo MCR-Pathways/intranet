@@ -8,8 +8,12 @@ import { createClient } from "@supabase/supabase-js";
  * NEVER import this in client components or expose the service role key.
  */
 export function createServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase service role environment variables");
+  }
+
+  return createClient(url, key);
 }
