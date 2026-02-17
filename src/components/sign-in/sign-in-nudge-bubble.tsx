@@ -55,12 +55,18 @@ export function SignInNudgeBubble() {
   }
 
   return (
-    <div className="absolute top-full right-0 mt-2 z-50">
-      {/* Speech bubble arrow — shadow creates the border effect, bg-card covers card border */}
-      <div className="absolute -top-[6px] right-[13px] z-10 w-4 h-4 rotate-45 bg-card shadow-[-1px_-1px_0_0_var(--color-border)]" />
+    <div
+      className="absolute top-full right-0 mt-2 z-50"
+      style={{
+        filter:
+          "drop-shadow(0 0 1px var(--border)) drop-shadow(0 10px 15px rgb(0 0 0 / 0.1)) drop-shadow(0 4px 6px rgb(0 0 0 / 0.05))",
+      }}
+    >
+      {/* Speech bubble arrow — no border/shadow needed, drop-shadow on wrapper traces the whole shape */}
+      <div className="absolute -top-[6px] right-[13px] w-4 h-4 rotate-45 bg-card" />
 
-      {/* Bubble content */}
-      <div className="relative w-80 rounded-2xl bg-card border border-border shadow-xl">
+      {/* Bubble content — no border/shadow, handled by wrapper drop-shadow */}
+      <div className="relative w-80 rounded-2xl bg-card overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
