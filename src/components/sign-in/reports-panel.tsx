@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FileDown, Loader2, BarChart3, Home, Building2, Globe, AlertTriangle } from "lucide-react";
+import { FileDown, Loader2, BarChart3, AlertTriangle } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
+import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel, getInitials } from "@/lib/sign-in";
 import { StatsCards } from "./stats-cards";
 import { LocationCharts } from "./location-charts";
 
@@ -27,41 +28,6 @@ interface TeamMember {
   preferred_name: string | null;
   avatar_url: string | null;
   job_title: string | null;
-}
-
-const locationConfig: Record<
-  string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
-> = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function getDefaultDateRange() {
@@ -127,11 +93,11 @@ export function ReportsPanel() {
         ? member.preferred_name ?? member.full_name
         : "Unknown";
       const loc =
-        locationConfig[entry.location]?.label ?? entry.location;
+        LOCATION_CONFIG[entry.location]?.label ?? entry.location;
       return [
         name,
         entry.sign_in_date,
-        formatTime(entry.signed_in_at),
+        formatSignInTime(entry.signed_in_at),
         loc,
         entry.other_location ?? "",
       ];
@@ -282,14 +248,10 @@ export function ReportsPanel() {
                           <div className="flex flex-wrap gap-1.5 pl-9">
                             {entries.map((entry) => {
                               const config =
-                                locationConfig[entry.location] ??
-                                locationConfig.other;
+                                LOCATION_CONFIG[entry.location] ??
+                                LOCATION_CONFIG.other;
                               const Icon = config.icon;
-                              const label =
-                                entry.location === "other" &&
-                                entry.other_location
-                                  ? entry.other_location
-                                  : config.label;
+                              const label = getLocationLabel(entry.location, entry.other_location);
 
                               return (
                                 <Badge
@@ -298,9 +260,9 @@ export function ReportsPanel() {
                                   className="gap-1 text-xs"
                                 >
                                   <Icon className="h-3 w-3" />
-                                  {formatDate(entry.sign_in_date)}
+                                  {formatSignInDate(entry.sign_in_date)}
                                   <span className="font-mono">
-                                    {formatTime(entry.signed_in_at)}
+                                    {formatSignInTime(entry.signed_in_at)}
                                   </span>
                                   {label}
                                 </Badge>

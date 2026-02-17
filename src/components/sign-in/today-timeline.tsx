@@ -13,8 +13,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Clock, Home, Building2, Globe, Trash2, Loader2 } from "lucide-react";
+import { Clock, Trash2, Loader2 } from "lucide-react";
 import { deleteSignInEntry } from "@/app/(protected)/sign-in/actions";
+import { LOCATION_CONFIG, formatSignInTime, getLocationLabel } from "@/lib/sign-in";
 
 interface TimelineEntry {
   id: string;
@@ -24,32 +25,12 @@ interface TimelineEntry {
   signed_in_at: string;
 }
 
-const locationConfig: Record<
-  string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
-> = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow Office", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage Office", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
-};
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function TimelineItem({ entry }: { entry: TimelineEntry }) {
   const [isPending, startTransition] = useTransition();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const config = locationConfig[entry.location] ?? locationConfig.other;
+  const config = LOCATION_CONFIG[entry.location] ?? LOCATION_CONFIG.other;
   const Icon = config.icon;
-  const label =
-    entry.location === "other" && entry.other_location
-      ? entry.other_location
-      : config.label;
+  const label = getLocationLabel(entry.location, entry.other_location);
 
   function handleDelete() {
     startTransition(async () => {
@@ -67,7 +48,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
 
       {/* Time */}
       <span className="text-sm text-muted-foreground font-mono w-14 shrink-0">
-        {formatTime(entry.signed_in_at)}
+        {formatSignInTime(entry.signed_in_at)}
       </span>
 
       {/* Location badge */}

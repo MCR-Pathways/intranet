@@ -173,7 +173,25 @@ export async function deleteSignInEntry(
     return { success: false, error: error.message };
   }
 
+  // If this was the last entry for today, clear last_sign_in_date so
+  // the sign-in nudge reappears on next page load.
+  const today = getUKToday();
+  const { data: remaining } = await supabase
+    .from("sign_ins")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("sign_in_date", today)
+    .limit(1);
+
+  if (!remaining || remaining.length === 0) {
+    await supabase
+      .from("profiles")
+      .update({ last_sign_in_date: null })
+      .eq("id", user.id);
+  }
+
   revalidatePath("/sign-in");
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 

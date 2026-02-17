@@ -5,17 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Home, Building2, Globe, Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { recordSignIn } from "@/app/(protected)/sign-in/actions";
+import { LOCATIONS } from "@/lib/sign-in";
 import type { WorkLocation } from "@/types/database.types";
-
-const locations: { id: WorkLocation; name: string; icon: typeof Home; description: string }[] = [
-  { id: "home", name: "Home", icon: Home, description: "Working from home" },
-  { id: "glasgow_office", name: "Glasgow Office", icon: Building2, description: "Glasgow HQ" },
-  { id: "stevenage_office", name: "Stevenage Office", icon: Building2, description: "Stevenage office" },
-  { id: "other", name: "Other", icon: Globe, description: "Another location" },
-];
 
 export function AddLocationForm() {
   const router = useRouter();
@@ -42,7 +36,7 @@ export function AddLocationForm() {
       setSuccessMessage(null);
       const result = await recordSignIn(location, other);
       if (result.success) {
-        const loc = locations.find((l) => l.id === location);
+        const loc = LOCATIONS.find((l) => l.id === location);
         setSuccessMessage(
           location === "other"
             ? `Recorded: ${other}`
@@ -82,7 +76,7 @@ export function AddLocationForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          {locations.map((loc) => (
+          {LOCATIONS.map((loc) => (
             <Button
               key={loc.id}
               variant="outline"

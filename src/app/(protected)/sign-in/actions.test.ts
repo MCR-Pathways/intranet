@@ -318,7 +318,46 @@ describe("Sign-in Actions", () => {
       });
     });
 
-    it("deletes entry successfully", async () => {
+    it("deletes entry and clears last_sign_in_date when no entries remain", async () => {
+      mockGetUserAuth.mockResolvedValue({
+        data: { user: { id: "user-1" } },
+      });
+
+      // 1) delete chain: .from("sign_ins").delete().eq("id").eq("user_id")
+      const mockDeleteEq2 = vi.fn().mockResolvedValue({ error: null });
+      const mockDeleteEq1 = vi.fn().mockReturnValue({ eq: mockDeleteEq2 });
+      mockDelete.mockReturnValue({ eq: mockDeleteEq1 });
+
+      // 2) remaining check: .from("sign_ins").select("id").eq("user_id").eq("sign_in_date").limit(1)
+      const mockRemainingLimit = vi.fn().mockResolvedValue({ data: [] });
+      const mockRemainingEq2 = vi.fn().mockReturnValue({ limit: mockRemainingLimit });
+      const mockRemainingEq1 = vi.fn().mockReturnValue({ eq: mockRemainingEq2 });
+      const mockRemainingSelect = vi.fn().mockReturnValue({ eq: mockRemainingEq1 });
+
+      // 3) profile update: .from("profiles").update({ last_sign_in_date: null }).eq("id")
+      const mockProfileUpdateEq = vi.fn().mockResolvedValue({ error: null });
+      const mockProfileUpdate = vi.fn().mockReturnValue({ eq: mockProfileUpdateEq });
+
+      let signInsCallCount = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "sign_ins") {
+          signInsCallCount++;
+          if (signInsCallCount === 1) return { delete: mockDelete };
+          return { select: mockRemainingSelect };
+        }
+        if (table === "profiles") return { update: mockProfileUpdate };
+        return {};
+      });
+
+      const result = await deleteSignInEntry("entry-1");
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(revalidatePath).toHaveBeenCalledWith("/sign-in");
+      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+      expect(mockProfileUpdate).toHaveBeenCalledWith({ last_sign_in_date: null });
+    });
+
+    it("deletes entry without clearing last_sign_in_date when entries remain", async () => {
       mockGetUserAuth.mockResolvedValue({
         data: { user: { id: "user-1" } },
       });
@@ -326,12 +365,30 @@ describe("Sign-in Actions", () => {
       const mockDeleteEq2 = vi.fn().mockResolvedValue({ error: null });
       const mockDeleteEq1 = vi.fn().mockReturnValue({ eq: mockDeleteEq2 });
       mockDelete.mockReturnValue({ eq: mockDeleteEq1 });
-      mockFrom.mockReturnValue({ delete: mockDelete });
+
+      // Remaining entries exist
+      const mockRemainingLimit = vi.fn().mockResolvedValue({ data: [{ id: "other-entry" }] });
+      const mockRemainingEq2 = vi.fn().mockReturnValue({ limit: mockRemainingLimit });
+      const mockRemainingEq1 = vi.fn().mockReturnValue({ eq: mockRemainingEq2 });
+      const mockRemainingSelect = vi.fn().mockReturnValue({ eq: mockRemainingEq1 });
+
+      const mockProfileUpdate = vi.fn();
+
+      let signInsCallCount = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "sign_ins") {
+          signInsCallCount++;
+          if (signInsCallCount === 1) return { delete: mockDelete };
+          return { select: mockRemainingSelect };
+        }
+        if (table === "profiles") return { update: mockProfileUpdate };
+        return {};
+      });
 
       const result = await deleteSignInEntry("entry-1");
 
       expect(result).toEqual({ success: true, error: null });
-      expect(revalidatePath).toHaveBeenCalledWith("/sign-in");
+      expect(mockProfileUpdate).not.toHaveBeenCalled();
     });
   });
 

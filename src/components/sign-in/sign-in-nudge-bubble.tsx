@@ -4,16 +4,10 @@ import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, Home, Building2, Globe, X, Check, Loader2 } from "lucide-react";
+import { MapPin, X, Check, Loader2 } from "lucide-react";
 import { recordSignIn } from "@/app/(protected)/sign-in/actions";
+import { LOCATIONS } from "@/lib/sign-in";
 import type { WorkLocation } from "@/types/database.types";
-
-const locations: { id: WorkLocation; name: string; icon: typeof Home }[] = [
-  { id: "home", name: "Home", icon: Home },
-  { id: "glasgow_office", name: "Glasgow", icon: Building2 },
-  { id: "stevenage_office", name: "Stevenage", icon: Building2 },
-  { id: "other", name: "Other", icon: Globe },
-];
 
 export function SignInNudgeBubble() {
   const pathname = usePathname();
@@ -88,7 +82,7 @@ export function SignInNudgeBubble() {
         <div className="px-4 pb-4 pt-1">
           {!showOtherInput ? (
             <div className="grid grid-cols-2 gap-2">
-              {locations.map((loc) => (
+              {LOCATIONS.map((loc) => (
                 <Button
                   key={loc.id}
                   variant="outline"

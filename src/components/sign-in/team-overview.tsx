@@ -4,29 +4,11 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Home, Building2, Globe, Clock } from "lucide-react";
+import { Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemberDetail } from "./member-detail";
+import { LOCATION_CONFIG, getLocationLabel, getInitials } from "@/lib/sign-in";
 import type { TeamMemberSignIn } from "@/types/database.types";
-
-const locationConfig: Record<
-  string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
-> = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 interface TeamOverviewProps {
   members: TeamMemberSignIn[];
@@ -98,11 +80,8 @@ export function TeamOverview({ members }: TeamOverviewProps) {
                 const displayName = member.preferred_name ?? member.full_name;
                 const latestSignIn = member.sign_ins[member.sign_ins.length - 1];
                 const config =
-                  locationConfig[latestSignIn.location] ?? locationConfig.other;
-                const locationLabel =
-                  latestSignIn.location === "other" && latestSignIn.other_location
-                    ? latestSignIn.other_location
-                    : config.label;
+                  LOCATION_CONFIG[latestSignIn.location] ?? LOCATION_CONFIG.other;
+                const locationLabel = getLocationLabel(latestSignIn.location, latestSignIn.other_location);
 
                 return (
                   <button

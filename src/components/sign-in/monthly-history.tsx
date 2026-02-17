@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Home, Building2, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel } from "@/lib/sign-in";
 
 interface HistoryEntry {
   id: string;
@@ -12,32 +13,6 @@ interface HistoryEntry {
   location: string;
   other_location: string | null;
   signed_in_at: string;
-}
-
-const locationConfig: Record<
-  string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
-> = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow Office", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage Office", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
-};
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
 }
 
 interface MonthlyHistoryProps {
@@ -49,7 +24,7 @@ export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
 
   // Group entries by date, excluding today
   const groupedByDate = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
     const groups = new Map<string, HistoryEntry[]>();
 
     for (const entry of entries) {
@@ -102,16 +77,13 @@ export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
         {visibleDates.map(([date, dateEntries]) => (
           <div key={date} className="flex items-start gap-4">
             <span className="text-sm font-medium text-muted-foreground w-24 shrink-0 pt-0.5">
-              {formatDate(date)}
+              {formatSignInDate(date)}
             </span>
             <div className="flex flex-wrap gap-2">
               {dateEntries.map((entry) => {
-                const config = locationConfig[entry.location] ?? locationConfig.other;
+                const config = LOCATION_CONFIG[entry.location] ?? LOCATION_CONFIG.other;
                 const Icon = config.icon;
-                const label =
-                  entry.location === "other" && entry.other_location
-                    ? entry.other_location
-                    : config.label;
+                const label = getLocationLabel(entry.location, entry.other_location);
 
                 return (
                   <Badge
@@ -121,7 +93,7 @@ export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
                   >
                     <Icon className="h-3 w-3" />
                     <span className="font-mono text-xs">
-                      {formatTime(entry.signed_in_at)}
+                      {formatSignInTime(entry.signed_in_at)}
                     </span>
                     {label}
                   </Badge>

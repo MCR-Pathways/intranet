@@ -11,44 +11,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Home, Building2, Globe, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
+import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel, getInitials } from "@/lib/sign-in";
 import type { TeamMemberSignIn } from "@/types/database.types";
-
-const locationConfig: Record<
-  string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
-> = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow Office", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage Office", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 interface HistoryEntry {
   id: string;
@@ -174,18 +140,15 @@ export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
                   groupedHistory.map(([date, entries]) => (
                     <div key={date} className="flex items-start gap-3">
                       <span className="text-xs font-medium text-muted-foreground w-20 shrink-0 pt-0.5">
-                        {formatDate(date)}
+                        {formatSignInDate(date)}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {entries.map((entry) => {
                           const config =
-                            locationConfig[entry.location] ??
-                            locationConfig.other;
+                            LOCATION_CONFIG[entry.location] ??
+                            LOCATION_CONFIG.other;
                           const Icon = config.icon;
-                          const label =
-                            entry.location === "other" && entry.other_location
-                              ? entry.other_location
-                              : config.label;
+                          const label = getLocationLabel(entry.location, entry.other_location);
 
                           return (
                             <Badge
@@ -195,7 +158,7 @@ export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
                             >
                               <Icon className="h-3 w-3" />
                               <span className="font-mono">
-                                {formatTime(entry.signed_in_at)}
+                                {formatSignInTime(entry.signed_in_at)}
                               </span>
                               {label}
                             </Badge>
