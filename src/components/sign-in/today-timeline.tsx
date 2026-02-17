@@ -1,9 +1,18 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Clock, Home, Building2, Globe, Trash2, Loader2 } from "lucide-react";
 import { deleteSignInEntry } from "@/app/(protected)/sign-in/actions";
 
@@ -34,6 +43,7 @@ function formatTime(isoString: string): string {
 
 function TimelineItem({ entry }: { entry: TimelineEntry }) {
   const [isPending, startTransition] = useTransition();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const config = locationConfig[entry.location] ?? locationConfig.other;
   const Icon = config.icon;
   const label =
@@ -44,6 +54,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
   function handleDelete() {
     startTransition(async () => {
       await deleteSignInEntry(entry.id);
+      setShowDeleteDialog(false);
     });
   }
 
@@ -70,7 +81,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
         variant="ghost"
         size="icon"
         className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-        onClick={handleDelete}
+        onClick={() => setShowDeleteDialog(true)}
         disabled={isPending}
         aria-label="Delete entry"
       >
@@ -80,6 +91,40 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
           <Trash2 className="h-3.5 w-3.5" />
         )}
       </Button>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this sign-in entry? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline" disabled={isPending}>
+                Cancel
+              </Button>
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

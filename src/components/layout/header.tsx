@@ -23,14 +23,26 @@ import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 
+interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
 interface HeaderProps {
   user: SupabaseUser;
   profile: Profile | null;
   needsSignIn?: boolean;
+  initialNotifications?: NotificationData[];
   onMobileMenuToggle?: () => void;
 }
 
-export function Header({ user, profile, needsSignIn, onMobileMenuToggle }: HeaderProps) {
+export function Header({ user, profile, needsSignIn, initialNotifications, onMobileMenuToggle }: HeaderProps) {
   const isStaff = profile?.user_type === "staff";
 
   const handleSignOut = async () => {
@@ -89,7 +101,7 @@ export function Header({ user, profile, needsSignIn, onMobileMenuToggle }: Heade
         <div className="flex items-center gap-2">
           {/* Notifications + sign-in nudge */}
           <div className="relative">
-            <NotificationBell />
+            <NotificationBell initialNotifications={initialNotifications} />
             {needsSignIn && <SignInNudgeBubble />}
           </div>
 
