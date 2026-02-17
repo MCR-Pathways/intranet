@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { SignInNudgeBubble } from "@/components/sign-in/sign-in-nudge-bubble";
 import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
@@ -25,10 +26,11 @@ import type { Profile } from "@/types/database.types";
 interface HeaderProps {
   user: SupabaseUser;
   profile: Profile | null;
+  needsSignIn?: boolean;
   onMobileMenuToggle?: () => void;
 }
 
-export function Header({ user, profile, onMobileMenuToggle }: HeaderProps) {
+export function Header({ user, profile, needsSignIn, onMobileMenuToggle }: HeaderProps) {
   const isStaff = profile?.user_type === "staff";
 
   const handleSignOut = async () => {
@@ -85,8 +87,11 @@ export function Header({ user, profile, onMobileMenuToggle }: HeaderProps) {
 
         {/* Right side - Notifications and user menu */}
         <div className="flex items-center gap-2">
-          {/* Notifications */}
-          <NotificationBell />
+          {/* Notifications + sign-in nudge */}
+          <div className="relative">
+            <NotificationBell />
+            {needsSignIn && <SignInNudgeBubble />}
+          </div>
 
           {/* User menu */}
           <DropdownMenu>

@@ -30,15 +30,16 @@ export async function createNotification(params: CreateNotificationParams) {
 }
 
 /**
- * Mark all unread sign-in reminder notifications as read for a user.
+ * Delete all unread sign-in reminder notifications for a user.
  * Called when the user records their first sign-in of the day.
+ * Notifications that have been acted upon should not linger in the list.
  */
 export async function dismissSignInReminders(userId: string) {
   const supabase = createServiceClient();
 
   const { error } = await supabase
     .from("notifications")
-    .update({ is_read: true, read_at: new Date().toISOString() })
+    .delete()
     .eq("user_id", userId)
     .eq("type", "sign_in_reminder")
     .eq("is_read", false);

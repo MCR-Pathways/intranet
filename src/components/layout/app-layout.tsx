@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
-import { SignInBanner } from "@/components/sign-in/sign-in-banner";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
@@ -23,11 +22,9 @@ export function AppLayout({ children, user, profile, needsSignIn }: AppLayoutPro
       <Header
         user={user}
         profile={profile}
+        needsSignIn={needsSignIn}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
-
-      {/* Sign-in location nudge banner */}
-      {needsSignIn && <SignInBanner />}
 
       <div className="flex">
         {/* Desktop sidebar */}
