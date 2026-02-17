@@ -63,10 +63,10 @@ export function SignInNudgeBubble() {
   return (
     <div className="absolute top-full right-0 mt-2 z-50">
       {/* Speech bubble arrow */}
-      <div className="absolute -top-2 right-10 w-4 h-4 rotate-45 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-l border-t border-white/40 dark:border-white/15" />
+      <div className="absolute -top-2 right-10 w-4 h-4 rotate-45 bg-card border-l border-t border-border" />
 
       {/* Bubble content */}
-      <div className="relative w-80 rounded-2xl bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-white/15 shadow-2xl overflow-hidden">
+      <div className="relative w-80 rounded-2xl bg-card border border-border shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export function SignInNudgeBubble() {
                   size="sm"
                   onClick={() => handleLocationClick(loc.id)}
                   disabled={isPending}
-                  className="h-9 gap-1.5 bg-white/50 dark:bg-white/5 border-white/60 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 backdrop-blur-sm"
+                  className="h-9 gap-1.5"
                 >
                   {isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -113,7 +113,7 @@ export function SignInNudgeBubble() {
                 value={otherLocation}
                 onChange={(e) => setOtherLocation(e.target.value)}
                 onKeyDown={handleOtherKeyDown}
-                className="h-9 bg-white/50 dark:bg-white/5 border-white/60 dark:border-white/10"
+                className="h-9"
                 maxLength={200}
                 disabled={isPending}
                 autoFocus
