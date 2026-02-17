@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const locations: { id: WorkLocation; name: string; icon: typeof Home; descriptio
 ];
 
 export function AddLocationForm() {
+  const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<WorkLocation | null>(null);
   const [otherLocation, setOtherLocation] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -48,6 +50,7 @@ export function AddLocationForm() {
         );
         setSelectedLocation(null);
         setOtherLocation("");
+        router.refresh();
       } else {
         setError(result.error ?? "Failed to record location");
       }

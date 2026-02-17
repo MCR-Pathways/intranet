@@ -30,9 +30,10 @@ export async function createNotification(params: CreateNotificationParams) {
 }
 
 /**
- * Delete all unread sign-in reminder notifications for a user.
+ * Delete all sign-in reminder notifications for a user (read or unread).
  * Called when the user records their first sign-in of the day.
- * Notifications that have been acted upon should not linger in the list.
+ * Once the user has signed in, these notifications are fulfilled and
+ * should be removed regardless of whether they were previously read.
  */
 export async function dismissSignInReminders(userId: string) {
   const supabase = createServiceClient();
@@ -41,8 +42,7 @@ export async function dismissSignInReminders(userId: string) {
     .from("notifications")
     .delete()
     .eq("user_id", userId)
-    .eq("type", "sign_in_reminder")
-    .eq("is_read", false);
+    .eq("type", "sign_in_reminder");
 
   return { error };
 }
