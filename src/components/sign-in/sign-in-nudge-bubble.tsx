@@ -63,7 +63,7 @@ export function SignInNudgeBubble() {
   return (
     <div className="absolute top-full right-0 mt-2 z-50">
       {/* Speech bubble arrow */}
-      <div className="absolute -top-2 right-10 w-4 h-4 rotate-45 bg-card border-l border-t border-border" />
+      <div className="absolute -top-2 right-3 w-4 h-4 rotate-45 bg-card border-l border-t border-border" />
 
       {/* Bubble content */}
       <div className="relative w-80 rounded-2xl bg-card border border-border shadow-xl overflow-hidden">
