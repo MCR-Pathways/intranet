@@ -117,7 +117,7 @@ export default async function CourseCatalogPage({
   // Fetch all active courses
   const { data: courses } = await supabase
     .from("courses")
-    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, created_at, updated_at")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
     .eq("is_active", true)
     .order("is_required", { ascending: false })
     .order("title");

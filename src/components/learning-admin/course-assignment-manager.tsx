@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Plus, X, Users, UserCheck } from "lucide-react";
 import type { CourseAssignment, Team } from "@/types/database.types";
 
@@ -109,7 +110,10 @@ export function CourseAssignmentManager({
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Assignments</CardTitle>
+          <CardTitle className="flex items-center gap-1">
+            Assignments
+            <InfoTooltip text="Assigning auto-enrols matching users. Removing does not unenrol existing users" />
+          </CardTitle>
           <Button size="sm" onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Assign

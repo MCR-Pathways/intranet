@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import type { CourseLesson, LessonType } from "@/types/database.types";
 
 interface LessonEditDialogProps {
@@ -102,6 +103,16 @@ export function LessonEditDialog({
     e.preventDefault();
     setError(null);
 
+    // Client-side validation: prevent empty content
+    if (lessonType === "text" && !content.trim()) {
+      setError("Text content is required");
+      return;
+    }
+    if (lessonType === "video" && !videoUrl && !videoStoragePath) {
+      setError("A video URL or uploaded video is required");
+      return;
+    }
+
     startTransition(async () => {
       if (isEditing) {
         const result = await updateLesson(lesson.id, courseId, {
@@ -153,19 +164,19 @@ export function LessonEditDialog({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edit Lesson" : "Add Lesson"}
+            {isEditing ? "Edit Content" : "Add Content"}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Update the lesson content."
-              : "Add a new lesson to this course."}
+              ? "Update this content item."
+              : "Add new content to this course."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             {/* Lesson type selector */}
             <div className="grid gap-2">
-              <Label>Lesson Type</Label>
+              <Label>Content Type</Label>
               <Select
                 value={lessonType}
                 onValueChange={(val) => setLessonType(val as LessonType)}
@@ -174,8 +185,8 @@ export function LessonEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="text">Text Lesson</SelectItem>
-                  <SelectItem value="video">Video Lesson</SelectItem>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="quiz">Quiz / Assessment</SelectItem>
                 </SelectContent>
               </Select>
@@ -288,7 +299,10 @@ export function LessonEditDialog({
             {/* Quiz settings */}
             {lessonType === "quiz" && (
               <div className="grid gap-2">
-                <Label htmlFor="passing_score">Passing Score (%)</Label>
+                <Label htmlFor="passing_score">
+                  Passing Score (%)
+                  <InfoTooltip text="Learners must achieve this score to pass the quiz and unlock subsequent content" />
+                </Label>
                 <Input
                   id="passing_score"
                   type="number"
@@ -328,7 +342,7 @@ export function LessonEditDialog({
                   : "Creating..."
                 : isEditing
                   ? "Save Changes"
-                  : "Add Lesson"}
+                  : "Add Content"}
             </Button>
           </DialogFooter>
         </form>

@@ -71,7 +71,7 @@ export async function updateCourse(
     is_active?: boolean;
   }
 ) {
-  const { supabase } = await requireLDAdmin();
+  const { supabase, user } = await requireLDAdmin();
 
   const ALLOWED_FIELDS = [
     "title",
@@ -95,6 +95,9 @@ export async function updateCourse(
   if (Object.keys(sanitized).length === 0) {
     return { success: false, error: "No valid fields to update" };
   }
+
+  // Track who modified the course
+  sanitized.updated_by = user.id;
 
   const { error } = await supabase
     .from("courses")
@@ -163,6 +166,19 @@ export async function createLesson(data: {
     }
   }
 
+  // Server-side content validation
+  if (data.lesson_type === "text") {
+    const c = data.content;
+    if (!c || !c.trim()) {
+      return { success: false, error: "Text content cannot be empty", lessonId: null };
+    }
+  }
+  if (data.lesson_type === "video") {
+    if (!data.video_url && !data.video_storage_path) {
+      return { success: false, error: "Video URL or uploaded video is required", lessonId: null };
+    }
+  }
+
   const { data: lesson, error } = await supabase
     .from("course_lessons")
     .insert(sanitized)
@@ -214,6 +230,20 @@ export async function updateLesson(
 
   if (Object.keys(sanitized).length === 0) {
     return { success: false, error: "No valid fields to update" };
+  }
+
+  // Server-side content validation
+  const lessonType = data.lesson_type;
+  if (lessonType === "text") {
+    const c = data.content;
+    if (!c || !c.trim()) {
+      return { success: false, error: "Text content cannot be empty" };
+    }
+  }
+  if (lessonType === "video") {
+    if (!data.video_url && !data.video_storage_path) {
+      return { success: false, error: "Video URL or uploaded video is required" };
+    }
   }
 
   const { error } = await supabase

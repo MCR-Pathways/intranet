@@ -208,6 +208,7 @@ export interface Database {
           due_days_from_start: number | null;
           is_active: boolean;
           created_by: string | null;
+          updated_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -224,6 +225,7 @@ export interface Database {
           due_days_from_start?: number | null;
           is_active?: boolean;
           created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -240,6 +242,7 @@ export interface Database {
           due_days_from_start?: number | null;
           is_active?: boolean;
           created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };

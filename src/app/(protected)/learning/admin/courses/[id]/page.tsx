@@ -5,6 +5,8 @@ import { LessonManager } from "@/components/learning-admin/lesson-manager";
 import { EnrollmentStatsCard } from "@/components/learning-admin/enrollment-stats-card";
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
 import { QuizEditor } from "@/components/learning-admin/quiz-editor";
+import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
+import { Card, CardContent } from "@/components/ui/card";
 import type { CourseLesson, QuizQuestionWithOptions } from "@/types/database.types";
 
 export default async function CourseDetailPage({
@@ -22,7 +24,7 @@ export default async function CourseDetailPage({
   const { data: course } = await supabase
     .from("courses")
     .select(
-      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, content_url, passing_score, due_days_from_start, created_by, created_at, updated_at"
+      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
     )
     .eq("id", id)
     .single();
@@ -100,18 +102,54 @@ export default async function CourseDetailPage({
     }
   }
 
+  // Fetch creator and updater profiles
+  const [creatorResult, updaterResult] = await Promise.all([
+    course.created_by
+      ? supabase.from("profiles").select("full_name").eq("id", course.created_by).single()
+      : Promise.resolve({ data: null }),
+    course.updated_by
+      ? supabase.from("profiles").select("full_name").eq("id", course.updated_by).single()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{course.title}</h1>
         <p className="text-muted-foreground">
-          Manage course details, lessons, and assignments.
+          Manage course details, content, and assignments.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <CourseEditForm course={course} />
+
+          {/* Course metadata */}
+          <Card>
+            <CardContent className="pt-6 space-y-1 text-sm text-muted-foreground">
+              <p>
+                Created by {creatorResult.data?.full_name ?? "Unknown"} on{" "}
+                {formatDate(course.created_at)}
+              </p>
+              {course.updated_by && (
+                <p>
+                  Last modified by {updaterResult.data?.full_name ?? "Unknown"} on{" "}
+                  {formatDate(course.updated_at)}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           <LessonManager courseId={course.id} lessons={typedLessons} />
 
           {/* Quiz editors for each quiz lesson */}
@@ -124,6 +162,12 @@ export default async function CourseDetailPage({
               questions={quizQuestionsMap[lesson.id] ?? []}
             />
           ))}
+
+          <CourseDangerZone
+            courseId={course.id}
+            courseTitle={course.title}
+            isActive={course.is_active}
+          />
         </div>
         <div className="space-y-6">
           <EnrollmentStatsCard enrollments={enrollments ?? []} />

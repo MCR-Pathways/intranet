@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { checkAndCreateSignInNudge } from "@/app/(protected)/sign-in/actions";
 import { getNotifications } from "@/app/(protected)/notifications/actions";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Profile } from "@/types/database.types";
 
 export default async function ProtectedLayout({
@@ -38,13 +39,15 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <AppLayout
-      user={user}
-      profile={profile as Profile}
-      needsSignIn={needsSignIn}
-      initialNotifications={initialNotifications}
-    >
-      {children}
-    </AppLayout>
+    <TooltipProvider>
+      <AppLayout
+        user={user}
+        profile={profile as Profile}
+        needsSignIn={needsSignIn}
+        initialNotifications={initialNotifications}
+      >
+        {children}
+      </AppLayout>
+    </TooltipProvider>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateCourse } from "@/app/(protected)/learning/admin/courses/actions";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,6 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
     course.due_days_from_start?.toString() ?? ""
   );
   const [contentUrl, setContentUrl] = useState(course.content_url ?? "");
-  const [isActive, setIsActive] = useState(course.is_active);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +58,6 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
           ? parseInt(dueDaysFromStart)
           : null,
         content_url: contentUrl || null,
-        is_active: isActive,
       });
 
       if (result.success) {
@@ -143,7 +142,10 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="edit_due_days">Due Days from Start</Label>
+                <Label htmlFor="edit_due_days">
+                  Due Days from Start
+                  <InfoTooltip text="Number of days from enrollment date before this course is due" />
+                </Label>
                 <Input
                   id="edit_due_days"
                   type="number"
@@ -166,20 +168,14 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
             </div>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="edit_is_required">Required Course</Label>
+              <Label htmlFor="edit_is_required">
+                Required Course
+                <InfoTooltip text="Required courses must be completed by all assigned users" />
+              </Label>
               <Switch
                 id="edit_is_required"
                 checked={isRequired}
                 onCheckedChange={setIsRequired}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="edit_is_active">Active</Label>
-              <Switch
-                id="edit_is_active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
               />
             </div>
 

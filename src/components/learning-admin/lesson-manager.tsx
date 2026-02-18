@@ -29,6 +29,7 @@ import {
   FileText,
   HelpCircle,
 } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import type { CourseLesson, LessonType } from "@/types/database.types";
 
 const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
@@ -92,17 +93,18 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
-            Lessons ({sortedLessons.length})
+            Course Content ({sortedLessons.length})
+            <InfoTooltip text="Use the arrows to change the display order of content" />
           </CardTitle>
           <Button size="sm" onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            Add Lesson
+            Add Content
           </Button>
         </CardHeader>
         <CardContent>
           {sortedLessons.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              No lessons yet. Add lessons to create course content.
+              No content yet. Add content to build this course.
             </p>
           ) : (
             <div className="space-y-2">
@@ -213,11 +215,11 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
+            <AlertDialogTitle>Delete Content</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTarget?.title}&quot;?
-              This will also remove all completion records for this lesson. This
-              action cannot be undone.
+              Are you sure you want to delete the content item &quot;{deleteTarget?.title}&quot;?
+              This will also remove all completion records. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -229,7 +231,7 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
               onClick={handleDelete}
               disabled={isPending}
             >
-              {isPending ? "Deleting..." : "Delete Lesson"}
+              {isPending ? "Deleting..." : "Delete Content"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

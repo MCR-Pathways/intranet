@@ -1,22 +1,12 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { toggleCourseActive } from "@/app/(protected)/learning/admin/courses/actions";
 import { CourseCreateDialog } from "./course-create-dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogClose,
-} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -28,8 +18,6 @@ import {
   Search,
   Pencil,
   Plus,
-  Eye,
-  EyeOff,
   Shield,
   Lightbulb,
   Users,
@@ -55,8 +43,6 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [deactivateTarget, setDeactivateTarget] = useState<Course | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -74,24 +60,6 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [courses, searchQuery, categoryFilter, statusFilter]);
-
-  const handleToggleActive = (course: Course) => {
-    if (course.is_active) {
-      setDeactivateTarget(course);
-    } else {
-      startTransition(async () => {
-        await toggleCourseActive(course.id, true);
-      });
-    }
-  };
-
-  const handleConfirmDeactivate = () => {
-    if (!deactivateTarget) return;
-    startTransition(async () => {
-      await toggleCourseActive(deactivateTarget.id, false);
-      setDeactivateTarget(null);
-    });
-  };
 
   return (
     <>
@@ -155,6 +123,9 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
                   Status
                 </th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">
+                  Last Modified
+                </th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">
                   Actions
                 </th>
               </tr>
@@ -163,7 +134,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
               {filteredCourses.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
                     No courses found
@@ -210,41 +181,27 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
                           <Badge variant="destructive">Inactive</Badge>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {new Date(course.updated_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2"
-                            asChild
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          asChild
+                        >
+                          <Link
+                            href={`/learning/admin/courses/${course.id}`}
                           >
-                            <Link
-                              href={`/learning/admin/courses/${course.id}`}
-                            >
-                              <Pencil className="h-3.5 w-3.5 mr-1" />
-                              Edit
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2"
-                            onClick={() => handleToggleActive(course)}
-                            disabled={isPending}
-                          >
-                            {course.is_active ? (
-                              <>
-                                <EyeOff className="h-3.5 w-3.5 mr-1" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                Activate
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            Edit
+                          </Link>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -263,37 +220,6 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
       />
-
-      {/* Deactivate Confirmation Dialog */}
-      <AlertDialog
-        open={!!deactivateTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeactivateTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate Course</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to deactivate &quot;{deactivateTarget?.title}&quot;?
-              It will be hidden from all learners immediately. You can reactivate
-              it at any time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </AlertDialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDeactivate}
-              disabled={isPending}
-            >
-              {isPending ? "Deactivating..." : "Deactivate"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

@@ -31,7 +31,7 @@ export default async function LearningPage() {
   // Fetch all active courses
   const { data: courses } = await supabase
     .from("courses")
-    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, created_at, updated_at")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
     .eq("is_active", true);
 
   // Fetch user's enrollments with course details
@@ -39,7 +39,7 @@ export default async function LearningPage() {
     .from("course_enrollments")
     .select(`
       id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
-      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, created_at, updated_at)
+      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
     `)
     .eq("user_id", user.id);
 

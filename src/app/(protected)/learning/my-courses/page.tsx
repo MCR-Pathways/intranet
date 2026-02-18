@@ -125,7 +125,7 @@ export default async function MyCoursesPage() {
     .from("course_enrollments")
     .select(`
       id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
-      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, created_at, updated_at)
+      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
     `)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
