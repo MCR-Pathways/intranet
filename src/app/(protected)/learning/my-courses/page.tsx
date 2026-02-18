@@ -8,9 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Shield,
-  Lightbulb,
-  Users,
   Clock,
   CheckCircle2,
   PlayCircle,
@@ -18,14 +15,9 @@ import {
   GraduationCap,
   BookOpen,
 } from "lucide-react";
-import type { CourseCategory, EnrollmentWithCourse } from "@/types/database.types";
+import type { EnrollmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-
-const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string }> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600" },
-};
+import { categoryConfig } from "@/lib/learning";
 
 function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
   const { course } = enrollment;
@@ -132,8 +124,8 @@ export default async function MyCoursesPage() {
   const { data: enrollments } = await supabase
     .from("course_enrollments")
     .select(`
-      *,
-      course:courses(*)
+      id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
+      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
     `)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
@@ -143,7 +135,7 @@ export default async function MyCoursesPage() {
     .filter((e) => e.course)
     .map((e) => ({
       ...e,
-      course: e.course as EnrollmentWithCourse["course"],
+      course: e.course as unknown as EnrollmentWithCourse["course"],
     })) as EnrollmentWithCourse[];
 
   // Categorize enrollments

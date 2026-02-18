@@ -7,9 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Shield,
-  Lightbulb,
-  Users,
   Clock,
   CheckCircle2,
   PlayCircle,
@@ -17,16 +14,11 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import type { Course, CourseCategory, CourseEnrollment } from "@/types/database.types";
+import type { Course, CourseEnrollment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
+import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
-import { UpdateProgressButton } from "./update-progress-button";
-
-const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string; bgColor: string }> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600", bgColor: "bg-red-50" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600", bgColor: "bg-blue-50" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600", bgColor: "bg-purple-50" },
-};
+import { LessonList } from "./lesson-list";
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "N/A";
@@ -53,7 +45,7 @@ export default async function CourseDetailPage({
   // Fetch course details
   const { data: courseData, error } = await supabase
     .from("courses")
-    .select("*")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
     .eq("id", id)
     .eq("is_active", true)
     .single();
@@ -67,12 +59,46 @@ export default async function CourseDetailPage({
   // Fetch user's enrollment for this course
   const { data: enrollmentData } = await supabase
     .from("course_enrollments")
-    .select("*")
+    .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
     .eq("user_id", user.id)
     .eq("course_id", id)
     .single();
 
   const enrollment = enrollmentData as CourseEnrollment | null;
+
+  // Fetch lessons for this course
+  const { data: lessonsData } = await supabase
+    .from("course_lessons")
+    .select("id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
+    .eq("course_id", id)
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const lessons = (lessonsData as CourseLesson[]) ?? [];
+
+  // Fetch user's lesson completions if they have lessons
+  const lessonIds = lessons.map((l) => l.id);
+  let completedLessonIds: string[] = [];
+  if (lessonIds.length > 0) {
+    const { data: completions } = await supabase
+      .from("lesson_completions")
+      .select("lesson_id")
+      .eq("user_id", user.id)
+      .in("lesson_id", lessonIds);
+    completedLessonIds = completions?.map((c) => c.lesson_id) ?? [];
+  }
+
+  const hasLessons = lessons.length > 0;
+
+  // Find the first incomplete, unlocked lesson for the "Continue Learning" button
+  const resumeLessonId = (() => {
+    if (!hasLessons) return null;
+    const lockedIds = getLockedLessonIds(lessons, completedLessonIds);
+    const firstIncomplete = lessons.find(
+      (l) => !completedLessonIds.includes(l.id) && !lockedIds.has(l.id)
+    );
+    return firstIncomplete?.id ?? lessons[0].id;
+  })();
 
   const config = categoryConfig[course.category];
   const Icon = config.icon;
@@ -179,7 +205,7 @@ export default async function CourseDetailPage({
 
             {/* Action buttons */}
             {!isEnrolled ? (
-              <EnrollButton courseId={course.id} userId={user.id} />
+              <EnrollButton courseId={course.id} />
             ) : isCompleted ? (
               <div className="space-y-2">
                 {course.content_url && (
@@ -193,18 +219,21 @@ export default async function CourseDetailPage({
               </div>
             ) : (
               <div className="space-y-2">
-                {course.content_url && (
+                {hasLessons ? (
+                  <Button asChild className="w-full">
+                    <Link href={`/learning/courses/${course.id}/lessons/${resumeLessonId}`}>
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      {isInProgress ? "Continue Learning" : "Start Learning"}
+                    </Link>
+                  </Button>
+                ) : course.content_url ? (
                   <Button asChild className="w-full">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">
-                      <PlayCircle className="h-4 w-4 mr-2" />
+                      <ExternalLink className="h-4 w-4 mr-2" />
                       {isInProgress ? "Continue Course" : "Start Course"}
                     </a>
                   </Button>
-                )}
-                <UpdateProgressButton
-                  enrollmentId={enrollment.id}
-                  currentProgress={enrollment.progress_percent}
-                />
+                ) : null}
               </div>
             )}
           </CardContent>
@@ -302,6 +331,16 @@ export default async function CourseDetailPage({
           </Card>
         )}
       </div>
+
+      {/* Lessons section */}
+      {hasLessons && (
+        <LessonList
+          courseId={course.id}
+          lessons={lessons}
+          completedLessonIds={completedLessonIds}
+          isEnrolled={isEnrolled}
+        />
+      )}
     </div>
   );
 }

@@ -42,6 +42,7 @@ export function UserEditDialog({
   const [userType, setUserType] = useState<string>(profile.user_type);
   const [status, setStatus] = useState<string>(profile.status);
   const [isHRAdmin, setIsHRAdmin] = useState(profile.is_hr_admin);
+  const [isLDAdmin, setIsLDAdmin] = useState(profile.is_ld_admin);
   const [isLineManager, setIsLineManager] = useState(profile.is_line_manager);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,6 +56,7 @@ export function UserEditDialog({
         user_type: userType,
         status,
         is_hr_admin: isHRAdmin,
+        is_ld_admin: isLDAdmin,
         is_line_manager: isLineManager,
       });
 
@@ -140,6 +142,15 @@ export function UserEditDialog({
                 id="is_hr_admin"
                 checked={isHRAdmin}
                 onCheckedChange={setIsHRAdmin}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_ld_admin">L&D Admin</Label>
+              <Switch
+                id="is_ld_admin"
+                checked={isLDAdmin}
+                onCheckedChange={setIsLDAdmin}
               />
             </div>
 
