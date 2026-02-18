@@ -13,6 +13,7 @@ interface VideoPlayerProps {
   isCompleted: boolean;
   /** Public URL for the storage video (pre-computed server-side) */
   storagePublicUrl?: string | null;
+  isLastLesson?: boolean;
 }
 
 /** Convert YouTube/Vimeo URLs to embeddable URLs */
@@ -51,6 +52,7 @@ export function VideoPlayer({
   courseId,
   isCompleted,
   storagePublicUrl,
+  isLastLesson = false,
 }: VideoPlayerProps) {
   const [autoCompleted, setAutoCompleted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -113,7 +115,11 @@ export function VideoPlayer({
       {(isCompleted || autoCompleted) && (
         <div className="flex items-center gap-2 text-sm text-green-600">
           <CheckCircle2 className="h-4 w-4" />
-          <span>Video lesson completed</span>
+          <span>
+            {isLastLesson
+              ? "Video lesson completed \u2014 you\u2019ve finished all lessons!"
+              : "Video lesson completed"}
+          </span>
         </div>
       )}
 

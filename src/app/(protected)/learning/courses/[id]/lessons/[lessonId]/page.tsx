@@ -15,6 +15,7 @@ import { MarkCompleteButton } from "./mark-complete-button";
 import { VideoPlayer } from "@/components/learning/video-player";
 import { QuizPlayer } from "@/components/learning/quiz-player";
 import { LessonSidebar } from "@/components/learning/lesson-sidebar";
+import { getLockedLessonIds } from "@/lib/learning";
 
 export default async function LessonPage({
   params,
@@ -92,19 +93,8 @@ export default async function LessonPage({
   const isCompleted = completedLessonIds.includes(lessonId);
 
   // Determine which lessons are locked by unpassed quizzes
-  // A lesson is locked if any preceding quiz lesson (lower sort_order) is not completed
-  const lockedLessonIds = new Set<string>();
-  let blockingQuizFound = false;
-  for (const l of lessons) {
-    if (blockingQuizFound) {
-      lockedLessonIds.add(l.id);
-    } else if (
-      l.lesson_type === "quiz" &&
-      !completedLessonIds.includes(l.id)
-    ) {
-      blockingQuizFound = true;
-    }
-  }
+  const lockedLessonIds = getLockedLessonIds(lessons, completedLessonIds);
+  const isLastLesson = !nextLesson;
 
   // If the current lesson is locked, redirect to the course page
   if (lockedLessonIds.has(lessonId)) {
@@ -218,6 +208,7 @@ export default async function LessonPage({
               courseId={courseId}
               isCompleted={isCompleted}
               storagePublicUrl={storagePublicUrl}
+              isLastLesson={isLastLesson}
             />
           )}
 
@@ -239,6 +230,7 @@ export default async function LessonPage({
               passingScore={lesson.passing_score ?? 80}
               previousAttempts={quizAttempts}
               isCompleted={isCompleted}
+              isLastLesson={isLastLesson}
             />
           )}
 

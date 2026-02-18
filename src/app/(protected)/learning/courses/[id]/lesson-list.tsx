@@ -14,6 +14,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import type { CourseLesson, LessonType } from "@/types/database.types";
+import { getLockedLessonIds } from "@/lib/learning";
 
 interface LessonListProps {
   courseId: string;
@@ -46,21 +47,10 @@ export function LessonList({
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   // Determine which lessons are locked by unpassed quizzes
-  const lockedLessonIds = useMemo(() => {
-    const locked = new Set<string>();
-    let blockingQuizFound = false;
-    for (const l of lessons) {
-      if (blockingQuizFound) {
-        locked.add(l.id);
-      } else if (
-        l.lesson_type === "quiz" &&
-        !completedLessonIds.includes(l.id)
-      ) {
-        blockingQuizFound = true;
-      }
-    }
-    return locked;
-  }, [lessons, completedLessonIds]);
+  const lockedLessonIds = useMemo(
+    () => getLockedLessonIds(lessons, completedLessonIds),
+    [lessons, completedLessonIds]
+  );
 
   return (
     <Card>

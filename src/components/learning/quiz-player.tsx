@@ -22,6 +22,7 @@ interface QuizPlayerProps {
   passingScore: number;
   previousAttempts: QuizAttempt[];
   isCompleted: boolean;
+  isLastLesson?: boolean;
 }
 
 interface QuizResult {
@@ -39,6 +40,7 @@ export function QuizPlayer({
   passingScore,
   previousAttempts,
   isCompleted,
+  isLastLesson = false,
 }: QuizPlayerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
@@ -87,6 +89,11 @@ export function QuizPlayer({
                 Your best score: {lastAttempt.score}%
               </p>
             )}
+            {isLastLesson && (
+              <p className="text-sm text-muted-foreground">
+                All lessons in this course are complete.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -99,7 +106,8 @@ export function QuizPlayer({
       <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
         <AlertCircle className="h-4 w-4 text-primary" />
         <span>
-          Pass mark: <strong>{passingScore}%</strong> required to continue.
+          Pass mark: <strong>{passingScore}%</strong>{" "}
+          {isLastLesson ? "required to complete." : "required to continue."}
         </span>
       </div>
 
@@ -203,7 +211,9 @@ export function QuizPlayer({
               <div className="flex items-center gap-2 rounded-lg bg-green-50 px-6 py-3 text-green-700">
                 <CheckCircle2 className="h-5 w-5" />
                 <span className="font-medium">
-                  Quiz Passed! You can proceed to the next lesson.
+                  {isLastLesson
+                    ? "Quiz Passed! You\u2019ve completed all lessons in this course."
+                    : "Quiz Passed! You can proceed to the next lesson."}
                 </span>
               </div>
             ) : (
