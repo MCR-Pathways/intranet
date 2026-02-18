@@ -261,6 +261,17 @@ export async function createLesson(data: {
     if (!data.video_url && !data.video_storage_path) {
       return { success: false, error: "Video URL or uploaded video is required", lessonId: null };
     }
+    // Validate URL protocol (prevent javascript: injection)
+    if (data.video_url) {
+      try {
+        const parsed = new URL(data.video_url);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+          return { success: false, error: "Video URL must use https:// or http://", lessonId: null };
+        }
+      } catch {
+        return { success: false, error: "Invalid video URL", lessonId: null };
+      }
+    }
   }
 
   const { data: lesson, error } = await supabase
@@ -327,6 +338,17 @@ export async function updateLesson(
   if (lessonType === "video") {
     if (!data.video_url && !data.video_storage_path) {
       return { success: false, error: "Video URL or uploaded video is required" };
+    }
+    // Validate URL protocol (prevent javascript: injection)
+    if (data.video_url) {
+      try {
+        const parsed = new URL(data.video_url);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+          return { success: false, error: "Video URL must use https:// or http://" };
+        }
+      } catch {
+        return { success: false, error: "Invalid video URL" };
+      }
     }
   }
 
