@@ -248,7 +248,7 @@ export function LessonEditDialog({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Upload Video File (max 1GB)</Label>
+                  <Label>Upload Video File (max 50MB)</Label>
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"

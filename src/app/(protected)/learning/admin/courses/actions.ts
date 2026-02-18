@@ -335,9 +335,9 @@ export async function uploadCourseVideo(formData: FormData) {
     return { success: false, error: "No course ID provided", url: null, storagePath: null };
   }
 
-  // Max 1GB
-  if (file.size > 1073741824) {
-    return { success: false, error: "File too large (max 1GB)", url: null, storagePath: null };
+  // Max 50MB
+  if (file.size > 52428800) {
+    return { success: false, error: "File too large (max 50MB)", url: null, storagePath: null };
   }
 
   const allowedTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];

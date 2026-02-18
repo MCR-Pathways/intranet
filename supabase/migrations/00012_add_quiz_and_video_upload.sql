@@ -201,7 +201,7 @@ VALUES (
   'course-videos',
   'course-videos',
   TRUE,
-  1073741824,
+  52428800,
   ARRAY['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
 )
 ON CONFLICT (id) DO NOTHING;
