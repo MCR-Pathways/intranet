@@ -714,6 +714,47 @@ export interface Database {
           attempted_at?: string;
         };
       };
+      external_courses: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          provider: string | null;
+          category: CourseCategory | null;
+          completed_at: string;
+          duration_minutes: number | null;
+          certificate_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          provider?: string | null;
+          category?: CourseCategory | null;
+          completed_at: string;
+          duration_minutes?: number | null;
+          certificate_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          provider?: string | null;
+          category?: CourseCategory | null;
+          completed_at?: string;
+          duration_minutes?: number | null;
+          certificate_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       sign_ins: {
         Row: {
           id: string;
@@ -801,6 +842,13 @@ export interface Database {
         };
         Returns: Json;
       };
+      notify_course_published: {
+        Args: {
+          p_course_id: string;
+          p_published_by: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums
@@ -824,6 +872,7 @@ export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"]
 export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
 export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
 export type LessonImage = Database["public"]["Tables"]["lesson_images"]["Row"];
+export type ExternalCourse = Database["public"]["Tables"]["external_courses"]["Row"];
 export type QuizQuestion = Database["public"]["Tables"]["quiz_questions"]["Row"];
 export type QuizOption = Database["public"]["Tables"]["quiz_options"]["Row"];
 export type QuizAttempt = Database["public"]["Tables"]["quiz_attempts"]["Row"];

@@ -14,10 +14,13 @@ import {
   AlertTriangle,
   GraduationCap,
   BookOpen,
+  Globe,
 } from "lucide-react";
-import type { EnrollmentWithCourse } from "@/types/database.types";
+import type { EnrollmentWithCourse, ExternalCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
+import { ExternalCourseDialog } from "@/components/learning/external-course-dialog";
+import { ExternalCourseCard } from "@/components/learning/external-course-card";
 
 function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
   const { course } = enrollment;
@@ -120,15 +123,24 @@ export default async function MyCoursesPage() {
     redirect("/login");
   }
 
-  // Fetch user's enrollments with course details
-  const { data: enrollments } = await supabase
-    .from("course_enrollments")
-    .select(`
-      id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
-      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
-    `)
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+  // Fetch user's enrollments with course details + external courses
+  const [{ data: enrollments }, { data: externalCoursesData }] = await Promise.all([
+    supabase
+      .from("course_enrollments")
+      .select(`
+        id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
+        course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
+      `)
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("external_courses")
+      .select("id, user_id, title, provider, category, completed_at, duration_minutes, certificate_url, notes, created_at, updated_at")
+      .eq("user_id", user.id)
+      .order("completed_at", { ascending: false }),
+  ]);
+
+  const externalCourses = (externalCoursesData ?? []) as ExternalCourse[];
 
   // Filter and type cast enrollments
   const typedEnrollments = (enrollments || [])
@@ -276,6 +288,9 @@ export default async function MyCoursesPage() {
           <TabsTrigger value="completed">
             Completed ({completedCourses.length})
           </TabsTrigger>
+          <TabsTrigger value="external">
+            External Learning ({externalCourses.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="in_progress" className="mt-6">
@@ -317,6 +332,35 @@ export default async function MyCoursesPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="external" className="mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Log courses completed outside the platform to keep a record of all your learning.
+              </p>
+              <ExternalCourseDialog mode="create" />
+            </div>
+
+            {externalCourses.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {externalCourses.map((course) => (
+                  <ExternalCourseCard key={course.id} course={course} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Globe className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-center mb-4">
+                    No external courses logged yet.
+                  </p>
+                  <ExternalCourseDialog mode="create" />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
