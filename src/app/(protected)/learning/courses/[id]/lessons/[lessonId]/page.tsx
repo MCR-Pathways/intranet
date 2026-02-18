@@ -121,7 +121,7 @@ export default async function LessonPage({
       supabase
         .from("quiz_questions")
         .select(
-          "id, lesson_id, question_text, sort_order, created_at, updated_at"
+          "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
         )
         .eq("lesson_id", lessonId)
         .order("sort_order"),

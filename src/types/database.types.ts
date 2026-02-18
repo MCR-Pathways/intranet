@@ -28,6 +28,7 @@ export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 export type LessonType = "video" | "text" | "quiz";
 export type CourseStatus = "draft" | "published";
+export type QuestionType = "single" | "multi";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
 export type AttachmentType = "image" | "document" | "link";
 
@@ -634,6 +635,7 @@ export interface Database {
           id: string;
           lesson_id: string;
           question_text: string;
+          question_type: QuestionType;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -642,6 +644,7 @@ export interface Database {
           id?: string;
           lesson_id: string;
           question_text: string;
+          question_type?: QuestionType;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -650,6 +653,7 @@ export interface Database {
           id?: string;
           lesson_id?: string;
           question_text?: string;
+          question_type?: QuestionType;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;

@@ -72,7 +72,7 @@ export default async function CourseDetailPage({
     const { data: questions } = await supabase
       .from("quiz_questions")
       .select(
-        "id, lesson_id, question_text, sort_order, created_at, updated_at"
+        "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
       )
       .in("lesson_id", quizLessonIds)
       .order("sort_order");

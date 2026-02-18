@@ -2,7 +2,7 @@
 
 import { requireLDAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { CourseCategory, LessonType } from "@/types/database.types";
+import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
 // ===========================================
 // COURSE CRUD
@@ -617,20 +617,34 @@ export async function createQuizQuestion(data: {
   lesson_id: string;
   course_id: string;
   question_text: string;
+  question_type?: QuestionType;
   sort_order: number;
   options: { option_text: string; is_correct: boolean; sort_order: number }[];
 }) {
   const { supabase } = await requireLDAdmin();
+
+  const questionType = data.question_type ?? "single";
 
   // Validate at least 2 options
   if (data.options.length < 2) {
     return { success: false, error: "At least 2 options are required", questionId: null };
   }
 
-  // Validate exactly 1 correct answer
+  // Validate correct answer count based on question type
   const correctCount = data.options.filter((o) => o.is_correct).length;
-  if (correctCount !== 1) {
-    return { success: false, error: "Exactly one correct answer is required", questionId: null };
+  if (questionType === "single") {
+    if (correctCount !== 1) {
+      return { success: false, error: "Exactly one correct answer is required", questionId: null };
+    }
+  } else {
+    // Multi-answer: need at least 1 correct AND at least 1 incorrect
+    if (correctCount < 1) {
+      return { success: false, error: "At least one correct answer is required", questionId: null };
+    }
+    const incorrectCount = data.options.length - correctCount;
+    if (incorrectCount < 1) {
+      return { success: false, error: "At least one incorrect option is required", questionId: null };
+    }
   }
 
   // Insert question
@@ -639,6 +653,7 @@ export async function createQuizQuestion(data: {
     .insert({
       lesson_id: data.lesson_id,
       question_text: data.question_text,
+      question_type: questionType,
       sort_order: data.sort_order,
     })
     .select("id")
@@ -674,15 +689,25 @@ export async function updateQuizQuestion(
   courseId: string,
   data: {
     question_text?: string;
+    question_type?: QuestionType;
     options?: { option_text: string; is_correct: boolean; sort_order: number }[];
   }
 ) {
   const { supabase } = await requireLDAdmin();
 
+  // Build update payload for question itself
+  const questionUpdate: Record<string, unknown> = {};
   if (data.question_text) {
+    questionUpdate.question_text = data.question_text;
+  }
+  if (data.question_type) {
+    questionUpdate.question_type = data.question_type;
+  }
+
+  if (Object.keys(questionUpdate).length > 0) {
     const { error } = await supabase
       .from("quiz_questions")
-      .update({ question_text: data.question_text })
+      .update(questionUpdate)
       .eq("id", questionId);
 
     if (error) {
@@ -695,9 +720,22 @@ export async function updateQuizQuestion(
     if (data.options.length < 2) {
       return { success: false, error: "At least 2 options are required" };
     }
+
+    const questionType = data.question_type ?? "single";
     const correctCount = data.options.filter((o) => o.is_correct).length;
-    if (correctCount !== 1) {
-      return { success: false, error: "Exactly one correct answer is required" };
+
+    if (questionType === "single") {
+      if (correctCount !== 1) {
+        return { success: false, error: "Exactly one correct answer is required" };
+      }
+    } else {
+      if (correctCount < 1) {
+        return { success: false, error: "At least one correct answer is required" };
+      }
+      const incorrectCount = data.options.length - correctCount;
+      if (incorrectCount < 1) {
+        return { success: false, error: "At least one incorrect option is required" };
+      }
     }
 
     // Replace all options: delete existing, insert new set
