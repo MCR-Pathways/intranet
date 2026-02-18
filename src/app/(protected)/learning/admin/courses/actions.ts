@@ -152,18 +152,24 @@ export async function publishCourse(courseId: string) {
     return { success: false, error: "Add at least one lesson before publishing." };
   }
 
-  // Validate: quiz lessons must have at least 1 question
+  // Validate: quiz lessons must have at least 1 question (batch query to avoid N+1)
   const quizLessons = lessons.filter((l) => l.lesson_type === "quiz");
-  for (const quiz of quizLessons) {
-    const { count } = await supabase
+  if (quizLessons.length > 0) {
+    const quizLessonIds = quizLessons.map((l) => l.id);
+    const { data: questionsWithLessons } = await supabase
       .from("quiz_questions")
-      .select("id", { count: "exact", head: true })
-      .eq("lesson_id", quiz.id);
+      .select("lesson_id")
+      .in("lesson_id", quizLessonIds);
 
-    if (!count || count === 0) {
+    const lessonsWithQuestions = new Set(
+      (questionsWithLessons ?? []).map((q) => q.lesson_id)
+    );
+
+    const emptyQuiz = quizLessons.find((q) => !lessonsWithQuestions.has(q.id));
+    if (emptyQuiz) {
       return {
         success: false,
-        error: `Quiz "${quiz.title}" needs at least one question before publishing.`,
+        error: `Quiz "${emptyQuiz.title}" needs at least one question before publishing.`,
       };
     }
   }
@@ -613,10 +619,7 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
     return { success: false, error: "Image not found" };
   }
 
-  // Delete from storage
-  await supabase.storage.from("lesson-images").remove([image.storage_path]);
-
-  // Delete from DB
+  // Delete from DB first — if this fails, app state stays consistent
   const { error } = await supabase
     .from("lesson_images")
     .delete()
@@ -626,6 +629,9 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
     return { success: false, error: error.message };
   }
 
+  // Then delete from storage — orphaned files are preferable to dangling DB refs
+  await supabase.storage.from("lesson-images").remove([image.storage_path]);
+
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath(`/learning/courses/${courseId}`);
   return { success: true, error: null };
@@ -634,6 +640,33 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
 // ===========================================
 // QUIZ QUESTION CRUD
 // ===========================================
+
+/** Shared validation for quiz question options */
+function validateQuizOptions(
+  options: { is_correct: boolean }[],
+  questionType: QuestionType
+): string | null {
+  if (options.length < 2) {
+    return "At least 2 options are required";
+  }
+
+  const correctCount = options.filter((o) => o.is_correct).length;
+  if (questionType === "single") {
+    if (correctCount !== 1) {
+      return "Exactly one correct answer is required";
+    }
+  } else {
+    if (correctCount < 1) {
+      return "At least one correct answer is required";
+    }
+    const incorrectCount = options.length - correctCount;
+    if (incorrectCount < 1) {
+      return "At least one incorrect option is required";
+    }
+  }
+
+  return null;
+}
 
 export async function createQuizQuestion(data: {
   lesson_id: string;
@@ -647,26 +680,9 @@ export async function createQuizQuestion(data: {
 
   const questionType = data.question_type ?? "single";
 
-  // Validate at least 2 options
-  if (data.options.length < 2) {
-    return { success: false, error: "At least 2 options are required", questionId: null };
-  }
-
-  // Validate correct answer count based on question type
-  const correctCount = data.options.filter((o) => o.is_correct).length;
-  if (questionType === "single") {
-    if (correctCount !== 1) {
-      return { success: false, error: "Exactly one correct answer is required", questionId: null };
-    }
-  } else {
-    // Multi-answer: need at least 1 correct AND at least 1 incorrect
-    if (correctCount < 1) {
-      return { success: false, error: "At least one correct answer is required", questionId: null };
-    }
-    const incorrectCount = data.options.length - correctCount;
-    if (incorrectCount < 1) {
-      return { success: false, error: "At least one incorrect option is required", questionId: null };
-    }
+  const validationError = validateQuizOptions(data.options, questionType);
+  if (validationError) {
+    return { success: false, error: validationError, questionId: null };
   }
 
   // Insert question
@@ -738,26 +754,25 @@ export async function updateQuizQuestion(
   }
 
   if (data.options) {
-    // Validate options
-    if (data.options.length < 2) {
-      return { success: false, error: "At least 2 options are required" };
+    // Determine the effective question type — fetch from DB if not provided
+    // to avoid incorrectly defaulting a "multi" question to "single" validation
+    let questionType: QuestionType = data.question_type ?? "single";
+    if (!data.question_type) {
+      const { data: existingQuestion } = await supabase
+        .from("quiz_questions")
+        .select("question_type")
+        .eq("id", questionId)
+        .single();
+
+      if (!existingQuestion) {
+        return { success: false, error: "Question not found" };
+      }
+      questionType = (existingQuestion.question_type as QuestionType) ?? "single";
     }
 
-    const questionType = data.question_type ?? "single";
-    const correctCount = data.options.filter((o) => o.is_correct).length;
-
-    if (questionType === "single") {
-      if (correctCount !== 1) {
-        return { success: false, error: "Exactly one correct answer is required" };
-      }
-    } else {
-      if (correctCount < 1) {
-        return { success: false, error: "At least one correct answer is required" };
-      }
-      const incorrectCount = data.options.length - correctCount;
-      if (incorrectCount < 1) {
-        return { success: false, error: "At least one incorrect option is required" };
-      }
+    const validationError = validateQuizOptions(data.options, questionType);
+    if (validationError) {
+      return { success: false, error: validationError };
     }
 
     // Replace all options: delete existing, insert new set
