@@ -17,7 +17,6 @@ export async function createCourse(data: {
   passing_score?: number | null;
   due_days_from_start?: number | null;
   content_url?: string | null;
-  is_active?: boolean;
 }) {
   const { supabase, user } = await requireLDAdmin();
 
@@ -30,7 +29,6 @@ export async function createCourse(data: {
     "passing_score",
     "due_days_from_start",
     "content_url",
-    "is_active",
   ] as const;
 
   const sanitized: Record<string, unknown> = {};
@@ -41,6 +39,8 @@ export async function createCourse(data: {
   }
 
   sanitized.created_by = user.id;
+  // New courses always start as drafts (DB default), not active
+  sanitized.is_active = false;
 
   const { data: course, error } = await supabase
     .from("courses")
@@ -69,6 +69,7 @@ export async function updateCourse(
     due_days_from_start?: number | null;
     content_url?: string | null;
     is_active?: boolean;
+    status?: "draft" | "published";
   }
 ) {
   const { supabase, user } = await requireLDAdmin();
@@ -83,6 +84,7 @@ export async function updateCourse(
     "due_days_from_start",
     "content_url",
     "is_active",
+    "status",
   ] as const;
 
   const sanitized: Record<string, unknown> = {};
@@ -129,6 +131,88 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
   revalidatePath("/learning/admin/courses");
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
+  return { success: true, error: null };
+}
+
+// ===========================================
+// PUBLISH / UNPUBLISH
+// ===========================================
+
+export async function publishCourse(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Validate: course must have at least 1 active lesson
+  const { data: lessons } = await supabase
+    .from("course_lessons")
+    .select("id, title, lesson_type")
+    .eq("course_id", courseId)
+    .eq("is_active", true);
+
+  if (!lessons || lessons.length === 0) {
+    return { success: false, error: "Add at least one lesson before publishing." };
+  }
+
+  // Validate: quiz lessons must have at least 1 question
+  const quizLessons = lessons.filter((l) => l.lesson_type === "quiz");
+  for (const quiz of quizLessons) {
+    const { count } = await supabase
+      .from("quiz_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("lesson_id", quiz.id);
+
+    if (!count || count === 0) {
+      return {
+        success: false,
+        error: `Quiz "${quiz.title}" needs at least one question before publishing.`,
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("courses")
+    .update({ status: "published", is_active: true, updated_by: user.id })
+    .eq("id", courseId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/learning/admin/courses");
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath("/learning/courses");
+  revalidatePath("/learning");
+  return { success: true, error: null };
+}
+
+export async function unpublishCourse(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Block if there are enrollments
+  const { count } = await supabase
+    .from("course_enrollments")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", courseId);
+
+  if (count && count > 0) {
+    return {
+      success: false,
+      error: `Cannot revert to draft: ${count} learner${count > 1 ? "s" : ""} enrolled. Deactivate instead.`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("courses")
+    .update({ status: "draft", is_active: false, updated_by: user.id })
+    .eq("id", courseId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/learning/admin/courses");
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath("/learning/courses");
+  revalidatePath("/learning");
   return { success: true, error: null };
 }
 

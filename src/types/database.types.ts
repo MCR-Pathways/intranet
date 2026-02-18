@@ -27,6 +27,7 @@ export type WorkLocation =
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 export type LessonType = "video" | "text" | "quiz";
+export type CourseStatus = "draft" | "published";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
 export type AttachmentType = "image" | "document" | "link";
 
@@ -207,6 +208,7 @@ export interface Database {
           passing_score: number | null;
           due_days_from_start: number | null;
           is_active: boolean;
+          status: CourseStatus;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
@@ -224,6 +226,7 @@ export interface Database {
           passing_score?: number | null;
           due_days_from_start?: number | null;
           is_active?: boolean;
+          status?: CourseStatus;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -241,6 +244,7 @@ export interface Database {
           passing_score?: number | null;
           due_days_from_start?: number | null;
           is_active?: boolean;
+          status?: CourseStatus;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;

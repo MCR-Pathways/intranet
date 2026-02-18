@@ -6,6 +6,7 @@ import { EnrollmentStatsCard } from "@/components/learning-admin/enrollment-stat
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
 import { QuizEditor } from "@/components/learning-admin/quiz-editor";
 import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
+import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CourseLesson, QuizQuestionWithOptions } from "@/types/database.types";
 
@@ -24,7 +25,7 @@ export default async function CourseDetailPage({
   const { data: course } = await supabase
     .from("courses")
     .select(
-      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
+      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, status, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
     )
     .eq("id", id)
     .single();
@@ -121,6 +122,8 @@ export default async function CourseDetailPage({
       minute: "2-digit",
     });
 
+  const enrollmentCount = (enrollments ?? []).length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -129,6 +132,13 @@ export default async function CourseDetailPage({
           Manage course details, content, and assignments.
         </p>
       </div>
+
+      {/* Draft / Publish banner */}
+      <CoursePublishBanner
+        courseId={course.id}
+        status={course.status as "draft" | "published"}
+        isActive={course.is_active}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
@@ -167,6 +177,8 @@ export default async function CourseDetailPage({
             courseId={course.id}
             courseTitle={course.title}
             isActive={course.is_active}
+            status={course.status as "draft" | "published"}
+            enrollmentCount={enrollmentCount}
           />
         </div>
         <div className="space-y-6">

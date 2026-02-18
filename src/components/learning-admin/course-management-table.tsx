@@ -55,8 +55,9 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
         categoryFilter === "all" || course.category === categoryFilter;
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "active" && course.is_active) ||
-        (statusFilter === "inactive" && !course.is_active);
+        (statusFilter === "draft" && course.status === "draft") ||
+        (statusFilter === "published" && course.status === "published" && course.is_active) ||
+        (statusFilter === "inactive" && course.status === "published" && !course.is_active);
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [courses, searchQuery, categoryFilter, statusFilter]);
@@ -91,7 +92,8 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="published">Published</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
@@ -175,8 +177,10 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
                         {formatDuration(course.duration_minutes)}
                       </td>
                       <td className="px-4 py-3">
-                        {course.is_active ? (
-                          <Badge variant="success">Active</Badge>
+                        {course.status === "draft" ? (
+                          <Badge variant="warning">Draft</Badge>
+                        ) : course.is_active ? (
+                          <Badge variant="success">Published</Badge>
                         ) : (
                           <Badge variant="destructive">Inactive</Badge>
                         )}

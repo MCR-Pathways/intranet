@@ -32,12 +32,13 @@ export default async function LessonPage({
     redirect("/login");
   }
 
-  // Fetch the course
+  // Fetch the course (only published + active)
   const { data: course } = await supabase
     .from("courses")
-    .select("id, title, is_active")
+    .select("id, title, is_active, status")
     .eq("id", courseId)
     .eq("is_active", true)
+    .eq("status", "published")
     .single();
 
   if (!course) {
