@@ -66,7 +66,7 @@ export async function completeLesson(lessonId: string, courseId: string) {
 export async function submitQuiz(
   lessonId: string,
   courseId: string,
-  answers: Record<string, string>
+  answers: Record<string, string | string[]>
 ) {
   const supabase = await createClient();
   const {

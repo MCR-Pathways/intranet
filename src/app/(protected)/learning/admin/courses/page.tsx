@@ -12,7 +12,7 @@ export default async function CourseManagementPage() {
   const { data: courses } = await supabase
     .from("courses")
     .select(
-      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
+      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, status, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
     )
     .order("updated_at", { ascending: false });
 

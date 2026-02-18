@@ -6,8 +6,9 @@ import { EnrollmentStatsCard } from "@/components/learning-admin/enrollment-stat
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
 import { QuizEditor } from "@/components/learning-admin/quiz-editor";
 import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
+import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { Card, CardContent } from "@/components/ui/card";
-import type { CourseLesson, QuizQuestionWithOptions } from "@/types/database.types";
+import type { CourseLesson, QuizQuestionWithOptions, LessonImage } from "@/types/database.types";
 
 export default async function CourseDetailPage({
   params,
@@ -24,7 +25,7 @@ export default async function CourseDetailPage({
   const { data: course } = await supabase
     .from("courses")
     .select(
-      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
+      "id, title, description, category, duration_minutes, is_required, thumbnail_url, is_active, status, content_url, passing_score, due_days_from_start, created_by, updated_by, created_at, updated_at"
     )
     .eq("id", id)
     .single();
@@ -71,7 +72,7 @@ export default async function CourseDetailPage({
     const { data: questions } = await supabase
       .from("quiz_questions")
       .select(
-        "id, lesson_id, question_text, sort_order, created_at, updated_at"
+        "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
       )
       .in("lesson_id", quizLessonIds)
       .order("sort_order");
@@ -102,6 +103,26 @@ export default async function CourseDetailPage({
     }
   }
 
+  // Fetch lesson images for text lessons
+  const textLessons = typedLessons.filter((l) => l.lesson_type === "text");
+  const textLessonIds = textLessons.map((l) => l.id);
+  const lessonImagesMap: Record<string, LessonImage[]> = {};
+
+  if (textLessonIds.length > 0) {
+    const { data: allImages } = await supabase
+      .from("lesson_images")
+      .select("id, lesson_id, file_name, file_url, storage_path, file_size, mime_type, sort_order, created_at")
+      .in("lesson_id", textLessonIds)
+      .order("sort_order");
+
+    for (const img of allImages ?? []) {
+      if (!lessonImagesMap[img.lesson_id]) {
+        lessonImagesMap[img.lesson_id] = [];
+      }
+      lessonImagesMap[img.lesson_id].push(img as LessonImage);
+    }
+  }
+
   // Fetch creator and updater profiles
   const [creatorResult, updaterResult] = await Promise.all([
     course.created_by
@@ -121,6 +142,8 @@ export default async function CourseDetailPage({
       minute: "2-digit",
     });
 
+  const enrollmentCount = (enrollments ?? []).length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -129,6 +152,13 @@ export default async function CourseDetailPage({
           Manage course details, content, and assignments.
         </p>
       </div>
+
+      {/* Draft / Publish banner */}
+      <CoursePublishBanner
+        courseId={course.id}
+        status={course.status as "draft" | "published"}
+        isActive={course.is_active}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
@@ -150,7 +180,7 @@ export default async function CourseDetailPage({
             </CardContent>
           </Card>
 
-          <LessonManager courseId={course.id} lessons={typedLessons} />
+          <LessonManager courseId={course.id} lessons={typedLessons} lessonImagesMap={lessonImagesMap} />
 
           {/* Quiz editors for each quiz lesson */}
           {quizLessons.map((lesson) => (
@@ -167,6 +197,8 @@ export default async function CourseDetailPage({
             courseId={course.id}
             courseTitle={course.title}
             isActive={course.is_active}
+            status={course.status as "draft" | "published"}
+            enrollmentCount={enrollmentCount}
           />
         </div>
         <div className="space-y-6">

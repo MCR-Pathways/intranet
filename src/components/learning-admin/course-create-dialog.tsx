@@ -95,7 +95,8 @@ export function CourseCreateDialog({
         <DialogHeader>
           <DialogTitle>Create Course</DialogTitle>
           <DialogDescription>
-            Add a new course to the learning catalogue.
+            Add a new course to the learning catalogue. Courses are created as
+            drafts — publish when ready for learners.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

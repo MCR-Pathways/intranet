@@ -13,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { QuizQuestionWithOptions, QuizAttempt } from "@/types/database.types";
+import type { QuizQuestionWithOptions, QuizAttempt, QuestionType } from "@/types/database.types";
 
 interface QuizPlayerProps {
   lessonId: string;
@@ -42,17 +42,40 @@ export function QuizPlayer({
   isCompleted,
   isLastLesson = false,
 }: QuizPlayerProps) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const lastAttempt = previousAttempts[0] ?? null;
-  const allAnswered = Object.keys(answers).length === questions.length;
 
-  function handleSelectOption(questionId: string, optionId: string) {
-    if (result) return; // Can't change answers after submission
+  const allAnswered = questions.every((q) => {
+    const answer = answers[q.id];
+    const qType = (q.question_type ?? "single") as QuestionType;
+    if (qType === "multi") {
+      return Array.isArray(answer) && answer.length > 0;
+    }
+    return typeof answer === "string" && answer.length > 0;
+  });
+
+  function handleSelectSingle(questionId: string, optionId: string) {
+    if (result) return;
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+  }
+
+  function handleToggleMulti(questionId: string, optionId: string) {
+    if (result) return;
+    setAnswers((prev) => {
+      const current = prev[questionId];
+      const arr = Array.isArray(current) ? [...current] : [];
+      const idx = arr.indexOf(optionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+      } else {
+        arr.push(optionId);
+      }
+      return { ...prev, [questionId]: arr };
+    });
   }
 
   function handleSubmit() {
@@ -113,52 +136,67 @@ export function QuizPlayer({
 
       {/* Questions */}
       <div className="space-y-8">
-        {questions.map((q, idx) => (
-          <Card key={q.id}>
-            <CardContent className="pt-6">
-              <h3 className="mb-4 text-lg font-semibold">
-                {idx + 1}. {q.question_text}
-              </h3>
-              <div className="space-y-3">
-                {q.options.map((opt) => {
-                  const isSelected = answers[q.id] === opt.id;
-                  // After submission, show correct/incorrect
-                  const showResult = !!result;
-                  // We don't have is_correct from server (stripped), but
-                  // the result tells us score. For per-question feedback,
-                  // we re-check using the server result:
-                  // The server returned correct_answers count, but not per-question.
-                  // We don't reveal correct answers for security.
-                  // After passing, we can show general feedback.
+        {questions.map((q, idx) => {
+          const qType = (q.question_type ?? "single") as QuestionType;
+          const isMulti = qType === "multi";
 
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      disabled={!!result || isPending}
-                      onClick={() => handleSelectOption(q.id, opt.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
-                        !showResult && isSelected &&
-                          "border-primary bg-primary/5 text-primary",
-                        !showResult && !isSelected &&
-                          "border-border hover:border-muted-foreground/30 hover:bg-muted/50",
-                        showResult && isSelected &&
-                          "border-muted-foreground/30 bg-muted/50",
-                        (!!result || isPending) && "cursor-not-allowed opacity-80"
-                      )}
-                    >
-                      <span className="text-sm">{opt.option_text}</span>
-                      {isSelected && !showResult && (
-                        <div className="h-3 w-3 rounded-full bg-primary" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+          return (
+            <Card key={q.id}>
+              <CardContent className="pt-6">
+                <h3 className="mb-1 text-lg font-semibold">
+                  {idx + 1}. {q.question_text}
+                </h3>
+                {isMulti && (
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Select all that apply
+                  </p>
+                )}
+                {!isMulti && <div className="mb-4" />}
+                <div className="space-y-3">
+                  {q.options.map((opt) => {
+                    const currentAnswer = answers[q.id];
+                    const isSelected = isMulti
+                      ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
+                      : currentAnswer === opt.id;
+                    const showResult = !!result;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        disabled={!!result || isPending}
+                        onClick={() =>
+                          isMulti
+                            ? handleToggleMulti(q.id, opt.id)
+                            : handleSelectSingle(q.id, opt.id)
+                        }
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
+                          !showResult && isSelected &&
+                            "border-primary bg-primary/5 text-primary",
+                          !showResult && !isSelected &&
+                            "border-border hover:border-muted-foreground/30 hover:bg-muted/50",
+                          showResult && isSelected &&
+                            "border-muted-foreground/30 bg-muted/50",
+                          (!!result || isPending) && "cursor-not-allowed opacity-80"
+                        )}
+                      >
+                        <span className="text-sm">{opt.option_text}</span>
+                        {isSelected && !showResult && (
+                          isMulti ? (
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          ) : (
+                            <div className="h-3 w-3 rounded-full bg-primary" />
+                          )
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Error message */}

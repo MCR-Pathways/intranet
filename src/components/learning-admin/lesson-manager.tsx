@@ -30,7 +30,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import type { CourseLesson, LessonType } from "@/types/database.types";
+import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
 const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
   text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
@@ -41,9 +41,10 @@ const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileTex
 interface LessonManagerProps {
   courseId: string;
   lessons: CourseLesson[];
+  lessonImagesMap?: Record<string, LessonImage[]>;
 }
 
-export function LessonManager({ courseId, lessons }: LessonManagerProps) {
+export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingLesson, setEditingLesson] = useState<CourseLesson | null>(null);
@@ -134,6 +135,7 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
                       {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
                       {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
                       {lesson.lesson_type === "quiz" && lesson.passing_score != null && ` · ${lesson.passing_score}% to pass`}
+                      {lesson.lesson_type === "text" && (lessonImagesMap[lesson.id]?.length ?? 0) > 0 && ` · ${lessonImagesMap[lesson.id].length} image${lessonImagesMap[lesson.id].length > 1 ? "s" : ""}`}
                     </p>
                   </div>
                   {!lesson.is_active && (
@@ -199,6 +201,7 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
         <LessonEditDialog
           courseId={courseId}
           lesson={editingLesson}
+          lessonImages={lessonImagesMap[editingLesson.id] ?? []}
           open={!!editingLesson}
           onOpenChange={(open) => {
             if (!open) setEditingLesson(null);

@@ -42,12 +42,13 @@ export default async function CourseDetailPage({
     redirect("/login");
   }
 
-  // Fetch course details
+  // Fetch course details (only published + active courses visible to learners)
   const { data: courseData, error } = await supabase
     .from("courses")
-    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
     .eq("id", id)
     .eq("is_active", true)
+    .eq("status", "published")
     .single();
 
   if (error || !courseData) {

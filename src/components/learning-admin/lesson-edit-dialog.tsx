@@ -26,11 +26,13 @@ import {
 } from "@/components/ui/select";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import type { CourseLesson, LessonType } from "@/types/database.types";
+import { LessonImageManager } from "./lesson-image-manager";
+import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
 interface LessonEditDialogProps {
   courseId: string;
   lesson?: CourseLesson;
+  lessonImages?: LessonImage[];
   sortOrder?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +41,7 @@ interface LessonEditDialogProps {
 export function LessonEditDialog({
   courseId,
   lesson,
+  lessonImages = [],
   sortOrder = 0,
   open,
   onOpenChange,
@@ -210,17 +213,28 @@ export function LessonEditDialog({
 
             {/* Text content (for text lessons) */}
             {lessonType === "text" && (
-              <div className="grid gap-2">
-                <Label htmlFor="lesson_content">Content</Label>
-                <textarea
-                  id="lesson_content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write lesson content..."
-                  className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
-                  rows={10}
-                />
-              </div>
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="lesson_content">Content</Label>
+                  <textarea
+                    id="lesson_content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Write lesson content..."
+                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
+                    rows={10}
+                  />
+                </div>
+
+                {/* Image gallery — only shown when editing an existing text lesson */}
+                {isEditing && (
+                  <LessonImageManager
+                    lessonId={lesson.id}
+                    courseId={courseId}
+                    images={lessonImages}
+                  />
+                )}
+              </>
             )}
 
             {/* Video fields (for video lessons) */}
