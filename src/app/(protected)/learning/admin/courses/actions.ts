@@ -226,6 +226,19 @@ export async function unpublishCourse(courseId: string) {
 // LESSON CRUD
 // ===========================================
 
+/** Validate video URL protocol — always call when video_url is provided, regardless of lesson_type */
+function validateVideoUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return "Video URL must use https:// or http://";
+    }
+  } catch {
+    return "Invalid video URL";
+  }
+  return null;
+}
+
 export async function createLesson(data: {
   course_id: string;
   title: string;
@@ -267,16 +280,13 @@ export async function createLesson(data: {
     if (!data.video_url && !data.video_storage_path) {
       return { success: false, error: "Video URL or uploaded video is required", lessonId: null };
     }
-    // Validate URL protocol (prevent javascript: injection)
-    if (data.video_url) {
-      try {
-        const parsed = new URL(data.video_url);
-        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-          return { success: false, error: "Video URL must use https:// or http://", lessonId: null };
-        }
-      } catch {
-        return { success: false, error: "Invalid video URL", lessonId: null };
-      }
+  }
+
+  // Always validate video_url when provided, regardless of lesson_type (prevent javascript: injection)
+  if (data.video_url) {
+    const urlError = validateVideoUrl(data.video_url);
+    if (urlError) {
+      return { success: false, error: urlError, lessonId: null };
     }
   }
 
@@ -345,16 +355,13 @@ export async function updateLesson(
     if (!data.video_url && !data.video_storage_path) {
       return { success: false, error: "Video URL or uploaded video is required" };
     }
-    // Validate URL protocol (prevent javascript: injection)
-    if (data.video_url) {
-      try {
-        const parsed = new URL(data.video_url);
-        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-          return { success: false, error: "Video URL must use https:// or http://" };
-        }
-      } catch {
-        return { success: false, error: "Invalid video URL" };
-      }
+  }
+
+  // Always validate video_url when provided, regardless of lesson_type (prevent javascript: injection)
+  if (data.video_url) {
+    const urlError = validateVideoUrl(data.video_url);
+    if (urlError) {
+      return { success: false, error: urlError };
     }
   }
 
