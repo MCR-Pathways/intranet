@@ -801,6 +801,13 @@ export interface Database {
         };
         Returns: Json;
       };
+      notify_course_published: {
+        Args: {
+          p_course_id: string;
+          p_published_by: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums

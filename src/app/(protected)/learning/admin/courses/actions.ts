@@ -451,8 +451,56 @@ export async function assignCourse(data: {
     return { success: false, error: error.message };
   }
 
+  // If the course is published, notify newly matched users
+  const { data: course } = await supabase
+    .from("courses")
+    .select("status")
+    .eq("id", data.course_id)
+    .single();
+
+  if (course?.status === "published") {
+    await supabase.rpc("notify_course_published", {
+      p_course_id: data.course_id,
+      p_published_by: user.id,
+    });
+  }
+
   revalidatePath(`/learning/admin/courses/${data.course_id}`);
   return { success: true, error: null };
+}
+
+/**
+ * Send notifications after a course is published.
+ * Call this from publishCourse() when Batch 2 is merged.
+ */
+export async function notifyCoursePublished(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Check if the course has any assignments
+  const { count } = await supabase
+    .from("course_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", courseId);
+
+  if (!count || count === 0) {
+    return { success: true, notifiedCount: 0 };
+  }
+
+  const { data: notifiedCount, error } = await supabase.rpc(
+    "notify_course_published",
+    {
+      p_course_id: courseId,
+      p_published_by: user.id,
+    }
+  );
+
+  if (error) {
+    // Non-blocking: notifications failing should not block publishing
+    console.error("Failed to send course notifications:", error.message);
+    return { success: true, notifiedCount: 0 };
+  }
+
+  return { success: true, notifiedCount: notifiedCount ?? 0 };
 }
 
 export async function removeAssignment(assignmentId: string, courseId: string) {
