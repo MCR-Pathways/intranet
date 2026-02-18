@@ -27,6 +27,8 @@ export type WorkLocation =
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 export type LessonType = "video" | "text" | "quiz";
+export type CourseStatus = "draft" | "published";
+export type QuestionType = "single" | "multi";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
 export type AttachmentType = "image" | "document" | "link";
 
@@ -207,6 +209,7 @@ export interface Database {
           passing_score: number | null;
           due_days_from_start: number | null;
           is_active: boolean;
+          status: CourseStatus;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
@@ -224,6 +227,7 @@ export interface Database {
           passing_score?: number | null;
           due_days_from_start?: number | null;
           is_active?: boolean;
+          status?: CourseStatus;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -241,6 +245,7 @@ export interface Database {
           passing_score?: number | null;
           due_days_from_start?: number | null;
           is_active?: boolean;
+          status?: CourseStatus;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -590,11 +595,47 @@ export interface Database {
           created_at?: string;
         };
       };
+      lesson_images: {
+        Row: {
+          id: string;
+          lesson_id: string;
+          file_name: string;
+          file_url: string;
+          storage_path: string;
+          file_size: number;
+          mime_type: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lesson_id: string;
+          file_name: string;
+          file_url: string;
+          storage_path: string;
+          file_size: number;
+          mime_type: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          lesson_id?: string;
+          file_name?: string;
+          file_url?: string;
+          storage_path?: string;
+          file_size?: number;
+          mime_type?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
       quiz_questions: {
         Row: {
           id: string;
           lesson_id: string;
           question_text: string;
+          question_type: QuestionType;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -603,6 +644,7 @@ export interface Database {
           id?: string;
           lesson_id: string;
           question_text: string;
+          question_type?: QuestionType;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -611,6 +653,7 @@ export interface Database {
           id?: string;
           lesson_id?: string;
           question_text?: string;
+          question_type?: QuestionType;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -780,6 +823,7 @@ export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"
 export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"];
 export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
 export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
+export type LessonImage = Database["public"]["Tables"]["lesson_images"]["Row"];
 export type QuizQuestion = Database["public"]["Tables"]["quiz_questions"]["Row"];
 export type QuizOption = Database["public"]["Tables"]["quiz_options"]["Row"];
 export type QuizAttempt = Database["public"]["Tables"]["quiz_attempts"]["Row"];

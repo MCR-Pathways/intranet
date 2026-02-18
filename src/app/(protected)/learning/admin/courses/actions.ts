@@ -2,7 +2,7 @@
 
 import { requireLDAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { CourseCategory, LessonType } from "@/types/database.types";
+import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
 // ===========================================
 // COURSE CRUD
@@ -17,7 +17,6 @@ export async function createCourse(data: {
   passing_score?: number | null;
   due_days_from_start?: number | null;
   content_url?: string | null;
-  is_active?: boolean;
 }) {
   const { supabase, user } = await requireLDAdmin();
 
@@ -30,7 +29,6 @@ export async function createCourse(data: {
     "passing_score",
     "due_days_from_start",
     "content_url",
-    "is_active",
   ] as const;
 
   const sanitized: Record<string, unknown> = {};
@@ -41,6 +39,8 @@ export async function createCourse(data: {
   }
 
   sanitized.created_by = user.id;
+  // New courses always start as drafts (DB default), not active
+  sanitized.is_active = false;
 
   const { data: course, error } = await supabase
     .from("courses")
@@ -69,6 +69,7 @@ export async function updateCourse(
     due_days_from_start?: number | null;
     content_url?: string | null;
     is_active?: boolean;
+    status?: "draft" | "published";
   }
 ) {
   const { supabase, user } = await requireLDAdmin();
@@ -83,6 +84,7 @@ export async function updateCourse(
     "due_days_from_start",
     "content_url",
     "is_active",
+    "status",
   ] as const;
 
   const sanitized: Record<string, unknown> = {};
@@ -129,6 +131,94 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
   revalidatePath("/learning/admin/courses");
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
+  return { success: true, error: null };
+}
+
+// ===========================================
+// PUBLISH / UNPUBLISH
+// ===========================================
+
+export async function publishCourse(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Validate: course must have at least 1 active lesson
+  const { data: lessons } = await supabase
+    .from("course_lessons")
+    .select("id, title, lesson_type")
+    .eq("course_id", courseId)
+    .eq("is_active", true);
+
+  if (!lessons || lessons.length === 0) {
+    return { success: false, error: "Add at least one lesson before publishing." };
+  }
+
+  // Validate: quiz lessons must have at least 1 question (batch query to avoid N+1)
+  const quizLessons = lessons.filter((l) => l.lesson_type === "quiz");
+  if (quizLessons.length > 0) {
+    const quizLessonIds = quizLessons.map((l) => l.id);
+    const { data: questionsWithLessons } = await supabase
+      .from("quiz_questions")
+      .select("lesson_id")
+      .in("lesson_id", quizLessonIds);
+
+    const lessonsWithQuestions = new Set(
+      (questionsWithLessons ?? []).map((q) => q.lesson_id)
+    );
+
+    const emptyQuiz = quizLessons.find((q) => !lessonsWithQuestions.has(q.id));
+    if (emptyQuiz) {
+      return {
+        success: false,
+        error: `Quiz "${emptyQuiz.title}" needs at least one question before publishing.`,
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("courses")
+    .update({ status: "published", is_active: true, updated_by: user.id })
+    .eq("id", courseId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/learning/admin/courses");
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath("/learning/courses");
+  revalidatePath("/learning");
+  return { success: true, error: null };
+}
+
+export async function unpublishCourse(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Block if there are enrollments
+  const { count } = await supabase
+    .from("course_enrollments")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", courseId);
+
+  if (count && count > 0) {
+    return {
+      success: false,
+      error: `Cannot revert to draft: ${count} learner${count > 1 ? "s" : ""} enrolled. Deactivate instead.`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("courses")
+    .update({ status: "draft", is_active: false, updated_by: user.id })
+    .eq("id", courseId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/learning/admin/courses");
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath("/learning/courses");
+  revalidatePath("/learning");
   return { success: true, error: null };
 }
 
@@ -285,6 +375,17 @@ export async function updateLesson(
 export async function deleteLesson(lessonId: string, courseId: string) {
   const { supabase } = await requireLDAdmin();
 
+  // Clean up associated images from storage before deleting lesson
+  const { data: images } = await supabase
+    .from("lesson_images")
+    .select("storage_path")
+    .eq("lesson_id", lessonId);
+
+  if (images && images.length > 0) {
+    const paths = images.map((img) => img.storage_path);
+    await supabase.storage.from("lesson-images").remove(paths);
+  }
+
   const { error } = await supabase
     .from("course_lessons")
     .delete()
@@ -422,27 +523,166 @@ export async function uploadCourseVideo(formData: FormData) {
 }
 
 // ===========================================
+// LESSON IMAGE UPLOAD
+// ===========================================
+
+export async function uploadLessonImage(formData: FormData) {
+  const { supabase } = await requireLDAdmin();
+
+  const file = formData.get("file") as File | null;
+  const lessonId = formData.get("lessonId") as string | null;
+  const courseId = formData.get("courseId") as string | null;
+
+  if (!file) {
+    return { success: false, error: "No file provided", image: null };
+  }
+  if (!lessonId || !courseId) {
+    return { success: false, error: "Missing lesson or course ID", image: null };
+  }
+
+  // Max 5MB
+  if (file.size > 5242880) {
+    return { success: false, error: "File too large (max 5MB)", image: null };
+  }
+
+  const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      success: false,
+      error: "Invalid image type. Allowed: PNG, JPEG, GIF, WebP, SVG",
+      image: null,
+    };
+  }
+
+  const fileExt = file.name.split(".").pop() || "png";
+  const uniqueName = `${crypto.randomUUID()}.${fileExt}`;
+  const filePath = `${courseId}/${lessonId}/${uniqueName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("lesson-images")
+    .upload(filePath, file);
+
+  if (uploadError) {
+    return { success: false, error: uploadError.message, image: null };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("lesson-images").getPublicUrl(filePath);
+
+  // Get current max sort order
+  const { data: existing } = await supabase
+    .from("lesson_images")
+    .select("sort_order")
+    .eq("lesson_id", lessonId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  const { data: imageRow, error: insertError } = await supabase
+    .from("lesson_images")
+    .insert({
+      lesson_id: lessonId,
+      file_name: file.name,
+      file_url: publicUrl,
+      storage_path: filePath,
+      file_size: file.size,
+      mime_type: file.type,
+      sort_order: nextOrder,
+    })
+    .select("id, lesson_id, file_name, file_url, storage_path, file_size, mime_type, sort_order, created_at")
+    .single();
+
+  if (insertError) {
+    // Cleanup uploaded file if DB insert fails
+    await supabase.storage.from("lesson-images").remove([filePath]);
+    return { success: false, error: insertError.message, image: null };
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null, image: imageRow };
+}
+
+export async function deleteLessonImage(imageId: string, courseId: string) {
+  const { supabase } = await requireLDAdmin();
+
+  // Get the storage path first
+  const { data: image } = await supabase
+    .from("lesson_images")
+    .select("storage_path")
+    .eq("id", imageId)
+    .single();
+
+  if (!image) {
+    return { success: false, error: "Image not found" };
+  }
+
+  // Delete from DB first — if this fails, app state stays consistent
+  const { error } = await supabase
+    .from("lesson_images")
+    .delete()
+    .eq("id", imageId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  // Then delete from storage — orphaned files are preferable to dangling DB refs
+  await supabase.storage.from("lesson-images").remove([image.storage_path]);
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null };
+}
+
+// ===========================================
 // QUIZ QUESTION CRUD
 // ===========================================
+
+/** Shared validation for quiz question options */
+function validateQuizOptions(
+  options: { is_correct: boolean }[],
+  questionType: QuestionType
+): string | null {
+  if (options.length < 2) {
+    return "At least 2 options are required";
+  }
+
+  const correctCount = options.filter((o) => o.is_correct).length;
+  if (questionType === "single") {
+    if (correctCount !== 1) {
+      return "Exactly one correct answer is required";
+    }
+  } else {
+    if (correctCount < 1) {
+      return "At least one correct answer is required";
+    }
+    const incorrectCount = options.length - correctCount;
+    if (incorrectCount < 1) {
+      return "At least one incorrect option is required";
+    }
+  }
+
+  return null;
+}
 
 export async function createQuizQuestion(data: {
   lesson_id: string;
   course_id: string;
   question_text: string;
+  question_type?: QuestionType;
   sort_order: number;
   options: { option_text: string; is_correct: boolean; sort_order: number }[];
 }) {
   const { supabase } = await requireLDAdmin();
 
-  // Validate at least 2 options
-  if (data.options.length < 2) {
-    return { success: false, error: "At least 2 options are required", questionId: null };
-  }
+  const questionType = data.question_type ?? "single";
 
-  // Validate exactly 1 correct answer
-  const correctCount = data.options.filter((o) => o.is_correct).length;
-  if (correctCount !== 1) {
-    return { success: false, error: "Exactly one correct answer is required", questionId: null };
+  const validationError = validateQuizOptions(data.options, questionType);
+  if (validationError) {
+    return { success: false, error: validationError, questionId: null };
   }
 
   // Insert question
@@ -451,6 +691,7 @@ export async function createQuizQuestion(data: {
     .insert({
       lesson_id: data.lesson_id,
       question_text: data.question_text,
+      question_type: questionType,
       sort_order: data.sort_order,
     })
     .select("id")
@@ -486,15 +727,25 @@ export async function updateQuizQuestion(
   courseId: string,
   data: {
     question_text?: string;
+    question_type?: QuestionType;
     options?: { option_text: string; is_correct: boolean; sort_order: number }[];
   }
 ) {
   const { supabase } = await requireLDAdmin();
 
+  // Build update payload for question itself
+  const questionUpdate: Record<string, unknown> = {};
   if (data.question_text) {
+    questionUpdate.question_text = data.question_text;
+  }
+  if (data.question_type) {
+    questionUpdate.question_type = data.question_type;
+  }
+
+  if (Object.keys(questionUpdate).length > 0) {
     const { error } = await supabase
       .from("quiz_questions")
-      .update({ question_text: data.question_text })
+      .update(questionUpdate)
       .eq("id", questionId);
 
     if (error) {
@@ -503,13 +754,25 @@ export async function updateQuizQuestion(
   }
 
   if (data.options) {
-    // Validate options
-    if (data.options.length < 2) {
-      return { success: false, error: "At least 2 options are required" };
+    // Determine the effective question type — fetch from DB if not provided
+    // to avoid incorrectly defaulting a "multi" question to "single" validation
+    let questionType: QuestionType = data.question_type ?? "single";
+    if (!data.question_type) {
+      const { data: existingQuestion } = await supabase
+        .from("quiz_questions")
+        .select("question_type")
+        .eq("id", questionId)
+        .single();
+
+      if (!existingQuestion) {
+        return { success: false, error: "Question not found" };
+      }
+      questionType = (existingQuestion.question_type as QuestionType) ?? "single";
     }
-    const correctCount = data.options.filter((o) => o.is_correct).length;
-    if (correctCount !== 1) {
-      return { success: false, error: "Exactly one correct answer is required" };
+
+    const validationError = validateQuizOptions(data.options, questionType);
+    if (validationError) {
+      return { success: false, error: validationError };
     }
 
     // Replace all options: delete existing, insert new set

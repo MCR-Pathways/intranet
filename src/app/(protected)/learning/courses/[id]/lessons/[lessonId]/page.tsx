@@ -32,12 +32,13 @@ export default async function LessonPage({
     redirect("/login");
   }
 
-  // Fetch the course
+  // Fetch the course (only published + active)
   const { data: course } = await supabase
     .from("courses")
-    .select("id, title, is_active")
+    .select("id, title, is_active, status")
     .eq("id", courseId)
     .eq("is_active", true)
+    .eq("status", "published")
     .single();
 
   if (!course) {
@@ -120,7 +121,7 @@ export default async function LessonPage({
       supabase
         .from("quiz_questions")
         .select(
-          "id, lesson_id, question_text, sort_order, created_at, updated_at"
+          "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
         )
         .eq("lesson_id", lessonId)
         .order("sort_order"),
@@ -162,6 +163,17 @@ export default async function LessonPage({
           ),
       }));
     }
+  }
+
+  // For text lessons: fetch images
+  let lessonImages: { id: string; file_url: string; file_name: string }[] = [];
+  if (lesson.lesson_type === "text") {
+    const { data: imgData } = await supabase
+      .from("lesson_images")
+      .select("id, file_url, file_name")
+      .eq("lesson_id", lessonId)
+      .order("sort_order");
+    lessonImages = imgData ?? [];
   }
 
   // For uploaded videos: get the public URL
@@ -223,6 +235,19 @@ export default async function LessonPage({
                   <p className="text-muted-foreground text-sm text-center py-8">
                     No content has been added to this lesson yet.
                   </p>
+                )}
+                {lessonImages.length > 0 && (
+                  <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    {lessonImages.map((img) => (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        key={img.id}
+                        src={img.file_url}
+                        alt={img.file_name}
+                        className="rounded-lg border border-border w-full object-contain"
+                      />
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
