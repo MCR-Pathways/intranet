@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, CheckCheck, ExternalLink } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 
@@ -172,18 +172,27 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
                   key={notification.id}
                   className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent rounded-sm ${
                     !notification.is_read ? "bg-accent/50" : ""
-                  }`}
+                  } ${notification.type === "mandatory_course" && !notification.is_read ? "border-l-2 border-destructive" : ""}`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-2">
-                    {!notification.is_read && (
+                    {!notification.is_read && notification.type === "mandatory_course" ? (
+                      <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" />
+                    ) : !notification.is_read ? (
                       <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
-                    )}
+                    ) : null}
                     <div className={`flex-1 ${notification.is_read ? "pl-4" : ""}`}>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium leading-tight">
-                          {notification.title}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium leading-tight">
+                            {notification.title}
+                          </p>
+                          {notification.type === "mandatory_course" && !notification.is_read && (
+                            <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                              Required
+                            </span>
+                          )}
+                        </div>
                         {notification.link && (
                           <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                         )}
