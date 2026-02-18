@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogClose,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -38,6 +37,7 @@ const CATEGORY_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
 export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   function handleDelete() {
     startTransition(async () => {
@@ -45,6 +45,8 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
       const result = await deleteExternalCourse(course.id);
       if (!result.success) {
         setError(result.error ?? "Failed to delete course");
+      } else {
+        setDialogOpen(false);
       }
     });
   }
@@ -58,12 +60,6 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
   return (
     <Card>
       <CardContent className="pt-6">
-        {error && (
-          <div className="mb-3 rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive">
-            {error}
-          </div>
-        )}
-
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold leading-tight">{course.title}</h3>
@@ -85,7 +81,7 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {course.duration_minutes >= 60
-                    ? `${Math.floor(course.duration_minutes / 60)}h ${course.duration_minutes % 60 > 0 ? `${course.duration_minutes % 60}m` : ""}`
+                    ? `${Math.floor(course.duration_minutes / 60)}h${course.duration_minutes % 60 > 0 ? ` ${course.duration_minutes % 60}m` : ""}`
                     : `${course.duration_minutes}m`}
                 </span>
               )}
@@ -111,7 +107,7 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
           {/* Actions */}
           <div className="flex items-center gap-1 shrink-0">
             <ExternalCourseDialog mode="edit" course={course} />
-            <AlertDialog>
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
@@ -130,15 +126,18 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
                     cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                {error && (
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive">
+                    {error}
+                  </div>
+                )}
                 <AlertDialogFooter>
-                  <AlertDialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </AlertDialogClose>
-                  <AlertDialogClose asChild>
-                    <Button variant="destructive" onClick={handleDelete}>
-                      Delete
-                    </Button>
-                  </AlertDialogClose>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isPending}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+                    {isPending ? "Deleting..." : "Delete"}
+                  </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

@@ -8,6 +8,12 @@
 CREATE INDEX IF NOT EXISTS idx_notifications_metadata_course_id
   ON public.notifications ((metadata->>'course_id'));
 
+-- Unique index to prevent duplicate notifications per user + course
+-- Required for ON CONFLICT DO NOTHING to work correctly in the RPC below
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notifications_user_course
+  ON public.notifications (user_id, (metadata->>'course_id'))
+  WHERE metadata->>'course_id' IS NOT NULL;
+
 -- ===========================================
 -- RPC: notify_course_published
 -- Finds users matching course assignments and creates notifications.
@@ -81,7 +87,9 @@ BEGIN
       '/learning/courses/' || p_course_id,
       jsonb_build_object('course_id', p_course_id)
     )
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (user_id, (metadata->>'course_id'))
+    WHERE metadata->>'course_id' IS NOT NULL
+    DO NOTHING;
 
     v_notification_count := v_notification_count + 1;
   END LOOP;

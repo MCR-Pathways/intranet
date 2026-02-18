@@ -8,6 +8,36 @@ import type { CourseCategory } from "@/types/database.types";
 // EXTERNAL COURSE CRUD
 // ===========================================
 
+const EXTERNAL_COURSE_FIELDS = [
+  "title",
+  "provider",
+  "category",
+  "completed_at",
+  "duration_minutes",
+  "certificate_url",
+  "notes",
+] as const;
+
+/** Sanitize and trim external course data using the allowed fields whitelist */
+function sanitizeExternalCourseData(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  for (const field of EXTERNAL_COURSE_FIELDS) {
+    if (field in data) {
+      sanitized[field] = data[field as keyof typeof data];
+    }
+  }
+
+  // Trim string fields, convert empty strings to null
+  for (const key of ["title", "provider", "certificate_url", "notes"]) {
+    if (typeof sanitized[key] === "string") {
+      const trimmed = (sanitized[key] as string).trim();
+      sanitized[key] = key === "title" ? trimmed : trimmed || null;
+    }
+  }
+
+  return sanitized;
+}
+
 export async function addExternalCourse(data: {
   title: string;
   provider?: string | null;
@@ -34,30 +64,8 @@ export async function addExternalCourse(data: {
     return { success: false, error: "Completion date is required" };
   }
 
-  const ALLOWED_FIELDS = [
-    "title",
-    "provider",
-    "category",
-    "completed_at",
-    "duration_minutes",
-    "certificate_url",
-    "notes",
-  ] as const;
-
-  const sanitized: Record<string, unknown> = {};
-  for (const field of ALLOWED_FIELDS) {
-    if (field in data) {
-      sanitized[field] = data[field as keyof typeof data];
-    }
-  }
-
+  const sanitized = sanitizeExternalCourseData(data as Record<string, unknown>);
   sanitized.user_id = user.id;
-
-  // Trim string fields
-  if (typeof sanitized.title === "string") sanitized.title = sanitized.title.trim();
-  if (typeof sanitized.provider === "string") sanitized.provider = sanitized.provider.trim() || null;
-  if (typeof sanitized.certificate_url === "string") sanitized.certificate_url = sanitized.certificate_url.trim() || null;
-  if (typeof sanitized.notes === "string") sanitized.notes = sanitized.notes.trim() || null;
 
   const { error } = await supabase.from("external_courses").insert(sanitized);
 
@@ -90,32 +98,11 @@ export async function updateExternalCourse(
     throw new Error("Not authenticated");
   }
 
-  const ALLOWED_FIELDS = [
-    "title",
-    "provider",
-    "category",
-    "completed_at",
-    "duration_minutes",
-    "certificate_url",
-    "notes",
-  ] as const;
-
-  const sanitized: Record<string, unknown> = {};
-  for (const field of ALLOWED_FIELDS) {
-    if (field in data) {
-      sanitized[field] = data[field as keyof typeof data];
-    }
-  }
+  const sanitized = sanitizeExternalCourseData(data as Record<string, unknown>);
 
   if (Object.keys(sanitized).length === 0) {
     return { success: false, error: "No valid fields to update" };
   }
-
-  // Trim string fields
-  if (typeof sanitized.title === "string") sanitized.title = sanitized.title.trim();
-  if (typeof sanitized.provider === "string") sanitized.provider = sanitized.provider.trim() || null;
-  if (typeof sanitized.certificate_url === "string") sanitized.certificate_url = sanitized.certificate_url.trim() || null;
-  if (typeof sanitized.notes === "string") sanitized.notes = sanitized.notes.trim() || null;
 
   const { error } = await supabase
     .from("external_courses")

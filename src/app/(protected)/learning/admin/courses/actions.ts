@@ -459,10 +459,15 @@ export async function assignCourse(data: {
     .single();
 
   if (course?.status === "published") {
-    await supabase.rpc("notify_course_published", {
+    const { error: rpcError } = await supabase.rpc("notify_course_published", {
       p_course_id: data.course_id,
       p_published_by: user.id,
     });
+
+    if (rpcError) {
+      // Non-blocking: notification failures should not break course assignment
+      console.error("Failed to send course notifications on assignment:", rpcError.message);
+    }
   }
 
   revalidatePath(`/learning/admin/courses/${data.course_id}`);
