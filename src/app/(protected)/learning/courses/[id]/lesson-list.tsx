@@ -1,10 +1,19 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, Lock, BookOpen } from "lucide-react";
-import type { CourseLesson } from "@/types/database.types";
+import {
+  CheckCircle2,
+  Lock,
+  BookOpen,
+  PlayCircle,
+  FileText,
+  HelpCircle,
+} from "lucide-react";
+import type { CourseLesson, LessonType } from "@/types/database.types";
 
 interface LessonListProps {
   courseId: string;
@@ -12,6 +21,18 @@ interface LessonListProps {
   completedLessonIds: string[];
   isEnrolled: boolean;
 }
+
+const lessonTypeIcon: Record<LessonType, typeof FileText> = {
+  video: PlayCircle,
+  text: FileText,
+  quiz: HelpCircle,
+};
+
+const lessonTypeLabel: Record<LessonType, string> = {
+  video: "Video",
+  text: "Text",
+  quiz: "Quiz",
+};
 
 export function LessonList({
   courseId,
@@ -23,6 +44,23 @@ export function LessonList({
   const totalCount = lessons.length;
   const progressPercent =
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Determine which lessons are locked by unpassed quizzes
+  const lockedLessonIds = useMemo(() => {
+    const locked = new Set<string>();
+    let blockingQuizFound = false;
+    for (const l of lessons) {
+      if (blockingQuizFound) {
+        locked.add(l.id);
+      } else if (
+        l.lesson_type === "quiz" &&
+        !completedLessonIds.includes(l.id)
+      ) {
+        blockingQuizFound = true;
+      }
+    }
+    return locked;
+  }, [lessons, completedLessonIds]);
 
   return (
     <Card>
@@ -44,7 +82,11 @@ export function LessonList({
         <div className="space-y-1">
           {lessons.map((lesson, index) => {
             const isCompleted = completedLessonIds.includes(lesson.id);
+            const isLocked = isEnrolled && lockedLessonIds.has(lesson.id);
+            const lessonType = (lesson.lesson_type ?? "text") as LessonType;
+            const TypeIcon = lessonTypeIcon[lessonType];
 
+            // Unenrolled users: all lessons locked
             if (!isEnrolled) {
               return (
                 <div
@@ -55,11 +97,35 @@ export function LessonList({
                   <span className="text-sm font-medium text-muted-foreground w-6">
                     {index + 1}.
                   </span>
-                  <span className="text-sm">{lesson.title}</span>
+                  <span className="text-sm flex-1">{lesson.title}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {lessonTypeLabel[lessonType]}
+                  </Badge>
                 </div>
               );
             }
 
+            // Enrolled but locked by unpassed quiz
+            if (isLocked) {
+              return (
+                <div
+                  key={lesson.id}
+                  className="flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground/50"
+                  title="Complete the preceding quiz to unlock"
+                >
+                  <Lock className="h-4 w-4 shrink-0" />
+                  <span className="text-sm font-medium w-6">
+                    {index + 1}.
+                  </span>
+                  <span className="text-sm flex-1">{lesson.title}</span>
+                  <Badge variant="outline" className="text-xs opacity-50">
+                    {lessonTypeLabel[lessonType]}
+                  </Badge>
+                </div>
+              );
+            }
+
+            // Enrolled and accessible
             return (
               <Link
                 key={lesson.id}
@@ -69,16 +135,19 @@ export function LessonList({
                 {isCompleted ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
                 ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <TypeIcon className="h-5 w-5 text-muted-foreground shrink-0" />
                 )}
                 <span className="text-sm font-medium text-muted-foreground w-6">
                   {index + 1}.
                 </span>
                 <span
-                  className={`text-sm ${isCompleted ? "text-muted-foreground" : "font-medium"}`}
+                  className={`text-sm flex-1 ${isCompleted ? "text-muted-foreground" : "font-medium"}`}
                 >
                   {lesson.title}
                 </span>
+                <Badge variant="outline" className="text-xs">
+                  {lessonTypeLabel[lessonType]}
+                </Badge>
               </Link>
             );
           })}

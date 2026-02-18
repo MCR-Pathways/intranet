@@ -20,7 +20,6 @@ import {
 import type { Course, CourseCategory, CourseEnrollment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { EnrollButton } from "./enroll-button";
-import { UpdateProgressButton } from "./update-progress-button";
 import { LessonList } from "./lesson-list";
 
 const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string; bgColor: string }> = {
@@ -78,7 +77,7 @@ export default async function CourseDetailPage({
   // Fetch lessons for this course
   const { data: lessonsData } = await supabase
     .from("course_lessons")
-    .select("id, course_id, title, content, video_url, sort_order, is_active, created_at, updated_at")
+    .select("id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
     .eq("course_id", id)
     .eq("is_active", true)
     .order("sort_order");
@@ -218,18 +217,21 @@ export default async function CourseDetailPage({
               </div>
             ) : (
               <div className="space-y-2">
-                {course.content_url && (
+                {hasLessons ? (
+                  <Button asChild className="w-full">
+                    <Link href={`/learning/courses/${course.id}/lessons/${lessons[0].id}`}>
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      {isInProgress ? "Continue Learning" : "Start Learning"}
+                    </Link>
+                  </Button>
+                ) : course.content_url ? (
                   <Button asChild className="w-full">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">
-                      <PlayCircle className="h-4 w-4 mr-2" />
+                      <ExternalLink className="h-4 w-4 mr-2" />
                       {isInProgress ? "Continue Course" : "Start Course"}
                     </a>
                   </Button>
-                )}
-                <UpdateProgressButton
-                  enrollmentId={enrollment.id}
-                  currentProgress={enrollment.progress_percent}
-                />
+                ) : null}
               </div>
             )}
           </CardContent>

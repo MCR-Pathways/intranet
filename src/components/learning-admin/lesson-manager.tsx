@@ -25,8 +25,17 @@ import {
   ChevronUp,
   ChevronDown,
   BookOpen,
+  PlayCircle,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
-import type { CourseLesson } from "@/types/database.types";
+import type { CourseLesson, LessonType } from "@/types/database.types";
+
+const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
+  text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
+  video: { label: "Video", icon: PlayCircle, color: "text-blue-600", bgColor: "bg-blue-50" },
+  quiz: { label: "Quiz", icon: HelpCircle, color: "text-purple-600", bgColor: "bg-purple-50" },
+};
 
 interface LessonManagerProps {
   courseId: string;
@@ -105,15 +114,25 @@ export function LessonManager({ courseId, lessons }: LessonManagerProps) {
                   <span className="text-sm font-medium text-muted-foreground w-6 text-center">
                     {index + 1}
                   </span>
+                  {(() => {
+                    const typeConfig = lessonTypeConfig[lesson.lesson_type ?? "text"];
+                    const TypeIcon = typeConfig.icon;
+                    return (
+                      <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
+                        <TypeIcon className={`h-3.5 w-3.5 ${typeConfig.color}`} />
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {lesson.title}
                     </p>
-                    {lesson.video_url && (
-                      <p className="text-xs text-muted-foreground">
-                        Has video
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {lessonTypeConfig[lesson.lesson_type ?? "text"].label}
+                      {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
+                      {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
+                      {lesson.lesson_type === "quiz" && lesson.passing_score != null && ` · ${lesson.passing_score}% to pass`}
+                    </p>
                   </div>
                   {!lesson.is_active && (
                     <Badge variant="destructive" className="text-xs">

@@ -2,7 +2,7 @@
 
 import { requireLDAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { CourseCategory } from "@/types/database.types";
+import type { CourseCategory, LessonType } from "@/types/database.types";
 
 // ===========================================
 // COURSE CRUD
@@ -138,6 +138,9 @@ export async function createLesson(data: {
   title: string;
   content?: string | null;
   video_url?: string | null;
+  video_storage_path?: string | null;
+  lesson_type?: LessonType;
+  passing_score?: number | null;
   sort_order: number;
 }) {
   const { supabase } = await requireLDAdmin();
@@ -147,6 +150,9 @@ export async function createLesson(data: {
     "title",
     "content",
     "video_url",
+    "video_storage_path",
+    "lesson_type",
+    "passing_score",
     "sort_order",
   ] as const;
 
@@ -179,6 +185,9 @@ export async function updateLesson(
     title?: string;
     content?: string | null;
     video_url?: string | null;
+    video_storage_path?: string | null;
+    lesson_type?: LessonType;
+    passing_score?: number | null;
     sort_order?: number;
     is_active?: boolean;
   }
@@ -189,6 +198,9 @@ export async function updateLesson(
     "title",
     "content",
     "video_url",
+    "video_storage_path",
+    "lesson_type",
+    "passing_score",
     "sort_order",
     "is_active",
   ] as const;
@@ -303,5 +315,185 @@ export async function removeAssignment(assignmentId: string, courseId: string) {
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
+  return { success: true, error: null };
+}
+
+// ===========================================
+// VIDEO UPLOAD
+// ===========================================
+
+export async function uploadCourseVideo(formData: FormData) {
+  const { supabase, user } = await requireLDAdmin();
+
+  const file = formData.get("file") as File | null;
+  const courseId = formData.get("courseId") as string | null;
+
+  if (!file) {
+    return { success: false, error: "No file provided", url: null, storagePath: null };
+  }
+  if (!courseId) {
+    return { success: false, error: "No course ID provided", url: null, storagePath: null };
+  }
+
+  // Max 1GB
+  if (file.size > 1073741824) {
+    return { success: false, error: "File too large (max 1GB)", url: null, storagePath: null };
+  }
+
+  const allowedTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      success: false,
+      error: "Invalid video type. Allowed: MP4, WebM, OGG, QuickTime",
+      url: null,
+      storagePath: null,
+    };
+  }
+
+  const fileExt = file.name.split(".").pop() || "mp4";
+  const uniqueName = `${crypto.randomUUID()}.${fileExt}`;
+  const filePath = `${user.id}/${uniqueName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("course-videos")
+    .upload(filePath, file);
+
+  if (uploadError) {
+    return { success: false, error: uploadError.message, url: null, storagePath: null };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("course-videos").getPublicUrl(filePath);
+
+  return { success: true, error: null, url: publicUrl, storagePath: filePath };
+}
+
+// ===========================================
+// QUIZ QUESTION CRUD
+// ===========================================
+
+export async function createQuizQuestion(data: {
+  lesson_id: string;
+  course_id: string;
+  question_text: string;
+  sort_order: number;
+  options: { option_text: string; is_correct: boolean; sort_order: number }[];
+}) {
+  const { supabase } = await requireLDAdmin();
+
+  // Validate at least 2 options
+  if (data.options.length < 2) {
+    return { success: false, error: "At least 2 options are required", questionId: null };
+  }
+
+  // Validate exactly 1 correct answer
+  const correctCount = data.options.filter((o) => o.is_correct).length;
+  if (correctCount !== 1) {
+    return { success: false, error: "Exactly one correct answer is required", questionId: null };
+  }
+
+  // Insert question
+  const { data: question, error: qError } = await supabase
+    .from("quiz_questions")
+    .insert({
+      lesson_id: data.lesson_id,
+      question_text: data.question_text,
+      sort_order: data.sort_order,
+    })
+    .select("id")
+    .single();
+
+  if (qError) {
+    return { success: false, error: qError.message, questionId: null };
+  }
+
+  // Insert options
+  const options = data.options.map((opt, i) => ({
+    question_id: question.id,
+    option_text: opt.option_text,
+    is_correct: opt.is_correct,
+    sort_order: opt.sort_order ?? i,
+  }));
+
+  const { error: oError } = await supabase.from("quiz_options").insert(options);
+
+  if (oError) {
+    // Cleanup question if options failed
+    await supabase.from("quiz_questions").delete().eq("id", question.id);
+    return { success: false, error: oError.message, questionId: null };
+  }
+
+  revalidatePath(`/learning/admin/courses/${data.course_id}`);
+  revalidatePath(`/learning/courses/${data.course_id}`);
+  return { success: true, error: null, questionId: question.id };
+}
+
+export async function updateQuizQuestion(
+  questionId: string,
+  courseId: string,
+  data: {
+    question_text?: string;
+    options?: { option_text: string; is_correct: boolean; sort_order: number }[];
+  }
+) {
+  const { supabase } = await requireLDAdmin();
+
+  if (data.question_text) {
+    const { error } = await supabase
+      .from("quiz_questions")
+      .update({ question_text: data.question_text })
+      .eq("id", questionId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  if (data.options) {
+    // Validate options
+    if (data.options.length < 2) {
+      return { success: false, error: "At least 2 options are required" };
+    }
+    const correctCount = data.options.filter((o) => o.is_correct).length;
+    if (correctCount !== 1) {
+      return { success: false, error: "Exactly one correct answer is required" };
+    }
+
+    // Replace all options: delete existing, insert new set
+    await supabase.from("quiz_options").delete().eq("question_id", questionId);
+
+    const newOptions = data.options.map((opt, i) => ({
+      question_id: questionId,
+      option_text: opt.option_text,
+      is_correct: opt.is_correct,
+      sort_order: opt.sort_order ?? i,
+    }));
+
+    const { error } = await supabase.from("quiz_options").insert(newOptions);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null };
+}
+
+export async function deleteQuizQuestion(questionId: string, courseId: string) {
+  const { supabase } = await requireLDAdmin();
+
+  const { error } = await supabase
+    .from("quiz_questions")
+    .delete()
+    .eq("id", questionId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
   return { success: true, error: null };
 }

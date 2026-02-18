@@ -62,3 +62,41 @@ export async function completeLesson(lessonId: string, courseId: string) {
   revalidatePath("/learning/my-courses");
   return { success: true, error: null, progressPercent };
 }
+
+export async function submitQuiz(
+  lessonId: string,
+  courseId: string,
+  answers: Record<string, string>
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { data: result, error } = await supabase.rpc("submit_quiz_attempt", {
+    p_user_id: user.id,
+    p_lesson_id: lessonId,
+    p_course_id: courseId,
+    p_answers: answers,
+  });
+
+  if (error) {
+    return { success: false, error: error.message, result: null };
+  }
+
+  revalidatePath(`/learning/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}/lessons/${lessonId}`);
+  revalidatePath("/learning");
+  revalidatePath("/learning/my-courses");
+  return { success: true, error: null, result: result as {
+    score: number;
+    passed: boolean;
+    correct_answers: number;
+    total_questions: number;
+    progress_percent: number;
+  } };
+}

@@ -4,6 +4,8 @@ import { CourseEditForm } from "@/components/learning-admin/course-edit-form";
 import { LessonManager } from "@/components/learning-admin/lesson-manager";
 import { EnrollmentStatsCard } from "@/components/learning-admin/enrollment-stats-card";
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
+import { QuizEditor } from "@/components/learning-admin/quiz-editor";
+import type { CourseLesson, QuizQuestionWithOptions } from "@/types/database.types";
 
 export default async function CourseDetailPage({
   params,
@@ -38,7 +40,7 @@ export default async function CourseDetailPage({
     supabase
       .from("course_lessons")
       .select(
-        "id, course_id, title, content, video_url, sort_order, is_active, created_at, updated_at"
+        "id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
       )
       .eq("course_id", id)
       .order("sort_order"),
@@ -55,6 +57,49 @@ export default async function CourseDetailPage({
     supabase.from("teams").select("id, name").order("name"),
   ]);
 
+  const typedLessons = (lessons ?? []) as CourseLesson[];
+
+  // Fetch quiz questions and options for all quiz lessons
+  const quizLessons = typedLessons.filter((l) => l.lesson_type === "quiz");
+  const quizLessonIds = quizLessons.map((l) => l.id);
+
+  const quizQuestionsMap: Record<string, QuizQuestionWithOptions[]> = {};
+
+  if (quizLessonIds.length > 0) {
+    const { data: questions } = await supabase
+      .from("quiz_questions")
+      .select(
+        "id, lesson_id, question_text, sort_order, created_at, updated_at"
+      )
+      .in("lesson_id", quizLessonIds)
+      .order("sort_order");
+
+    if (questions && questions.length > 0) {
+      const questionIds = questions.map((q) => q.id);
+      const { data: options } = await supabase
+        .from("quiz_options")
+        .select(
+          "id, question_id, option_text, is_correct, sort_order, created_at"
+        )
+        .in("question_id", questionIds)
+        .order("sort_order");
+
+      const allOptions = options ?? [];
+
+      // Group into QuizQuestionWithOptions keyed by lesson_id
+      for (const q of questions) {
+        const qWithOptions: QuizQuestionWithOptions = {
+          ...q,
+          options: allOptions.filter((o) => o.question_id === q.id),
+        };
+        if (!quizQuestionsMap[q.lesson_id]) {
+          quizQuestionsMap[q.lesson_id] = [];
+        }
+        quizQuestionsMap[q.lesson_id].push(qWithOptions);
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -67,7 +112,18 @@ export default async function CourseDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <CourseEditForm course={course} />
-          <LessonManager courseId={course.id} lessons={lessons ?? []} />
+          <LessonManager courseId={course.id} lessons={typedLessons} />
+
+          {/* Quiz editors for each quiz lesson */}
+          {quizLessons.map((lesson) => (
+            <QuizEditor
+              key={lesson.id}
+              lessonId={lesson.id}
+              courseId={course.id}
+              lessonTitle={lesson.title}
+              questions={quizQuestionsMap[lesson.id] ?? []}
+            />
+          ))}
         </div>
         <div className="space-y-6">
           <EnrollmentStatsCard enrollments={enrollments ?? []} />

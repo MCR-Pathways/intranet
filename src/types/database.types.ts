@@ -26,6 +26,7 @@ export type WorkLocation =
   | "other";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
+export type LessonType = "video" | "text" | "quiz";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
 export type AttachmentType = "image" | "document" | "link";
 
@@ -503,6 +504,9 @@ export interface Database {
           title: string;
           content: string | null;
           video_url: string | null;
+          video_storage_path: string | null;
+          lesson_type: LessonType;
+          passing_score: number | null;
           sort_order: number;
           is_active: boolean;
           created_at: string;
@@ -514,6 +518,9 @@ export interface Database {
           title: string;
           content?: string | null;
           video_url?: string | null;
+          video_storage_path?: string | null;
+          lesson_type?: LessonType;
+          passing_score?: number | null;
           sort_order?: number;
           is_active?: boolean;
           created_at?: string;
@@ -525,6 +532,9 @@ export interface Database {
           title?: string;
           content?: string | null;
           video_url?: string | null;
+          video_storage_path?: string | null;
+          lesson_type?: LessonType;
+          passing_score?: number | null;
           sort_order?: number;
           is_active?: boolean;
           created_at?: string;
@@ -575,6 +585,87 @@ export interface Database {
           assign_value?: string;
           assigned_by?: string | null;
           created_at?: string;
+        };
+      };
+      quiz_questions: {
+        Row: {
+          id: string;
+          lesson_id: string;
+          question_text: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lesson_id: string;
+          question_text: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          lesson_id?: string;
+          question_text?: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      quiz_options: {
+        Row: {
+          id: string;
+          question_id: string;
+          option_text: string;
+          is_correct: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          option_text: string;
+          is_correct?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          question_id?: string;
+          option_text?: string;
+          is_correct?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      quiz_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          lesson_id: string;
+          score: number;
+          passed: boolean;
+          answers: Json | null;
+          attempted_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          lesson_id: string;
+          score: number;
+          passed?: boolean;
+          answers?: Json | null;
+          attempted_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          lesson_id?: string;
+          score?: number;
+          passed?: boolean;
+          answers?: Json | null;
+          attempted_at?: string;
         };
       };
       sign_ins: {
@@ -655,6 +746,15 @@ export interface Database {
         };
         Returns: number;
       };
+      submit_quiz_attempt: {
+        Args: {
+          p_user_id: string;
+          p_lesson_id: string;
+          p_course_id: string;
+          p_answers: Json;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums
@@ -677,6 +777,13 @@ export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"
 export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"];
 export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
 export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
+export type QuizQuestion = Database["public"]["Tables"]["quiz_questions"]["Row"];
+export type QuizOption = Database["public"]["Tables"]["quiz_options"]["Row"];
+export type QuizAttempt = Database["public"]["Tables"]["quiz_attempts"]["Row"];
+
+export interface QuizQuestionWithOptions extends QuizQuestion {
+  options: QuizOption[];
+}
 export type InductionProgress = Database["public"]["Tables"]["induction_progress"]["Row"];
 
 // Extended types with relations
