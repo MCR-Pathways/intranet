@@ -7,21 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import {
   Shield,
-  Lightbulb,
-  Users,
   Clock,
   CheckCircle2,
   PlayCircle,
   BookOpen,
 } from "lucide-react";
-import type { Course, CourseCategory, CourseEnrollment } from "@/types/database.types";
+import type { Course, CourseEnrollment } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-
-const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string }> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600" },
-};
+import { categoryConfig } from "@/lib/learning";
 
 function CourseCard({
   course,
@@ -102,7 +95,18 @@ function CourseCard({
   );
 }
 
-export default async function CourseCatalogPage() {
+const validCategoryTabs = ["all", "compliance", "upskilling", "soft_skills"] as const;
+
+export default async function CourseCatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const defaultTab = validCategoryTabs.includes(category as (typeof validCategoryTabs)[number])
+    ? (category as (typeof validCategoryTabs)[number])
+    : "all";
+
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -113,7 +117,7 @@ export default async function CourseCatalogPage() {
   // Fetch all active courses
   const { data: courses } = await supabase
     .from("courses")
-    .select("*")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
     .eq("is_active", true)
     .order("is_required", { ascending: false })
     .order("title");
@@ -121,7 +125,7 @@ export default async function CourseCatalogPage() {
   // Fetch user's enrollments
   const { data: enrollments } = await supabase
     .from("course_enrollments")
-    .select("*")
+    .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
     .eq("user_id", user.id);
 
   const enrollmentMap = new Map(
@@ -188,7 +192,7 @@ export default async function CourseCatalogPage() {
       )}
 
       {/* Course tabs by category */}
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
         <TabsList>
           <TabsTrigger value="all">All Courses</TabsTrigger>
           <TabsTrigger value="compliance">

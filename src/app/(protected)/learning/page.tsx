@@ -11,20 +11,14 @@ import {
   Lightbulb,
   BookOpen,
   ArrowRight,
-  Users,
   Clock,
   AlertTriangle,
   PlayCircle,
   CheckCircle2,
 } from "lucide-react";
-import type { CourseCategory, EnrollmentWithCourse } from "@/types/database.types";
+import type { EnrollmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-
-const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string }> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600" },
-};
+import { categoryConfig } from "@/lib/learning";
 
 export default async function LearningPage() {
   const supabase = await createClient();
@@ -37,15 +31,15 @@ export default async function LearningPage() {
   // Fetch all active courses
   const { data: courses } = await supabase
     .from("courses")
-    .select("*")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at")
     .eq("is_active", true);
 
   // Fetch user's enrollments with course details
   const { data: enrollments } = await supabase
     .from("course_enrollments")
     .select(`
-      *,
-      course:courses(*)
+      id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
+      course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
     `)
     .eq("user_id", user.id);
 
@@ -54,7 +48,7 @@ export default async function LearningPage() {
     .filter((e) => e.course)
     .map((e) => ({
       ...e,
-      course: e.course as EnrollmentWithCourse["course"],
+      course: e.course as unknown as EnrollmentWithCourse["course"],
     })) as EnrollmentWithCourse[];
 
   // Calculate stats by category
