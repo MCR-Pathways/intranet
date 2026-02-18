@@ -212,12 +212,18 @@ export default async function LessonPage({
             />
           )}
 
-          {lessonType === "text" && lesson.content && (
+          {lessonType === "text" && (
             <Card>
               <CardContent className="pt-6">
-                <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-                  {lesson.content}
-                </div>
+                {lesson.content ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
+                    {lesson.content}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm text-center py-8">
+                    No content has been added to this lesson yet.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

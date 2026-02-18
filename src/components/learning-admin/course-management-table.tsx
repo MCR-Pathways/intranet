@@ -9,6 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogClose,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -46,6 +55,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<Course | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredCourses = useMemo(() => {
@@ -65,9 +75,21 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
     });
   }, [courses, searchQuery, categoryFilter, statusFilter]);
 
-  const handleToggleActive = (courseId: string, currentlyActive: boolean) => {
+  const handleToggleActive = (course: Course) => {
+    if (course.is_active) {
+      setDeactivateTarget(course);
+    } else {
+      startTransition(async () => {
+        await toggleCourseActive(course.id, true);
+      });
+    }
+  };
+
+  const handleConfirmDeactivate = () => {
+    if (!deactivateTarget) return;
     startTransition(async () => {
-      await toggleCourseActive(courseId, !currentlyActive);
+      await toggleCourseActive(deactivateTarget.id, false);
+      setDeactivateTarget(null);
     });
   };
 
@@ -207,9 +229,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
                             variant="ghost"
                             size="sm"
                             className="h-8 px-2"
-                            onClick={() =>
-                              handleToggleActive(course.id, course.is_active)
-                            }
+                            onClick={() => handleToggleActive(course)}
                             disabled={isPending}
                           >
                             {course.is_active ? (
@@ -243,6 +263,37 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
       />
+
+      {/* Deactivate Confirmation Dialog */}
+      <AlertDialog
+        open={!!deactivateTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeactivateTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate &quot;{deactivateTarget?.title}&quot;?
+              It will be hidden from all learners immediately. You can reactivate
+              it at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeactivate}
+              disabled={isPending}
+            >
+              {isPending ? "Deactivating..." : "Deactivate"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

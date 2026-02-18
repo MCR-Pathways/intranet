@@ -63,8 +63,8 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       module: "learning",
       children: [
         { name: "My Courses", href: "/learning" },
-        { name: "Compliance", href: "/learning/courses/compliance" },
-        { name: "Upskilling", href: "/learning/courses/upskilling" },
+        { name: "Compliance", href: "/learning/courses?category=compliance" },
+        { name: "Upskilling", href: "/learning/courses?category=upskilling" },
         { name: "Tool Shed", href: "/learning/tool-shed" },
         ...(isLDAdmin
           ? [

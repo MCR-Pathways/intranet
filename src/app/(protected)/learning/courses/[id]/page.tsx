@@ -7,9 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Shield,
-  Lightbulb,
-  Users,
   Clock,
   CheckCircle2,
   PlayCircle,
@@ -17,16 +14,11 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import type { Course, CourseCategory, CourseEnrollment, CourseLesson } from "@/types/database.types";
+import type { Course, CourseEnrollment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
+import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
-
-const categoryConfig: Record<CourseCategory, { label: string; icon: typeof Shield; color: string; bgColor: string }> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600", bgColor: "bg-red-50" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600", bgColor: "bg-blue-50" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600", bgColor: "bg-purple-50" },
-};
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "N/A";
@@ -97,6 +89,16 @@ export default async function CourseDetailPage({
   }
 
   const hasLessons = lessons.length > 0;
+
+  // Find the first incomplete, unlocked lesson for the "Continue Learning" button
+  const resumeLessonId = (() => {
+    if (!hasLessons) return null;
+    const lockedIds = getLockedLessonIds(lessons, completedLessonIds);
+    const firstIncomplete = lessons.find(
+      (l) => !completedLessonIds.includes(l.id) && !lockedIds.has(l.id)
+    );
+    return firstIncomplete?.id ?? lessons[0].id;
+  })();
 
   const config = categoryConfig[course.category];
   const Icon = config.icon;
@@ -219,7 +221,7 @@ export default async function CourseDetailPage({
               <div className="space-y-2">
                 {hasLessons ? (
                   <Button asChild className="w-full">
-                    <Link href={`/learning/courses/${course.id}/lessons/${lessons[0].id}`}>
+                    <Link href={`/learning/courses/${course.id}/lessons/${resumeLessonId}`}>
                       <PlayCircle className="h-4 w-4 mr-2" />
                       {isInProgress ? "Continue Learning" : "Start Learning"}
                     </Link>

@@ -8,6 +8,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogClose,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -45,6 +54,7 @@ export function CourseAssignmentManager({
 }: CourseAssignmentManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [showDialog, setShowDialog] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<CourseAssignment | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [assignType, setAssignType] = useState<string>("user_type");
@@ -75,9 +85,15 @@ export function CourseAssignmentManager({
     });
   };
 
-  const handleRemove = (assignmentId: string) => {
+  const handleRemove = (assignment: CourseAssignment) => {
+    setRemoveTarget(assignment);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!removeTarget) return;
     startTransition(async () => {
-      await removeAssignment(assignmentId, courseId);
+      await removeAssignment(removeTarget.id, courseId);
+      setRemoveTarget(null);
     });
   };
 
@@ -132,7 +148,7 @@ export function CourseAssignmentManager({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleRemove(assignment.id)}
+                    onClick={() => handleRemove(assignment)}
                     disabled={isPending}
                   >
                     <X className="h-4 w-4" />
@@ -233,6 +249,38 @@ export function CourseAssignmentManager({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Assignment Confirmation Dialog */}
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the assignment for{" "}
+              <strong>{removeTarget ? getAssignmentLabel(removeTarget) : ""}</strong>?
+              New matching users will no longer be auto-enrolled, but existing
+              enrollments will not be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRemove}
+              disabled={isPending}
+            >
+              {isPending ? "Removing..." : "Remove"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
