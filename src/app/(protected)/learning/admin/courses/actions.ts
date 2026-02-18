@@ -347,6 +347,17 @@ export async function updateLesson(
 export async function deleteLesson(lessonId: string, courseId: string) {
   const { supabase } = await requireLDAdmin();
 
+  // Clean up associated images from storage before deleting lesson
+  const { data: images } = await supabase
+    .from("lesson_images")
+    .select("storage_path")
+    .eq("lesson_id", lessonId);
+
+  if (images && images.length > 0) {
+    const paths = images.map((img) => img.storage_path);
+    await supabase.storage.from("lesson-images").remove(paths);
+  }
+
   const { error } = await supabase
     .from("course_lessons")
     .delete()
@@ -481,6 +492,121 @@ export async function uploadCourseVideo(formData: FormData) {
   } = supabase.storage.from("course-videos").getPublicUrl(filePath);
 
   return { success: true, error: null, url: publicUrl, storagePath: filePath };
+}
+
+// ===========================================
+// LESSON IMAGE UPLOAD
+// ===========================================
+
+export async function uploadLessonImage(formData: FormData) {
+  const { supabase } = await requireLDAdmin();
+
+  const file = formData.get("file") as File | null;
+  const lessonId = formData.get("lessonId") as string | null;
+  const courseId = formData.get("courseId") as string | null;
+
+  if (!file) {
+    return { success: false, error: "No file provided", image: null };
+  }
+  if (!lessonId || !courseId) {
+    return { success: false, error: "Missing lesson or course ID", image: null };
+  }
+
+  // Max 5MB
+  if (file.size > 5242880) {
+    return { success: false, error: "File too large (max 5MB)", image: null };
+  }
+
+  const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+  if (!allowedTypes.includes(file.type)) {
+    return {
+      success: false,
+      error: "Invalid image type. Allowed: PNG, JPEG, GIF, WebP, SVG",
+      image: null,
+    };
+  }
+
+  const fileExt = file.name.split(".").pop() || "png";
+  const uniqueName = `${crypto.randomUUID()}.${fileExt}`;
+  const filePath = `${courseId}/${lessonId}/${uniqueName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("lesson-images")
+    .upload(filePath, file);
+
+  if (uploadError) {
+    return { success: false, error: uploadError.message, image: null };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("lesson-images").getPublicUrl(filePath);
+
+  // Get current max sort order
+  const { data: existing } = await supabase
+    .from("lesson_images")
+    .select("sort_order")
+    .eq("lesson_id", lessonId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  const { data: imageRow, error: insertError } = await supabase
+    .from("lesson_images")
+    .insert({
+      lesson_id: lessonId,
+      file_name: file.name,
+      file_url: publicUrl,
+      storage_path: filePath,
+      file_size: file.size,
+      mime_type: file.type,
+      sort_order: nextOrder,
+    })
+    .select("id, lesson_id, file_name, file_url, storage_path, file_size, mime_type, sort_order, created_at")
+    .single();
+
+  if (insertError) {
+    // Cleanup uploaded file if DB insert fails
+    await supabase.storage.from("lesson-images").remove([filePath]);
+    return { success: false, error: insertError.message, image: null };
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null, image: imageRow };
+}
+
+export async function deleteLessonImage(imageId: string, courseId: string) {
+  const { supabase } = await requireLDAdmin();
+
+  // Get the storage path first
+  const { data: image } = await supabase
+    .from("lesson_images")
+    .select("storage_path")
+    .eq("id", imageId)
+    .single();
+
+  if (!image) {
+    return { success: false, error: "Image not found" };
+  }
+
+  // Delete from storage
+  await supabase.storage.from("lesson-images").remove([image.storage_path]);
+
+  // Delete from DB
+  const { error } = await supabase
+    .from("lesson_images")
+    .delete()
+    .eq("id", imageId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null };
 }
 
 // ===========================================

@@ -165,6 +165,17 @@ export default async function LessonPage({
     }
   }
 
+  // For text lessons: fetch images
+  let lessonImages: { id: string; file_url: string; file_name: string }[] = [];
+  if (lesson.lesson_type === "text") {
+    const { data: imgData } = await supabase
+      .from("lesson_images")
+      .select("id, file_url, file_name")
+      .eq("lesson_id", lessonId)
+      .order("sort_order");
+    lessonImages = imgData ?? [];
+  }
+
   // For uploaded videos: get the public URL
   let storagePublicUrl: string | null = null;
   if (lesson.lesson_type === "video" && lesson.video_storage_path) {
@@ -224,6 +235,19 @@ export default async function LessonPage({
                   <p className="text-muted-foreground text-sm text-center py-8">
                     No content has been added to this lesson yet.
                   </p>
+                )}
+                {lessonImages.length > 0 && (
+                  <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    {lessonImages.map((img) => (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        key={img.id}
+                        src={img.file_url}
+                        alt={img.file_name}
+                        className="rounded-lg border border-border w-full object-contain"
+                      />
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -594,6 +594,41 @@ export interface Database {
           created_at?: string;
         };
       };
+      lesson_images: {
+        Row: {
+          id: string;
+          lesson_id: string;
+          file_name: string;
+          file_url: string;
+          storage_path: string;
+          file_size: number;
+          mime_type: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lesson_id: string;
+          file_name: string;
+          file_url: string;
+          storage_path: string;
+          file_size: number;
+          mime_type: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          lesson_id?: string;
+          file_name?: string;
+          file_url?: string;
+          storage_path?: string;
+          file_size?: number;
+          mime_type?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
       quiz_questions: {
         Row: {
           id: string;
@@ -784,6 +819,7 @@ export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"
 export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"];
 export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
 export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
+export type LessonImage = Database["public"]["Tables"]["lesson_images"]["Row"];
 export type QuizQuestion = Database["public"]["Tables"]["quiz_questions"]["Row"];
 export type QuizOption = Database["public"]["Tables"]["quiz_options"]["Row"];
 export type QuizAttempt = Database["public"]["Tables"]["quiz_attempts"]["Row"];
