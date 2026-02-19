@@ -1,13 +1,10 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function enrollInCourse(courseId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     throw new Error("Not authenticated");
@@ -34,10 +31,7 @@ export async function enrollInCourse(courseId: string) {
 }
 
 export async function completeLesson(lessonId: string, courseId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     throw new Error("Not authenticated");
@@ -68,10 +62,7 @@ export async function submitQuiz(
   courseId: string,
   answers: Record<string, string | string[]>
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     throw new Error("Not authenticated");

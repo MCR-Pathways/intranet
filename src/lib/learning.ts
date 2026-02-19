@@ -10,12 +10,13 @@ export interface CategoryConfig {
   icon: typeof Shield;
   color: string;
   bgColor: string;
+  badgeVariant: "destructive" | "default" | "secondary";
 }
 
 export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
-  compliance: { label: "Compliance", icon: Shield, color: "text-red-600", bgColor: "bg-red-50" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600", bgColor: "bg-blue-50" },
-  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600", bgColor: "bg-purple-50" },
+  compliance: { label: "Compliance", icon: Shield, color: "text-red-600", bgColor: "bg-red-50", badgeVariant: "destructive" },
+  upskilling: { label: "Upskilling", icon: Lightbulb, color: "text-blue-600", bgColor: "bg-blue-50", badgeVariant: "default" },
+  soft_skills: { label: "Soft Skills", icon: Users, color: "text-purple-600", bgColor: "bg-purple-50", badgeVariant: "secondary" },
 };
 
 interface LockableLessonInput {

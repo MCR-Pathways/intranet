@@ -18,21 +18,10 @@ import {
   Search,
   Pencil,
   Plus,
-  Shield,
-  Lightbulb,
-  Users,
 } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
-import type { Course, CourseCategory } from "@/types/database.types";
-
-const categoryConfig: Record<
-  CourseCategory,
-  { label: string; icon: React.ElementType; variant: "destructive" | "default" | "secondary" }
-> = {
-  compliance: { label: "Compliance", icon: Shield, variant: "destructive" },
-  upskilling: { label: "Upskilling", icon: Lightbulb, variant: "default" },
-  soft_skills: { label: "Soft Skills", icon: Users, variant: "secondary" },
-};
+import { categoryConfig } from "@/lib/learning";
+import type { Course } from "@/types/database.types";
 
 interface CourseManagementTableProps {
   courses: Course[];
@@ -170,7 +159,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={config.variant}>{config.label}</Badge>
+                        <Badge variant={config.badgeVariant}>{config.label}</Badge>
                       </td>
                       <td className="px-4 py-3">
                         {course.is_required ? (
