@@ -157,7 +157,6 @@ export default async function CourseDetailPage({
       <CoursePublishBanner
         courseId={course.id}
         status={course.status as "draft" | "published"}
-        isActive={course.is_active}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">

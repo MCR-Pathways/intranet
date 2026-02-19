@@ -9,13 +9,11 @@ import { FileText, Loader2, Rocket } from "lucide-react";
 interface CoursePublishBannerProps {
   courseId: string;
   status: "draft" | "published";
-  isActive: boolean;
 }
 
 export function CoursePublishBanner({
   courseId,
   status,
-  isActive,
 }: CoursePublishBannerProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
