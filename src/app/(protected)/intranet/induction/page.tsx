@@ -27,7 +27,6 @@ export default async function InductionPage() {
     <InductionChecklist
       displayName={displayName}
       completedItemIds={completedItemIds}
-      userId={user.id}
     />
   );
 }
