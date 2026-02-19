@@ -4,13 +4,14 @@
 
 import { Shield, Lightbulb, Users } from "lucide-react";
 import type { CourseCategory } from "@/types/database.types";
+import type { BadgeProps } from "@/components/ui/badge";
 
 export interface CategoryConfig {
   label: string;
   icon: typeof Shield;
   color: string;
   bgColor: string;
-  badgeVariant: "destructive" | "default" | "secondary";
+  badgeVariant: NonNullable<BadgeProps["variant"]>;
 }
 
 export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
