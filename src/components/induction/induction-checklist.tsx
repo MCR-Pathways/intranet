@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { completeInduction } from "@/app/(protected)/intranet/induction/actions";
 import Link from "next/link";
 import {
   Card,
@@ -149,13 +149,11 @@ function groupByCategory(items: InductionItem[]) {
 interface InductionChecklistProps {
   displayName: string;
   completedItemIds: string[];
-  userId: string;
 }
 
 export function InductionChecklist({
   displayName,
   completedItemIds,
-  userId,
 }: InductionChecklistProps) {
   const [isCompleting, setIsCompleting] = useState(false);
 
@@ -169,24 +167,15 @@ export function InductionChecklist({
   const handleCompleteInduction = async () => {
     setIsCompleting(true);
     try {
-      const supabase = createClient();
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          induction_completed_at: new Date().toISOString(),
-          status: "active",
-        })
-        .eq("id", userId);
-
-      if (error) {
-        logger.error("Error completing induction", { error });
-        return;
-      }
-
-      // Full page reload to clear middleware induction check
+      await completeInduction();
+      // Server action calls redirect(), but as a fallback:
       window.location.href = "/intranet";
     } catch (err) {
+      // Next.js redirect() throws a NEXT_REDIRECT error — this is expected
+      const error = err as Error;
+      if (error?.message?.includes("NEXT_REDIRECT")) {
+        return;
+      }
       logger.error("Error completing induction", { error: err });
     } finally {
       setIsCompleting(false);
