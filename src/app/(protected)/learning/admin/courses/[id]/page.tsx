@@ -168,7 +168,11 @@ export default async function CourseDetailPage({
           <Card>
             <CardContent className="pt-6 space-y-1 text-sm text-muted-foreground">
               <p>
-                Created by {creatorResult.data?.full_name ?? "Unknown"} on{" "}
+                Created by{" "}
+                {course.created_by
+                  ? (creatorResult.data?.full_name ?? "Unknown")
+                  : "System"}{" "}
+                on{" "}
                 {formatDate(course.created_at)}
               </p>
               {course.updated_by && (

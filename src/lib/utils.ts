@@ -24,6 +24,23 @@ export function sanitizeUrl(url: string | null | undefined): string | undefined 
 }
 
 /**
+ * Validates that a URL uses http: or https: protocol.
+ * Returns an error message string if invalid, or null if valid.
+ * Use in server actions for input validation.
+ */
+export function validateUrl(url: string, fieldName: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return `${fieldName} must use https:// or http://`;
+    }
+  } catch {
+    return `Invalid ${fieldName}`;
+  }
+  return null;
+}
+
+/**
  * Formats a date string into a relative time description.
  * e.g. "just now", "5m ago", "3h ago", "2d ago", "1w ago", or a full date.
  */
