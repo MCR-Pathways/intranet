@@ -19,6 +19,7 @@ import {
 import { Bell, CheckCheck, ExternalLink, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface Notification {
   id: string;
@@ -50,7 +51,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
     const { notifications: data, error } = await getNotifications();
 
     if (error) {
-      console.error("Error fetching notifications:", error);
+      logger.error("Error fetching notifications", { error });
       setIsLoading(false);
       return;
     }
@@ -95,7 +96,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error("Error marking notifications as read:", error);
+      logger.error("Error marking notifications as read", { error });
     }
   };
 
@@ -114,7 +115,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (error) {
-        console.error("Error marking notification as read:", error);
+        logger.error("Error marking notification as read", { error });
       }
     }
 

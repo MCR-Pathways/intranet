@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
 
   // Handle OAuth errors
   if (error) {
-    console.error("OAuth error:", error, errorDescription);
+    logger.error("OAuth error", { error, errorDescription });
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(errorDescription || error)}`
     );
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
       await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
-      console.error("Code exchange error:", exchangeError);
+      logger.error("Code exchange error", { error: exchangeError });
       // Check if this is a database schema error (missing types/tables)
       const errorMessage = exchangeError.message.toLowerCase();
       if (
@@ -30,9 +31,7 @@ export async function GET(request: Request) {
         errorMessage.includes("does not exist") ||
         errorMessage.includes("transaction is aborted")
       ) {
-        console.error(
-          "Database schema error detected - migrations may not have been run"
-        );
+        logger.error("Database schema error detected - migrations may not have been run");
         return NextResponse.redirect(
           `${origin}/login?error=${encodeURIComponent(
             "Database configuration error. Please contact the administrator."
@@ -79,10 +78,7 @@ export async function GET(request: Request) {
             errorCode === "42704" || // undefined_object (missing type)
             errorCode === "25P02" // in_failed_sql_transaction
           ) {
-            console.error(
-              "Database schema error during profile fetch:",
-              profileError
-            );
+            logger.error("Database schema error during profile fetch", { error: profileError });
             await supabase.auth.signOut();
             return NextResponse.redirect(
               `${origin}/login?error=${encodeURIComponent(
@@ -94,7 +90,7 @@ export async function GET(request: Request) {
           // Profile not found is expected for new users - trigger should create it
           // If it's a different error, log it but continue
           if (profileError.code !== "PGRST116") {
-            console.error("Profile fetch error:", profileError);
+            logger.error("Profile fetch error", { error: profileError });
           }
         }
 
@@ -104,7 +100,7 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/intranet/induction`);
         }
       } catch (err) {
-        console.error("Unexpected error fetching profile:", err);
+        logger.error("Unexpected error fetching profile", { error: err });
         // Don't block login for unexpected errors, but log them
       }
 

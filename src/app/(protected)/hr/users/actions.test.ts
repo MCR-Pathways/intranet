@@ -56,8 +56,8 @@ describe("HR User Actions", () => {
 
     // Default: requireHRAdmin succeeds
     vi.mocked(requireHRAdmin).mockResolvedValue({
-      supabase: mockSupabase as ReturnType<typeof requireHRAdmin> extends Promise<infer T> ? T["supabase"] : never,
-      user: { id: "admin-123", email: "admin@mcrpathways.org" } as ReturnType<typeof requireHRAdmin> extends Promise<infer T> ? T["user"] : never,
+      supabase: mockSupabase as never,
+      user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
     });
   });
 

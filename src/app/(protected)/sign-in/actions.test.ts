@@ -8,12 +8,8 @@ function getUKToday(): string {
 }
 
 /**
- * Mock strategy for sign-in actions:
- * - recordSignIn uses createClient() directly (for insert + profile update)
- * - Read actions use getCurrentUser() from @/lib/auth
- * - checkAndCreateSignInNudge uses getCurrentUser() + createNotification from @/lib/notifications
- *
- * We mock both to control auth state and database responses.
+ * Mock strategy: All sign-in actions now use getCurrentUser() from @/lib/auth.
+ * We mock getCurrentUser to control auth state and the supabase instance.
  */
 
 const mockInsert = vi.hoisted(() => vi.fn());
@@ -25,20 +21,16 @@ const mockFrom = vi.hoisted(() => vi.fn());
 const mockLimit = vi.hoisted(() => vi.fn());
 const mockOrder = vi.hoisted(() => vi.fn());
 
-const mockGetUserAuth = vi.hoisted(() => vi.fn());
-
-// Mock createClient for recordSignIn / deleteSignInEntry
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn().mockResolvedValue({
-    auth: { getUser: () => mockGetUserAuth() },
-    from: mockFrom,
-  }),
+const mockSupabase = vi.hoisted(() => ({
+  from: mockFrom,
 }));
 
-// Mock getCurrentUser for read actions and nudge check
-const mockGetCurrentUser = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth", () => ({
-  getCurrentUser: () => mockGetCurrentUser(),
+  getCurrentUser: vi.fn().mockResolvedValue({
+    supabase: mockSupabase,
+    user: { id: "user-1", email: "test@mcrpathways.org" },
+    profile: { id: "user-1", user_type: "staff", last_sign_in_date: null },
+  }),
 }));
 
 // Mock next/cache
@@ -54,6 +46,16 @@ vi.mock("@/lib/notifications", () => ({
   dismissSignInReminders: (...args: unknown[]) => mockDismissSignInReminders(...args),
 }));
 
+// Mock logger (since we replaced console.error with logger.error)
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 import {
   recordSignIn,
   getTodaySignIns,
@@ -63,7 +65,9 @@ import {
   getTeamSignInHistory,
   checkAndCreateSignInNudge,
 } from "@/app/(protected)/sign-in/actions";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 describe("Sign-in Actions", () => {
   beforeEach(() => {
@@ -75,9 +79,12 @@ describe("Sign-in Actions", () => {
   describe("recordSignIn", () => {
     beforeEach(() => {
       // Default: authenticated user
-      mockGetUserAuth.mockResolvedValue({
-        data: { user: { id: "user-1" } },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1", email: "test@mcrpathways.org" } as never,
+        profile: { id: "user-1", user_type: "staff", last_sign_in_date: null } as never,
       });
+
       // Mock sign_ins select (checking existing today) -> returns empty (first of day)
       mockLimit.mockResolvedValue({ data: [] });
       mockEq.mockReturnValue({ limit: mockLimit });
@@ -103,7 +110,11 @@ describe("Sign-in Actions", () => {
     });
 
     it("returns error when not authenticated", async () => {
-      mockGetUserAuth.mockResolvedValue({ data: { user: null } });
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: null,
+        profile: null,
+      });
 
       const result = await recordSignIn("home");
       expect(result).toEqual({
@@ -195,16 +206,15 @@ describe("Sign-in Actions", () => {
     it("still succeeds when dismissSignInReminders throws", async () => {
       mockLimit.mockResolvedValue({ data: [] });
       mockDismissSignInReminders.mockRejectedValue(new Error("Network error"));
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const result = await recordSignIn("home");
 
       expect(result).toEqual({ success: true, error: null });
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to dismiss sign-in reminders:",
-        expect.any(Error)
+      // Now uses logger.error instead of console.error
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to dismiss sign-in reminders",
+        expect.objectContaining({ error: expect.any(Error) })
       );
-      consoleSpy.mockRestore();
     });
 
     it("returns error when insert fails", async () => {
@@ -244,8 +254,8 @@ describe("Sign-in Actions", () => {
 
   describe("getTodaySignIns", () => {
     it("returns empty array when not authenticated", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -282,10 +292,10 @@ describe("Sign-in Actions", () => {
       mockSelect.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "staff" },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff" } as never,
       });
 
       const result = await getTodaySignIns();
@@ -296,8 +306,8 @@ describe("Sign-in Actions", () => {
 
   describe("getMonthlyHistory", () => {
     it("returns empty array when not authenticated", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -309,7 +319,11 @@ describe("Sign-in Actions", () => {
 
   describe("deleteSignInEntry", () => {
     it("returns error when not authenticated", async () => {
-      mockGetUserAuth.mockResolvedValue({ data: { user: null } });
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: null,
+        profile: null,
+      });
 
       const result = await deleteSignInEntry("entry-1");
       expect(result).toEqual({
@@ -319,8 +333,10 @@ describe("Sign-in Actions", () => {
     });
 
     it("deletes entry and clears last_sign_in_date when no entries remain", async () => {
-      mockGetUserAuth.mockResolvedValue({
-        data: { user: { id: "user-1" } },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { id: "user-1" } as never,
       });
 
       // 1) delete chain: .from("sign_ins").delete().eq("id").eq("user_id")
@@ -358,8 +374,10 @@ describe("Sign-in Actions", () => {
     });
 
     it("deletes entry without clearing last_sign_in_date when entries remain", async () => {
-      mockGetUserAuth.mockResolvedValue({
-        data: { user: { id: "user-1" } },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { id: "user-1" } as never,
       });
 
       const mockDeleteEq2 = vi.fn().mockResolvedValue({ error: null });
@@ -394,10 +412,10 @@ describe("Sign-in Actions", () => {
 
   describe("getTeamSignInsToday", () => {
     it("returns error for non-managers", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { is_line_manager: false },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { is_line_manager: false } as never,
       });
 
       const result = await getTeamSignInsToday();
@@ -415,10 +433,10 @@ describe("Sign-in Actions", () => {
 
       mockFrom.mockReturnValue({ select: mockMemberSelect });
 
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "manager-1" },
-        profile: { is_line_manager: true },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "manager-1" } as never,
+        profile: { is_line_manager: true } as never,
       });
 
       const result = await getTeamSignInsToday();
@@ -428,10 +446,10 @@ describe("Sign-in Actions", () => {
 
   describe("getTeamSignInHistory", () => {
     it("returns error for non-managers", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { is_line_manager: false },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { is_line_manager: false } as never,
       });
 
       const result = await getTeamSignInHistory({});
@@ -446,8 +464,8 @@ describe("Sign-in Actions", () => {
 
   describe("checkAndCreateSignInNudge", () => {
     it("returns false when not authenticated", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -457,10 +475,10 @@ describe("Sign-in Actions", () => {
     });
 
     it("returns false for non-staff users", async () => {
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "pathways_coordinator", last_sign_in_date: null },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "pathways_coordinator", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -469,10 +487,10 @@ describe("Sign-in Actions", () => {
 
     it("returns false when staff has signed in today", async () => {
       const today = getUKToday();
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "staff", last_sign_in_date: today },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: today } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -488,10 +506,10 @@ describe("Sign-in Actions", () => {
       mockSelect.mockReturnValue({ eq: mockNotifEq1 });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "staff", last_sign_in_date: null },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -513,22 +531,21 @@ describe("Sign-in Actions", () => {
       mockSelect.mockReturnValue({ eq: mockNotifEq1 });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "staff", last_sign_in_date: null },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       mockCreateNotification.mockRejectedValue(new Error("Service unavailable"));
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const result = await checkAndCreateSignInNudge();
       expect(result).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to create sign-in nudge notification:",
-        expect.any(Error)
+      // Now uses logger.error instead of console.error
+      expect(logger.error).toHaveBeenCalledWith(
+        "Failed to create sign-in nudge notification",
+        expect.objectContaining({ error: expect.any(Error) })
       );
-      consoleSpy.mockRestore();
     });
 
     it("does not create duplicate notification", async () => {
@@ -540,10 +557,10 @@ describe("Sign-in Actions", () => {
       mockSelect.mockReturnValue({ eq: mockNotifEq1 });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      mockGetCurrentUser.mockResolvedValue({
-        supabase: { from: mockFrom },
-        user: { id: "user-1" },
-        profile: { user_type: "staff", last_sign_in_date: null },
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
