@@ -80,9 +80,9 @@ describe("Sign-in Actions", () => {
     beforeEach(() => {
       // Default: authenticated user
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1", email: "test@mcrpathways.org" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { id: "user-1", user_type: "staff", last_sign_in_date: null } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1", email: "test@mcrpathways.org" } as never,
+        profile: { id: "user-1", user_type: "staff", last_sign_in_date: null } as never,
       });
 
       // Mock sign_ins select (checking existing today) -> returns empty (first of day)
@@ -111,7 +111,7 @@ describe("Sign-in Actions", () => {
 
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -255,7 +255,7 @@ describe("Sign-in Actions", () => {
   describe("getTodaySignIns", () => {
     it("returns empty array when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -293,9 +293,9 @@ describe("Sign-in Actions", () => {
       mockFrom.mockReturnValue({ select: mockSelect });
 
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "staff" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff" } as never,
       });
 
       const result = await getTodaySignIns();
@@ -307,7 +307,7 @@ describe("Sign-in Actions", () => {
   describe("getMonthlyHistory", () => {
     it("returns empty array when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -320,7 +320,7 @@ describe("Sign-in Actions", () => {
   describe("deleteSignInEntry", () => {
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -334,9 +334,9 @@ describe("Sign-in Actions", () => {
 
     it("deletes entry and clears last_sign_in_date when no entries remain", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { id: "user-1" } as never,
       });
 
       // 1) delete chain: .from("sign_ins").delete().eq("id").eq("user_id")
@@ -375,9 +375,9 @@ describe("Sign-in Actions", () => {
 
     it("deletes entry without clearing last_sign_in_date when entries remain", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { id: "user-1" } as never,
       });
 
       const mockDeleteEq2 = vi.fn().mockResolvedValue({ error: null });
@@ -413,9 +413,9 @@ describe("Sign-in Actions", () => {
   describe("getTeamSignInsToday", () => {
     it("returns error for non-managers", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { is_line_manager: false } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { is_line_manager: false } as never,
       });
 
       const result = await getTeamSignInsToday();
@@ -434,9 +434,9 @@ describe("Sign-in Actions", () => {
       mockFrom.mockReturnValue({ select: mockMemberSelect });
 
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "manager-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { is_line_manager: true } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "manager-1" } as never,
+        profile: { is_line_manager: true } as never,
       });
 
       const result = await getTeamSignInsToday();
@@ -447,9 +447,9 @@ describe("Sign-in Actions", () => {
   describe("getTeamSignInHistory", () => {
     it("returns error for non-managers", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { is_line_manager: false } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { is_line_manager: false } as never,
       });
 
       const result = await getTeamSignInHistory({});
@@ -465,7 +465,7 @@ describe("Sign-in Actions", () => {
   describe("checkAndCreateSignInNudge", () => {
     it("returns false when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -476,9 +476,9 @@ describe("Sign-in Actions", () => {
 
     it("returns false for non-staff users", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "pathways_coordinator", last_sign_in_date: null } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "pathways_coordinator", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -488,9 +488,9 @@ describe("Sign-in Actions", () => {
     it("returns false when staff has signed in today", async () => {
       const today = getUKToday();
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "staff", last_sign_in_date: today } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: today } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -507,9 +507,9 @@ describe("Sign-in Actions", () => {
       mockFrom.mockReturnValue({ select: mockSelect });
 
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "staff", last_sign_in_date: null } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();
@@ -532,9 +532,9 @@ describe("Sign-in Actions", () => {
       mockFrom.mockReturnValue({ select: mockSelect });
 
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "staff", last_sign_in_date: null } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       mockCreateNotification.mockRejectedValue(new Error("Service unavailable"));
@@ -558,9 +558,9 @@ describe("Sign-in Actions", () => {
       mockFrom.mockReturnValue({ select: mockSelect });
 
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-        user: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-        profile: { user_type: "staff", last_sign_in_date: null } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { user_type: "staff", last_sign_in_date: null } as never,
       });
 
       const result = await checkAndCreateSignInNudge();

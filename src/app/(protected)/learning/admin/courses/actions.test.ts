@@ -63,8 +63,8 @@ describe("L&D Course Actions", () => {
 
     // Default: requireLDAdmin succeeds
     vi.mocked(requireLDAdmin).mockResolvedValue({
-      supabase: mockSupabase as ReturnType<typeof requireLDAdmin> extends Promise<infer T> ? T["supabase"] : never,
-      user: { id: "admin-123", email: "admin@mcrpathways.org" } as ReturnType<typeof requireLDAdmin> extends Promise<infer T> ? T["user"] : never,
+      supabase: mockSupabase as never,
+      user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
     });
   });
 

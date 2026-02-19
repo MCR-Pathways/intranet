@@ -94,9 +94,9 @@ describe("Intranet Post Actions", () => {
 
     // Default: getCurrentUser returns authenticated staff user
     vi.mocked(getCurrentUser).mockResolvedValue({
-      supabase: mockSupabase as unknown as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-      user: mockUser as unknown as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-      profile: mockProfile as unknown as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+      supabase: mockSupabase as never,
+      user: mockUser as never,
+      profile: mockProfile as never,
     });
 
     // Default chain: .from(table).insert({}).select("id").single()

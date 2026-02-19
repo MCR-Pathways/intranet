@@ -46,9 +46,9 @@ describe("Notification Actions", () => {
 
     // Default: authenticated user
     vi.mocked(getCurrentUser).mockResolvedValue({
-      supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-      user: { id: "user-1", email: "test@mcrpathways.org" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-      profile: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+      supabase: mockSupabase as never,
+      user: { id: "user-1", email: "test@mcrpathways.org" } as never,
+      profile: { id: "user-1" } as never,
     });
 
     // Wire select chain: .from().select().eq().order().limit()
@@ -70,7 +70,7 @@ describe("Notification Actions", () => {
   describe("getNotifications", () => {
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -131,7 +131,7 @@ describe("Notification Actions", () => {
 
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -182,7 +182,7 @@ describe("Notification Actions", () => {
 
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });

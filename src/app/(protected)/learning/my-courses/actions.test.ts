@@ -40,9 +40,9 @@ describe("External Course Actions", () => {
 
     // Default: authenticated user
     vi.mocked(getCurrentUser).mockResolvedValue({
-      supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
-      user: { id: "user-1", email: "test@mcrpathways.org" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["user"] : never,
-      profile: { id: "user-1" } as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["profile"] : never,
+      supabase: mockSupabase as never,
+      user: { id: "user-1", email: "test@mcrpathways.org" } as never,
+      profile: { id: "user-1" } as never,
     });
 
     // Default: DB insert succeeds
@@ -250,7 +250,7 @@ describe("External Course Actions", () => {
   describe("authentication", () => {
     it("returns error when not authenticated on add", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -265,7 +265,7 @@ describe("External Course Actions", () => {
 
     it("returns error when not authenticated on update", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
@@ -277,7 +277,7 @@ describe("External Course Actions", () => {
 
     it("returns error when not authenticated on delete", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as ReturnType<typeof getCurrentUser> extends Promise<infer T> ? T["supabase"] : never,
+        supabase: mockSupabase as never,
         user: null,
         profile: null,
       });

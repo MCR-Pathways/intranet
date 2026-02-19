@@ -40,6 +40,11 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
+          // CSP: Report-Only for initial rollout. Tightening roadmap:
+          // 1. Monitor browser console for violation reports
+          // 2. Replace 'unsafe-inline' with nonces (requires Next.js nonce support)
+          // 3. Remove 'unsafe-eval' once Turbopack/webpack dev dependency is confirmed prod-safe
+          // 4. Promote to enforcing Content-Security-Policy once stable
           {
             key: "Content-Security-Policy-Report-Only",
             value:
