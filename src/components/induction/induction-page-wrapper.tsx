@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 /**
@@ -6,11 +6,7 @@ import { redirect } from "next/navigation";
  * Returns the completion status for a given item ID.
  */
 export async function getInductionItemStatus(itemId: string) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
