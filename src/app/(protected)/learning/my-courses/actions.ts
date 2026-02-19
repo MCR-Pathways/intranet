@@ -18,6 +18,19 @@ const EXTERNAL_COURSE_FIELDS = [
   "notes",
 ] as const;
 
+/** Validate URL protocol — only allow https:// and http:// */
+function validateUrl(url: string, fieldName: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return `${fieldName} must use https:// or http://`;
+    }
+  } catch {
+    return `Invalid ${fieldName}`;
+  }
+  return null;
+}
+
 /** Sanitize and trim external course data using the allowed fields whitelist */
 function sanitizeExternalCourseData(data: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
@@ -63,6 +76,13 @@ export async function addExternalCourse(data: {
   if (!data.completed_at) {
     return { success: false, error: "Completion date is required" };
   }
+  if (data.certificate_url?.trim()) {
+    const urlError = validateUrl(data.certificate_url.trim(), "Certificate URL");
+    if (urlError) return { success: false, error: urlError };
+  }
+  if (data.duration_minutes != null && data.duration_minutes < 1) {
+    return { success: false, error: "Duration must be at least 1 minute" };
+  }
 
   const sanitized = sanitizeExternalCourseData(data as Record<string, unknown>);
   sanitized.user_id = user.id;
@@ -102,6 +122,16 @@ export async function updateExternalCourse(
 
   if (Object.keys(sanitized).length === 0) {
     return { success: false, error: "No valid fields to update" };
+  }
+  if ("title" in sanitized && !sanitized.title) {
+    return { success: false, error: "Title is required" };
+  }
+  if (typeof sanitized.certificate_url === "string") {
+    const urlError = validateUrl(sanitized.certificate_url, "Certificate URL");
+    if (urlError) return { success: false, error: urlError };
+  }
+  if (sanitized.duration_minutes != null && (sanitized.duration_minutes as number) < 1) {
+    return { success: false, error: "Duration must be at least 1 minute" };
   }
 
   const { error } = await supabase

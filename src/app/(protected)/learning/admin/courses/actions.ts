@@ -183,6 +183,9 @@ export async function publishCourse(courseId: string) {
     return { success: false, error: error.message };
   }
 
+  // Non-blocking: send notifications to assigned users
+  await notifyCoursePublished(courseId);
+
   revalidatePath("/learning/admin/courses");
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
@@ -481,10 +484,7 @@ export async function assignCourse(data: {
   return { success: true, error: null };
 }
 
-/**
- * Send notifications after a course is published.
- * Call this from publishCourse() when Batch 2 is merged.
- */
+/** Send notifications after a course is published. */
 export async function notifyCoursePublished(courseId: string) {
   const { supabase, user } = await requireLDAdmin();
 
