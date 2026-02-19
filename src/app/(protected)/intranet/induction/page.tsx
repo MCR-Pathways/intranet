@@ -16,7 +16,7 @@ export default async function InductionPage() {
   // Fetch user profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("induction_completed_at, preferred_name, full_name")
     .eq("id", user.id)
     .single();
 
