@@ -109,6 +109,9 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
+                <th className="px-4 py-3 font-medium text-muted-foreground w-12">
+                  #
+                </th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">
                   Title
                 </th>
@@ -136,20 +139,23 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
               {filteredCourses.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
                     No courses found
                   </td>
                 </tr>
               ) : (
-                filteredCourses.map((course) => {
+                filteredCourses.map((course, index) => {
                   const config = categoryConfig[course.category];
                   return (
                     <tr
                       key={course.id}
                       className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {index + 1}
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/learning/admin/courses/${course.id}`}
