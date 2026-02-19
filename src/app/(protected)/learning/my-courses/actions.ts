@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { CourseCategory } from "@/types/database.types";
 
@@ -17,19 +18,6 @@ const EXTERNAL_COURSE_FIELDS = [
   "certificate_url",
   "notes",
 ] as const;
-
-/** Validate URL protocol — only allow https:// and http:// */
-function validateUrl(url: string, fieldName: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return `${fieldName} must use https:// or http://`;
-    }
-  } catch {
-    return `Invalid ${fieldName}`;
-  }
-  return null;
-}
 
 /** Sanitize and trim external course data using the allowed fields whitelist */
 function sanitizeExternalCourseData(data: Record<string, unknown>): Record<string, unknown> {

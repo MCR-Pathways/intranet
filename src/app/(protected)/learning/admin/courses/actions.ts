@@ -1,6 +1,7 @@
 "use server";
 
 import { requireLDAdmin } from "@/lib/auth";
+import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
@@ -183,7 +184,7 @@ export async function publishCourse(courseId: string) {
     return { success: false, error: error.message };
   }
 
-  // Non-blocking: send notifications to assigned users
+  // Send notifications to assigned users
   await notifyCoursePublished(courseId);
 
   revalidatePath("/learning/admin/courses");
@@ -229,18 +230,6 @@ export async function unpublishCourse(courseId: string) {
 // LESSON CRUD
 // ===========================================
 
-/** Validate video URL protocol — always call when video_url is provided, regardless of lesson_type */
-function validateVideoUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return "Video URL must use https:// or http://";
-    }
-  } catch {
-    return "Invalid video URL";
-  }
-  return null;
-}
 
 export async function createLesson(data: {
   course_id: string;
@@ -287,7 +276,7 @@ export async function createLesson(data: {
 
   // Always validate video_url when provided, regardless of lesson_type (prevent javascript: injection)
   if (data.video_url) {
-    const urlError = validateVideoUrl(data.video_url);
+    const urlError = validateUrl(data.video_url, "Video URL");
     if (urlError) {
       return { success: false, error: urlError, lessonId: null };
     }
@@ -362,7 +351,7 @@ export async function updateLesson(
 
   // Always validate video_url when provided, regardless of lesson_type (prevent javascript: injection)
   if (data.video_url) {
-    const urlError = validateVideoUrl(data.video_url);
+    const urlError = validateUrl(data.video_url, "Video URL");
     if (urlError) {
       return { success: false, error: urlError };
     }
