@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createNotification, dismissSignInReminders } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 import type { WorkLocation } from "@/types/database.types";
 
 const VALID_LOCATIONS: WorkLocation[] = [
@@ -31,10 +31,7 @@ export async function recordSignIn(
   location: string,
   otherLocation?: string
 ): Promise<{ success: boolean; error: string | null }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     return { success: false, error: "Not authenticated" };
@@ -86,13 +83,13 @@ export async function recordSignIn(
       .eq("id", user.id);
 
     if (profileError) {
-      console.error("Failed to update last_sign_in_date:", profileError.message);
+      logger.error("Failed to update last_sign_in_date", { error: profileError.message });
     }
 
     try {
       await dismissSignInReminders(user.id);
     } catch (e) {
-      console.error("Failed to dismiss sign-in reminders:", e);
+      logger.error("Failed to dismiss sign-in reminders", { error: e });
     }
   }
 
@@ -153,10 +150,7 @@ export async function getMonthlyHistory() {
 export async function deleteSignInEntry(
   entryId: string
 ): Promise<{ success: boolean; error: string | null }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     return { success: false, error: "Not authenticated" };
@@ -347,7 +341,7 @@ export async function checkAndCreateSignInNudge(): Promise<boolean> {
         link: "/sign-in",
       });
     } catch (e) {
-      console.error("Failed to create sign-in nudge notification:", e);
+      logger.error("Failed to create sign-in nudge notification", { error: e });
     }
   }
 

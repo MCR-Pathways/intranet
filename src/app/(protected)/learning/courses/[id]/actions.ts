@@ -7,7 +7,7 @@ export async function enrollInCourse(courseId: string) {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated" };
   }
 
   const { error } = await supabase.from("course_enrollments").insert({
@@ -34,7 +34,7 @@ export async function completeLesson(lessonId: string, courseId: string) {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated", progressPercent: null };
   }
 
   // Use atomic RPC to insert completion and update progress in a single transaction
@@ -65,7 +65,7 @@ export async function submitQuiz(
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated", result: null };
   }
 
   const { data: result, error } = await supabase.rpc("submit_quiz_attempt", {

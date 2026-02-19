@@ -1,17 +1,16 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-export async function markInductionItemComplete(itemId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export async function markInductionItemComplete(
+  itemId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated" };
   }
 
   const { error } = await supabase.from("induction_progress").insert({
@@ -25,7 +24,7 @@ export async function markInductionItemComplete(itemId: string) {
       revalidatePath("/intranet/induction");
       redirect("/intranet/induction");
     }
-    throw new Error(error.message);
+    return { success: false, error: error.message };
   }
 
   revalidatePath("/intranet/induction");

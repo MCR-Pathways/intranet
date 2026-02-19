@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-      console.error("OTP verification error:", error);
+      logger.error("OTP verification error", { error });
       return NextResponse.redirect(
         `${origin}/login?error=${encodeURIComponent(error.message)}`
       );

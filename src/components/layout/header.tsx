@@ -22,6 +22,7 @@ import { SignInNudgeBubble } from "@/components/sign-in/sign-in-nudge-bubble";
 import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
+import { logger } from "@/lib/logger";
 
 interface NotificationData {
   id: string;
@@ -54,7 +55,7 @@ export function Header({ user, profile, needsSignIn, initialNotifications, onMob
       if (err?.message?.includes("NEXT_REDIRECT")) {
         return;
       }
-      console.error("Error signing out:", error);
+      logger.error("Error signing out", { error });
       window.location.href = "/login";
     }
   };

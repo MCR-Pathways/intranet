@@ -1,23 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * Mock strategy for external course actions:
- * - All actions use createClient() → supabase.auth.getUser() for auth
- * - Then supabase.from("external_courses").insert/update/delete chains
- *
- * We mock createClient to control auth and DB responses.
+ * Mock strategy: Mock getCurrentUser() from @/lib/auth instead of
+ * the low-level Supabase client. This matches the CLAUDE.md pattern.
  */
 
-const mockInsert = vi.hoisted(() => vi.fn());
-const mockUpdate = vi.hoisted(() => vi.fn());
 const mockEq = vi.hoisted(() => vi.fn());
+const mockUpdate = vi.hoisted(() => vi.fn());
+const mockInsert = vi.hoisted(() => vi.fn());
+const mockDelete = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
-const mockGetUserAuth = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn().mockResolvedValue({
-    auth: { getUser: () => mockGetUserAuth() },
-    from: mockFrom,
+const mockSupabase = vi.hoisted(() => ({
+  from: mockFrom,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  getCurrentUser: vi.fn().mockResolvedValue({
+    supabase: mockSupabase,
+    user: { id: "user-1", email: "test@mcrpathways.org" },
+    profile: { id: "user-1" },
   }),
 }));
 
@@ -28,22 +30,37 @@ vi.mock("next/cache", () => ({
 import {
   addExternalCourse,
   updateExternalCourse,
+  deleteExternalCourse,
 } from "@/app/(protected)/learning/my-courses/actions";
+import { getCurrentUser } from "@/lib/auth";
 
 describe("External Course Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Default: authenticated user
-    mockGetUserAuth.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      supabase: mockSupabase as never,
+      user: { id: "user-1", email: "test@mcrpathways.org" } as never,
+      profile: { id: "user-1" } as never,
     });
 
-    // Default: DB operations succeed
-    mockEq.mockResolvedValue({ error: null });
-    mockUpdate.mockReturnValue({ eq: mockEq });
+    // Default: DB insert succeeds
     mockInsert.mockResolvedValue({ error: null });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdate });
+
+    // Default: DB update chain: .from().update().eq().eq()
+    const mockEq2 = vi.fn().mockResolvedValue({ error: null });
+    mockEq.mockReturnValue({ eq: mockEq2 });
+    mockUpdate.mockReturnValue({ eq: mockEq });
+
+    // Default: DB delete chain: .from().delete().eq().eq()
+    mockDelete.mockReturnValue({ eq: mockEq });
+
+    mockFrom.mockReturnValue({
+      insert: mockInsert,
+      update: mockUpdate,
+      delete: mockDelete,
+    });
   });
 
   // ===========================================
@@ -127,11 +144,6 @@ describe("External Course Actions", () => {
     });
 
     it("rejects javascript: protocol on update", async () => {
-      // For update, the chain is .from().update().eq().eq()
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-
       const result = await updateExternalCourse("course-1", {
         certificate_url: "javascript:alert('xss')",
       });
@@ -190,10 +202,6 @@ describe("External Course Actions", () => {
     });
 
     it("rejects negative duration on update", async () => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-
       const result = await updateExternalCourse("course-1", {
         duration_minutes: -10,
       });
@@ -209,10 +217,6 @@ describe("External Course Actions", () => {
 
   describe("empty title on update (KG-03)", () => {
     it("rejects empty title on update", async () => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-
       const result = await updateExternalCourse("course-1", {
         title: "",
       });
@@ -222,10 +226,6 @@ describe("External Course Actions", () => {
     });
 
     it("rejects whitespace-only title on update", async () => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-
       const result = await updateExternalCourse("course-1", {
         title: "   ",
       });
@@ -235,10 +235,6 @@ describe("External Course Actions", () => {
     });
 
     it("accepts valid title on update", async () => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-
       const result = await updateExternalCourse("course-1", {
         title: "Valid Title",
       });
@@ -252,23 +248,43 @@ describe("External Course Actions", () => {
   // ===========================================
 
   describe("authentication", () => {
-    it("throws when not authenticated on add", async () => {
-      mockGetUserAuth.mockResolvedValue({ data: { user: null } });
+    it("returns error when not authenticated on add", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: null,
+        profile: null,
+      });
 
-      await expect(
-        addExternalCourse({
-          title: "Test",
-          completed_at: "2026-01-01",
-        })
-      ).rejects.toThrow("Not authenticated");
+      const result = await addExternalCourse({
+        title: "Test",
+        completed_at: "2026-01-01",
+      });
+
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
     });
 
-    it("throws when not authenticated on update", async () => {
-      mockGetUserAuth.mockResolvedValue({ data: { user: null } });
+    it("returns error when not authenticated on update", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: null,
+        profile: null,
+      });
 
-      await expect(
-        updateExternalCourse("course-1", { title: "Test" })
-      ).rejects.toThrow("Not authenticated");
+      const result = await updateExternalCourse("course-1", { title: "Test" });
+
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
+    });
+
+    it("returns error when not authenticated on delete", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: null,
+        profile: null,
+      });
+
+      const result = await deleteExternalCourse("course-1");
+
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
     });
   });
 });

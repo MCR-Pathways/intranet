@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { checkAndCreateSignInNudge } from "@/app/(protected)/sign-in/actions";
@@ -24,7 +25,7 @@ export default async function ProtectedLayout({
   try {
     needsSignIn = await checkAndCreateSignInNudge();
   } catch (e) {
-    console.error("Sign-in nudge check failed:", e);
+    logger.error("Sign-in nudge check failed", { error: e });
   }
 
   // Fetch notifications server-side so revalidatePath refreshes the bell.
@@ -35,7 +36,7 @@ export default async function ProtectedLayout({
     const { notifications } = await getNotifications();
     initialNotifications = notifications;
   } catch (e) {
-    console.error("Failed to fetch notifications:", e);
+    logger.error("Failed to fetch notifications", { error: e });
   }
 
   return (

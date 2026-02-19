@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { logger } from "@/lib/logger";
 
 interface InductionItemPageProps {
   itemId: string;
@@ -67,7 +68,7 @@ export function InductionItemPage({
       if (error?.message?.includes("NEXT_REDIRECT")) {
         return; // Redirect is happening, do nothing
       }
-      console.error("Error marking item complete:", err);
+      logger.error("Error marking item complete", { error: err });
     } finally {
       setIsSubmitting(false);
     }

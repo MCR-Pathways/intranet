@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -10,21 +10,25 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { User, Mail, Briefcase, Building2, Shield, Bell } from "lucide-react";
 
-export default async function SettingsPage() {
-  const supabase = await createClient();
+const USER_TYPE_LABELS: Record<string, string> = {
+  staff: "Staff",
+  pathways_coordinator: "Pathways Coordinator",
+  new_user: "New User",
+};
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default async function SettingsPage() {
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch user profile with team info
+  // Fetch user profile with team info — explicit columns, never select("*")
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*, teams(name)")
+    .select(
+      "id, full_name, preferred_name, email, phone, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, start_date, induction_completed_at, team_id, teams(name)"
+    )
     .eq("id", user.id)
     .single();
 
@@ -34,6 +38,20 @@ export default async function SettingsPage() {
       : profile?.status === "inactive"
         ? "destructive"
         : "warning";
+
+  const statusLabel =
+    profile?.status === "pending_induction"
+      ? "Pending Induction"
+      : profile?.status === "active"
+        ? "Active"
+        : profile?.status === "inactive"
+          ? "Inactive"
+          : profile?.status
+            ? profile.status.charAt(0).toUpperCase() + profile.status.slice(1)
+            : "Unknown";
+
+  const userTypeLabel =
+    USER_TYPE_LABELS[profile?.user_type ?? ""] ?? profile?.user_type ?? "Unknown";
 
   return (
     <div className="space-y-6">
@@ -106,7 +124,7 @@ export default async function SettingsPage() {
                 </p>
               </div>
               <p className="text-sm">
-                {(profile?.teams as { name: string } | null)?.name || "Not assigned"}
+                {(profile?.teams as unknown as { name: string } | null)?.name || "Not assigned"}
               </p>
             </div>
             {profile?.start_date && (
@@ -144,21 +162,13 @@ export default async function SettingsPage() {
               <p className="text-sm font-medium text-muted-foreground">
                 Account Status
               </p>
-              <Badge variant={statusVariant}>
-                {profile?.status === "pending_induction"
-                  ? "Pending Induction"
-                  : profile?.status === "active"
-                    ? "Active"
-                    : "Inactive"}
-              </Badge>
+              <Badge variant={statusVariant}>{statusLabel}</Badge>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
                 User Type
               </p>
-              <p className="text-sm capitalize">
-                {profile?.user_type?.replace("_", " ") || "Unknown"}
-              </p>
+              <p className="text-sm">{userTypeLabel}</p>
             </div>
             {profile?.is_line_manager && (
               <div className="space-y-1">
@@ -174,6 +184,14 @@ export default async function SettingsPage() {
                   Admin Access
                 </p>
                 <Badge variant="outline">HR Admin</Badge>
+              </div>
+            )}
+            {profile?.is_ld_admin && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Admin Access
+                </p>
+                <Badge variant="outline">L&D Admin</Badge>
               </div>
             )}
           </div>

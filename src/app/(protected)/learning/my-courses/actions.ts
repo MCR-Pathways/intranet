@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { CourseCategory } from "@/types/database.types";
@@ -48,13 +48,10 @@ export async function addExternalCourse(data: {
   certificate_url?: string | null;
   notes?: string | null;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated" };
   }
 
   // Validate required fields
@@ -97,13 +94,10 @@ export async function updateExternalCourse(
     notes?: string | null;
   }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated" };
   }
 
   const sanitized = sanitizeExternalCourseData(data as Record<string, unknown>);
@@ -137,13 +131,10 @@ export async function updateExternalCourse(
 }
 
 export async function deleteExternalCourse(courseId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { success: false, error: "Not authenticated" };
   }
 
   const { error } = await supabase

@@ -36,6 +36,7 @@ import {
   PartyPopper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface InductionItem {
   id: string;
@@ -179,14 +180,14 @@ export function InductionChecklist({
         .eq("id", userId);
 
       if (error) {
-        console.error("Error completing induction:", error);
+        logger.error("Error completing induction", { error });
         return;
       }
 
       // Full page reload to clear middleware induction check
       window.location.href = "/intranet";
     } catch (err) {
-      console.error("Error completing induction:", err);
+      logger.error("Error completing induction", { error: err });
     } finally {
       setIsCompleting(false);
     }

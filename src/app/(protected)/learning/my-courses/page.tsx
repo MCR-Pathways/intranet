@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,9 +116,8 @@ function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentWithCourse }
 }
 
 export default async function MyCoursesPage() {
-  const supabase = await createClient();
+  const { supabase, user } = await getCurrentUser();
 
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     redirect("/login");
   }

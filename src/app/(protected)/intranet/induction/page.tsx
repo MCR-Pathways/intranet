@@ -1,24 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { InductionChecklist } from "@/components/induction/induction-checklist";
 
 export default async function InductionPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, profile } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
-
-  // Fetch user profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("induction_completed_at, preferred_name, full_name")
-    .eq("id", user.id)
-    .single();
 
   // If induction is already completed, redirect to dashboard
   if (profile?.induction_completed_at) {

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -75,7 +76,7 @@ export default function LoginPage() {
         window.location.assign(data.url);
       }
     } catch (err) {
-      console.error("Google sign in error:", err);
+      logger.error("Google sign in error", { error: err });
       setMessage({ type: "error", text: "Failed to sign in with Google" });
       setIsGoogleLoading(false);
     }

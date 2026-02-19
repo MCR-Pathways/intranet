@@ -3,6 +3,7 @@
 import { requireLDAdmin } from "@/lib/auth";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
 // ===========================================
@@ -465,7 +466,7 @@ export async function assignCourse(data: {
 
     if (rpcError) {
       // Non-blocking: notification failures should not break course assignment
-      console.error("Failed to send course notifications on assignment:", rpcError.message);
+      logger.error("Failed to send course notifications on assignment", { error: rpcError.message });
     }
   }
 
@@ -497,7 +498,7 @@ export async function notifyCoursePublished(courseId: string) {
 
   if (error) {
     // Non-blocking: notifications failing should not block publishing
-    console.error("Failed to send course notifications:", error.message);
+    logger.error("Failed to send course notifications", { error: error.message });
     return { success: true, notifiedCount: 0 };
   }
 

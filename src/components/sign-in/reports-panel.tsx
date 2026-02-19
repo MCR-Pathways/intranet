@@ -10,8 +10,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileDown, Loader2, BarChart3, AlertTriangle } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
 import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel, getInitials } from "@/lib/sign-in";
+import dynamic from "next/dynamic";
 import { StatsCards } from "./stats-cards";
-import { LocationCharts } from "./location-charts";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const LocationCharts = dynamic(() => import("./location-charts").then((m) => m.LocationCharts), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      <Skeleton className="h-[300px] w-full rounded-lg" />
+      <Skeleton className="h-[300px] w-full rounded-lg" />
+    </div>
+  ),
+});
 
 interface SignInEntry {
   id: string;

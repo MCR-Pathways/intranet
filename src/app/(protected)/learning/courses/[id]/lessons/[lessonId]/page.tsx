@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,8 @@ export default async function LessonPage({
   params: Promise<{ id: string; lessonId: string }>;
 }) {
   const { id: courseId, lessonId } = await params;
-  const supabase = await createClient();
+  const { supabase, user } = await getCurrentUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   if (!user) {
     redirect("/login");
   }
