@@ -42,15 +42,15 @@ export default async function LessonPage({
     notFound();
   }
 
-  // Check enrollment
-  const { data: enrollment } = await supabase
-    .from("course_enrollments")
+  // Check enrolment
+  const { data: enrolment } = await supabase
+    .from("course_enrolments")
     .select("id")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
     .single();
 
-  if (!enrollment) {
+  if (!enrolment) {
     redirect(`/learning/courses/${courseId}`);
   }
 

@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { CourseEditForm } from "@/components/learning-admin/course-edit-form";
 import { LessonManager } from "@/components/learning-admin/lesson-manager";
-import { EnrollmentStatsCard } from "@/components/learning-admin/enrollment-stats-card";
+import { EnrolmentStatsCard } from "@/components/learning-admin/enrolment-stats-card";
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
 import { QuizEditor } from "@/components/learning-admin/quiz-editor";
 import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
@@ -36,7 +36,7 @@ export default async function CourseDetailPage({
 
   const [
     { data: lessons },
-    { data: enrollments },
+    { data: enrolments },
     { data: assignments },
     { data: teams },
   ] = await Promise.all([
@@ -48,7 +48,7 @@ export default async function CourseDetailPage({
       .eq("course_id", id)
       .order("sort_order"),
     supabase
-      .from("course_enrollments")
+      .from("course_enrolments")
       .select("id, user_id, status, progress_percent, completed_at, due_date")
       .eq("course_id", id),
     supabase
@@ -142,7 +142,7 @@ export default async function CourseDetailPage({
       minute: "2-digit",
     });
 
-  const enrollmentCount = (enrollments ?? []).length;
+  const enrolmentCount = (enrolments ?? []).length;
 
   return (
     <div className="space-y-6">
@@ -201,11 +201,11 @@ export default async function CourseDetailPage({
             courseTitle={course.title}
             isActive={course.is_active}
             status={course.status as "draft" | "published"}
-            enrollmentCount={enrollmentCount}
+            enrolmentCount={enrolmentCount}
           />
         </div>
         <div className="space-y-6">
-          <EnrollmentStatsCard enrollments={enrollments ?? []} />
+          <EnrolmentStatsCard enrolments={enrolments ?? []} />
           <CourseAssignmentManager
             courseId={course.id}
             assignments={assignments ?? []}

@@ -16,26 +16,26 @@ import {
   BookOpen,
   Globe,
 } from "lucide-react";
-import type { EnrollmentWithCourse, ExternalCourse } from "@/types/database.types";
+import type { EnrolmentWithCourse, ExternalCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
 import { ExternalCourseDialog } from "@/components/learning/external-course-dialog";
 import { ExternalCourseCard } from "@/components/learning/external-course-card";
 
-function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
-  const { course } = enrollment;
+function EnrolledCourseCard({ enrolment }: { enrolment: EnrolmentWithCourse }) {
+  const { course } = enrolment;
   const config = categoryConfig[course.category];
   const Icon = config.icon;
 
-  const isCompleted = enrollment.status === "completed";
-  const isInProgress = enrollment.status === "in_progress";
+  const isCompleted = enrolment.status === "completed";
+  const isInProgress = enrolment.status === "in_progress";
 
   // Calculate due date status
   let dueStatus: "overdue" | "due_soon" | "on_track" | null = null;
   let daysUntilDue: number | null = null;
 
-  if (enrollment.due_date && !isCompleted) {
-    const dueDate = new Date(enrollment.due_date);
+  if (enrolment.due_date && !isCompleted) {
+    const dueDate = new Date(enrolment.due_date);
     const today = new Date();
     daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -95,9 +95,9 @@ function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentWithCourse }
             <div className="space-y-2 mb-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{enrollment.progress_percent}%</span>
+                <span className="font-medium">{enrolment.progress_percent}%</span>
               </div>
-              <Progress value={enrollment.progress_percent} />
+              <Progress value={enrolment.progress_percent} />
             </div>
           )}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -122,10 +122,10 @@ export default async function MyCoursesPage() {
     redirect("/login");
   }
 
-  // Fetch user's enrollments with course details + external courses
-  const [{ data: enrollments }, { data: externalCoursesData }] = await Promise.all([
+  // Fetch user's enrolments with course details + external courses
+  const [{ data: enrolments }, { data: externalCoursesData }] = await Promise.all([
     supabase
-      .from("course_enrollments")
+      .from("course_enrolments")
       .select(`
         id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
         course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
@@ -141,19 +141,19 @@ export default async function MyCoursesPage() {
 
   const externalCourses = (externalCoursesData ?? []) as ExternalCourse[];
 
-  // Filter and type cast enrollments
-  const typedEnrollments = (enrollments || [])
+  // Filter and type cast enrolments
+  const typedEnrolments = (enrolments || [])
     .filter((e) => e.course)
     .map((e) => ({
       ...e,
-      course: e.course as unknown as EnrollmentWithCourse["course"],
-    })) as EnrollmentWithCourse[];
+      course: e.course as unknown as EnrolmentWithCourse["course"],
+    })) as EnrolmentWithCourse[];
 
-  // Categorize enrollments
-  const inProgressCourses = typedEnrollments.filter(
+  // Categorize enrolments
+  const inProgressCourses = typedEnrolments.filter(
     (e) => e.status === "in_progress" || e.status === "enrolled"
   );
-  const completedCourses = typedEnrollments.filter(
+  const completedCourses = typedEnrolments.filter(
     (e) => e.status === "completed"
   );
 
@@ -197,7 +197,7 @@ export default async function MyCoursesPage() {
         <Button asChild>
           <Link href="/learning/courses">
             <BookOpen className="h-4 w-4 mr-2" />
-            Browse Catalog
+            Browse Catalogue
           </Link>
         </Button>
       </div>
@@ -211,7 +211,7 @@ export default async function MyCoursesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{typedEnrollments.length}</p>
+            <p className="text-2xl font-bold">{typedEnrolments.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -295,8 +295,8 @@ export default async function MyCoursesPage() {
         <TabsContent value="in_progress" className="mt-6">
           {inProgressCourses.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {inProgressCourses.map((enrollment) => (
-                <EnrolledCourseCard key={enrollment.id} enrollment={enrollment} />
+              {inProgressCourses.map((enrolment) => (
+                <EnrolledCourseCard key={enrolment.id} enrolment={enrolment} />
               ))}
             </div>
           ) : (
@@ -307,7 +307,7 @@ export default async function MyCoursesPage() {
                   You don&apos;t have any courses in progress.
                 </p>
                 <Button asChild>
-                  <Link href="/learning/courses">Browse Course Catalog</Link>
+                  <Link href="/learning/courses">Browse Course Catalogue</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -317,8 +317,8 @@ export default async function MyCoursesPage() {
         <TabsContent value="completed" className="mt-6">
           {completedCourses.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {completedCourses.map((enrollment) => (
-                <EnrolledCourseCard key={enrollment.id} enrollment={enrollment} />
+              {completedCourses.map((enrolment) => (
+                <EnrolledCourseCard key={enrolment.id} enrolment={enrolment} />
               ))}
             </div>
           ) : (

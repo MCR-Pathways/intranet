@@ -984,7 +984,7 @@ export async function deletePost(
   }
 
   if (post.author_id !== user.id && !profile.is_hr_admin) {
-    return { success: false, error: "Not authorized to delete this post" };
+    return { success: false, error: "Not authorised to delete this post" };
   }
 
   // Delete attachments from storage first
@@ -1210,7 +1210,7 @@ export async function deleteComment(
   }
 
   if (comment.author_id !== user.id && !profile.is_hr_admin) {
-    return { success: false, error: "Not authorized to delete this comment" };
+    return { success: false, error: "Not authorised to delete this comment" };
   }
 
   const { error } = await supabase

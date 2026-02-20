@@ -268,7 +268,7 @@ export function CourseAssignmentManager({
               Are you sure you want to remove the assignment for{" "}
               <strong>{removeTarget ? getAssignmentLabel(removeTarget) : ""}</strong>?
               New matching users will no longer be auto-enrolled, but existing
-              enrollments will not be affected.
+              enrolments will not be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

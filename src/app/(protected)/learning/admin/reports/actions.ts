@@ -27,9 +27,9 @@ export async function exportReportCSV(filters: ReportFilters) {
     }
   }
 
-  // Build enrollment query with all filters applied at DB level
+  // Build enrolment query with all filters applied at DB level
   let query = supabase
-    .from("course_enrollments")
+    .from("course_enrolments")
     .select(
       "id, status, progress_percent, score, enrolled_at, completed_at, due_date, user_id, course_id"
     );
@@ -44,19 +44,19 @@ export async function exportReportCSV(filters: ReportFilters) {
     query = query.in("user_id", userIdFilter);
   }
 
-  const { data: enrollments, error: enrollError } = await query;
+  const { data: enrolments, error: enrollError } = await query;
 
   if (enrollError) {
     return { success: false, error: enrollError.message, csv: null };
   }
 
-  if (!enrollments || enrollments.length === 0) {
+  if (!enrolments || enrolments.length === 0) {
     return { success: false, error: "No data to export", csv: null };
   }
 
-  // Get user profiles and courses for the filtered enrollments
-  const userIds = [...new Set(enrollments.map((e) => e.user_id))];
-  const courseIds = [...new Set(enrollments.map((e) => e.course_id))];
+  // Get user profiles and courses for the filtered enrolments
+  const userIds = [...new Set(enrolments.map((e) => e.user_id))];
+  const courseIds = [...new Set(enrolments.map((e) => e.course_id))];
 
   const [{ data: profiles }, { data: courses }, { data: teams }] =
     await Promise.all([
@@ -91,7 +91,7 @@ export async function exportReportCSV(filters: ReportFilters) {
     "Due Date",
   ];
 
-  const rows = enrollments.map((e) => {
+  const rows = enrolments.map((e) => {
     const profile = profileMap.get(e.user_id);
     const course = courseMap.get(e.course_id);
     const team = profile?.team_id ? teamMap.get(profile.team_id) : null;

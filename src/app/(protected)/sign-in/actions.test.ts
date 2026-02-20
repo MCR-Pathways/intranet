@@ -421,7 +421,7 @@ describe("Sign-in Actions", () => {
       const result = await getTeamSignInsToday();
       expect(result).toEqual({
         members: [],
-        error: "Unauthorized",
+        error: "Unauthorised",
       });
     });
 
@@ -456,7 +456,7 @@ describe("Sign-in Actions", () => {
       expect(result).toEqual({
         data: [],
         members: [],
-        error: "Unauthorized",
+        error: "Unauthorised",
         truncated: false,
       });
     });
