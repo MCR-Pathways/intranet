@@ -117,11 +117,11 @@ function isPrivateIP(ip: string): boolean {
   const v4MappedDotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
   if (v4MappedDotted) return isPrivateIPv4(v4MappedDotted[1]);
 
-  // Handle IPv4-mapped IPv6 in hex (e.g. ::ffff:7f00:0001)
+  // Handle IPv4-mapped IPv6 in hex (e.g. ::ffff:7f00:0001 → 127.0.0.1)
   const v4MappedHex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
   if (v4MappedHex) {
-    const high = parseInt(v4MappedHex[1], 16);
-    const low = parseInt(v4MappedHex[2], 16);
+    const high = parseInt(v4MappedHex[1], 16); // first two octets (e.g. 7f00 → 127.0)
+    const low = parseInt(v4MappedHex[2], 16); // last two octets (e.g. 0001 → 0.1)
     const a = (high >> 8) & 0xff;
     const b = high & 0xff;
     const c = (low >> 8) & 0xff;
@@ -223,16 +223,17 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
 
     const chunks: Uint8Array[] = [];
     let totalSize = 0;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalSize += value.byteLength;
+    let done = false;
+    while (!done) {
+      const result = await reader.read();
+      done = result.done;
+      if (done || !result.value) break;
+      totalSize += result.value.byteLength;
       if (totalSize > MAX_PREVIEW_BODY_BYTES) {
         reader.cancel();
         break;
       }
-      chunks.push(value);
+      chunks.push(result.value);
     }
     const html = new TextDecoder().decode(Buffer.concat(chunks));
 
@@ -870,16 +871,20 @@ export async function editPost(
     }
 
     // Update sort_order on kept attachments (parallel for efficiency)
-    const updateResults = await Promise.all(
-      desiredAttachments.map((att, i) =>
+    const updatePromises = desiredAttachments
+      .map((att, i) =>
         att.id && keptIds.has(att.id)
           ? supabase.from("post_attachments").update({ sort_order: i }).eq("id", att.id)
-          : Promise.resolve({ error: null })
+          : null
       )
-    );
-    const updateError = updateResults.find((r) => r.error)?.error;
-    if (updateError) {
-      return { success: false, error: `Failed to update attachment order: ${updateError.message}` };
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    if (updatePromises.length > 0) {
+      const updateResults = await Promise.all(updatePromises);
+      const updateError = updateResults.find((r) => r.error)?.error;
+      if (updateError) {
+        return { success: false, error: `Failed to update attachment order: ${updateError.message}` };
+      }
     }
 
     // Insert only new attachments
