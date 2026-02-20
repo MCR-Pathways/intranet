@@ -436,7 +436,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Not authorized to delete this post",
+        error: "Not authorised to delete this post",
       });
     });
 

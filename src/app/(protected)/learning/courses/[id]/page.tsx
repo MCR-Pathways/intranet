@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import type { Course, CourseEnrollment, CourseLesson } from "@/types/database.types";
+import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
@@ -56,15 +56,15 @@ export default async function CourseDetailPage({
 
   const course = courseData as Course;
 
-  // Fetch user's enrollment for this course
-  const { data: enrollmentData } = await supabase
-    .from("course_enrollments")
+  // Fetch user's enrolment for this course
+  const { data: enrolmentData } = await supabase
+    .from("course_enrolments")
     .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
     .eq("user_id", user.id)
     .eq("course_id", id)
     .single();
 
-  const enrollment = enrollmentData as CourseEnrollment | null;
+  const enrolment = enrolmentData as CourseEnrolment | null;
 
   // Fetch lessons for this course
   const { data: lessonsData } = await supabase
@@ -103,16 +103,16 @@ export default async function CourseDetailPage({
   const config = categoryConfig[course.category];
   const Icon = config.icon;
 
-  const isEnrolled = !!enrollment;
-  const isCompleted = enrollment?.status === "completed";
-  const isInProgress = enrollment?.status === "in_progress";
+  const isEnrolled = !!enrolment;
+  const isCompleted = enrolment?.status === "completed";
+  const isInProgress = enrolment?.status === "in_progress";
 
   // Calculate due date status
   let dueStatus: "overdue" | "due_soon" | "on_track" | null = null;
   let daysUntilDue: number | null = null;
 
-  if (enrollment?.due_date && !isCompleted) {
-    const dueDate = new Date(enrollment.due_date);
+  if (enrolment?.due_date && !isCompleted) {
+    const dueDate = new Date(enrolment.due_date);
     const today = new Date();
     daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -131,7 +131,7 @@ export default async function CourseDetailPage({
       <Button variant="ghost" asChild className="mb-4">
         <Link href="/learning/courses">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Course Catalog
+          Back to Course Catalogue
         </Link>
       </Button>
 
@@ -166,9 +166,9 @@ export default async function CourseDetailPage({
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Progress</span>
-                  <span className="font-medium">{enrollment.progress_percent}%</span>
+                  <span className="font-medium">{enrolment.progress_percent}%</span>
                 </div>
-                <Progress value={enrollment.progress_percent} />
+                <Progress value={enrolment.progress_percent} />
               </div>
             )}
 
@@ -198,7 +198,7 @@ export default async function CourseDetailPage({
                 <CheckCircle2 className="h-5 w-5" />
                 <div className="text-sm">
                   <p className="font-medium">Completed</p>
-                  <p>Finished on {formatDate(enrollment.completed_at)}</p>
+                  <p>Finished on {formatDate(enrolment.completed_at)}</p>
                 </div>
               </div>
             )}
@@ -267,13 +267,13 @@ export default async function CourseDetailPage({
                 </div>
               </div>
             )}
-            {enrollment?.due_date && (
+            {enrolment?.due_date && (
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Due Date</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(enrollment.due_date)}
+                    {formatDate(enrolment.due_date)}
                   </p>
                 </div>
               </div>
@@ -292,7 +292,7 @@ export default async function CourseDetailPage({
                 <div>
                   <p className="font-medium">Status</p>
                   <p className="text-sm text-muted-foreground capitalize">
-                    {enrollment.status.replace("_", " ")}
+                    {enrolment.status.replace("_", " ")}
                   </p>
                 </div>
               </div>
@@ -301,28 +301,28 @@ export default async function CourseDetailPage({
                 <div>
                   <p className="font-medium">Enrolled</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(enrollment.enrolled_at)}
+                    {formatDate(enrolment.enrolled_at)}
                   </p>
                 </div>
               </div>
-              {enrollment.started_at && (
+              {enrolment.started_at && (
                 <div className="flex items-center gap-3">
                   <PlayCircle className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Started</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(enrollment.started_at)}
+                      {formatDate(enrolment.started_at)}
                     </p>
                   </div>
                 </div>
               )}
-              {enrollment.score !== null && (
+              {enrolment.score !== null && (
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Score</p>
                     <p className="text-sm text-muted-foreground">
-                      {enrollment.score}%
+                      {enrolment.score}%
                     </p>
                   </div>
                 </div>

@@ -144,7 +144,7 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
               <div className="grid gap-2">
                 <Label htmlFor="edit_due_days">
                   Due Days from Start
-                  <InfoTooltip text="Number of days from enrollment date before this course is due" />
+                  <InfoTooltip text="Number of days from enrolment date before this course is due" />
                 </Label>
                 <Input
                   id="edit_due_days"
