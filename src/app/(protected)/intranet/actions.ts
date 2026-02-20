@@ -1,6 +1,13 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/auth";
+import {
+  POST_MAX_LENGTH,
+  ATTACHMENT_MAX_COUNT,
+  ATTACHMENT_MAX_SIZE_BYTES,
+  ALLOWED_FILE_TYPES,
+} from "@/lib/intranet";
+import { extractUrls } from "@/lib/url";
 import { revalidatePath } from "next/cache";
 import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -122,6 +129,93 @@ async function validateExternalUrl(url: string): Promise<boolean> {
     return !isPrivateIP(address);
   } catch {
     return false; // DNS resolution failed; reject
+  }
+}
+
+// ─── Internal Link Preview Helper ────────────────────────────────────
+
+/** In-memory cache for link preview results to avoid double-fetching. */
+const previewCache = new Map<
+  string,
+  { data: { title?: string; description?: string; imageUrl?: string }; timestamp: number }
+>();
+const PREVIEW_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const PREVIEW_CACHE_MAX_SIZE = 50;
+
+/** @internal Exported only for test cleanup — do not use in production code. */
+export function _clearPreviewCacheForTesting() {
+  previewCache.clear();
+}
+
+/**
+ * Internal link preview fetcher (no auth check).
+ * Used by createPost/editPost for server-side auto-detection
+ * and by the public fetchLinkPreview action.
+ * Results are cached in-memory for PREVIEW_CACHE_TTL to avoid
+ * re-fetching the same URL when the client previews then posts.
+ */
+async function _fetchLinkPreviewInternal(url: string): Promise<{
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+} | null> {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+
+    // Check cache first
+    const cached = previewCache.get(url);
+    if (cached && Date.now() - cached.timestamp < PREVIEW_CACHE_TTL) {
+      return cached.data;
+    }
+
+    const isExternal = await validateExternalUrl(url);
+    if (!isExternal) return null;
+
+    const response = await fetch(url, {
+      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+
+    const getMetaContent = (property: string): string | undefined => {
+      const regex = new RegExp(
+        `<meta[^>]*(?:property|name)=["']${property}["'][^>]*content=["']([^"']*)["']`,
+        "i"
+      );
+      const altRegex = new RegExp(
+        `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`,
+        "i"
+      );
+      return regex.exec(html)?.[1] ?? altRegex.exec(html)?.[1];
+    };
+
+    const title =
+      getMetaContent("og:title") ??
+      html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
+    const description =
+      getMetaContent("og:description") ?? getMetaContent("description");
+    const imageUrl = getMetaContent("og:image");
+
+    const data = {
+      title: title?.slice(0, 200),
+      description: description?.slice(0, 500),
+      imageUrl,
+    };
+
+    // Store in cache, evict oldest if at max size
+    if (previewCache.size >= PREVIEW_CACHE_MAX_SIZE) {
+      const oldestKey = previewCache.keys().next().value;
+      if (oldestKey) previewCache.delete(oldestKey);
+    }
+    previewCache.set(url, { data, timestamp: Date.now() });
+
+    return data;
+  } catch {
+    return null;
   }
 }
 
@@ -550,10 +644,10 @@ export async function createPost(data: {
   }
 
   const content = data.content?.trim();
-  if (!content || content.length === 0 || content.length > 5000) {
+  if (!content || content.length === 0 || content.length > POST_MAX_LENGTH) {
     return {
       success: false,
-      error: "Content must be between 1 and 5000 characters",
+      error: `Content must be between 1 and ${POST_MAX_LENGTH.toLocaleString()} characters`,
     };
   }
 
@@ -572,7 +666,7 @@ export async function createPost(data: {
 
   // Insert attachments if provided
   if (data.attachments && data.attachments.length > 0) {
-    const attachments = data.attachments.slice(0, 10).map((att, index) => {
+    const attachments = data.attachments.slice(0, ATTACHMENT_MAX_COUNT).map((att, index) => {
       const sanitized: Record<string, unknown> = {
         post_id: post.id,
         sort_order: index,
@@ -597,6 +691,30 @@ export async function createPost(data: {
         postId: post.id,
         warning: "Post created, but some attachments could not be saved",
       };
+    }
+  }
+
+  // Auto-detect first URL in content and create link preview attachment
+  const detectedUrls = extractUrls(content);
+  if (detectedUrls.length > 0) {
+    const firstUrl = detectedUrls[0];
+    const hasLinkForUrl = (data.attachments ?? []).some(
+      (a) => a.attachment_type === "link" && a.link_url === firstUrl
+    );
+    if (!hasLinkForUrl) {
+      const preview = await _fetchLinkPreviewInternal(firstUrl);
+      if (preview) {
+        const sortOrder = (data.attachments ?? []).length;
+        await supabase.from("post_attachments").insert({
+          post_id: post.id,
+          attachment_type: "link",
+          link_url: firstUrl,
+          link_title: preview.title,
+          link_description: preview.description,
+          link_image_url: preview.imageUrl,
+          sort_order: sortOrder,
+        });
+      }
     }
   }
 
@@ -634,10 +752,10 @@ export async function editPost(
   }
 
   const content = data.content?.trim();
-  if (!content || content.length === 0 || content.length > 5000) {
+  if (!content || content.length === 0 || content.length > POST_MAX_LENGTH) {
     return {
       success: false,
-      error: "Content must be between 1 and 5000 characters",
+      error: `Content must be between 1 and ${POST_MAX_LENGTH.toLocaleString()} characters`,
     };
   }
 
@@ -654,7 +772,7 @@ export async function editPost(
 
   // Handle attachment changes if provided
   if (data.attachments !== undefined) {
-    const desiredAttachments = (data.attachments ?? []).slice(0, 10);
+    const desiredAttachments = (data.attachments ?? []).slice(0, ATTACHMENT_MAX_COUNT);
 
     // Fetch existing attachments for this post
     const { data: existingAttachments } = await supabase
@@ -720,6 +838,30 @@ export async function editPost(
           error: null,
           warning: "Post updated, but some attachments could not be saved",
         };
+      }
+    }
+
+    // Auto-detect first URL in content and create link preview attachment
+    const detectedUrls = extractUrls(content);
+    if (detectedUrls.length > 0) {
+      const firstUrl = detectedUrls[0];
+      const hasLinkForUrl = desiredAttachments.some(
+        (a) => a.attachment_type === "link" && a.link_url === firstUrl
+      );
+      if (!hasLinkForUrl) {
+        const preview = await _fetchLinkPreviewInternal(firstUrl);
+        if (preview) {
+          const sortOrder = desiredAttachments.length;
+          await supabase.from("post_attachments").insert({
+            post_id: postId,
+            attachment_type: "link",
+            link_url: firstUrl,
+            link_title: preview.title,
+            link_description: preview.description,
+            link_image_url: preview.imageUrl,
+            sort_order: sortOrder,
+          });
+        }
       }
     }
   }
@@ -1018,21 +1160,15 @@ export async function uploadPostAttachment(
     return { success: false, error: "No file provided" };
   }
 
-  if (file.size > 52428800) {
+  if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
     return { success: false, error: "File too large (max 50MB)" };
   }
 
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
+  if (
+    !ALLOWED_FILE_TYPES.includes(
+      file.type as (typeof ALLOWED_FILE_TYPES)[number]
+    )
+  ) {
     return { success: false, error: "File type not allowed" };
   }
 
@@ -1081,60 +1217,18 @@ export async function fetchLinkPreview(
     return { success: false, error: "Only staff can fetch link previews" };
   }
 
-  try {
-    // Validate URL
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      return { success: false, error: "Invalid URL protocol" };
-    }
-
-    // SSRF protection: reject URLs that resolve to private/internal IPs
-    const isExternal = await validateExternalUrl(url);
-    if (!isExternal) {
-      return { success: false, error: "URL resolves to a restricted address" };
-    }
-
-    const response = await fetch(url, {
-      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!response.ok) {
-      return { success: false, error: "Failed to fetch URL" };
-    }
-
-    const html = await response.text();
-
-    // Parse Open Graph tags
-    const getMetaContent = (property: string): string | undefined => {
-      const regex = new RegExp(
-        `<meta[^>]*(?:property|name)=["']${property}["'][^>]*content=["']([^"']*)["']`,
-        "i"
-      );
-      const altRegex = new RegExp(
-        `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`,
-        "i"
-      );
-      return regex.exec(html)?.[1] ?? altRegex.exec(html)?.[1];
-    };
-
-    const title =
-      getMetaContent("og:title") ??
-      html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
-    const description =
-      getMetaContent("og:description") ?? getMetaContent("description");
-    const imageUrl = getMetaContent("og:image");
-
-    return {
-      success: true,
-      error: null,
-      title: title?.slice(0, 200),
-      description: description?.slice(0, 500),
-      imageUrl,
-    };
-  } catch {
+  const result = await _fetchLinkPreviewInternal(url);
+  if (!result) {
     return { success: false, error: "Failed to fetch link preview" };
   }
+
+  return {
+    success: true,
+    error: null,
+    title: result.title,
+    description: result.description,
+    imageUrl: result.imageUrl,
+  };
 }
 
 // ─── Weekly Round Up ─────────────────────────────────────────────────

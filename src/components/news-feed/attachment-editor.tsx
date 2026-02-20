@@ -2,11 +2,22 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ImagePlus, Paperclip, Link2, X, Loader2 } from "lucide-react";
 import {
-  uploadPostAttachment,
-  fetchLinkPreview,
-} from "@/app/(protected)/intranet/actions";
+  ImagePlus,
+  Paperclip,
+  X,
+  Loader2,
+  FileText,
+} from "lucide-react";
+import { formatFileSize } from "@/lib/utils";
+import {
+  validateFile,
+  isImageType,
+  ATTACHMENT_MAX_COUNT,
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_DOCUMENT_TYPES,
+} from "@/lib/intranet";
+import { uploadPostAttachment } from "@/app/(protected)/intranet/actions";
 import type { AttachmentType } from "@/types/database.types";
 
 export interface PendingAttachment {
@@ -44,16 +55,14 @@ export function AttachmentEditor({
   const [attachments, setAttachments] = useState<PendingAttachment[]>(
     initialAttachments ?? []
   );
-  const [linkInput, setLinkInput] = useState("");
-  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
   // Reset internal state when resetKey changes
   useEffect(() => {
     setAttachments(initialAttachments ?? []);
-    setLinkInput("");
-    setShowLinkInput(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
@@ -67,14 +76,42 @@ export function AttachmentEditor({
     async (files: FileList | null, type: "image" | "document") => {
       if (!files) return;
 
-      for (const file of Array.from(files)) {
+      // Check attachment count limit
+      const remaining = ATTACHMENT_MAX_COUNT - attachments.length;
+      if (remaining <= 0) {
+        onError?.(`Maximum of ${ATTACHMENT_MAX_COUNT} attachments allowed`);
+        return;
+      }
+
+      const filesToUpload = Array.from(files).slice(0, remaining);
+      if (filesToUpload.length < files.length) {
+        onError?.(
+          `Only ${remaining} more attachment${remaining === 1 ? "" : "s"} can be added`
+        );
+      }
+
+      for (const file of filesToUpload) {
+        // Client-side validation
+        const validationError = validateFile(file);
+        if (validationError) {
+          onError?.(validationError);
+          continue;
+        }
+
         const tempId = crypto.randomUUID();
         const preview =
           type === "image" ? URL.createObjectURL(file) : undefined;
 
         setAttachments((prev) => [
           ...prev,
-          { id: tempId, type, file_name: file.name, preview, uploading: true },
+          {
+            id: tempId,
+            type,
+            file_name: file.name,
+            file_size: file.size,
+            preview,
+            uploading: true,
+          },
         ]);
 
         const formData = new FormData();
@@ -103,37 +140,8 @@ export function AttachmentEditor({
         }
       }
     },
-    [onError]
+    [attachments.length, onError]
   );
-
-  const handleAddLink = useCallback(async () => {
-    const url = linkInput.trim();
-    if (!url) return;
-
-    const tempId = crypto.randomUUID();
-    setAttachments((prev) => [
-      ...prev,
-      { id: tempId, type: "link", link_url: url, uploading: true },
-    ]);
-    setLinkInput("");
-    setShowLinkInput(false);
-
-    const linkPreview = await fetchLinkPreview(url);
-
-    setAttachments((prev) =>
-      prev.map((a) =>
-        a.id === tempId
-          ? {
-              ...a,
-              link_title: linkPreview.title,
-              link_description: linkPreview.description,
-              link_image_url: linkPreview.imageUrl,
-              uploading: false,
-            }
-          : a
-      )
-    );
-  }, [linkInput]);
 
   const removeAttachment = useCallback((id: string) => {
     setAttachments((prev) => {
@@ -143,86 +151,137 @@ export function AttachmentEditor({
     });
   }, []);
 
+  // ─── Drag and drop handlers ────────────────────────────────────────
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      dragCounterRef.current = 0;
+
+      const files = e.dataTransfer.files;
+      if (files.length === 0) return;
+
+      // Determine type from first file's MIME type
+      const firstFile = files[0];
+      const type = isImageType(firstFile.type) ? "image" : "document";
+      handleFileUpload(files, type);
+    },
+    [handleFileUpload]
+  );
+
+  // ─── Derived values ────────────────────────────────────────────────
+
+  const imageAttachments = attachments.filter((a) => a.type === "image");
+  const documentAttachments = attachments.filter(
+    (a) => a.type === "document"
+  );
+
+  const acceptImages = ALLOWED_IMAGE_TYPES.join(",");
+  const acceptDocs = ALLOWED_DOCUMENT_TYPES.join(",");
+
   return (
-    <div className="space-y-3">
-      {/* Attachment previews */}
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {attachments.map((att) => (
-            <div
-              key={att.id}
-              className="relative flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm"
-            >
-              {att.uploading && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-              {att.type === "image" && att.preview && (
-                /* eslint-disable-next-line @next/next/no-img-element -- temporary blob URL preview */
-                <img
-                  src={att.preview}
-                  alt=""
-                  className="h-8 w-8 rounded object-cover"
-                />
-              )}
-              {att.type === "image" && att.isExisting && att.file_url && !att.preview && (
-                /* eslint-disable-next-line @next/next/no-img-element -- existing attachment thumbnail */
-                <img
-                  src={att.file_url}
-                  alt=""
-                  className="h-8 w-8 rounded object-cover"
-                />
-              )}
-              <span className="max-w-[150px] truncate">
-                {att.type === "link"
-                  ? att.link_title || att.link_url
-                  : att.file_name}
-              </span>
-              <button
-                onClick={() => removeAttachment(att.id)}
-                className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                disabled={disabled}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+    <div
+      className="relative space-y-3"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5">
+          <p className="text-sm font-medium text-primary">Drop files here</p>
         </div>
       )}
 
-      {/* Link input */}
-      {showLinkInput && (
-        <div className="flex gap-2">
-          <input
-            type="url"
-            value={linkInput}
-            onChange={(e) => setLinkInput(e.target.value)}
-            placeholder="https://..."
-            className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddLink();
-              }
-            }}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleAddLink}
-            disabled={!linkInput.trim()}
-          >
-            Add
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setShowLinkInput(false);
-              setLinkInput("");
-            }}
-          >
-            Cancel
-          </Button>
+      {/* Attachment previews */}
+      {attachments.length > 0 && (
+        <div className="space-y-2">
+          {/* Images — grid layout */}
+          {imageAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {imageAttachments.map((att) => (
+                <div
+                  key={att.id}
+                  className="relative h-24 w-24 overflow-hidden rounded-lg border"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- blob/existing URL preview */}
+                  <img
+                    src={att.preview || att.file_url}
+                    alt={att.file_name || "Image"}
+                    className="h-full w-full object-cover"
+                  />
+                  {att.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => removeAttachment(att.id)}
+                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                    disabled={disabled}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Documents — stacked */}
+          {documentAttachments.map((att) => (
+            <div
+              key={att.id}
+              className="relative flex items-center gap-3 rounded-lg border p-3"
+            >
+              <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {att.file_name}
+                </p>
+                {att.file_size != null && att.file_size > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(att.file_size)}
+                  </p>
+                )}
+              </div>
+              {att.uploading && (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              )}
+              <button
+                onClick={() => removeAttachment(att.id)}
+                className="shrink-0 rounded-full p-1 hover:bg-muted"
+                disabled={disabled}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -231,10 +290,14 @@ export function AttachmentEditor({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
+          accept={acceptImages}
           multiple
           className="hidden"
-          onChange={(e) => handleFileUpload(e.target.files, "image")}
+          onChange={(e) => {
+            handleFileUpload(e.target.files, "image");
+            // Reset input so same file can be re-selected
+            if (e.target) e.target.value = "";
+          }}
         />
         <Button
           type="button"
@@ -250,10 +313,13 @@ export function AttachmentEditor({
         <input
           ref={docInputRef}
           type="file"
-          accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept={acceptDocs}
           multiple
           className="hidden"
-          onChange={(e) => handleFileUpload(e.target.files, "document")}
+          onChange={(e) => {
+            handleFileUpload(e.target.files, "document");
+            if (e.target) e.target.value = "";
+          }}
         />
         <Button
           type="button"
@@ -264,17 +330,6 @@ export function AttachmentEditor({
         >
           <Paperclip className="mr-1.5 h-4 w-4" />
           Document
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowLinkInput(true)}
-          disabled={disabled || showLinkInput}
-        >
-          <Link2 className="mr-1.5 h-4 w-4" />
-          Link
         </Button>
       </div>
     </div>

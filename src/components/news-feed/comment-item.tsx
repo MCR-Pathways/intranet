@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo } from "@/lib/utils";
+import { linkifyText } from "@/lib/url";
 import { Trash2, Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -139,7 +140,7 @@ export function CommentItem({
           <div className="rounded-2xl bg-muted/50 px-3 py-2">
             <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
             <p className="text-sm font-normal whitespace-pre-wrap break-words">
-              {comment.content}
+              {linkifyText(comment.content)}
             </p>
           </div>
 

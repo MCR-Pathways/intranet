@@ -81,6 +81,7 @@ import {
   toggleReaction,
   addComment,
   fetchLinkPreview,
+  _clearPreviewCacheForTesting,
 } from "@/app/(protected)/intranet/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -169,7 +170,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -178,7 +179,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -188,7 +189,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -335,7 +336,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -344,7 +345,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -826,6 +827,8 @@ describe("Intranet Post Actions", () => {
     beforeEach(() => {
       // Mock global fetch for link preview requests
       vi.stubGlobal("fetch", vi.fn());
+      // Clear server-side preview cache between tests
+      _clearPreviewCacheForTesting();
     });
 
     it("returns error when not authenticated", async () => {
@@ -858,7 +861,7 @@ describe("Intranet Post Actions", () => {
     it("returns error for non-HTTP protocol", async () => {
       const result = await fetchLinkPreview("ftp://example.com/file.txt");
 
-      expect(result).toEqual({ success: false, error: "Invalid URL protocol" });
+      expect(result).toEqual({ success: false, error: "Failed to fetch link preview" });
     });
 
     it("returns error for invalid URL", async () => {
@@ -880,7 +883,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -892,7 +895,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -904,7 +907,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -915,7 +918,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -926,7 +929,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -936,7 +939,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -948,7 +951,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -959,7 +962,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -1015,7 +1018,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await fetchLinkPreview("https://example.com/404");
 
-      expect(result).toEqual({ success: false, error: "Failed to fetch URL" });
+      expect(result).toEqual({ success: false, error: "Failed to fetch link preview" });
     });
 
     it("returns error when fetch throws (e.g. timeout)", async () => {
