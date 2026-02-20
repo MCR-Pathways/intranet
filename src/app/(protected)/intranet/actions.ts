@@ -143,7 +143,7 @@ const PREVIEW_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const PREVIEW_CACHE_MAX_SIZE = 50;
 
 /** @internal Exported only for test cleanup — do not use in production code. */
-export function _clearPreviewCacheForTesting() {
+export async function _clearPreviewCacheForTesting() {
   previewCache.clear();
 }
 
