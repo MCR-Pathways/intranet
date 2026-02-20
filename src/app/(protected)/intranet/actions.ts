@@ -39,6 +39,8 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
+const POST_ATTACHMENTS_BUCKET = "post-attachments";
+
 const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
   "attachment_type",
   "file_url",
@@ -61,7 +63,7 @@ async function deleteAttachmentFiles(
     .map((url) => {
       try {
         const parsed = new URL(url);
-        const segments = parsed.pathname.split("/post-attachments/");
+        const segments = parsed.pathname.split(`/${POST_ATTACHMENTS_BUCKET}/`);
         if (segments.length < 2 || !segments[1]) return null;
         return segments[1];
       } catch {
@@ -71,7 +73,7 @@ async function deleteAttachmentFiles(
     .filter((p): p is string => p !== null);
 
   if (filePaths.length > 0) {
-    await supabase.storage.from("post-attachments").remove(filePaths);
+    await supabase.storage.from(POST_ATTACHMENTS_BUCKET).remove(filePaths);
   }
 }
 
@@ -806,10 +808,14 @@ export async function editPost(
 
     // Delete ALL existing attachment records (we re-insert with correct sort_order)
     if (existingAttachments && existingAttachments.length > 0) {
-      await supabase
+      const { error: deleteError } = await supabase
         .from("post_attachments")
         .delete()
         .eq("post_id", postId);
+
+      if (deleteError) {
+        return { success: false, error: `Failed to update attachments: ${deleteError.message}` };
+      }
     }
 
     // Re-insert the desired attachment list with correct sort_order
@@ -1177,7 +1183,7 @@ export async function uploadPostAttachment(
   const filePath = `${user.id}/${uniqueName}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("post-attachments")
+    .from(POST_ATTACHMENTS_BUCKET)
     .upload(filePath, file);
 
   if (uploadError) {
@@ -1186,7 +1192,7 @@ export async function uploadPostAttachment(
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from("post-attachments").getPublicUrl(filePath);
+  } = supabase.storage.from(POST_ATTACHMENTS_BUCKET).getPublicUrl(filePath);
 
   return {
     success: true,

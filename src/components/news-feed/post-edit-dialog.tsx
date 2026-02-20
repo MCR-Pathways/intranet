@@ -98,9 +98,10 @@ export function PostEditDialog({
   const { autoLinkPreview, isFetchingPreview, dismissPreview, resetPreview } =
     useAutoLinkPreview({ content, enabled: open, initialPreview });
 
-  // Reset state when dialog opens to pick up latest data
+  // Reset state when dialog opens to pick up latest data (intentional setState in effect for prop sync)
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state from prop change on dialog open
       setContent(initialContent);
       setAttachments(
         filterNonLinkAttachments(mapExistingToPending(initialAttachments))
@@ -112,8 +113,7 @@ export function PostEditDialog({
       // Resize textarea after content is set
       requestAnimationFrame(() => resize());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, initialContent, initialAttachments, initialPreview, resetPreview, resize]);
 
   // Detect unsaved changes
   const hasChanges = useMemo(() => {

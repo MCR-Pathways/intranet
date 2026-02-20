@@ -60,17 +60,16 @@ export function AttachmentEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset internal state when resetKey changes
+  // Reset internal state when resetKey changes (intentional setState in effect for prop sync)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state from prop change
     setAttachments(initialAttachments ?? []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetKey]);
+  }, [resetKey, initialAttachments]);
 
   // Notify parent whenever attachments change
   useEffect(() => {
     onChange(attachments);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachments]);
+  }, [attachments, onChange]);
 
   const handleFileUpload = useCallback(
     async (files: FileList | null, type: "image" | "document") => {
