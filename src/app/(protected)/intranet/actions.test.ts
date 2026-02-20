@@ -999,6 +999,27 @@ describe("Intranet Post Actions", () => {
       });
     });
 
+    it("blocks redirects to private IPs", async () => {
+      // First request resolves to external IP
+      vi.mocked(dns.lookup)
+        .mockResolvedValueOnce({ address: "93.184.216.34", family: 4 } as never)
+        // Redirect target resolves to private IP
+        .mockResolvedValueOnce({ address: "127.0.0.1", family: 4 } as never);
+
+      vi.mocked(fetch).mockResolvedValue({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "http://127.0.0.1/admin" }),
+      } as unknown as Response);
+
+      const result = await fetchLinkPreview("https://redirect.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
+      });
+    });
+
     it("blocks when DNS resolution fails", async () => {
       vi.mocked(dns.lookup).mockRejectedValue(new Error("DNS resolution failed"));
 

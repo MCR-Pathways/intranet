@@ -132,10 +132,10 @@ function isPrivateIP(ip: string): boolean {
   // Plain IPv4
   if (ip.includes(".")) return isPrivateIPv4(ip);
 
-  // IPv6
-  if (ip === "::1") return true; // loopback
+  // Native IPv6 private/reserved ranges
+  if (ip === "::1") return true; // ::1/128 loopback
   if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
-  if (ip.startsWith("fe80")) return true; // link-local
+  if (ip.startsWith("fe80")) return true; // fe80::/10 link-local
   return false;
 }
 
@@ -198,18 +198,35 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
       return cached.data;
     }
 
-    // Resolve hostname to verify it's not a private/internal IP
-    const resolvedIp = await resolveExternalUrl(url);
-    if (!resolvedIp) return null;
+    // Fetch with redirect validation — each hop is checked against private IPs
+    const MAX_REDIRECTS = 3;
+    let currentUrl = url;
+    let response: Response | null = null;
 
-    // Fetch with original URL to preserve TLS/SNI certificate validation.
-    // DNS rebinding is mitigated by the 5s timeout constraint.
-    const response = await fetch(url, {
-      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
-      signal: AbortSignal.timeout(5000),
-    });
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      const resolvedIp = await resolveExternalUrl(currentUrl);
+      if (!resolvedIp) return null;
 
-    if (!response.ok) return null;
+      response = await fetch(currentUrl, {
+        headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
+        signal: AbortSignal.timeout(5000),
+        redirect: "manual",
+      });
+
+      // Follow redirects with SSRF validation on each hop
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location || i === MAX_REDIRECTS) return null;
+        currentUrl = new URL(location, currentUrl).toString();
+        const redirectParsed = new URL(currentUrl);
+        if (!["http:", "https:"].includes(redirectParsed.protocol)) return null;
+        continue;
+      }
+
+      break;
+    }
+
+    if (!response?.ok) return null;
 
     // Only process HTML responses to avoid reading large binary files
     const contentType = response.headers.get("content-type");
@@ -223,17 +240,15 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
 
     const chunks: Uint8Array[] = [];
     let totalSize = 0;
-    let done = false;
-    while (!done) {
-      const result = await reader.read();
-      done = result.done;
-      if (done || !result.value) break;
-      totalSize += result.value.byteLength;
+    let result: ReadableStreamReadResult<Uint8Array>;
+    while (!(result = await reader.read()).done) {
+      const { value } = result;
+      totalSize += value.byteLength;
       if (totalSize > MAX_PREVIEW_BODY_BYTES) {
         reader.cancel();
         break;
       }
-      chunks.push(result.value);
+      chunks.push(value);
     }
     const html = new TextDecoder().decode(Buffer.concat(chunks));
 
