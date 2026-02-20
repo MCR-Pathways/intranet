@@ -96,10 +96,15 @@ type RoundupListItem = WeeklyRoundupBase & { created_at: string };
 /**
  * Checks whether an IP address belongs to a private/reserved range.
  * Used to prevent SSRF attacks in fetchLinkPreview.
+ * Handles IPv4, IPv6, and IPv4-mapped IPv6 addresses (::ffff:x.x.x.x).
  */
 function isPrivateIP(ip: string): boolean {
+  // Handle IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1 or ::ffff:10.0.0.1)
+  const v4Mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  const normalizedIp = v4Mapped ? v4Mapped[1] : ip;
+
   // IPv4
-  const parts = ip.split(".").map(Number);
+  const parts = normalizedIp.split(".").map(Number);
   if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
     if (parts[0] === 10) return true; // 10.0.0.0/8
     if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
@@ -109,28 +114,31 @@ function isPrivateIP(ip: string): boolean {
     if (parts[0] === 0) return true; // 0.0.0.0/8
   }
   // IPv6
-  if (ip === "::1") return true; // loopback
-  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
-  if (ip.startsWith("fe80")) return true; // link-local
+  if (normalizedIp === "::1") return true; // loopback
+  if (normalizedIp.startsWith("fc") || normalizedIp.startsWith("fd")) return true; // fc00::/7 ULA
+  if (normalizedIp.startsWith("fe80")) return true; // link-local
   return false;
 }
 
 /**
  * Validates that a URL does not resolve to a private/internal IP address.
- * Prevents SSRF by resolving the hostname and checking the resulting IP.
+ * Resolves the hostname once and returns the resolved IP for use in the fetch call,
+ * preventing DNS rebinding TOCTOU attacks.
+ * Returns the resolved IP if external, null if private/failed.
  */
-async function validateExternalUrl(url: string): Promise<boolean> {
+async function resolveExternalUrl(url: string): Promise<string | null> {
   const parsed = new URL(url);
   const hostname = parsed.hostname;
 
   // If hostname is already an IP, check directly
-  if (isPrivateIP(hostname)) return false;
+  if (isPrivateIP(hostname)) return null;
 
   try {
     const { address } = await dns.lookup(hostname);
-    return !isPrivateIP(address);
+    if (isPrivateIP(address)) return null;
+    return address;
   } catch {
-    return false; // DNS resolution failed; reject
+    return null; // DNS resolution failed; reject
   }
 }
 
@@ -171,15 +179,28 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
       return cached.data;
     }
 
-    const isExternal = await validateExternalUrl(url);
-    if (!isExternal) return null;
+    // Resolve hostname to IP once and use for the fetch to prevent DNS rebinding
+    const resolvedIp = await resolveExternalUrl(url);
+    if (!resolvedIp) return null;
 
-    const response = await fetch(url, {
-      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
+    // Build URL with resolved IP to prevent TOCTOU DNS rebinding
+    const fetchUrl = new URL(url);
+    const originalHost = fetchUrl.host;
+    fetchUrl.hostname = resolvedIp;
+
+    const response = await fetch(fetchUrl.toString(), {
+      headers: {
+        "User-Agent": "MCR-Intranet-Bot/1.0",
+        Host: originalHost,
+      },
       signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) return null;
+
+    // Only process HTML responses to avoid reading large binary files
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("text/html")) return null;
 
     const html = await response.text();
 
@@ -798,29 +819,39 @@ export async function editPost(
       (a) => !keptIds.has(a.id)
     );
 
-    // Delete storage files for removed attachments
-    if (removedAttachments.length > 0) {
+    // Delete only removed attachments (not all — avoids data loss if insert fails)
+    const removedIds = removedAttachments.map((a) => a.id);
+    if (removedIds.length > 0) {
       await deleteAttachmentFiles(
         supabase,
         removedAttachments.map((a) => a.file_url)
       );
-    }
 
-    // Delete ALL existing attachment records (we re-insert with correct sort_order)
-    if (existingAttachments && existingAttachments.length > 0) {
       const { error: deleteError } = await supabase
         .from("post_attachments")
         .delete()
-        .eq("post_id", postId);
+        .in("id", removedIds);
 
       if (deleteError) {
         return { success: false, error: `Failed to update attachments: ${deleteError.message}` };
       }
     }
 
-    // Re-insert the desired attachment list with correct sort_order
-    if (desiredAttachments.length > 0) {
-      const attachmentsToInsert = desiredAttachments.map((att, index) => {
+    // Update sort_order on kept attachments
+    for (let i = 0; i < desiredAttachments.length; i++) {
+      const att = desiredAttachments[i];
+      if (att.id && keptIds.has(att.id)) {
+        await supabase
+          .from("post_attachments")
+          .update({ sort_order: i })
+          .eq("id", att.id);
+      }
+    }
+
+    // Insert only new attachments
+    const newAttachments = desiredAttachments
+      .map((att, index) => {
+        if (att.id && keptIds.has(att.id)) return null; // already exists
         const sanitized: Record<string, unknown> = {
           post_id: postId,
           sort_order: index,
@@ -831,11 +862,13 @@ export async function editPost(
           }
         }
         return sanitized;
-      });
+      })
+      .filter((a): a is Record<string, unknown> => a !== null);
 
+    if (newAttachments.length > 0) {
       const { error: attError } = await supabase
         .from("post_attachments")
-        .insert(attachmentsToInsert);
+        .insert(newAttachments);
 
       if (attError) {
         revalidatePath("/intranet");

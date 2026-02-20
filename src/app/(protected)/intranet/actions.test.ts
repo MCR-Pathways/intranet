@@ -972,6 +972,7 @@ describe("Intranet Post Actions", () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
         text: () =>
           Promise.resolve(
             `<html><head>
@@ -997,6 +998,7 @@ describe("Intranet Post Actions", () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
+        headers: new Headers({ "content-type": "text/html" }),
         text: () =>
           Promise.resolve(
             `<html><head><title>Fallback Title</title></head></html>`
@@ -1038,6 +1040,7 @@ describe("Intranet Post Actions", () => {
       const longTitle = "A".repeat(300);
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
+        headers: new Headers({ "content-type": "text/html" }),
         text: () =>
           Promise.resolve(
             `<html><head><meta property="og:title" content="${longTitle}" /></head></html>`
@@ -1055,6 +1058,7 @@ describe("Intranet Post Actions", () => {
       const longDesc = "B".repeat(600);
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
+        headers: new Headers({ "content-type": "text/html" }),
         text: () =>
           Promise.resolve(
             `<html><head><meta property="og:description" content="${longDesc}" /></head></html>`
