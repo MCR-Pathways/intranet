@@ -294,6 +294,7 @@ export function PostCard({
       <PostEditDialog
         postId={post.id}
         initialContent={post.content}
+        initialAttachments={post.attachments}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

@@ -32,6 +32,42 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
+const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
+  "attachment_type",
+  "file_url",
+  "file_name",
+  "file_size",
+  "mime_type",
+  "link_url",
+  "link_title",
+  "link_description",
+  "link_image_url",
+] as const;
+
+/** Extract storage paths from attachment file URLs and delete them. */
+async function deleteAttachmentFiles(
+  supabase: SupabaseClient,
+  fileUrls: (string | null)[]
+): Promise<void> {
+  const filePaths = fileUrls
+    .filter((url): url is string => url !== null)
+    .map((url) => {
+      try {
+        const parsed = new URL(url);
+        const segments = parsed.pathname.split("/post-attachments/");
+        if (segments.length < 2 || !segments[1]) return null;
+        return segments[1];
+      } catch {
+        return null;
+      }
+    })
+    .filter((p): p is string => p !== null);
+
+  if (filePaths.length > 0) {
+    await supabase.storage.from("post-attachments").remove(filePaths);
+  }
+}
+
 // ─── Weekly Roundup Types ─────────────────────────────────────────────
 
 /** Base fields shared by all weekly roundup responses */
@@ -536,24 +572,12 @@ export async function createPost(data: {
 
   // Insert attachments if provided
   if (data.attachments && data.attachments.length > 0) {
-    const ALLOWED_ATTACHMENT_FIELDS = [
-      "attachment_type",
-      "file_url",
-      "file_name",
-      "file_size",
-      "mime_type",
-      "link_url",
-      "link_title",
-      "link_description",
-      "link_image_url",
-    ] as const;
-
     const attachments = data.attachments.slice(0, 10).map((att, index) => {
       const sanitized: Record<string, unknown> = {
         post_id: post.id,
         sort_order: index,
       };
-      for (const field of ALLOWED_ATTACHMENT_FIELDS) {
+      for (const field of ALLOWED_ATTACHMENT_FIELDS_SHARED) {
         if (field in att && att[field] !== undefined) {
           sanitized[field] = att[field];
         }
@@ -580,10 +604,29 @@ export async function createPost(data: {
   return { success: true, error: null, postId: post.id };
 }
 
+// ─── Edit Post ──────────────────────────────────────────────────────
+
+interface AttachmentInput {
+  id?: string;
+  attachment_type: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  link_url?: string;
+  link_title?: string;
+  link_description?: string;
+  link_image_url?: string;
+  [key: string]: unknown;
+}
+
 export async function editPost(
   postId: string,
-  data: { content: string }
-): Promise<{ success: boolean; error: string | null }> {
+  data: {
+    content: string;
+    attachments?: AttachmentInput[];
+  }
+): Promise<{ success: boolean; error: string | null; warning?: string }> {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
@@ -598,6 +641,7 @@ export async function editPost(
     };
   }
 
+  // Update post content (author-only via .eq("author_id"))
   const { error } = await supabase
     .from("posts")
     .update({ content })
@@ -606,6 +650,78 @@ export async function editPost(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Handle attachment changes if provided
+  if (data.attachments !== undefined) {
+    const desiredAttachments = (data.attachments ?? []).slice(0, 10);
+
+    // Fetch existing attachments for this post
+    const { data: existingAttachments } = await supabase
+      .from("post_attachments")
+      .select("id, file_url")
+      .eq("post_id", postId);
+
+    const existingIds = new Set(
+      (existingAttachments ?? []).map((a) => a.id)
+    );
+
+    // Validate that any "kept" IDs actually belong to this post
+    const keptIds = new Set(
+      desiredAttachments
+        .filter((a) => a.id && existingIds.has(a.id))
+        .map((a) => a.id!)
+    );
+
+    // Determine which existing attachments are being removed
+    const removedAttachments = (existingAttachments ?? []).filter(
+      (a) => !keptIds.has(a.id)
+    );
+
+    // Delete storage files for removed attachments
+    if (removedAttachments.length > 0) {
+      await deleteAttachmentFiles(
+        supabase,
+        removedAttachments.map((a) => a.file_url)
+      );
+    }
+
+    // Delete ALL existing attachment records (we re-insert with correct sort_order)
+    if (existingAttachments && existingAttachments.length > 0) {
+      await supabase
+        .from("post_attachments")
+        .delete()
+        .eq("post_id", postId);
+    }
+
+    // Re-insert the desired attachment list with correct sort_order
+    if (desiredAttachments.length > 0) {
+      const attachmentsToInsert = desiredAttachments.map((att, index) => {
+        const sanitized: Record<string, unknown> = {
+          post_id: postId,
+          sort_order: index,
+        };
+        for (const field of ALLOWED_ATTACHMENT_FIELDS_SHARED) {
+          if (field in att && att[field] !== undefined) {
+            sanitized[field] = att[field];
+          }
+        }
+        return sanitized;
+      });
+
+      const { error: attError } = await supabase
+        .from("post_attachments")
+        .insert(attachmentsToInsert);
+
+      if (attError) {
+        revalidatePath("/intranet");
+        return {
+          success: true,
+          error: null,
+          warning: "Post updated, but some attachments could not be saved",
+        };
+      }
+    }
   }
 
   revalidatePath("/intranet");
@@ -643,24 +759,10 @@ export async function deletePost(
     .eq("post_id", postId);
 
   if (attachments && attachments.length > 0) {
-    const filePaths = attachments
-      .filter((a) => a.file_url)
-      .map((a) => {
-        const url = a.file_url!;
-        try {
-          const parsed = new URL(url);
-          const segments = parsed.pathname.split("/post-attachments/");
-          if (segments.length < 2 || !segments[1]) return null;
-          return segments[1];
-        } catch {
-          return null;
-        }
-      })
-      .filter((p): p is string => p !== null);
-
-    if (filePaths.length > 0) {
-      await supabase.storage.from("post-attachments").remove(filePaths);
-    }
+    await deleteAttachmentFiles(
+      supabase,
+      attachments.map((a) => a.file_url)
+    );
   }
 
   // Cascade delete handles attachments, reactions, comments
