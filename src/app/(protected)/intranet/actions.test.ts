@@ -81,6 +81,7 @@ import {
   toggleReaction,
   addComment,
   fetchLinkPreview,
+  _clearPreviewCacheForTesting,
 } from "@/app/(protected)/intranet/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -169,7 +170,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -178,7 +179,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -188,7 +189,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -335,7 +336,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -344,7 +345,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Content must be between 1 and 5000 characters",
+        error: "Content must be between 1 and 5,000 characters",
       });
     });
 
@@ -823,9 +824,31 @@ describe("Intranet Post Actions", () => {
   // ===========================================
 
   describe("fetchLinkPreview", () => {
+    /** Creates a mock Response with a streaming body for the link preview reader. */
+    function mockHtmlResponse(html: string) {
+      const encoded = new TextEncoder().encode(html);
+      let read = false;
+      return {
+        ok: true,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+        body: {
+          getReader: () => ({
+            read: () => {
+              if (read) return Promise.resolve({ done: true, value: undefined });
+              read = true;
+              return Promise.resolve({ done: false, value: encoded });
+            },
+            cancel: () => Promise.resolve(),
+          }),
+        },
+      } as unknown as Response;
+    }
+
     beforeEach(() => {
       // Mock global fetch for link preview requests
       vi.stubGlobal("fetch", vi.fn());
+      // Clear server-side preview cache between tests
+      _clearPreviewCacheForTesting();
     });
 
     it("returns error when not authenticated", async () => {
@@ -858,7 +881,7 @@ describe("Intranet Post Actions", () => {
     it("returns error for non-HTTP protocol", async () => {
       const result = await fetchLinkPreview("ftp://example.com/file.txt");
 
-      expect(result).toEqual({ success: false, error: "Invalid URL protocol" });
+      expect(result).toEqual({ success: false, error: "Failed to fetch link preview" });
     });
 
     it("returns error for invalid URL", async () => {
@@ -880,7 +903,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -892,7 +915,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -904,7 +927,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -915,7 +938,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -926,7 +949,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -936,7 +959,31 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("blocks IPv4-mapped IPv6 in hex form (e.g. ::ffff:7f00:0001)", async () => {
+      vi.mocked(dns.lookup).mockResolvedValue({ address: "::ffff:7f00:0001", family: 6 } as never);
+
+      const result = await fetchLinkPreview("https://sneaky.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("blocks IPv4-mapped IPv6 hex for 10.x.x.x range (::ffff:0a00:0001)", async () => {
+      vi.mocked(dns.lookup).mockResolvedValue({ address: "::ffff:0a00:0001", family: 6 } as never);
+
+      const result = await fetchLinkPreview("https://sneaky2.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
       });
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -948,7 +995,28 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
+      });
+    });
+
+    it("blocks redirects to private IPs", async () => {
+      // First request resolves to external IP
+      vi.mocked(dns.lookup)
+        .mockResolvedValueOnce({ address: "93.184.216.34", family: 4 } as never)
+        // Redirect target resolves to private IP
+        .mockResolvedValueOnce({ address: "127.0.0.1", family: 4 } as never);
+
+      vi.mocked(fetch).mockResolvedValue({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "http://127.0.0.1/admin" }),
+      } as unknown as Response);
+
+      const result = await fetchLinkPreview("https://redirect.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -959,7 +1027,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "URL resolves to a restricted address",
+        error: "Failed to fetch link preview",
       });
     });
 
@@ -967,17 +1035,15 @@ describe("Intranet Post Actions", () => {
 
     it("extracts Open Graph metadata from HTML", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () =>
-          Promise.resolve(
-            `<html><head>
-              <meta property="og:title" content="Example Page" />
-              <meta property="og:description" content="A description of the page" />
-              <meta property="og:image" content="https://example.com/image.png" />
-            </head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head>
+            <meta property="og:title" content="Example Page" />
+            <meta property="og:description" content="A description of the page" />
+            <meta property="og:image" content="https://example.com/image.png" />
+          </head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -992,13 +1058,9 @@ describe("Intranet Post Actions", () => {
 
     it("falls back to <title> tag when og:title is missing", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () =>
-          Promise.resolve(
-            `<html><head><title>Fallback Title</title></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(`<html><head><title>Fallback Title</title></head></html>`)
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -1015,7 +1077,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await fetchLinkPreview("https://example.com/404");
 
-      expect(result).toEqual({ success: false, error: "Failed to fetch URL" });
+      expect(result).toEqual({ success: false, error: "Failed to fetch link preview" });
     });
 
     it("returns error when fetch throws (e.g. timeout)", async () => {
@@ -1033,13 +1095,11 @@ describe("Intranet Post Actions", () => {
     it("truncates title to 200 characters", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       const longTitle = "A".repeat(300);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () =>
-          Promise.resolve(
-            `<html><head><meta property="og:title" content="${longTitle}" /></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head><meta property="og:title" content="${longTitle}" /></head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -1050,13 +1110,11 @@ describe("Intranet Post Actions", () => {
     it("truncates description to 500 characters", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       const longDesc = "B".repeat(600);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () =>
-          Promise.resolve(
-            `<html><head><meta property="og:description" content="${longDesc}" /></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head><meta property="og:description" content="${longDesc}" /></head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 

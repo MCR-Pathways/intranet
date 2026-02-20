@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, Pin, Sparkles } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
+import { linkifyText } from "@/lib/url";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
@@ -258,7 +259,7 @@ export function PostCard({
 
             {/* Content */}
             <div className="whitespace-pre-wrap text-sm break-words">
-              {post.content}
+              {linkifyText(post.content)}
             </div>
 
             {/* Attachments */}
@@ -294,6 +295,7 @@ export function PostCard({
       <PostEditDialog
         postId={post.id}
         initialContent={post.content}
+        initialAttachments={post.attachments}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

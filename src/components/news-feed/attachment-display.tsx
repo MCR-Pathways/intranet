@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { FileText, Download } from "lucide-react";
 import { LinkPreviewCard } from "./link-preview-card";
+import { ImageLightbox } from "./image-lightbox";
 import { sanitizeUrl, formatFileSize } from "@/lib/utils";
 import type { PostAttachment } from "@/types/database.types";
 
@@ -10,6 +12,9 @@ interface AttachmentDisplayProps {
 }
 
 export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   if (attachments.length === 0) return null;
 
   const images = attachments.filter((a) => a.attachment_type === "image");
@@ -17,6 +22,11 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
     (a) => a.attachment_type === "document"
   );
   const links = attachments.filter((a) => a.attachment_type === "link");
+
+  const handleImageClick = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
 
   return (
     <div className="space-y-3">
@@ -29,13 +39,12 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
               : "grid grid-cols-2 gap-1 rounded-lg overflow-hidden"
           }
         >
-          {images.map((img) => (
-            <a
+          {images.map((img, index) => (
+            <button
               key={img.id}
-              href={sanitizeUrl(img.file_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
+              type="button"
+              onClick={() => handleImageClick(index)}
+              className="block cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded dynamic image URLs */}
               <img
@@ -43,7 +52,7 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
                 alt={img.file_name || "Image"}
                 className="w-full object-cover max-h-[400px] bg-muted"
               />
-            </a>
+            </button>
           ))}
         </div>
       )}
@@ -89,6 +98,16 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
             />
           ))}
         </div>
+      )}
+
+      {/* Image Lightbox */}
+      {images.length > 0 && (
+        <ImageLightbox
+          images={images}
+          initialIndex={lightboxIndex}
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+        />
       )}
     </div>
   );
