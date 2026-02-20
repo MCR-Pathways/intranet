@@ -164,12 +164,12 @@ describe("L&D Course Actions", () => {
 
     it("throws when user is not an L&D admin", async () => {
       vi.mocked(requireLDAdmin).mockRejectedValue(
-        new Error("Unauthorized: L&D admin access required")
+        new Error("Unauthorised: L&D admin access required")
       );
 
       await expect(
         createCourse({ title: "Test", category: "onboarding" })
-      ).rejects.toThrow("Unauthorized: L&D admin access required");
+      ).rejects.toThrow("Unauthorised: L&D admin access required");
     });
   });
 
@@ -476,22 +476,22 @@ describe("L&D Course Actions", () => {
   describe("unpublishCourse", () => {
     /**
      * unpublishCourse chain:
-     * 1. count enrollments: .from("course_enrollments").select("id", { count, head }).eq("course_id", ...)
+     * 1. count enrolments: .from("course_enrolments").select("id", { count, head }).eq("course_id", ...)
      * 2. update course: .from("courses").update({}).eq("id", ...)
      */
 
     function wireUnpublishMocks(options: {
-      enrollmentCount?: number | null;
+      enrolmentCount?: number | null;
       updateError?: { message: string } | null;
     }) {
-      const { enrollmentCount = 0, updateError = null } = options;
+      const { enrolmentCount = 0, updateError = null } = options;
 
-      // Enrollment check: .from("course_enrollments").select(...).eq(...)
-      const mockEnrollEq = vi.fn().mockResolvedValue({
-        count: enrollmentCount,
+      // Enrolment check: .from("course_enrolments").select(...).eq(...)
+      const mockEnrolEq = vi.fn().mockResolvedValue({
+        count: enrolmentCount,
         error: null,
       });
-      const mockEnrollSelect = vi.fn().mockReturnValue({ eq: mockEnrollEq });
+      const mockEnrolSelect = vi.fn().mockReturnValue({ eq: mockEnrolEq });
 
       // Update course: .from("courses").update({}).eq(...)
       const mockCourseEq = vi.fn().mockResolvedValue({ error: updateError });
@@ -499,8 +499,8 @@ describe("L&D Course Actions", () => {
 
       mockFrom.mockImplementation((table: string) => {
         switch (table) {
-          case "course_enrollments":
-            return { select: mockEnrollSelect };
+          case "course_enrolments":
+            return { select: mockEnrolSelect };
           case "courses":
             return { update: mockCourseUpdate };
           default:
@@ -511,9 +511,9 @@ describe("L&D Course Actions", () => {
       return { mockCourseUpdate, mockCourseEq };
     }
 
-    it("unpublishes a course with no enrollments", async () => {
+    it("unpublishes a course with no enrolments", async () => {
       const { mockCourseUpdate, mockCourseEq } = wireUnpublishMocks({
-        enrollmentCount: 0,
+        enrolmentCount: 0,
       });
 
       const result = await unpublishCourse("course-001");
@@ -532,7 +532,7 @@ describe("L&D Course Actions", () => {
     });
 
     it("blocks unpublish when learners are enrolled (singular)", async () => {
-      wireUnpublishMocks({ enrollmentCount: 1 });
+      wireUnpublishMocks({ enrolmentCount: 1 });
 
       const result = await unpublishCourse("course-001");
 
@@ -544,7 +544,7 @@ describe("L&D Course Actions", () => {
     });
 
     it("blocks unpublish when multiple learners are enrolled (plural)", async () => {
-      wireUnpublishMocks({ enrollmentCount: 5 });
+      wireUnpublishMocks({ enrolmentCount: 5 });
 
       const result = await unpublishCourse("course-001");
 
@@ -555,8 +555,8 @@ describe("L&D Course Actions", () => {
       expect(revalidatePath).not.toHaveBeenCalled();
     });
 
-    it("allows unpublish when enrollment count is null (no enrollments table rows)", async () => {
-      wireUnpublishMocks({ enrollmentCount: null });
+    it("allows unpublish when enrolment count is null (no enrolments table rows)", async () => {
+      wireUnpublishMocks({ enrolmentCount: null });
 
       const result = await unpublishCourse("course-001");
 
@@ -565,7 +565,7 @@ describe("L&D Course Actions", () => {
 
     it("returns error when DB update fails", async () => {
       wireUnpublishMocks({
-        enrollmentCount: 0,
+        enrolmentCount: 0,
         updateError: { message: "Update failed" },
       });
 
@@ -587,11 +587,11 @@ describe("L&D Course Actions", () => {
 
     it("throws when user is not an L&D admin", async () => {
       vi.mocked(requireLDAdmin).mockRejectedValue(
-        new Error("Unauthorized: L&D admin access required")
+        new Error("Unauthorised: L&D admin access required")
       );
 
       await expect(unpublishCourse("course-001")).rejects.toThrow(
-        "Unauthorized: L&D admin access required"
+        "Unauthorised: L&D admin access required"
       );
     });
   });

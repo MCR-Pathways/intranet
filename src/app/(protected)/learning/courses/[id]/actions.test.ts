@@ -73,10 +73,10 @@ describe("Course Learner Actions", () => {
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it("inserts enrollment with correct fields", async () => {
+    it("inserts enrolment with correct fields", async () => {
       await enrollInCourse("course-1");
 
-      expect(mockFrom).toHaveBeenCalledWith("course_enrollments");
+      expect(mockFrom).toHaveBeenCalledWith("course_enrolments");
       expect(mockInsert).toHaveBeenCalledWith({
         user_id: "user-1",
         course_id: "course-1",
@@ -85,7 +85,7 @@ describe("Course Learner Actions", () => {
       });
     });
 
-    it("returns success on successful enrollment", async () => {
+    it("returns success on successful enrolment", async () => {
       const result = await enrollInCourse("course-1");
 
       expect(result).toEqual({ success: true, error: null });
@@ -99,7 +99,7 @@ describe("Course Learner Actions", () => {
       expect(revalidatePath).toHaveBeenCalledWith("/learning/my-courses");
     });
 
-    it("returns 'Already enrolled' for duplicate enrollment (code 23505)", async () => {
+    it("returns 'Already enrolled' for duplicate enrolment (code 23505)", async () => {
       mockInsert.mockResolvedValue({
         error: { code: "23505", message: "duplicate key value" },
       });

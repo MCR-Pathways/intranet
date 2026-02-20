@@ -25,7 +25,7 @@ export type WorkLocation =
   | "stevenage_office"
   | "other";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
-export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
+export type EnrolmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 export type LessonType = "video" | "text" | "quiz";
 export type CourseStatus = "draft" | "published";
 export type QuestionType = "single" | "multi";
@@ -461,12 +461,12 @@ export interface Database {
           created_at?: string;
         };
       };
-      course_enrollments: {
+      course_enrolments: {
         Row: {
           id: string;
           user_id: string;
           course_id: string;
-          status: EnrollmentStatus;
+          status: EnrolmentStatus;
           progress_percent: number;
           score: number | null;
           enrolled_at: string;
@@ -480,7 +480,7 @@ export interface Database {
           id?: string;
           user_id: string;
           course_id: string;
-          status?: EnrollmentStatus;
+          status?: EnrolmentStatus;
           progress_percent?: number;
           score?: number | null;
           enrolled_at?: string;
@@ -494,7 +494,7 @@ export interface Database {
           id?: string;
           user_id?: string;
           course_id?: string;
-          status?: EnrollmentStatus;
+          status?: EnrolmentStatus;
           progress_percent?: number;
           score?: number | null;
           enrolled_at?: string;
@@ -856,7 +856,7 @@ export interface Database {
       leave_status: LeaveStatus;
       work_location: WorkLocation;
       course_category: CourseCategory;
-      enrollment_status: EnrollmentStatus;
+      enrolment_status: EnrolmentStatus;
     };
   };
 }
@@ -867,7 +867,7 @@ export type Team = Database["public"]["Tables"]["teams"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ManagerTeam = Database["public"]["Tables"]["manager_teams"]["Row"];
 export type Course = Database["public"]["Tables"]["courses"]["Row"];
-export type CourseEnrollment = Database["public"]["Tables"]["course_enrollments"]["Row"];
+export type CourseEnrolment = Database["public"]["Tables"]["course_enrolments"]["Row"];
 export type CourseLesson = Database["public"]["Tables"]["course_lessons"]["Row"];
 export type LessonCompletion = Database["public"]["Tables"]["lesson_completions"]["Row"];
 export type CourseAssignment = Database["public"]["Tables"]["course_assignments"]["Row"];
@@ -894,11 +894,11 @@ export interface TeamWithRelations extends Team {
   parent_team?: Pick<Team, "id" | "name"> | null;
 }
 
-export interface CourseWithEnrollment extends Course {
-  enrollment?: CourseEnrollment | null;
+export interface CourseWithEnrolment extends Course {
+  enrolment?: CourseEnrolment | null;
 }
 
-export interface EnrollmentWithCourse extends CourseEnrollment {
+export interface EnrolmentWithCourse extends CourseEnrolment {
   course: Course;
 }
 

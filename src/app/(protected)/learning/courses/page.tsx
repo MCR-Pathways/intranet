@@ -12,28 +12,28 @@ import {
   PlayCircle,
   BookOpen,
 } from "lucide-react";
-import type { Course, CourseEnrollment } from "@/types/database.types";
+import type { Course, CourseEnrolment } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
 
 function CourseCard({
   course,
-  enrollment,
+  enrolment,
 }: {
   course: Course;
-  enrollment?: CourseEnrollment | null;
+  enrolment?: CourseEnrolment | null;
 }) {
   const config = categoryConfig[course.category];
   const Icon = config.icon;
 
   const getStatusBadge = () => {
-    if (!enrollment) return null;
+    if (!enrolment) return null;
 
-    switch (enrollment.status) {
+    switch (enrolment.status) {
       case "completed":
         return <Badge variant="success"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>;
       case "in_progress":
-        return <Badge variant="warning"><PlayCircle className="h-3 w-3 mr-1" />{enrollment.progress_percent}% Complete</Badge>;
+        return <Badge variant="warning"><PlayCircle className="h-3 w-3 mr-1" />{enrolment.progress_percent}% Complete</Badge>;
       case "enrolled":
         return <Badge variant="muted">Enrolled</Badge>;
       default:
@@ -42,13 +42,13 @@ function CourseCard({
   };
 
   const getDueDateBadge = () => {
-    if (!enrollment?.due_date) return null;
+    if (!enrolment?.due_date) return null;
 
-    const dueDate = new Date(enrollment.due_date);
+    const dueDate = new Date(enrolment.due_date);
     const today = new Date();
     const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (enrollment.status === "completed") return null;
+    if (enrolment.status === "completed") return null;
 
     if (daysUntilDue < 0) {
       return <Badge variant="destructive">Overdue</Badge>;
@@ -113,8 +113,8 @@ export default async function CourseCatalogPage({
     redirect("/login");
   }
 
-  // Fetch courses and enrollments in parallel for faster page loads
-  const [{ data: courses }, { data: enrollments }] = await Promise.all([
+  // Fetch courses and enrolments in parallel for faster page loads
+  const [{ data: courses }, { data: enrolments }] = await Promise.all([
     supabase
       .from("courses")
       .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
@@ -123,13 +123,13 @@ export default async function CourseCatalogPage({
       .order("is_required", { ascending: false })
       .order("title"),
     supabase
-      .from("course_enrollments")
+      .from("course_enrolments")
       .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
       .eq("user_id", user.id),
   ]);
 
-  const enrollmentMap = new Map(
-    enrollments?.map((e) => [e.course_id, e]) || []
+  const enrolmentMap = new Map(
+    enrolments?.map((e) => [e.course_id, e]) || []
   );
 
   const coursesByCategory = {
@@ -141,14 +141,14 @@ export default async function CourseCatalogPage({
   // Calculate stats
   const complianceCourses = coursesByCategory.compliance;
   const completedCompliance = complianceCourses.filter(
-    (c) => enrollmentMap.get(c.id)?.status === "completed"
+    (c) => enrolmentMap.get(c.id)?.status === "completed"
   ).length;
   const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
   const dueSoonCompliance = complianceCourses.filter((c) => {
-    const enrollment = enrollmentMap.get(c.id);
-    if (!enrollment?.due_date || enrollment.status === "completed") return false;
+    const enrolment = enrolmentMap.get(c.id);
+    if (!enrolment?.due_date || enrolment.status === "completed") return false;
     const daysUntilDue = Math.ceil(
-      (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
+      (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
     );
     return daysUntilDue <= 14 && daysUntilDue >= 0;
   }).length;
@@ -158,7 +158,7 @@ export default async function CourseCatalogPage({
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Course Catalog</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Course Catalogue</h1>
           <p className="text-muted-foreground mt-1">
             Browse and enroll in available courses
           </p>
@@ -213,7 +213,7 @@ export default async function CourseCatalogPage({
                 <CourseCard
                   key={course.id}
                   course={course}
-                  enrollment={enrollmentMap.get(course.id)}
+                  enrolment={enrolmentMap.get(course.id)}
                 />
               ))}
             </div>
@@ -230,7 +230,7 @@ export default async function CourseCatalogPage({
                   <CourseCard
                     key={course.id}
                     course={course}
-                    enrollment={enrollmentMap.get(course.id)}
+                    enrolment={enrolmentMap.get(course.id)}
                   />
                 ))}
               </div>

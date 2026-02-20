@@ -142,12 +142,12 @@ describe("HR User Actions", () => {
 
     it("throws when user is not an HR admin", async () => {
       vi.mocked(requireHRAdmin).mockRejectedValue(
-        new Error("Unauthorized: HR admin access required")
+        new Error("Unauthorised: HR admin access required")
       );
 
       await expect(
         updateUserProfile("user-456", { full_name: "Jane" })
-      ).rejects.toThrow("Unauthorized: HR admin access required");
+      ).rejects.toThrow("Unauthorised: HR admin access required");
     });
   });
 

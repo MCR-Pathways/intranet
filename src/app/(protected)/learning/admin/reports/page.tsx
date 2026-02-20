@@ -11,13 +11,13 @@ export default async function ReportsPage() {
 
   // Fetch overview data in parallel for faster page loads
   const [
-    { data: enrollments },
+    { data: enrolments },
     { data: courses },
     { data: profiles },
     { data: teams },
   ] = await Promise.all([
     supabase
-      .from("course_enrollments")
+      .from("course_enrolments")
       .select(
         "id, user_id, course_id, status, progress_percent, score, completed_at, due_date"
       ),
@@ -48,7 +48,7 @@ export default async function ReportsPage() {
       </div>
 
       <ReportsDashboard
-        enrollments={enrollments ?? []}
+        enrolments={enrolments ?? []}
         courses={courses ?? []}
         profiles={profiles ?? []}
         teams={teams ?? []}

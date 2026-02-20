@@ -16,7 +16,7 @@ import {
   PlayCircle,
   CheckCircle2,
 } from "lucide-react";
-import type { EnrollmentWithCourse } from "@/types/database.types";
+import type { EnrolmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
 
@@ -27,15 +27,15 @@ export default async function LearningPage() {
     redirect("/login");
   }
 
-  // Fetch courses and enrollments in parallel for faster page loads
-  const [{ data: courses }, { data: enrollments }] = await Promise.all([
+  // Fetch courses and enrolments in parallel for faster page loads
+  const [{ data: courses }, { data: enrolments }] = await Promise.all([
     supabase
       .from("courses")
       .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
       .eq("is_active", true)
       .eq("status", "published"),
     supabase
-      .from("course_enrollments")
+      .from("course_enrolments")
       .select(`
         id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
         course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
@@ -43,13 +43,13 @@ export default async function LearningPage() {
       .eq("user_id", user.id),
   ]);
 
-  // Type and filter enrollments
-  const typedEnrollments = (enrollments || [])
+  // Type and filter enrolments
+  const typedEnrolments = (enrolments || [])
     .filter((e) => e.course)
     .map((e) => ({
       ...e,
-      course: e.course as unknown as EnrollmentWithCourse["course"],
-    })) as EnrollmentWithCourse[];
+      course: e.course as unknown as EnrolmentWithCourse["course"],
+    })) as EnrolmentWithCourse[];
 
   // Calculate stats by category
   const coursesByCategory = {
@@ -58,9 +58,9 @@ export default async function LearningPage() {
     soft_skills: courses?.filter((c) => c.category === "soft_skills") || [],
   };
 
-  // Get enrollment stats
-  const enrollmentMap = new Map(
-    typedEnrollments.map((e) => [e.course_id, e])
+  // Get enrolment stats
+  const enrolmentMap = new Map(
+    typedEnrolments.map((e) => [e.course_id, e])
   );
 
   const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
@@ -68,29 +68,29 @@ export default async function LearningPage() {
   const complianceStats = {
     total: coursesByCategory.compliance.length,
     completed: coursesByCategory.compliance.filter(
-      (c) => enrollmentMap.get(c.id)?.status === "completed"
+      (c) => enrolmentMap.get(c.id)?.status === "completed"
     ).length,
     due: coursesByCategory.compliance.filter((c) => {
-      const enrollment = enrollmentMap.get(c.id);
-      if (!enrollment || enrollment.status === "completed") return false;
-      if (!enrollment.due_date) return c.is_required;
+      const enrolment = enrolmentMap.get(c.id);
+      if (!enrolment || enrolment.status === "completed") return false;
+      if (!enrolment.due_date) return c.is_required;
       const daysUntilDue = Math.ceil(
-        (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
+        (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
       );
       return daysUntilDue <= 14;
     }).length,
     overdue: coursesByCategory.compliance.filter((c) => {
-      const enrollment = enrollmentMap.get(c.id);
-      if (!enrollment?.due_date || enrollment.status === "completed") return false;
+      const enrolment = enrolmentMap.get(c.id);
+      if (!enrolment?.due_date || enrolment.status === "completed") return false;
       const daysUntilDue = Math.ceil(
-        (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
+        (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
       );
       return daysUntilDue < 0;
     }).length,
   };
 
   // Get in-progress courses for display
-  const inProgressEnrollments = typedEnrollments
+  const inProgressEnrolments = typedEnrolments
     .filter((e) => e.status === "in_progress" || e.status === "enrolled")
     .sort((a, b) => {
       // Sort by due date (soonest first), then by progress (highest first)
@@ -244,19 +244,19 @@ export default async function LearningPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {inProgressEnrollments.length > 0 ? (
+          {inProgressEnrolments.length > 0 ? (
             <div className="space-y-4">
-              {inProgressEnrollments.map((enrollment) => {
-                const config = categoryConfig[enrollment.course.category];
+              {inProgressEnrolments.map((enrolment) => {
+                const config = categoryConfig[enrolment.course.category];
                 const Icon = config.icon;
 
                 // Calculate due date status
                 let dueStatus: "overdue" | "due_soon" | null = null;
                 let daysUntilDue: number | null = null;
 
-                if (enrollment.due_date) {
+                if (enrolment.due_date) {
                   daysUntilDue = Math.ceil(
-                    (new Date(enrollment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
+                    (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
                   );
                   if (daysUntilDue < 0) dueStatus = "overdue";
                   else if (daysUntilDue <= 7) dueStatus = "due_soon";
@@ -264,15 +264,15 @@ export default async function LearningPage() {
 
                 return (
                   <Link
-                    key={enrollment.id}
-                    href={`/learning/courses/${enrollment.course_id}`}
+                    key={enrolment.id}
+                    href={`/learning/courses/${enrolment.course_id}`}
                     className="block"
                   >
                     <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                       <Icon className={`h-8 w-8 ${config.color} shrink-0`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium truncate">{enrollment.course.title}</p>
+                          <p className="font-medium truncate">{enrolment.course.title}</p>
                           {dueStatus === "overdue" && (
                             <Badge variant="destructive" className="shrink-0">Overdue</Badge>
                           )}
@@ -282,16 +282,16 @@ export default async function LearningPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex-1">
-                            <Progress value={enrollment.progress_percent} className="h-2" />
+                            <Progress value={enrolment.progress_percent} className="h-2" />
                           </div>
                           <span className="text-sm text-muted-foreground shrink-0">
-                            {enrollment.progress_percent}%
+                            {enrolment.progress_percent}%
                           </span>
                         </div>
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1 shrink-0">
                         <Clock className="h-4 w-4" />
-                        {formatDuration(enrollment.course.duration_minutes)}
+                        {formatDuration(enrolment.course.duration_minutes)}
                       </div>
                     </div>
                   </Link>
@@ -302,7 +302,7 @@ export default async function LearningPage() {
             <div className="flex flex-col items-center justify-center py-8">
               <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center max-w-sm mb-4">
-                You haven&apos;t started any courses yet. Browse the course catalog to
+                You haven&apos;t started any courses yet. Browse the course catalogue to
                 get started.
               </p>
               <Button asChild>

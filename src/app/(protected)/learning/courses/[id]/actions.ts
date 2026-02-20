@@ -10,7 +10,7 @@ export async function enrollInCourse(courseId: string) {
     return { success: false, error: "Not authenticated" };
   }
 
-  const { error } = await supabase.from("course_enrollments").insert({
+  const { error } = await supabase.from("course_enrolments").insert({
     user_id: user.id,
     course_id: courseId,
     status: "enrolled",

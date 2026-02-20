@@ -54,7 +54,7 @@ export async function requireHRAdmin() {
     .single();
 
   if (!profile?.is_hr_admin) {
-    throw new Error("Unauthorized: HR admin access required");
+    throw new Error("Unauthorised: HR admin access required");
   }
 
   return { supabase, user };
@@ -82,7 +82,7 @@ export async function requireLDAdmin() {
     .single();
 
   if (!profile?.is_ld_admin) {
-    throw new Error("Unauthorized: L&D admin access required");
+    throw new Error("Unauthorised: L&D admin access required");
   }
 
   return { supabase, user };

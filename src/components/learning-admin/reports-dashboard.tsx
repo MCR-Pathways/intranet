@@ -21,7 +21,7 @@ import {
   BarChart3,
 } from "lucide-react";
 
-interface EnrollmentData {
+interface EnrolmentData {
   id: string;
   user_id: string;
   course_id: string;
@@ -55,14 +55,14 @@ interface TeamData {
 }
 
 interface ReportsDashboardProps {
-  enrollments: EnrollmentData[];
+  enrolments: EnrolmentData[];
   courses: CourseData[];
   profiles: ProfileData[];
   teams: TeamData[];
 }
 
 export function ReportsDashboard({
-  enrollments,
+  enrolments,
   courses,
   profiles,
   teams,
@@ -83,8 +83,8 @@ export function ReportsDashboard({
   );
 
   // Apply filters
-  const filteredEnrollments = useMemo(() => {
-    return enrollments.filter((e) => {
+  const filteredEnrolments = useMemo(() => {
+    return enrolments.filter((e) => {
       if (courseFilter !== "all" && e.course_id !== courseFilter) return false;
       if (statusFilter !== "all" && e.status !== statusFilter) return false;
 
@@ -97,7 +97,7 @@ export function ReportsDashboard({
       return true;
     });
   }, [
-    enrollments,
+    enrolments,
     courseFilter,
     teamFilter,
     userTypeFilter,
@@ -108,11 +108,11 @@ export function ReportsDashboard({
   // Overview stats
   const stats = useMemo(() => {
     const now = new Date();
-    const total = filteredEnrollments.length;
-    const completed = filteredEnrollments.filter(
+    const total = filteredEnrolments.length;
+    const completed = filteredEnrolments.filter(
       (e) => e.status === "completed"
     ).length;
-    const overdue = filteredEnrollments.filter(
+    const overdue = filteredEnrolments.filter(
       (e) =>
         e.status !== "completed" && e.due_date && new Date(e.due_date) < now
     ).length;
@@ -120,7 +120,7 @@ export function ReportsDashboard({
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { total, completed, overdue, activeCourses, completionRate };
-  }, [filteredEnrollments, courses]);
+  }, [filteredEnrolments, courses]);
 
   // Per-course breakdown
   const courseStats = useMemo(() => {
@@ -139,26 +139,26 @@ export function ReportsDashboard({
     const now = new Date();
 
     for (const course of courses) {
-      const courseEnrollments = filteredEnrollments.filter(
+      const courseEnrolments = filteredEnrolments.filter(
         (e) => e.course_id === course.id
       );
-      const completedEnrollments = courseEnrollments.filter(
+      const completedEnrolments = courseEnrolments.filter(
         (e) => e.status === "completed"
       );
-      const scores = completedEnrollments
+      const scores = completedEnrolments
         .map((e) => e.score)
         .filter((s): s is number => s !== null);
-      const overdueCount = courseEnrollments.filter(
+      const overdueCount = courseEnrolments.filter(
         (e) =>
           e.status !== "completed" && e.due_date && new Date(e.due_date) < now
       ).length;
 
-      if (courseEnrollments.length > 0) {
+      if (courseEnrolments.length > 0) {
         statsMap.set(course.id, {
           title: course.title,
           category: course.category,
-          enrolled: courseEnrollments.length,
-          completed: completedEnrollments.length,
+          enrolled: courseEnrolments.length,
+          completed: completedEnrolments.length,
           overdue: overdueCount,
           avgScore:
             scores.length > 0
@@ -171,7 +171,7 @@ export function ReportsDashboard({
     return Array.from(statsMap.values()).sort((a, b) =>
       a.title.localeCompare(b.title)
     );
-  }, [courses, filteredEnrollments]);
+  }, [courses, filteredEnrolments]);
 
   // Per-user breakdown
   const userStats = useMemo(() => {
@@ -191,15 +191,15 @@ export function ReportsDashboard({
     const now = new Date();
 
     for (const profile of profiles) {
-      const userEnrollments = filteredEnrollments.filter(
+      const userEnrolments = filteredEnrolments.filter(
         (e) => e.user_id === profile.id
       );
 
-      if (userEnrollments.length > 0) {
-        const completedCount = userEnrollments.filter(
+      if (userEnrolments.length > 0) {
+        const completedCount = userEnrolments.filter(
           (e) => e.status === "completed"
         ).length;
-        const overdueCount = userEnrollments.filter(
+        const overdueCount = userEnrolments.filter(
           (e) =>
             e.status !== "completed" &&
             e.due_date &&
@@ -212,7 +212,7 @@ export function ReportsDashboard({
           email: profile.email,
           userType: profile.user_type,
           team: team?.name ?? "",
-          enrolled: userEnrollments.length,
+          enrolled: userEnrolments.length,
           completed: completedCount,
           overdue: overdueCount,
         });
@@ -222,7 +222,7 @@ export function ReportsDashboard({
     return Array.from(statsMap.values()).sort((a, b) =>
       a.name.localeCompare(b.name)
     );
-  }, [profiles, filteredEnrollments, teamMap]);
+  }, [profiles, filteredEnrolments, teamMap]);
 
   const handleExportCSV = () => {
     startTransition(async () => {
@@ -275,7 +275,7 @@ export function ReportsDashboard({
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
                 <p className="text-sm text-muted-foreground">
-                  Total Enrollments
+                  Total Enrolments
                 </p>
               </div>
             </div>
@@ -424,7 +424,7 @@ export function ReportsDashboard({
                       colSpan={7}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
-                      No enrollment data
+                      No enrolment data
                     </td>
                   </tr>
                 ) : (

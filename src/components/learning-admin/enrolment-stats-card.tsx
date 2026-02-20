@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, BookOpen, CheckCircle2, AlertTriangle } from "lucide-react";
 
-interface EnrollmentData {
+interface EnrolmentData {
   id: string;
   status: string;
   progress_percent: number;
@@ -12,23 +12,23 @@ interface EnrollmentData {
   due_date: string | null;
 }
 
-interface EnrollmentStatsCardProps {
-  enrollments: EnrollmentData[];
+interface EnrolmentStatsCardProps {
+  enrolments: EnrolmentData[];
 }
 
-export function EnrollmentStatsCard({
-  enrollments,
-}: EnrollmentStatsCardProps) {
+export function EnrolmentStatsCard({
+  enrolments,
+}: EnrolmentStatsCardProps) {
   const stats = useMemo(() => {
     const now = new Date();
-    const total = enrollments.length;
-    const inProgress = enrollments.filter(
+    const total = enrolments.length;
+    const inProgress = enrolments.filter(
       (e) => e.status === "in_progress"
     ).length;
-    const completed = enrollments.filter(
+    const completed = enrolments.filter(
       (e) => e.status === "completed"
     ).length;
-    const overdue = enrollments.filter(
+    const overdue = enrolments.filter(
       (e) =>
         e.status !== "completed" &&
         e.due_date &&
@@ -36,7 +36,7 @@ export function EnrollmentStatsCard({
     ).length;
 
     return { total, inProgress, completed, overdue };
-  }, [enrollments]);
+  }, [enrolments]);
 
   const statItems = [
     {
@@ -68,7 +68,7 @@ export function EnrollmentStatsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Enrollment Stats</CardTitle>
+        <CardTitle>Enrolment Stats</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">

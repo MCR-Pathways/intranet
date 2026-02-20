@@ -156,7 +156,7 @@ export async function deleteSignInEntry(
     return { success: false, error: "Not authenticated" };
   }
 
-  // Delete with user_id check for defense-in-depth on top of RLS
+  // Delete with user_id check for defence-in-depth on top of RLS
   const { error } = await supabase
     .from("sign_ins")
     .delete()
@@ -198,7 +198,7 @@ export async function getTeamSignInsToday() {
   const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile?.is_line_manager) {
-    return { members: [], error: "Unauthorized" };
+    return { members: [], error: "Unauthorised" };
   }
 
   const today = getUKToday();
@@ -255,7 +255,7 @@ export async function getTeamSignInHistory(filters: {
   const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile?.is_line_manager) {
-    return { data: [], members: [], error: "Unauthorized", truncated: false };
+    return { data: [], members: [], error: "Unauthorised", truncated: false };
   }
 
   // Get active direct reports

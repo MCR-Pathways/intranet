@@ -198,9 +198,9 @@ export async function publishCourse(courseId: string) {
 export async function unpublishCourse(courseId: string) {
   const { supabase, user } = await requireLDAdmin();
 
-  // Block if there are enrollments
+  // Block if there are enrolments
   const { count } = await supabase
-    .from("course_enrollments")
+    .from("course_enrolments")
     .select("id", { count: "exact", head: true })
     .eq("course_id", courseId);
 

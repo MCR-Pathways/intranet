@@ -31,7 +31,7 @@ import { requireLDAdmin } from "@/lib/auth";
 
 // ---- Test data ----
 
-const mockEnrollment = {
+const mockEnrolment = {
   id: "enr-1",
   status: "enrolled",
   progress_percent: 50,
@@ -80,17 +80,17 @@ function createChainableMock<T>(resolveValue: T) {
 
 /**
  * Wire the standard mock chain for exportReportCSV with no profile pre-filter.
- * Call order: (1) course_enrollments, (2-4) Promise.all: profiles, courses, teams
+ * Call order: (1) course_enrolments, (2-4) Promise.all: profiles, courses, teams
  */
 function wireDefaultMocks(overrides?: {
-  enrollments?: typeof mockEnrollment[] | null;
-  enrollError?: { message: string } | null;
+  enrolments?: typeof mockEnrolment[] | null;
+  enrolError?: { message: string } | null;
   profiles?: typeof mockProfile[];
   courses?: typeof mockCourse[];
   teams?: typeof mockTeam[];
 }) {
-  const enrollments = overrides && "enrollments" in overrides ? overrides.enrollments : [mockEnrollment];
-  const enrollError = overrides?.enrollError ?? null;
+  const enrolments = overrides && "enrolments" in overrides ? overrides.enrolments : [mockEnrolment];
+  const enrolError = overrides?.enrolError ?? null;
   const profiles = overrides?.profiles ?? [mockProfile];
   const courses = overrides?.courses ?? [mockCourse];
   const teams = overrides?.teams ?? [mockTeam];
@@ -101,8 +101,8 @@ function wireDefaultMocks(overrides?: {
     callCount++;
 
     if (callCount === 1) {
-      // course_enrollments: .select().eq().in() → awaitable
-      return createChainableMock({ data: enrollments, error: enrollError });
+      // course_enrolments: .select().eq().in() → awaitable
+      return createChainableMock({ data: enrolments, error: enrolError });
     }
     if (callCount === 2) {
       // profiles: .select().in() → promise
@@ -133,17 +133,17 @@ function wireDefaultMocks(overrides?: {
 
 /**
  * Wire mocks when a profile pre-filter (teamId/userType) is active.
- * Call order: (1) profiles pre-query, (2) course_enrollments, (3-5) Promise.all
+ * Call order: (1) profiles pre-query, (2) course_enrolments, (3-5) Promise.all
  */
 function wireFilteredMocks(overrides?: {
   matchedProfileIds?: string[];
-  enrollments?: typeof mockEnrollment[] | null;
+  enrolments?: typeof mockEnrolment[] | null;
   profiles?: typeof mockProfile[];
   courses?: typeof mockCourse[];
   teams?: typeof mockTeam[];
 }) {
   const matchedProfileIds = overrides?.matchedProfileIds ?? ["u1"];
-  const enrollments = overrides?.enrollments ?? [mockEnrollment];
+  const enrolments = overrides?.enrolments ?? [mockEnrolment];
   const profiles = overrides?.profiles ?? [mockProfile];
   const courses = overrides?.courses ?? [mockCourse];
   const teams = overrides?.teams ?? [mockTeam];
@@ -159,8 +159,8 @@ function wireFilteredMocks(overrides?: {
       return createChainableMock({ data: profileData });
     }
     if (callCount === 2) {
-      // course_enrollments: .select().eq().in() → thenable
-      return createChainableMock({ data: enrollments, error: null });
+      // course_enrolments: .select().eq().in() → thenable
+      return createChainableMock({ data: enrolments, error: null });
     }
     if (callCount === 3) {
       return {
@@ -202,11 +202,11 @@ describe("exportReportCSV", () => {
 
   it("throws when user is not an L&D admin", async () => {
     vi.mocked(requireLDAdmin).mockRejectedValue(
-      new Error("Unauthorized: L&D admin access required")
+      new Error("Unauthorised: L&D admin access required")
     );
 
     await expect(exportReportCSV({})).rejects.toThrow(
-      "Unauthorized: L&D admin access required"
+      "Unauthorised: L&D admin access required"
     );
   });
 
@@ -235,8 +235,8 @@ describe("exportReportCSV", () => {
 
   it("returns CSV with formatted date (DD/MM/YYYY en-GB)", async () => {
     wireDefaultMocks({
-      enrollments: [
-        { ...mockEnrollment, enrolled_at: "2026-03-15T10:00:00Z" },
+      enrolments: [
+        { ...mockEnrolment, enrolled_at: "2026-03-15T10:00:00Z" },
       ],
     });
 
@@ -247,9 +247,9 @@ describe("exportReportCSV", () => {
 
   it("handles null score, completed_at, and due_date gracefully", async () => {
     wireDefaultMocks({
-      enrollments: [
+      enrolments: [
         {
-          ...mockEnrollment,
+          ...mockEnrolment,
           score: null,
           completed_at: null,
           due_date: null,
@@ -286,7 +286,7 @@ describe("exportReportCSV", () => {
     const result = await exportReportCSV({ teamId: "t1" });
 
     expect(result.success).toBe(true);
-    // 1 pre-query + 1 enrollments + 3 Promise.all = 5 total
+    // 1 pre-query + 1 enrolments + 3 Promise.all = 5 total
     expect(mockFrom).toHaveBeenCalledTimes(5);
   });
 
@@ -309,7 +309,7 @@ describe("exportReportCSV", () => {
       error: "No data to export",
       csv: null,
     });
-    // Should not proceed to enrollment query
+    // Should not proceed to enrolment query
     expect(mockFrom).toHaveBeenCalledTimes(1);
   });
 
@@ -317,8 +317,8 @@ describe("exportReportCSV", () => {
   // Empty / error cases
   // ===========================================
 
-  it("returns 'No data to export' when no enrollments found", async () => {
-    wireDefaultMocks({ enrollments: [] });
+  it("returns 'No data to export' when no enrolments found", async () => {
+    wireDefaultMocks({ enrolments: [] });
 
     const result = await exportReportCSV({});
 
@@ -329,8 +329,8 @@ describe("exportReportCSV", () => {
     });
   });
 
-  it("returns 'No data to export' when enrollments data is null", async () => {
-    wireDefaultMocks({ enrollments: null });
+  it("returns 'No data to export' when enrolments data is null", async () => {
+    wireDefaultMocks({ enrolments: null });
 
     const result = await exportReportCSV({});
 
@@ -341,9 +341,9 @@ describe("exportReportCSV", () => {
     });
   });
 
-  it("returns error on enrollment query DB failure", async () => {
+  it("returns error on enrolment query DB failure", async () => {
     wireDefaultMocks({
-      enrollError: { message: "Database connection error" },
+      enrolError: { message: "Database connection error" },
     });
 
     const result = await exportReportCSV({});
@@ -357,8 +357,8 @@ describe("exportReportCSV", () => {
 
   it("handles missing profile/course/team gracefully in CSV", async () => {
     wireDefaultMocks({
-      enrollments: [
-        { ...mockEnrollment, user_id: "unknown", course_id: "unknown" },
+      enrolments: [
+        { ...mockEnrolment, user_id: "unknown", course_id: "unknown" },
       ],
       profiles: [],
       courses: [],

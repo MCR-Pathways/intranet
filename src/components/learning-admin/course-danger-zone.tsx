@@ -23,7 +23,7 @@ interface CourseDangerZoneProps {
   courseTitle: string;
   isActive: boolean;
   status: "draft" | "published";
-  enrollmentCount: number;
+  enrolmentCount: number;
 }
 
 export function CourseDangerZone({
@@ -31,7 +31,7 @@ export function CourseDangerZone({
   courseTitle,
   isActive,
   status,
-  enrollmentCount,
+  enrolmentCount,
 }: CourseDangerZoneProps) {
   const [isPending, startTransition] = useTransition();
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
@@ -113,8 +113,8 @@ export function CourseDangerZone({
             </Button>
           </div>
 
-          {/* Revert to Draft — only if 0 enrollments */}
-          {enrollmentCount === 0 && (
+          {/* Revert to Draft — only if 0 enrolments */}
+          {enrolmentCount === 0 && (
             <div className="flex items-center justify-between border-t border-border pt-4">
               <div>
                 <p className="text-sm font-medium">Revert to draft</p>
