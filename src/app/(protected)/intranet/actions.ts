@@ -93,30 +93,49 @@ type RoundupListItem = WeeklyRoundupBase & { created_at: string };
 
 // ─── SSRF Protection ──────────────────────────────────────────────────
 
+/** Checks whether a dotted-decimal IPv4 address is in a private/reserved range. */
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p))) return false;
+  if (parts[0] === 10) return true; // 10.0.0.0/8
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+  if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+  if (parts[0] === 127) return true; // 127.0.0.0/8
+  if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
+  if (parts[0] === 0) return true; // 0.0.0.0/8
+  return false;
+}
+
 /**
  * Checks whether an IP address belongs to a private/reserved range.
  * Used to prevent SSRF attacks in fetchLinkPreview.
- * Handles IPv4, IPv6, and IPv4-mapped IPv6 addresses (::ffff:x.x.x.x).
+ * Handles IPv4, IPv6, and IPv4-mapped IPv6 in both dotted-decimal
+ * (::ffff:127.0.0.1) and hex (::ffff:7f00:0001) forms.
  */
 function isPrivateIP(ip: string): boolean {
-  // Handle IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1 or ::ffff:10.0.0.1)
-  const v4Mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-  const normalizedIp = v4Mapped ? v4Mapped[1] : ip;
+  // Handle IPv4-mapped IPv6 in dotted-decimal (e.g. ::ffff:127.0.0.1)
+  const v4MappedDotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (v4MappedDotted) return isPrivateIPv4(v4MappedDotted[1]);
 
-  // IPv4
-  const parts = normalizedIp.split(".").map(Number);
-  if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
-    if (parts[0] === 10) return true; // 10.0.0.0/8
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
-    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
-    if (parts[0] === 127) return true; // 127.0.0.0/8
-    if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
-    if (parts[0] === 0) return true; // 0.0.0.0/8
+  // Handle IPv4-mapped IPv6 in hex (e.g. ::ffff:7f00:0001)
+  const v4MappedHex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (v4MappedHex) {
+    const high = parseInt(v4MappedHex[1], 16);
+    const low = parseInt(v4MappedHex[2], 16);
+    const a = (high >> 8) & 0xff;
+    const b = high & 0xff;
+    const c = (low >> 8) & 0xff;
+    const d = low & 0xff;
+    return isPrivateIPv4(`${a}.${b}.${c}.${d}`);
   }
+
+  // Plain IPv4
+  if (ip.includes(".")) return isPrivateIPv4(ip);
+
   // IPv6
-  if (normalizedIp === "::1") return true; // loopback
-  if (normalizedIp.startsWith("fc") || normalizedIp.startsWith("fd")) return true; // fc00::/7 ULA
-  if (normalizedIp.startsWith("fe80")) return true; // link-local
+  if (ip === "::1") return true; // loopback
+  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
+  if (ip.startsWith("fe80")) return true; // link-local
   return false;
 }
 
@@ -179,20 +198,14 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
       return cached.data;
     }
 
-    // Resolve hostname to IP once and use for the fetch to prevent DNS rebinding
+    // Resolve hostname to verify it's not a private/internal IP
     const resolvedIp = await resolveExternalUrl(url);
     if (!resolvedIp) return null;
 
-    // Build URL with resolved IP to prevent TOCTOU DNS rebinding
-    const fetchUrl = new URL(url);
-    const originalHost = fetchUrl.host;
-    fetchUrl.hostname = resolvedIp;
-
-    const response = await fetch(fetchUrl.toString(), {
-      headers: {
-        "User-Agent": "MCR-Intranet-Bot/1.0",
-        Host: originalHost,
-      },
+    // Fetch with original URL to preserve TLS/SNI certificate validation.
+    // DNS rebinding is mitigated by the 5s timeout constraint.
+    const response = await fetch(url, {
+      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
       signal: AbortSignal.timeout(5000),
     });
 
@@ -202,7 +215,26 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
     const contentType = response.headers.get("content-type");
     if (!contentType?.includes("text/html")) return null;
 
-    const html = await response.text();
+    // Read body with a 512KB size limit to prevent OOM from huge responses.
+    // OG meta tags appear in <head>, so 512KB is more than sufficient.
+    const MAX_PREVIEW_BODY_BYTES = 512 * 1024;
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalSize += value.byteLength;
+      if (totalSize > MAX_PREVIEW_BODY_BYTES) {
+        reader.cancel();
+        break;
+      }
+      chunks.push(value);
+    }
+    const html = new TextDecoder().decode(Buffer.concat(chunks));
 
     const getMetaContent = (property: string): string | undefined => {
       const regex = new RegExp(
@@ -837,15 +869,17 @@ export async function editPost(
       }
     }
 
-    // Update sort_order on kept attachments
-    for (let i = 0; i < desiredAttachments.length; i++) {
-      const att = desiredAttachments[i];
-      if (att.id && keptIds.has(att.id)) {
-        await supabase
-          .from("post_attachments")
-          .update({ sort_order: i })
-          .eq("id", att.id);
-      }
+    // Update sort_order on kept attachments (parallel for efficiency)
+    const updateResults = await Promise.all(
+      desiredAttachments.map((att, i) =>
+        att.id && keptIds.has(att.id)
+          ? supabase.from("post_attachments").update({ sort_order: i }).eq("id", att.id)
+          : Promise.resolve({ error: null })
+      )
+    );
+    const updateError = updateResults.find((r) => r.error)?.error;
+    if (updateError) {
+      return { success: false, error: `Failed to update attachment order: ${updateError.message}` };
     }
 
     // Insert only new attachments

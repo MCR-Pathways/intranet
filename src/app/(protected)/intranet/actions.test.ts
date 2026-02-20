@@ -824,6 +824,26 @@ describe("Intranet Post Actions", () => {
   // ===========================================
 
   describe("fetchLinkPreview", () => {
+    /** Creates a mock Response with a streaming body for the link preview reader. */
+    function mockHtmlResponse(html: string) {
+      const encoded = new TextEncoder().encode(html);
+      let read = false;
+      return {
+        ok: true,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+        body: {
+          getReader: () => ({
+            read: () => {
+              if (read) return Promise.resolve({ done: true, value: undefined });
+              read = true;
+              return Promise.resolve({ done: false, value: encoded });
+            },
+            cancel: () => Promise.resolve(),
+          }),
+        },
+      } as unknown as Response;
+    }
+
     beforeEach(() => {
       // Mock global fetch for link preview requests
       vi.stubGlobal("fetch", vi.fn());
@@ -944,6 +964,30 @@ describe("Intranet Post Actions", () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
+    it("blocks IPv4-mapped IPv6 in hex form (e.g. ::ffff:7f00:0001)", async () => {
+      vi.mocked(dns.lookup).mockResolvedValue({ address: "::ffff:7f00:0001", family: 6 } as never);
+
+      const result = await fetchLinkPreview("https://sneaky.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("blocks IPv4-mapped IPv6 hex for 10.x.x.x range (::ffff:0a00:0001)", async () => {
+      vi.mocked(dns.lookup).mockResolvedValue({ address: "::ffff:0a00:0001", family: 6 } as never);
+
+      const result = await fetchLinkPreview("https://sneaky2.example.com");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Failed to fetch link preview",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
     it("blocks URLs resolving to 0.0.0.0", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "0.0.0.0", family: 4 } as never);
 
@@ -970,18 +1014,15 @@ describe("Intranet Post Actions", () => {
 
     it("extracts Open Graph metadata from HTML", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
-        text: () =>
-          Promise.resolve(
-            `<html><head>
-              <meta property="og:title" content="Example Page" />
-              <meta property="og:description" content="A description of the page" />
-              <meta property="og:image" content="https://example.com/image.png" />
-            </head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head>
+            <meta property="og:title" content="Example Page" />
+            <meta property="og:description" content="A description of the page" />
+            <meta property="og:image" content="https://example.com/image.png" />
+          </head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -996,14 +1037,9 @@ describe("Intranet Post Actions", () => {
 
     it("falls back to <title> tag when og:title is missing", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-type": "text/html" }),
-        text: () =>
-          Promise.resolve(
-            `<html><head><title>Fallback Title</title></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(`<html><head><title>Fallback Title</title></head></html>`)
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -1038,14 +1074,11 @@ describe("Intranet Post Actions", () => {
     it("truncates title to 200 characters", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       const longTitle = "A".repeat(300);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-type": "text/html" }),
-        text: () =>
-          Promise.resolve(
-            `<html><head><meta property="og:title" content="${longTitle}" /></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head><meta property="og:title" content="${longTitle}" /></head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
@@ -1056,14 +1089,11 @@ describe("Intranet Post Actions", () => {
     it("truncates description to 500 characters", async () => {
       vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
       const longDesc = "B".repeat(600);
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-type": "text/html" }),
-        text: () =>
-          Promise.resolve(
-            `<html><head><meta property="og:description" content="${longDesc}" /></head></html>`
-          ),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(
+        mockHtmlResponse(
+          `<html><head><meta property="og:description" content="${longDesc}" /></head></html>`
+        )
+      );
 
       const result = await fetchLinkPreview("https://example.com");
 
