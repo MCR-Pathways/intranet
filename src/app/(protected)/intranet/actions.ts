@@ -93,44 +93,71 @@ type RoundupListItem = WeeklyRoundupBase & { created_at: string };
 
 // ─── SSRF Protection ──────────────────────────────────────────────────
 
+/** Checks whether a dotted-decimal IPv4 address is in a private/reserved range. */
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p))) return false;
+  if (parts[0] === 10) return true; // 10.0.0.0/8
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+  if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+  if (parts[0] === 127) return true; // 127.0.0.0/8
+  if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
+  if (parts[0] === 0) return true; // 0.0.0.0/8
+  return false;
+}
+
 /**
  * Checks whether an IP address belongs to a private/reserved range.
  * Used to prevent SSRF attacks in fetchLinkPreview.
+ * Handles IPv4, IPv6, and IPv4-mapped IPv6 in both dotted-decimal
+ * (::ffff:127.0.0.1) and hex (::ffff:7f00:0001) forms.
  */
 function isPrivateIP(ip: string): boolean {
-  // IPv4
-  const parts = ip.split(".").map(Number);
-  if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
-    if (parts[0] === 10) return true; // 10.0.0.0/8
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
-    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
-    if (parts[0] === 127) return true; // 127.0.0.0/8
-    if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
-    if (parts[0] === 0) return true; // 0.0.0.0/8
+  // Handle IPv4-mapped IPv6 in dotted-decimal (e.g. ::ffff:127.0.0.1)
+  const v4MappedDotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (v4MappedDotted) return isPrivateIPv4(v4MappedDotted[1]);
+
+  // Handle IPv4-mapped IPv6 in hex (e.g. ::ffff:7f00:0001 → 127.0.0.1)
+  const v4MappedHex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (v4MappedHex) {
+    const high = parseInt(v4MappedHex[1], 16); // first two octets (e.g. 7f00 → 127.0)
+    const low = parseInt(v4MappedHex[2], 16); // last two octets (e.g. 0001 → 0.1)
+    const a = (high >> 8) & 0xff;
+    const b = high & 0xff;
+    const c = (low >> 8) & 0xff;
+    const d = low & 0xff;
+    return isPrivateIPv4(`${a}.${b}.${c}.${d}`);
   }
-  // IPv6
-  if (ip === "::1") return true; // loopback
+
+  // Plain IPv4
+  if (ip.includes(".")) return isPrivateIPv4(ip);
+
+  // Native IPv6 private/reserved ranges
+  if (ip === "::1") return true; // ::1/128 loopback
   if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
-  if (ip.startsWith("fe80")) return true; // link-local
+  if (ip.startsWith("fe80")) return true; // fe80::/10 link-local
   return false;
 }
 
 /**
  * Validates that a URL does not resolve to a private/internal IP address.
- * Prevents SSRF by resolving the hostname and checking the resulting IP.
+ * Resolves the hostname once and returns the resolved IP for use in the fetch call,
+ * preventing DNS rebinding TOCTOU attacks.
+ * Returns the resolved IP if external, null if private/failed.
  */
-async function validateExternalUrl(url: string): Promise<boolean> {
+async function resolveExternalUrl(url: string): Promise<string | null> {
   const parsed = new URL(url);
   const hostname = parsed.hostname;
 
   // If hostname is already an IP, check directly
-  if (isPrivateIP(hostname)) return false;
+  if (isPrivateIP(hostname)) return null;
 
   try {
     const { address } = await dns.lookup(hostname);
-    return !isPrivateIP(address);
+    if (isPrivateIP(address)) return null;
+    return address;
   } catch {
-    return false; // DNS resolution failed; reject
+    return null; // DNS resolution failed; reject
   }
 }
 
@@ -171,17 +198,59 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
       return cached.data;
     }
 
-    const isExternal = await validateExternalUrl(url);
-    if (!isExternal) return null;
+    // Fetch with redirect validation — each hop is checked against private IPs
+    const MAX_REDIRECTS = 3;
+    let currentUrl = url;
+    let response: Response | null = null;
 
-    const response = await fetch(url, {
-      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
-      signal: AbortSignal.timeout(5000),
-    });
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      const resolvedIp = await resolveExternalUrl(currentUrl);
+      if (!resolvedIp) return null;
 
-    if (!response.ok) return null;
+      response = await fetch(currentUrl, {
+        headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
+        signal: AbortSignal.timeout(5000),
+        redirect: "manual",
+      });
 
-    const html = await response.text();
+      // Follow redirects with SSRF validation on each hop
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location || i === MAX_REDIRECTS) return null;
+        currentUrl = new URL(location, currentUrl).toString();
+        const redirectParsed = new URL(currentUrl);
+        if (!["http:", "https:"].includes(redirectParsed.protocol)) return null;
+        continue;
+      }
+
+      break;
+    }
+
+    if (!response?.ok) return null;
+
+    // Only process HTML responses to avoid reading large binary files
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("text/html")) return null;
+
+    // Read body with a 512KB size limit to prevent OOM from huge responses.
+    // OG meta tags appear in <head>, so 512KB is more than sufficient.
+    const MAX_PREVIEW_BODY_BYTES = 512 * 1024;
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
+    let result: ReadableStreamReadResult<Uint8Array>;
+    while (!(result = await reader.read()).done) {
+      const { value } = result;
+      totalSize += value.byteLength;
+      if (totalSize > MAX_PREVIEW_BODY_BYTES) {
+        reader.cancel();
+        break;
+      }
+      chunks.push(value);
+    }
+    const html = new TextDecoder().decode(Buffer.concat(chunks));
 
     const getMetaContent = (property: string): string | undefined => {
       const regex = new RegExp(
@@ -798,29 +867,45 @@ export async function editPost(
       (a) => !keptIds.has(a.id)
     );
 
-    // Delete storage files for removed attachments
-    if (removedAttachments.length > 0) {
+    // Delete only removed attachments (not all — avoids data loss if insert fails)
+    const removedIds = removedAttachments.map((a) => a.id);
+    if (removedIds.length > 0) {
       await deleteAttachmentFiles(
         supabase,
         removedAttachments.map((a) => a.file_url)
       );
-    }
 
-    // Delete ALL existing attachment records (we re-insert with correct sort_order)
-    if (existingAttachments && existingAttachments.length > 0) {
       const { error: deleteError } = await supabase
         .from("post_attachments")
         .delete()
-        .eq("post_id", postId);
+        .in("id", removedIds);
 
       if (deleteError) {
         return { success: false, error: `Failed to update attachments: ${deleteError.message}` };
       }
     }
 
-    // Re-insert the desired attachment list with correct sort_order
-    if (desiredAttachments.length > 0) {
-      const attachmentsToInsert = desiredAttachments.map((att, index) => {
+    // Update sort_order on kept attachments (parallel for efficiency)
+    const updatePromises = desiredAttachments
+      .map((att, i) =>
+        att.id && keptIds.has(att.id)
+          ? supabase.from("post_attachments").update({ sort_order: i }).eq("id", att.id)
+          : null
+      )
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    if (updatePromises.length > 0) {
+      const updateResults = await Promise.all(updatePromises);
+      const updateError = updateResults.find((r) => r.error)?.error;
+      if (updateError) {
+        return { success: false, error: `Failed to update attachment order: ${updateError.message}` };
+      }
+    }
+
+    // Insert only new attachments
+    const newAttachments = desiredAttachments
+      .map((att, index) => {
+        if (att.id && keptIds.has(att.id)) return null; // already exists
         const sanitized: Record<string, unknown> = {
           post_id: postId,
           sort_order: index,
@@ -831,11 +916,13 @@ export async function editPost(
           }
         }
         return sanitized;
-      });
+      })
+      .filter((a): a is Record<string, unknown> => a !== null);
 
+    if (newAttachments.length > 0) {
       const { error: attError } = await supabase
         .from("post_attachments")
-        .insert(attachmentsToInsert);
+        .insert(newAttachments);
 
       if (attError) {
         revalidatePath("/intranet");
