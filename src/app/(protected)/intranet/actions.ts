@@ -1,6 +1,13 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/auth";
+import {
+  POST_MAX_LENGTH,
+  ATTACHMENT_MAX_COUNT,
+  ATTACHMENT_MAX_SIZE_BYTES,
+  ALLOWED_FILE_TYPES,
+} from "@/lib/intranet";
+import { extractUrls } from "@/lib/url";
 import { revalidatePath } from "next/cache";
 import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -32,6 +39,44 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
+const POST_ATTACHMENTS_BUCKET = "post-attachments";
+
+const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
+  "attachment_type",
+  "file_url",
+  "file_name",
+  "file_size",
+  "mime_type",
+  "link_url",
+  "link_title",
+  "link_description",
+  "link_image_url",
+] as const;
+
+/** Extract storage paths from attachment file URLs and delete them. */
+async function deleteAttachmentFiles(
+  supabase: SupabaseClient,
+  fileUrls: (string | null)[]
+): Promise<void> {
+  const filePaths = fileUrls
+    .filter((url): url is string => url !== null)
+    .map((url) => {
+      try {
+        const parsed = new URL(url);
+        const segments = parsed.pathname.split(`/${POST_ATTACHMENTS_BUCKET}/`);
+        if (segments.length < 2 || !segments[1]) return null;
+        return segments[1];
+      } catch {
+        return null;
+      }
+    })
+    .filter((p): p is string => p !== null);
+
+  if (filePaths.length > 0) {
+    await supabase.storage.from(POST_ATTACHMENTS_BUCKET).remove(filePaths);
+  }
+}
+
 // ─── Weekly Roundup Types ─────────────────────────────────────────────
 
 /** Base fields shared by all weekly roundup responses */
@@ -48,44 +93,200 @@ type RoundupListItem = WeeklyRoundupBase & { created_at: string };
 
 // ─── SSRF Protection ──────────────────────────────────────────────────
 
+/** Checks whether a dotted-decimal IPv4 address is in a private/reserved range. */
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p))) return false;
+  if (parts[0] === 10) return true; // 10.0.0.0/8
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+  if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+  if (parts[0] === 127) return true; // 127.0.0.0/8
+  if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
+  if (parts[0] === 0) return true; // 0.0.0.0/8
+  return false;
+}
+
 /**
  * Checks whether an IP address belongs to a private/reserved range.
  * Used to prevent SSRF attacks in fetchLinkPreview.
+ * Handles IPv4, IPv6, and IPv4-mapped IPv6 in both dotted-decimal
+ * (::ffff:127.0.0.1) and hex (::ffff:7f00:0001) forms.
  */
 function isPrivateIP(ip: string): boolean {
-  // IPv4
-  const parts = ip.split(".").map(Number);
-  if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
-    if (parts[0] === 10) return true; // 10.0.0.0/8
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
-    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
-    if (parts[0] === 127) return true; // 127.0.0.0/8
-    if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local / cloud metadata)
-    if (parts[0] === 0) return true; // 0.0.0.0/8
+  // Handle IPv4-mapped IPv6 in dotted-decimal (e.g. ::ffff:127.0.0.1)
+  const v4MappedDotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (v4MappedDotted) return isPrivateIPv4(v4MappedDotted[1]);
+
+  // Handle IPv4-mapped IPv6 in hex (e.g. ::ffff:7f00:0001 → 127.0.0.1)
+  const v4MappedHex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (v4MappedHex) {
+    const high = parseInt(v4MappedHex[1], 16); // first two octets (e.g. 7f00 → 127.0)
+    const low = parseInt(v4MappedHex[2], 16); // last two octets (e.g. 0001 → 0.1)
+    const a = (high >> 8) & 0xff;
+    const b = high & 0xff;
+    const c = (low >> 8) & 0xff;
+    const d = low & 0xff;
+    return isPrivateIPv4(`${a}.${b}.${c}.${d}`);
   }
-  // IPv6
-  if (ip === "::1") return true; // loopback
+
+  // Plain IPv4
+  if (ip.includes(".")) return isPrivateIPv4(ip);
+
+  // Native IPv6 private/reserved ranges
+  if (ip === "::1") return true; // ::1/128 loopback
   if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
-  if (ip.startsWith("fe80")) return true; // link-local
+  if (ip.startsWith("fe80")) return true; // fe80::/10 link-local
   return false;
 }
 
 /**
  * Validates that a URL does not resolve to a private/internal IP address.
- * Prevents SSRF by resolving the hostname and checking the resulting IP.
+ * Resolves the hostname once and returns the resolved IP for use in the fetch call,
+ * preventing DNS rebinding TOCTOU attacks.
+ * Returns the resolved IP if external, null if private/failed.
  */
-async function validateExternalUrl(url: string): Promise<boolean> {
+async function resolveExternalUrl(url: string): Promise<string | null> {
   const parsed = new URL(url);
   const hostname = parsed.hostname;
 
   // If hostname is already an IP, check directly
-  if (isPrivateIP(hostname)) return false;
+  if (isPrivateIP(hostname)) return null;
 
   try {
     const { address } = await dns.lookup(hostname);
-    return !isPrivateIP(address);
+    if (isPrivateIP(address)) return null;
+    return address;
   } catch {
-    return false; // DNS resolution failed; reject
+    return null; // DNS resolution failed; reject
+  }
+}
+
+// ─── Internal Link Preview Helper ────────────────────────────────────
+
+/** In-memory cache for link preview results to avoid double-fetching. */
+const previewCache = new Map<
+  string,
+  { data: { title?: string; description?: string; imageUrl?: string }; timestamp: number }
+>();
+const PREVIEW_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const PREVIEW_CACHE_MAX_SIZE = 50;
+
+/** @internal Exported only for test cleanup — do not use in production code. */
+export async function _clearPreviewCacheForTesting() {
+  previewCache.clear();
+}
+
+/**
+ * Internal link preview fetcher (no auth check).
+ * Used by createPost/editPost for server-side auto-detection
+ * and by the public fetchLinkPreview action.
+ * Results are cached in-memory for PREVIEW_CACHE_TTL to avoid
+ * re-fetching the same URL when the client previews then posts.
+ */
+async function _fetchLinkPreviewInternal(url: string): Promise<{
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+} | null> {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+
+    // Check cache first
+    const cached = previewCache.get(url);
+    if (cached && Date.now() - cached.timestamp < PREVIEW_CACHE_TTL) {
+      return cached.data;
+    }
+
+    // Fetch with redirect validation — each hop is checked against private IPs
+    const MAX_REDIRECTS = 3;
+    let currentUrl = url;
+    let response: Response | null = null;
+
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      const resolvedIp = await resolveExternalUrl(currentUrl);
+      if (!resolvedIp) return null;
+
+      response = await fetch(currentUrl, {
+        headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
+        signal: AbortSignal.timeout(5000),
+        redirect: "manual",
+      });
+
+      // Follow redirects with SSRF validation on each hop
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location || i === MAX_REDIRECTS) return null;
+        currentUrl = new URL(location, currentUrl).toString();
+        const redirectParsed = new URL(currentUrl);
+        if (!["http:", "https:"].includes(redirectParsed.protocol)) return null;
+        continue;
+      }
+
+      break;
+    }
+
+    if (!response?.ok) return null;
+
+    // Only process HTML responses to avoid reading large binary files
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("text/html")) return null;
+
+    // Read body with a 512KB size limit to prevent OOM from huge responses.
+    // OG meta tags appear in <head>, so 512KB is more than sufficient.
+    const MAX_PREVIEW_BODY_BYTES = 512 * 1024;
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
+    let result: ReadableStreamReadResult<Uint8Array>;
+    while (!(result = await reader.read()).done) {
+      const { value } = result;
+      totalSize += value.byteLength;
+      if (totalSize > MAX_PREVIEW_BODY_BYTES) {
+        reader.cancel();
+        break;
+      }
+      chunks.push(value);
+    }
+    const html = new TextDecoder().decode(Buffer.concat(chunks));
+
+    const getMetaContent = (property: string): string | undefined => {
+      const regex = new RegExp(
+        `<meta[^>]*(?:property|name)=["']${property}["'][^>]*content=["']([^"']*)["']`,
+        "i"
+      );
+      const altRegex = new RegExp(
+        `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`,
+        "i"
+      );
+      return regex.exec(html)?.[1] ?? altRegex.exec(html)?.[1];
+    };
+
+    const title =
+      getMetaContent("og:title") ??
+      html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
+    const description =
+      getMetaContent("og:description") ?? getMetaContent("description");
+    const imageUrl = getMetaContent("og:image");
+
+    const data = {
+      title: title?.slice(0, 200),
+      description: description?.slice(0, 500),
+      imageUrl,
+    };
+
+    // Store in cache, evict oldest if at max size
+    if (previewCache.size >= PREVIEW_CACHE_MAX_SIZE) {
+      const oldestKey = previewCache.keys().next().value;
+      if (oldestKey) previewCache.delete(oldestKey);
+    }
+    previewCache.set(url, { data, timestamp: Date.now() });
+
+    return data;
+  } catch {
+    return null;
   }
 }
 
@@ -514,10 +715,10 @@ export async function createPost(data: {
   }
 
   const content = data.content?.trim();
-  if (!content || content.length === 0 || content.length > 5000) {
+  if (!content || content.length === 0 || content.length > POST_MAX_LENGTH) {
     return {
       success: false,
-      error: "Content must be between 1 and 5000 characters",
+      error: `Content must be between 1 and ${POST_MAX_LENGTH.toLocaleString()} characters`,
     };
   }
 
@@ -536,24 +737,12 @@ export async function createPost(data: {
 
   // Insert attachments if provided
   if (data.attachments && data.attachments.length > 0) {
-    const ALLOWED_ATTACHMENT_FIELDS = [
-      "attachment_type",
-      "file_url",
-      "file_name",
-      "file_size",
-      "mime_type",
-      "link_url",
-      "link_title",
-      "link_description",
-      "link_image_url",
-    ] as const;
-
-    const attachments = data.attachments.slice(0, 10).map((att, index) => {
+    const attachments = data.attachments.slice(0, ATTACHMENT_MAX_COUNT).map((att, index) => {
       const sanitized: Record<string, unknown> = {
         post_id: post.id,
         sort_order: index,
       };
-      for (const field of ALLOWED_ATTACHMENT_FIELDS) {
+      for (const field of ALLOWED_ATTACHMENT_FIELDS_SHARED) {
         if (field in att && att[field] !== undefined) {
           sanitized[field] = att[field];
         }
@@ -576,14 +765,57 @@ export async function createPost(data: {
     }
   }
 
+  // Auto-detect first URL in content and create link preview attachment
+  const detectedUrls = extractUrls(content);
+  if (detectedUrls.length > 0) {
+    const firstUrl = detectedUrls[0];
+    const hasLinkForUrl = (data.attachments ?? []).some(
+      (a) => a.attachment_type === "link" && a.link_url === firstUrl
+    );
+    if (!hasLinkForUrl) {
+      const preview = await _fetchLinkPreviewInternal(firstUrl);
+      if (preview) {
+        const sortOrder = (data.attachments ?? []).length;
+        await supabase.from("post_attachments").insert({
+          post_id: post.id,
+          attachment_type: "link",
+          link_url: firstUrl,
+          link_title: preview.title,
+          link_description: preview.description,
+          link_image_url: preview.imageUrl,
+          sort_order: sortOrder,
+        });
+      }
+    }
+  }
+
   revalidatePath("/intranet");
   return { success: true, error: null, postId: post.id };
 }
 
+// ─── Edit Post ──────────────────────────────────────────────────────
+
+interface AttachmentInput {
+  id?: string;
+  attachment_type: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  link_url?: string;
+  link_title?: string;
+  link_description?: string;
+  link_image_url?: string;
+  [key: string]: unknown;
+}
+
 export async function editPost(
   postId: string,
-  data: { content: string }
-): Promise<{ success: boolean; error: string | null }> {
+  data: {
+    content: string;
+    attachments?: AttachmentInput[];
+  }
+): Promise<{ success: boolean; error: string | null; warning?: string }> {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
@@ -591,13 +823,14 @@ export async function editPost(
   }
 
   const content = data.content?.trim();
-  if (!content || content.length === 0 || content.length > 5000) {
+  if (!content || content.length === 0 || content.length > POST_MAX_LENGTH) {
     return {
       success: false,
-      error: "Content must be between 1 and 5000 characters",
+      error: `Content must be between 1 and ${POST_MAX_LENGTH.toLocaleString()} characters`,
     };
   }
 
+  // Update post content (author-only via .eq("author_id"))
   const { error } = await supabase
     .from("posts")
     .update({ content })
@@ -606,6 +839,124 @@ export async function editPost(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Handle attachment changes if provided
+  if (data.attachments !== undefined) {
+    const desiredAttachments = (data.attachments ?? []).slice(0, ATTACHMENT_MAX_COUNT);
+
+    // Fetch existing attachments for this post
+    const { data: existingAttachments } = await supabase
+      .from("post_attachments")
+      .select("id, file_url")
+      .eq("post_id", postId);
+
+    const existingIds = new Set(
+      (existingAttachments ?? []).map((a) => a.id)
+    );
+
+    // Validate that any "kept" IDs actually belong to this post
+    const keptIds = new Set(
+      desiredAttachments
+        .filter((a) => a.id && existingIds.has(a.id))
+        .map((a) => a.id!)
+    );
+
+    // Determine which existing attachments are being removed
+    const removedAttachments = (existingAttachments ?? []).filter(
+      (a) => !keptIds.has(a.id)
+    );
+
+    // Delete only removed attachments (not all — avoids data loss if insert fails)
+    const removedIds = removedAttachments.map((a) => a.id);
+    if (removedIds.length > 0) {
+      await deleteAttachmentFiles(
+        supabase,
+        removedAttachments.map((a) => a.file_url)
+      );
+
+      const { error: deleteError } = await supabase
+        .from("post_attachments")
+        .delete()
+        .in("id", removedIds);
+
+      if (deleteError) {
+        return { success: false, error: `Failed to update attachments: ${deleteError.message}` };
+      }
+    }
+
+    // Update sort_order on kept attachments (parallel for efficiency)
+    const updatePromises = desiredAttachments
+      .map((att, i) =>
+        att.id && keptIds.has(att.id)
+          ? supabase.from("post_attachments").update({ sort_order: i }).eq("id", att.id)
+          : null
+      )
+      .filter((p): p is NonNullable<typeof p> => p !== null);
+
+    if (updatePromises.length > 0) {
+      const updateResults = await Promise.all(updatePromises);
+      const updateError = updateResults.find((r) => r.error)?.error;
+      if (updateError) {
+        return { success: false, error: `Failed to update attachment order: ${updateError.message}` };
+      }
+    }
+
+    // Insert only new attachments
+    const newAttachments = desiredAttachments
+      .map((att, index) => {
+        if (att.id && keptIds.has(att.id)) return null; // already exists
+        const sanitized: Record<string, unknown> = {
+          post_id: postId,
+          sort_order: index,
+        };
+        for (const field of ALLOWED_ATTACHMENT_FIELDS_SHARED) {
+          if (field in att && att[field] !== undefined) {
+            sanitized[field] = att[field];
+          }
+        }
+        return sanitized;
+      })
+      .filter((a): a is Record<string, unknown> => a !== null);
+
+    if (newAttachments.length > 0) {
+      const { error: attError } = await supabase
+        .from("post_attachments")
+        .insert(newAttachments);
+
+      if (attError) {
+        revalidatePath("/intranet");
+        return {
+          success: true,
+          error: null,
+          warning: "Post updated, but some attachments could not be saved",
+        };
+      }
+    }
+
+    // Auto-detect first URL in content and create link preview attachment
+    const detectedUrls = extractUrls(content);
+    if (detectedUrls.length > 0) {
+      const firstUrl = detectedUrls[0];
+      const hasLinkForUrl = desiredAttachments.some(
+        (a) => a.attachment_type === "link" && a.link_url === firstUrl
+      );
+      if (!hasLinkForUrl) {
+        const preview = await _fetchLinkPreviewInternal(firstUrl);
+        if (preview) {
+          const sortOrder = desiredAttachments.length;
+          await supabase.from("post_attachments").insert({
+            post_id: postId,
+            attachment_type: "link",
+            link_url: firstUrl,
+            link_title: preview.title,
+            link_description: preview.description,
+            link_image_url: preview.imageUrl,
+            sort_order: sortOrder,
+          });
+        }
+      }
+    }
   }
 
   revalidatePath("/intranet");
@@ -643,24 +994,10 @@ export async function deletePost(
     .eq("post_id", postId);
 
   if (attachments && attachments.length > 0) {
-    const filePaths = attachments
-      .filter((a) => a.file_url)
-      .map((a) => {
-        const url = a.file_url!;
-        try {
-          const parsed = new URL(url);
-          const segments = parsed.pathname.split("/post-attachments/");
-          if (segments.length < 2 || !segments[1]) return null;
-          return segments[1];
-        } catch {
-          return null;
-        }
-      })
-      .filter((p): p is string => p !== null);
-
-    if (filePaths.length > 0) {
-      await supabase.storage.from("post-attachments").remove(filePaths);
-    }
+    await deleteAttachmentFiles(
+      supabase,
+      attachments.map((a) => a.file_url)
+    );
   }
 
   // Cascade delete handles attachments, reactions, comments
@@ -916,21 +1253,15 @@ export async function uploadPostAttachment(
     return { success: false, error: "No file provided" };
   }
 
-  if (file.size > 52428800) {
+  if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
     return { success: false, error: "File too large (max 50MB)" };
   }
 
-  const allowedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
+  if (
+    !ALLOWED_FILE_TYPES.includes(
+      file.type as (typeof ALLOWED_FILE_TYPES)[number]
+    )
+  ) {
     return { success: false, error: "File type not allowed" };
   }
 
@@ -939,7 +1270,7 @@ export async function uploadPostAttachment(
   const filePath = `${user.id}/${uniqueName}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("post-attachments")
+    .from(POST_ATTACHMENTS_BUCKET)
     .upload(filePath, file);
 
   if (uploadError) {
@@ -948,7 +1279,7 @@ export async function uploadPostAttachment(
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from("post-attachments").getPublicUrl(filePath);
+  } = supabase.storage.from(POST_ATTACHMENTS_BUCKET).getPublicUrl(filePath);
 
   return {
     success: true,
@@ -979,60 +1310,18 @@ export async function fetchLinkPreview(
     return { success: false, error: "Only staff can fetch link previews" };
   }
 
-  try {
-    // Validate URL
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      return { success: false, error: "Invalid URL protocol" };
-    }
-
-    // SSRF protection: reject URLs that resolve to private/internal IPs
-    const isExternal = await validateExternalUrl(url);
-    if (!isExternal) {
-      return { success: false, error: "URL resolves to a restricted address" };
-    }
-
-    const response = await fetch(url, {
-      headers: { "User-Agent": "MCR-Intranet-Bot/1.0" },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!response.ok) {
-      return { success: false, error: "Failed to fetch URL" };
-    }
-
-    const html = await response.text();
-
-    // Parse Open Graph tags
-    const getMetaContent = (property: string): string | undefined => {
-      const regex = new RegExp(
-        `<meta[^>]*(?:property|name)=["']${property}["'][^>]*content=["']([^"']*)["']`,
-        "i"
-      );
-      const altRegex = new RegExp(
-        `<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`,
-        "i"
-      );
-      return regex.exec(html)?.[1] ?? altRegex.exec(html)?.[1];
-    };
-
-    const title =
-      getMetaContent("og:title") ??
-      html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim();
-    const description =
-      getMetaContent("og:description") ?? getMetaContent("description");
-    const imageUrl = getMetaContent("og:image");
-
-    return {
-      success: true,
-      error: null,
-      title: title?.slice(0, 200),
-      description: description?.slice(0, 500),
-      imageUrl,
-    };
-  } catch {
+  const result = await _fetchLinkPreviewInternal(url);
+  if (!result) {
     return { success: false, error: "Failed to fetch link preview" };
   }
+
+  return {
+    success: true,
+    error: null,
+    title: result.title,
+    description: result.description,
+    imageUrl: result.imageUrl,
+  };
 }
 
 // ─── Weekly Round Up ─────────────────────────────────────────────────
