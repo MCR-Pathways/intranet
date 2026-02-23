@@ -13,6 +13,7 @@ interface ProfileLeaveTabProps {
   profileId: string;
   profileName: string;
   fte: number;
+  startDate: string | null;
   currentUserId: string;
   balances: LeaveBalance[];
   requests: LeaveRequest[];
@@ -24,6 +25,7 @@ export function ProfileLeaveTab({
   profileId,
   profileName,
   fte,
+  startDate,
   currentUserId,
   balances,
   requests,
@@ -72,6 +74,7 @@ export function ProfileLeaveTab({
             profileId={profileId}
             profileName={profileName}
             fte={fte}
+            startDate={startDate}
             open={entitlementOpen}
             onOpenChange={setEntitlementOpen}
           />

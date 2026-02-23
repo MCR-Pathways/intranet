@@ -48,7 +48,6 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
   const [serial, setSerial] = useState(existing?.serial_number ?? "");
   const [purchaseDate, setPurchaseDate] = useState(existing?.purchase_date ?? "");
   const [cost, setCost] = useState(existing?.purchase_cost != null ? String(existing.purchase_cost) : "");
-  const [warranty, setWarranty] = useState(existing?.warranty_expiry_date ?? "");
   const [status, setStatus] = useState(existing?.status ?? "available");
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +55,7 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
   function resetForm() {
     if (!existing) {
       setTypeId(""); setTag(""); setMake(""); setModel(""); setSerial("");
-      setPurchaseDate(""); setCost(""); setWarranty(""); setStatus("available"); setNotes("");
+      setPurchaseDate(""); setCost(""); setStatus("available"); setNotes("");
     }
     setError(null);
   }
@@ -76,7 +75,6 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
         serial_number: serial.trim() || undefined,
         purchase_date: purchaseDate || undefined,
         purchase_cost: cost ? parseFloat(cost) : undefined,
-        warranty_expiry_date: warranty || undefined,
         notes: notes.trim() || undefined,
       };
 
@@ -149,27 +147,21 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {isEditing && (
             <div className="grid gap-2">
-              <Label>Warranty Expiry</Label>
-              <Input type="date" value={warranty} onChange={(e) => setWarranty(e.target.value)} />
+              <Label>Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="in_repair">In Repair</SelectItem>
+                  <SelectItem value="retired">Retired</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            {isEditing && (
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="in_repair">In Repair</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="grid gap-2">
             <Label>Notes</Label>

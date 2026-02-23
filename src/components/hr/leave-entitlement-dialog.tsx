@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,13 +20,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LEAVE_TYPE_CONFIG, getLeaveYearForDate } from "@/lib/hr";
+import {
+  LEAVE_TYPE_CONFIG,
+  getLeaveYearForDate,
+  calculateProRataEntitlement,
+  formatHRDate,
+  formatLeaveDays,
+} from "@/lib/hr";
 import { upsertLeaveEntitlement } from "@/app/(protected)/hr/leave/actions";
 
 interface LeaveEntitlementDialogProps {
   profileId: string;
   profileName: string;
   fte: number;
+  startDate: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existing?: {
@@ -41,6 +48,7 @@ export function LeaveEntitlementDialog({
   profileId,
   profileName,
   fte,
+  startDate,
   open,
   onOpenChange,
   existing,
@@ -54,6 +62,33 @@ export function LeaveEntitlementDialog({
   const [adjustments, setAdjustments] = useState(String(existing?.adjustments_days ?? "0"));
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  // Pro-rata calculation when employee started mid-year
+  const proRataSuggestion = useMemo(() => {
+    if (!startDate || !baseDays) return null;
+
+    const empStartDate = new Date(startDate + "T00:00:00");
+    const yearStart = new Date(leaveYear.start + "T00:00:00");
+    const yearEnd = new Date(leaveYear.end + "T00:00:00");
+
+    // Only show pro-rata if the employee started within this leave year
+    if (empStartDate <= yearStart || empStartDate > yearEnd) return null;
+
+    const base = parseFloat(baseDays);
+    const fteVal = parseFloat(fteAtCalc);
+    if (isNaN(base) || isNaN(fteVal) || base <= 0 || fteVal <= 0) return null;
+
+    const proRata = calculateProRataEntitlement(
+      base,
+      fteVal,
+      startDate,
+      leaveYear.end,
+      leaveYear.start,
+      leaveYear.end,
+    );
+
+    return proRata;
+  }, [startDate, baseDays, fteAtCalc, leaveYear]);
 
   function resetForm() {
     setLeaveType(existing?.leave_type ?? "");
@@ -156,6 +191,27 @@ export function LeaveEntitlementDialog({
               Positive for carry-over or bought leave; negative for deductions
             </p>
           </div>
+
+          {/* Pro-rata suggestion for mid-year starters */}
+          {proRataSuggestion !== null && (
+            <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm space-y-1.5">
+              <p className="font-medium text-blue-900">
+                Pro-rated: {formatLeaveDays(proRataSuggestion)} days
+              </p>
+              <p className="text-xs text-blue-700">
+                Based on start date {formatHRDate(startDate)} within the {leaveYear.year} leave year.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-1"
+                onClick={() => setBaseDays(String(proRataSuggestion))}
+              >
+                Apply pro-rata entitlement
+              </Button>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label>Notes</Label>
