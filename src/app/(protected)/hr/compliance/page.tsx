@@ -5,7 +5,7 @@ import type { ComplianceStatus } from "@/lib/hr";
 
 /** Select columns for compliance_documents joined with type + profile. */
 const COMPLIANCE_DOCS_SELECT =
-  "id, profile_id, document_type_id, reference_number, issue_date, expiry_date, status, file_name, verified_at, compliance_document_types(name), profiles(full_name, department)";
+  "id, profile_id, document_type_id, reference_number, issue_date, expiry_date, status, file_name, verified_at, compliance_document_types(name), profiles!profile_id(full_name, department)";
 
 export default async function CompliancePage() {
   let supabase;

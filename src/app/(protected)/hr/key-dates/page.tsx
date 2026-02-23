@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { KeyDatesDashboard } from "@/components/hr/key-dates-dashboard";
 
 const KEY_DATE_SELECT =
-  "id, profile_id, date_type, due_date, title, description, is_completed, completed_at, profiles(full_name)";
+  "id, profile_id, date_type, due_date, title, description, is_completed, completed_at, profiles!profile_id(full_name)";
 
 export default async function KeyDatesPage() {
   let supabase;

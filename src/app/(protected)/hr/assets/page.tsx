@@ -11,7 +11,7 @@ const ASSET_SELECT =
 
 /** Select columns for active assignments with employee name. */
 const ASSIGNMENT_SELECT =
-  "id, asset_id, profile_id, assigned_date, returned_date, condition_on_assignment, profiles(full_name)";
+  "id, asset_id, profile_id, assigned_date, returned_date, condition_on_assignment, profiles!profile_id(full_name)";
 
 export default async function AssetsPage() {
   const { supabase, user, profile } = await getCurrentUser();
