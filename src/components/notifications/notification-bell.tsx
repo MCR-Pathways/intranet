@@ -20,26 +20,16 @@ import { Bell, CheckCheck, ExternalLink, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  link: string | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-}
+import type { NotificationData } from "@/types/notification";
 
 interface NotificationBellProps {
-  initialNotifications?: Notification[];
+  initialNotifications?: NotificationData[];
 }
 
 export function NotificationBell({ initialNotifications }: NotificationBellProps) {
   const router = useRouter();
   const hasInitialData = initialNotifications !== undefined;
-  const [notifications, setNotifications] = useState<Notification[]>(
+  const [notifications, setNotifications] = useState<NotificationData[]>(
     initialNotifications ?? []
   );
   const [unreadCount, setUnreadCount] = useState(
@@ -56,9 +46,9 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
       return;
     }
 
-    setNotifications((data as Notification[]) || []);
+    setNotifications((data as NotificationData[]) || []);
     setUnreadCount(
-      (data as Notification[])?.filter((n) => !n.is_read).length || 0
+      (data as NotificationData[])?.filter((n) => !n.is_read).length || 0
     );
     setIsLoading(false);
   }, []);
@@ -100,7 +90,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
     }
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
+  const handleNotificationClick = async (notification: NotificationData) => {
     // Mark as read if unread
     if (!notification.is_read) {
       try {

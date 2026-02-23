@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Send } from "lucide-react";
+import { getInitials } from "@/lib/utils";
 import { addComment } from "@/app/(protected)/intranet/actions";
 import { CommentItem } from "./comment-item";
 import type {
@@ -56,14 +57,6 @@ export function CommentSection({
     currentUserProfile.preferred_name ||
     currentUserProfile.full_name ||
     "User";
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
 
   const buildOptimisticComment = (
     content: string,

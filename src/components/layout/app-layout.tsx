@@ -6,17 +6,7 @@ import { Sidebar } from "./sidebar";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
-
-interface NotificationData {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  link: string | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-}
+import type { NotificationData } from "@/types/notification";
 
 interface AppLayoutProps {
   children: React.ReactNode;

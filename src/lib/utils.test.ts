@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cn, timeAgo, formatFileSize, formatDuration } from "@/lib/utils";
+import { cn, timeAgo, formatFileSize, formatDuration, getInitials } from "@/lib/utils";
 
 describe("cn utility", () => {
   it("merges class names", () => {
@@ -89,14 +89,36 @@ describe("formatFileSize", () => {
   });
 });
 
+describe("getInitials", () => {
+  it("extracts initials from two-word name", () => {
+    expect(getInitials("John Smith")).toBe("JS");
+  });
+
+  it("extracts initials from single-word name", () => {
+    expect(getInitials("Madonna")).toBe("M");
+  });
+
+  it("limits to 2 characters", () => {
+    expect(getInitials("John Paul Smith")).toBe("JP");
+  });
+
+  it('returns "?" for empty string', () => {
+    expect(getInitials("")).toBe("?");
+  });
+
+  it('returns "?" for whitespace-only string', () => {
+    expect(getInitials("   ")).toBe("?");
+  });
+});
+
 describe("formatDuration", () => {
   describe("short style (default)", () => {
     it('returns "Self-paced" for null', () => {
       expect(formatDuration(null)).toBe("Self-paced");
     });
 
-    it('returns "Self-paced" for 0', () => {
-      expect(formatDuration(0)).toBe("Self-paced");
+    it('returns "0 min" for 0 (only null means self-paced)', () => {
+      expect(formatDuration(0)).toBe("0 min");
     });
 
     it("formats minutes under 60", () => {
