@@ -561,9 +561,6 @@ CREATE TABLE IF NOT EXISTS public.audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_log_table_record ON public.audit_log(table_name, record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_changed_by ON public.audit_log(changed_by);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON public.audit_log(created_at DESC);
--- Partial index for recent entries (most queries look at recent data)
-CREATE INDEX IF NOT EXISTS idx_audit_log_recent ON public.audit_log(created_at DESC)
-  WHERE created_at > (NOW() - INTERVAL '90 days');
 
 -- ===========================================
 -- 18. SURVEYS (Phase 3 — pulse, engagement, DEI, custom)
