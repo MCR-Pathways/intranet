@@ -6,7 +6,7 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getHolidayCalendar } from "@/lib/hr";
+import { getHolidayCalendar, getLeaveYearForDate } from "@/lib/hr";
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region } from "@/lib/hr";
 
 /** Select columns for employee_details. */
@@ -75,11 +75,9 @@ export default async function EmployeeDetailPage({
     notFound();
   }
 
-  // Determine the current leave year (April to March)
-  const now = new Date();
-  const leaveYearStart = now.getMonth() >= 3
-    ? `${now.getFullYear()}-04-01`
-    : `${now.getFullYear() - 1}-04-01`;
+  // Determine the current leave year (calendar year)
+  const leaveYear = getLeaveYearForDate();
+  const leaveYearStart = leaveYear.start;
 
   // Fetch associated data in parallel
   const [
