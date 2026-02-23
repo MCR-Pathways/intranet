@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileOverviewTab } from "./profile-overview-tab";
 import { ProfileEmploymentTab } from "./profile-employment-tab";
 import { ProfileDocumentsTab } from "./profile-documents-tab";
+import { ProfileLeaveTab } from "./profile-leave-tab";
+import { ProfileAssetsTab } from "./profile-assets-tab";
+import { ProfileKeyDatesSection } from "./profile-key-dates-section";
 import { EmploymentEditDialog } from "./employment-edit-dialog";
 import { PersonalDetailsEditDialog } from "./personal-details-edit-dialog";
 import {
@@ -24,6 +27,8 @@ import type {
   EmployeeDetails,
   EmergencyContact,
   EmploymentHistoryEntry,
+  LeaveBalance,
+  LeaveRequest,
 } from "@/types/hr";
 import { Pencil, Phone, Mail, User } from "lucide-react";
 
@@ -45,6 +50,29 @@ interface DocumentType {
   name: string;
 }
 
+interface AssetAssignmentRow {
+  id: string;
+  asset_id: string;
+  asset_tag: string;
+  asset_type_name: string;
+  make: string | null;
+  model: string | null;
+  assigned_date: string;
+  returned_date: string | null;
+  condition_on_assignment: string | null;
+  condition_on_return: string | null;
+}
+
+interface KeyDateRow {
+  id: string;
+  profile_id: string;
+  date_type: string;
+  due_date: string;
+  title: string;
+  description: string | null;
+  is_completed: boolean;
+}
+
 interface EmployeeDetailContentProps {
   profile: EmployeeProfile;
   employeeDetails: EmployeeDetails | null;
@@ -53,12 +81,18 @@ interface EmployeeDetailContentProps {
   complianceDocuments: ComplianceDocumentRow[];
   complianceDocumentTypes?: DocumentType[];
   isHRAdmin?: boolean;
+  currentUserId: string;
   lineManagerName: string | null;
   teamName: string | null;
   activeTab: string;
+  leaveBalances?: LeaveBalance[];
+  leaveRequests?: LeaveRequest[];
+  publicHolidays?: string[];
+  assetAssignments?: AssetAssignmentRow[];
+  keyDates?: KeyDateRow[];
 }
 
-const VALID_TABS = ["overview", "personal", "employment", "documents"];
+const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets"];
 
 export function EmployeeDetailContent({
   profile,
@@ -68,9 +102,15 @@ export function EmployeeDetailContent({
   complianceDocuments,
   complianceDocumentTypes = [],
   isHRAdmin = false,
+  currentUserId,
   lineManagerName,
   teamName,
   activeTab,
+  leaveBalances = [],
+  leaveRequests = [],
+  publicHolidays = [],
+  assetAssignments = [],
+  keyDates = [],
 }: EmployeeDetailContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "overview";
 
@@ -85,6 +125,8 @@ export function EmployeeDetailContent({
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="employment">Employment</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="leave">Leave</TabsTrigger>
+          <TabsTrigger value="assets">Assets</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-4">
@@ -102,6 +144,12 @@ export function EmployeeDetailContent({
             profile={profile}
             lineManagerName={lineManagerName}
             teamName={teamName}
+          />
+          <ProfileKeyDatesSection
+            profileId={profile.id}
+            profileName={profile.full_name}
+            keyDates={keyDates}
+            isHRAdmin={isHRAdmin}
           />
         </TabsContent>
 
@@ -208,6 +256,28 @@ export function EmployeeDetailContent({
             profileName={profile.full_name}
             complianceDocuments={complianceDocuments}
             documentTypes={complianceDocumentTypes}
+            isHRAdmin={isHRAdmin}
+          />
+        </TabsContent>
+
+        <TabsContent value="leave" className="mt-6">
+          <ProfileLeaveTab
+            profileId={profile.id}
+            profileName={profile.full_name}
+            fte={profile.fte}
+            currentUserId={currentUserId}
+            balances={leaveBalances}
+            requests={leaveRequests}
+            publicHolidays={publicHolidays}
+            isHRAdmin={isHRAdmin}
+          />
+        </TabsContent>
+
+        <TabsContent value="assets" className="mt-6">
+          <ProfileAssetsTab
+            profileId={profile.id}
+            profileName={profile.full_name}
+            assignments={assetAssignments}
             isHRAdmin={isHRAdmin}
           />
         </TabsContent>
