@@ -1,7 +1,151 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Construction } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { LeaveDashboardContent } from "@/components/hr/leave-dashboard-content";
+import { getLeaveYearForDate, getHolidayCalendar } from "@/lib/hr";
+import type { LeaveType, Region } from "@/lib/hr";
+import type { LeaveBalance, LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 
-export default function LeavePage() {
+/** Select columns for leave_requests. */
+const LEAVE_REQUEST_SELECT =
+  "id, profile_id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, reason, status, decided_by, decided_at, decision_notes, rejection_reason, created_at";
+
+/** Select columns for leave_entitlements. */
+const LEAVE_ENTITLEMENT_SELECT =
+  "id, profile_id, leave_year_start, leave_year_end, leave_type, base_entitlement_days, fte_at_calculation, adjustments_days, notes";
+
+export default async function LeavePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const params = await searchParams;
+  const activeTab = params.tab || "my-leave";
+
+  const { supabase, user, profile } = await getCurrentUser();
+  if (!user || !profile) {
+    redirect("/login");
+  }
+
+  const leaveYear = getLeaveYearForDate();
+  const region = (profile.region as Region | null) ?? null;
+  const calendar = getHolidayCalendar(region);
+
+  // Fetch own entitlements, own requests, and public holidays in parallel
+  const [
+    { data: entitlements },
+    { data: myRequests },
+    { data: holidays },
+  ] = await Promise.all([
+    supabase
+      .from("leave_entitlements")
+      .select(LEAVE_ENTITLEMENT_SELECT)
+      .eq("profile_id", user.id)
+      .eq("leave_year_start", leaveYear.start),
+    supabase
+      .from("leave_requests")
+      .select(LEAVE_REQUEST_SELECT)
+      .eq("profile_id", user.id)
+      .gte("start_date", leaveYear.start)
+      .lte("start_date", leaveYear.end)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("public_holidays")
+      .select("id, name, holiday_date, region")
+      .in("region", [calendar, "all"])
+      .eq("year", leaveYear.year)
+      .order("holiday_date"),
+  ]);
+
+  // Fetch pending approvals if manager or HR admin
+  const isManager = profile.is_line_manager === true;
+  const isHRAdmin = profile.is_hr_admin === true;
+
+  let pendingApprovals: LeaveRequestWithEmployee[] = [];
+  let allRequests: LeaveRequestWithEmployee[] = [];
+
+  if (isManager || isHRAdmin) {
+    // Fetch pending requests that need approval (from direct reports or all if HR)
+    const { data: pendingData } = await supabase
+      .from("leave_requests")
+      .select(`${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`)
+      .eq("status", "pending")
+      .neq("profile_id", user.id)
+      .order("created_at", { ascending: true });
+
+    pendingApprovals = (pendingData ?? []).map((r) => {
+      const p = r.profiles as unknown as { full_name: string; avatar_url: string | null; job_title: string | null } | null;
+      return {
+        ...r,
+        leave_type: r.leave_type as LeaveType,
+        status: r.status as LeaveRequest["status"],
+        employee_name: p?.full_name ?? "Unknown",
+        employee_avatar: p?.avatar_url ?? null,
+        employee_job_title: p?.job_title ?? null,
+      } as LeaveRequestWithEmployee;
+    });
+
+    // Fetch all requests for calendar / admin view
+    const { data: allData } = await supabase
+      .from("leave_requests")
+      .select(`${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`)
+      .gte("start_date", leaveYear.start)
+      .lte("start_date", leaveYear.end)
+      .in("status", ["pending", "approved"])
+      .order("start_date");
+
+    allRequests = (allData ?? []).map((r) => {
+      const p = r.profiles as unknown as { full_name: string; avatar_url: string | null; job_title: string | null } | null;
+      return {
+        ...r,
+        leave_type: r.leave_type as LeaveType,
+        status: r.status as LeaveRequest["status"],
+        employee_name: p?.full_name ?? "Unknown",
+        employee_avatar: p?.avatar_url ?? null,
+        employee_job_title: p?.job_title ?? null,
+      } as LeaveRequestWithEmployee;
+    });
+  }
+
+  // Calculate leave balances
+  const requests = (myRequests ?? []) as LeaveRequest[];
+  const balances: LeaveBalance[] = (entitlements ?? []).map((ent) => {
+    const leaveType = ent.leave_type as LeaveType;
+    const entitlement =
+      (ent.base_entitlement_days as number) * (ent.fte_at_calculation as number) +
+      (ent.adjustments_days as number);
+
+    const used = requests
+      .filter((r) => r.leave_type === leaveType && r.status === "approved")
+      .reduce((sum, r) => sum + (r.total_days as number), 0);
+
+    const pending = requests
+      .filter((r) => r.leave_type === leaveType && r.status === "pending")
+      .reduce((sum, r) => sum + (r.total_days as number), 0);
+
+    return {
+      leave_type: leaveType,
+      entitlement: Math.round(entitlement * 100) / 100,
+      used,
+      pending,
+      remaining: Math.round((entitlement - used) * 100) / 100,
+      available: Math.round((entitlement - used - pending) * 100) / 100,
+    };
+  });
+
+  const publicHolidayList = (holidays ?? []).map((h) => ({
+    holiday_date: h.holiday_date as string,
+    name: h.name as string,
+  }));
+
+  const profileData = {
+    id: user.id,
+    full_name: profile.full_name as string,
+    region: profile.region as string | null,
+    fte: (profile.fte as number) ?? 1,
+    is_line_manager: isManager,
+    is_hr_admin: isHRAdmin,
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -11,18 +155,15 @@ export default function LeavePage() {
         </p>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Construction className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium text-muted-foreground mb-1">
-            Coming Soon
-          </p>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            The leave management system is being built. Check back soon to
-            request and track your leave.
-          </p>
-        </CardContent>
-      </Card>
+      <LeaveDashboardContent
+        profile={profileData}
+        balances={balances}
+        requests={requests}
+        pendingApprovals={pendingApprovals}
+        allRequests={allRequests}
+        publicHolidays={publicHolidayList}
+        activeTab={activeTab}
+      />
     </div>
   );
 }

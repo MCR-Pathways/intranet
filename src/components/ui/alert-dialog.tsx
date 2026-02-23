@@ -100,6 +100,36 @@ AlertDialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 const AlertDialogClose = DialogPrimitive.Close;
 
+const AlertDialogCancel = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Close>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Close
+    ref={ref}
+    className={cn(
+      "mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 sm:mt-0",
+      className
+    )}
+    {...props}
+  />
+));
+AlertDialogCancel.displayName = "AlertDialogCancel";
+
+const AlertDialogAction = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => (
+  <button
+    ref={ref}
+    className={cn(
+      "inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      className
+    )}
+    {...props}
+  />
+));
+AlertDialogAction.displayName = "AlertDialogAction";
+
 export {
   AlertDialog,
   AlertDialogPortal,
@@ -111,4 +141,6 @@ export {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogClose,
+  AlertDialogCancel,
+  AlertDialogAction,
 };

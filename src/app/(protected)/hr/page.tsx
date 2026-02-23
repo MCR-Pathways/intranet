@@ -1,14 +1,14 @@
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import {
   Users,
   Calendar,
-  Briefcase,
   User,
   Shield,
   FileCheck,
+  CalendarClock,
+  Package,
 } from "lucide-react";
 
 export default async function HRPage() {
@@ -62,9 +62,6 @@ export default async function HRPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary">Coming soon</Badge>
-              </div>
               <CardDescription>
                 Request and manage your leave
               </CardDescription>
@@ -76,11 +73,11 @@ export default async function HRPage() {
           <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Calendar</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <CardDescription>
-                View your schedule and events
+                View team leave calendar
               </CardDescription>
             </CardContent>
           </Card>
@@ -104,7 +101,7 @@ export default async function HRPage() {
           <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Assets</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -144,6 +141,24 @@ export default async function HRPage() {
               <CardContent>
                 <CardDescription>
                   Track compliance documents and expiry dates
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {isHRAdmin && (
+          <Link href="/hr/key-dates">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Key Dates
+                </CardTitle>
+                <CalendarClock className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Track probations, appraisals, and contract renewals
                 </CardDescription>
               </CardContent>
             </Card>

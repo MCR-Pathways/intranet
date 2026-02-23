@@ -6,7 +6,7 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { ComplianceStatus, ContractType, WorkPattern } from "@/lib/hr";
+import type { ComplianceStatus, ContractType, WorkPattern, LeaveType } from "@/lib/hr";
 
 /** Select columns for employee_details. */
 const EMPLOYEE_DETAILS_SELECT =
@@ -24,6 +24,22 @@ const EMPLOYMENT_HISTORY_SELECT =
 const COMPLIANCE_DOCS_SELECT =
   "id, profile_id, document_type_id, reference_number, issue_date, expiry_date, status, file_name, file_path, notes, verified_at, verified_by, compliance_document_types(name)";
 
+/** Select columns for leave_entitlements. */
+const LEAVE_ENTITLEMENTS_SELECT =
+  "id, profile_id, leave_year_start, leave_year_end, leave_type, base_entitlement_days, fte_at_calculation, adjustments_days, notes";
+
+/** Select columns for leave_requests. */
+const LEAVE_REQUESTS_SELECT =
+  "id, profile_id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, reason, status, decided_by, decided_at, decision_notes, rejection_reason, created_at";
+
+/** Select columns for asset_assignments joined with assets. */
+const ASSET_ASSIGNMENTS_SELECT =
+  "id, asset_id, assigned_date, returned_date, condition_on_assignment, condition_on_return, assets(asset_tag, make, model, asset_types(name))";
+
+/** Select columns for key_dates. */
+const KEY_DATES_SELECT =
+  "id, profile_id, date_type, due_date, title, description, is_completed";
+
 export default async function EmployeeDetailPage({
   params,
   searchParams,
@@ -38,9 +54,11 @@ export default async function EmployeeDetailPage({
   const activeTab = searchParamsResolved.tab || "overview";
 
   let supabase;
+  let currentUserId: string;
   try {
     const result = await requireHRAdmin();
     supabase = result.supabase;
+    currentUserId = result.user.id;
   } catch {
     redirect("/hr");
   }
@@ -56,6 +74,12 @@ export default async function EmployeeDetailPage({
     notFound();
   }
 
+  // Determine the current leave year (April to March)
+  const now = new Date();
+  const leaveYearStart = now.getMonth() >= 3
+    ? `${now.getFullYear()}-04-01`
+    : `${now.getFullYear() - 1}-04-01`;
+
   // Fetch associated data in parallel
   const [
     { data: employeeDetails },
@@ -63,6 +87,11 @@ export default async function EmployeeDetailPage({
     { data: employmentHistory },
     { data: rawDocs },
     { data: documentTypes },
+    { data: leaveEntitlements },
+    { data: leaveRequests },
+    { data: rawAssignments },
+    { data: keyDates },
+    { data: publicHolidayRows },
   ] = await Promise.all([
     supabase
       .from("employee_details")
@@ -89,6 +118,30 @@ export default async function EmployeeDetailPage({
       .select("id, name")
       .eq("is_active", true)
       .order("name"),
+    supabase
+      .from("leave_entitlements")
+      .select(LEAVE_ENTITLEMENTS_SELECT)
+      .eq("profile_id", userId)
+      .eq("leave_year_start", leaveYearStart),
+    supabase
+      .from("leave_requests")
+      .select(LEAVE_REQUESTS_SELECT)
+      .eq("profile_id", userId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("asset_assignments")
+      .select(ASSET_ASSIGNMENTS_SELECT)
+      .eq("profile_id", userId)
+      .order("assigned_date", { ascending: false }),
+    supabase
+      .from("key_dates")
+      .select(KEY_DATES_SELECT)
+      .eq("profile_id", userId)
+      .order("due_date"),
+    supabase
+      .from("public_holidays")
+      .select("holiday_date")
+      .eq("calendar", profile.region === "glasgow" ? "scotland" : "scotland"),
   ]);
 
   // Resolve line manager name
@@ -135,6 +188,87 @@ export default async function EmployeeDetailPage({
     id: dt.id as string,
     name: dt.name as string,
   }));
+
+  // Calculate leave balances
+  const leaveBalances = (leaveEntitlements ?? []).map((ent) => {
+    const type = ent.leave_type as LeaveType;
+    const entitlement = Math.round(
+      ((ent.base_entitlement_days as number) * (ent.fte_at_calculation as number) +
+        (ent.adjustments_days as number)) * 2,
+    ) / 2;
+    const typeRequests = (leaveRequests ?? []).filter(
+      (r) => r.leave_type === type,
+    );
+    const used = typeRequests
+      .filter((r) => r.status === "approved")
+      .reduce((sum, r) => sum + (r.total_days as number), 0);
+    const pending = typeRequests
+      .filter((r) => r.status === "pending")
+      .reduce((sum, r) => sum + (r.total_days as number), 0);
+    return {
+      leave_type: type,
+      entitlement,
+      used,
+      pending,
+      remaining: entitlement - used,
+      available: entitlement - used - pending,
+    };
+  });
+
+  // Flatten leave requests
+  const flatLeaveRequests = (leaveRequests ?? []).map((r) => ({
+    id: r.id as string,
+    profile_id: r.profile_id as string,
+    leave_type: r.leave_type as LeaveType,
+    start_date: r.start_date as string,
+    end_date: r.end_date as string,
+    start_half_day: r.start_half_day as boolean,
+    end_half_day: r.end_half_day as boolean,
+    total_days: r.total_days as number,
+    reason: r.reason as string | null,
+    status: r.status as "pending" | "approved" | "rejected" | "cancelled" | "withdrawn",
+    decided_by: r.decided_by as string | null,
+    decided_at: r.decided_at as string | null,
+    decision_notes: r.decision_notes as string | null,
+    rejection_reason: r.rejection_reason as string | null,
+    created_at: r.created_at as string,
+  }));
+
+  // Flatten asset assignments
+  const assetAssignments = (rawAssignments ?? []).map((a) => {
+    const asset = a.assets as unknown as {
+      asset_tag: string;
+      make: string | null;
+      model: string | null;
+      asset_types: { name: string } | null;
+    } | null;
+    return {
+      id: a.id as string,
+      asset_id: a.asset_id as string,
+      asset_tag: asset?.asset_tag ?? "—",
+      asset_type_name: asset?.asset_types?.name ?? "Unknown",
+      make: asset?.make ?? null,
+      model: asset?.model ?? null,
+      assigned_date: a.assigned_date as string,
+      returned_date: a.returned_date as string | null,
+      condition_on_assignment: a.condition_on_assignment as string | null,
+      condition_on_return: a.condition_on_return as string | null,
+    };
+  });
+
+  // Flatten key dates
+  const flatKeyDates = (keyDates ?? []).map((kd) => ({
+    id: kd.id as string,
+    profile_id: kd.profile_id as string,
+    date_type: kd.date_type as string,
+    due_date: kd.due_date as string,
+    title: kd.title as string,
+    description: kd.description as string | null,
+    is_completed: kd.is_completed as boolean,
+  }));
+
+  // Public holidays as string array
+  const publicHolidays = (publicHolidayRows ?? []).map((h) => h.holiday_date as string);
 
   // Cast profile to the EmployeeProfile shape
   const employeeProfile = {
@@ -194,9 +328,15 @@ export default async function EmployeeDetailPage({
         complianceDocuments={complianceDocuments}
         complianceDocumentTypes={complianceDocumentTypes}
         isHRAdmin
+        currentUserId={currentUserId}
         lineManagerName={lineManagerName}
         teamName={teamName}
         activeTab={activeTab}
+        leaveBalances={leaveBalances}
+        leaveRequests={flatLeaveRequests}
+        publicHolidays={publicHolidays}
+        assetAssignments={assetAssignments}
+        keyDates={flatKeyDates}
       />
     </div>
   );

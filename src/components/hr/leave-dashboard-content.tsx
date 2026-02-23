@@ -1,0 +1,133 @@
+"use client";
+
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { LeaveBalanceCards } from "@/components/hr/leave-balance-cards";
+import { LeaveRequestTable } from "@/components/hr/leave-request-table";
+import { LeaveRequestDialog } from "@/components/hr/leave-request-dialog";
+import { LeaveCalendar } from "@/components/hr/leave-calendar";
+import type { LeaveBalance, LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
+import { Plus } from "lucide-react";
+
+interface LeaveDashboardContentProps {
+  profile: {
+    id: string;
+    full_name: string;
+    region: string | null;
+    fte: number;
+    is_line_manager: boolean;
+    is_hr_admin: boolean;
+  };
+  balances: LeaveBalance[];
+  requests: LeaveRequest[];
+  pendingApprovals: LeaveRequestWithEmployee[];
+  allRequests: LeaveRequestWithEmployee[];
+  publicHolidays: { holiday_date: string; name: string }[];
+  activeTab: string;
+}
+
+const VALID_TABS = ["my-leave", "approvals", "calendar", "admin"];
+
+export function LeaveDashboardContent({
+  profile,
+  balances,
+  requests,
+  pendingApprovals,
+  allRequests,
+  publicHolidays,
+  activeTab,
+}: LeaveDashboardContentProps) {
+  const tab = VALID_TABS.includes(activeTab) ? activeTab : "my-leave";
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+
+  const showApprovals = profile.is_line_manager || profile.is_hr_admin;
+  const showAdmin = profile.is_hr_admin;
+  const holidayDates = publicHolidays.map((h) => h.holiday_date);
+
+  return (
+    <>
+      <Tabs key={tab} defaultValue={tab}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="my-leave">My Leave</TabsTrigger>
+            {showApprovals && (
+              <TabsTrigger value="approvals">
+                Approvals
+                {pendingApprovals.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] text-destructive-foreground">
+                    {pendingApprovals.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            {showAdmin && <TabsTrigger value="admin">All Requests</TabsTrigger>}
+          </TabsList>
+
+          <Button onClick={() => setRequestDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Request Leave
+          </Button>
+        </div>
+
+        <TabsContent value="my-leave" className="mt-6 space-y-6">
+          <LeaveBalanceCards balances={balances} />
+          <div>
+            <h3 className="text-lg font-semibold mb-4">My Requests</h3>
+            <LeaveRequestTable
+              requests={requests}
+              currentUserId={profile.id}
+              isHRAdmin={profile.is_hr_admin}
+            />
+          </div>
+        </TabsContent>
+
+        {showApprovals && (
+          <TabsContent value="approvals" className="mt-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">
+                Pending Approvals ({pendingApprovals.length})
+              </h3>
+              <LeaveRequestTable
+                requests={pendingApprovals}
+                currentUserId={profile.id}
+                isHRAdmin={profile.is_hr_admin}
+                isManager={profile.is_line_manager}
+                showEmployee
+              />
+            </div>
+          </TabsContent>
+        )}
+
+        <TabsContent value="calendar" className="mt-6">
+          <LeaveCalendar
+            requests={showApprovals ? allRequests : requests}
+            publicHolidays={publicHolidays}
+            showEmployee={showApprovals}
+          />
+        </TabsContent>
+
+        {showAdmin && (
+          <TabsContent value="admin" className="mt-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">All Leave Requests</h3>
+              <LeaveRequestTable
+                requests={allRequests}
+                currentUserId={profile.id}
+                isHRAdmin
+                showEmployee
+              />
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
+
+      <LeaveRequestDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        publicHolidays={holidayDates}
+      />
+    </>
+  );
+}
