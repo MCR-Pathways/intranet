@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
@@ -30,14 +30,6 @@ export function PostComposer({ userProfile }: PostComposerProps) {
 
   const displayName =
     userProfile.preferred_name || userProfile.full_name || "User";
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
 
   // Warn before navigating away with unsaved content
   useEffect(() => {

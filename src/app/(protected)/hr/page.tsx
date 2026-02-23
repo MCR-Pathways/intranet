@@ -62,8 +62,7 @@ export default async function HRPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="success">25 days</Badge>
-                <span className="text-xs text-muted-foreground">remaining</span>
+                <Badge variant="secondary">Coming soon</Badge>
               </div>
               <CardDescription>
                 Request and manage your leave

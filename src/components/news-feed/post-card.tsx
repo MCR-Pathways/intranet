@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, Pin, Sparkles } from "lucide-react";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, getInitials } from "@/lib/utils";
 import { linkifyText } from "@/lib/url";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
@@ -173,14 +173,6 @@ export function PostCard({
 
   const displayName =
     post.author.preferred_name || post.author.full_name || "User";
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
 
   return (
     <>

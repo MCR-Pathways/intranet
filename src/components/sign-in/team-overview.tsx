@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemberDetail } from "./member-detail";
-import { LOCATION_CONFIG, getLocationLabel, getInitials } from "@/lib/sign-in";
+import { LOCATION_CONFIG, getLocationLabel } from "@/lib/sign-in";
+import { getInitials } from "@/lib/utils";
 import type { TeamMemberSignIn } from "@/types/database.types";
 
 interface TeamOverviewProps {

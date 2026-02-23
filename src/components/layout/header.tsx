@@ -22,18 +22,9 @@ import { SignInNudgeBubble } from "@/components/sign-in/sign-in-nudge-bubble";
 import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
+import { getInitials } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-
-interface NotificationData {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  link: string | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-}
+import type { NotificationData } from "@/types/notification";
 
 interface HeaderProps {
   user: SupabaseUser;
@@ -58,15 +49,6 @@ export function Header({ user, profile, needsSignIn, initialNotifications, onMob
       logger.error("Error signing out", { error });
       window.location.href = "/login";
     }
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   const displayName = profile?.preferred_name || profile?.full_name || "User";

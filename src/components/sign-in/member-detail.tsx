@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
-import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel, getInitials } from "@/lib/sign-in";
+import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel } from "@/lib/sign-in";
+import { getInitials } from "@/lib/utils";
 import type { TeamMemberSignIn } from "@/types/database.types";
 
 interface HistoryEntry {

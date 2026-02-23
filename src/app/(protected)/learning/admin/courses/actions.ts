@@ -826,7 +826,10 @@ export async function updateQuizQuestion(
     }
 
     // Replace all options: delete existing, insert new set
-    await supabase.from("quiz_options").delete().eq("question_id", questionId);
+    const { error: deleteError } = await supabase.from("quiz_options").delete().eq("question_id", questionId);
+    if (deleteError) {
+      return { success: false, error: deleteError.message };
+    }
 
     const newOptions = data.options.map((opt, i) => ({
       question_id: questionId,

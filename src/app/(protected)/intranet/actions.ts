@@ -1057,19 +1057,22 @@ export async function toggleReaction(
   if (existing) {
     if (existing.reaction_type === reactionType) {
       // Same reaction — remove it (toggle off)
-      await supabase.from("post_reactions").delete().eq("id", existing.id);
+      const { error } = await supabase.from("post_reactions").delete().eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
     } else {
       // Different reaction — update
-      await supabase
+      const { error } = await supabase
         .from("post_reactions")
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
     }
   } else {
     // No existing reaction — create
-    await supabase
+    const { error } = await supabase
       .from("post_reactions")
       .insert({ post_id: postId, user_id: user.id, reaction_type: reactionType });
+    if (error) return { success: false, error: error.message };
   }
 
   revalidatePath("/intranet");
@@ -1103,19 +1106,22 @@ export async function toggleCommentReaction(
   if (existing) {
     if (existing.reaction_type === reactionType) {
       // Same reaction — remove it (toggle off)
-      await supabase.from("comment_reactions").delete().eq("id", existing.id);
+      const { error } = await supabase.from("comment_reactions").delete().eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
     } else {
       // Different reaction — update
-      await supabase
+      const { error } = await supabase
         .from("comment_reactions")
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
     }
   } else {
     // No existing reaction — create
-    await supabase
+    const { error } = await supabase
       .from("comment_reactions")
       .insert({ comment_id: commentId, user_id: user.id, reaction_type: reactionType });
+    if (error) return { success: false, error: error.message };
   }
 
   revalidatePath("/intranet");
