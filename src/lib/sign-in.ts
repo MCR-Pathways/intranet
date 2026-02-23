@@ -57,14 +57,3 @@ export function getLocationLabel(location: string, otherLocation: string | null)
   return LOCATION_CONFIG[location]?.label ?? "Other";
 }
 
-/**
- * Get up to 2 uppercase initials from a name (e.g. "John Smith" → "JS").
- */
-export function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}

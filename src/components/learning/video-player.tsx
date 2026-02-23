@@ -101,6 +101,7 @@ export function VideoPlayer({
             ) : hasExternalVideo && getEmbedUrl(videoUrl) ? (
               <iframe
                 src={getEmbedUrl(videoUrl)}
+                title="Lesson video"
                 className="h-full w-full"
                 sandbox="allow-scripts allow-same-origin allow-presentation"
                 allowFullScreen

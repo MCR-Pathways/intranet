@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn, timeAgo } from "@/lib/utils";
+import { cn, timeAgo, getInitials } from "@/lib/utils";
 import { linkifyText } from "@/lib/url";
 import { Trash2, Loader2 } from "lucide-react";
 import {
@@ -50,14 +50,6 @@ export function CommentItem({
 
   const displayName =
     comment.author.preferred_name || comment.author.full_name || "User";
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
 
   const handleDelete = () => {
     startTransition(async () => {

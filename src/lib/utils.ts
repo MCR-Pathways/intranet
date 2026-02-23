@@ -83,6 +83,20 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
+ * Extract initials from a name (up to 2 characters).
+ * Returns "?" for empty/blank input.
+ */
+export function getInitials(name: string): string {
+  if (!name?.trim()) return "?";
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/**
  * Formats a duration in minutes into a human-readable string.
  * "short" → "45 min", "2h 30m"  (for list views)
  * "long"  → "2 hours 30 minutes" (for detail views)
@@ -91,7 +105,7 @@ export function formatDuration(
   minutes: number | null,
   style: "short" | "long" = "short"
 ): string {
-  if (!minutes) return "Self-paced";
+  if (minutes == null) return "Self-paced";
   if (style === "long") {
     if (minutes < 60) return `${minutes} minutes`;
     const hours = Math.floor(minutes / 60);
