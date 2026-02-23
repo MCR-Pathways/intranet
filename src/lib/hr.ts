@@ -38,9 +38,9 @@ export const LEAVE_TYPE_CONFIG = {
   sick: {
     label: "Sick Leave",
     icon: HeartPulse,
-    colour: "text-red-600",
-    bgColour: "bg-red-50",
-    badgeVariant: "destructive" as const,
+    colour: "text-amber-600",
+    bgColour: "bg-amber-50",
+    badgeVariant: "secondary" as const,
   },
   maternity: {
     label: "Maternity Leave",

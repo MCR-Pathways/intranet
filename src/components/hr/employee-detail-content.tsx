@@ -265,6 +265,7 @@ export function EmployeeDetailContent({
             profileId={profile.id}
             profileName={profile.full_name}
             fte={profile.fte}
+            startDate={profile.start_date}
             currentUserId={currentUserId}
             balances={leaveBalances}
             requests={leaveRequests}

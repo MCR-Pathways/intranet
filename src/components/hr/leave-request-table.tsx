@@ -41,7 +41,7 @@ import {
   rejectLeave,
   cancelLeave,
 } from "@/app/(protected)/hr/leave/actions";
-import { Search } from "lucide-react";
+import { Search, Undo2 } from "lucide-react";
 
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
@@ -236,7 +236,8 @@ export function LeaveRequestTable({
                         {canWithdraw && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" disabled={isPending}>
+                              <Button variant="outline" size="sm" disabled={isPending}>
+                                <Undo2 className="h-3.5 w-3.5 mr-1" />
                                 Withdraw
                               </Button>
                             </AlertDialogTrigger>

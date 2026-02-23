@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -47,10 +46,20 @@ export function RecordLeaveDialog({
   const [leaveType, setLeaveType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [startHalfDay, setStartHalfDay] = useState(false);
-  const [endHalfDay, setEndHalfDay] = useState(false);
+  const [startDayType, setStartDayType] = useState<"full" | "pm">("full");
+  const [endDayType, setEndDayType] = useState<"full" | "am">("full");
+  const [singleDayType, setSingleDayType] = useState<"full" | "am" | "pm">("full");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const isSingleDay = startDate !== "" && startDate === endDate;
+
+  const startHalfDay = isSingleDay
+    ? singleDayType === "pm"
+    : startDayType === "pm";
+  const endHalfDay = isSingleDay
+    ? singleDayType === "am"
+    : endDayType === "am";
 
   const calculatedDays = useMemo(() => {
     if (!startDate || !endDate || endDate < startDate) return null;
@@ -61,8 +70,9 @@ export function RecordLeaveDialog({
     setLeaveType("");
     setStartDate("");
     setEndDate("");
-    setStartHalfDay(false);
-    setEndHalfDay(false);
+    setStartDayType("full");
+    setEndDayType("full");
+    setSingleDayType("full");
     setReason("");
     setError(null);
   }
@@ -129,6 +139,9 @@ export function RecordLeaveDialog({
                 onChange={(e) => {
                   setStartDate(e.target.value);
                   if (!endDate || e.target.value > endDate) setEndDate(e.target.value);
+                  setStartDayType("full");
+                  setEndDayType("full");
+                  setSingleDayType("full");
                 }}
               />
             </div>
@@ -138,33 +151,69 @@ export function RecordLeaveDialog({
                 type="date"
                 value={endDate}
                 min={startDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setEndDayType("full");
+                  setSingleDayType("full");
+                }}
               />
             </div>
           </div>
 
-          <div className="flex gap-6">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="rec-start-half"
-                checked={startHalfDay}
-                onCheckedChange={(c) => setStartHalfDay(c === true)}
-              />
-              <Label htmlFor="rec-start-half" className="text-sm font-normal">
-                Start afternoon only
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="rec-end-half"
-                checked={endHalfDay}
-                onCheckedChange={(c) => setEndHalfDay(c === true)}
-              />
-              <Label htmlFor="rec-end-half" className="text-sm font-normal">
-                End morning only
-              </Label>
-            </div>
-          </div>
+          {/* Half-day selectors */}
+          {startDate && endDate && (
+            isSingleDay ? (
+              <div className="grid gap-2">
+                <Label>Duration</Label>
+                <Select
+                  value={singleDayType}
+                  onValueChange={(val) => setSingleDayType(val as "full" | "am" | "pm")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full">Full Day</SelectItem>
+                    <SelectItem value="am">Morning only (AM)</SelectItem>
+                    <SelectItem value="pm">Afternoon only (PM)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>First Day</Label>
+                  <Select
+                    value={startDayType}
+                    onValueChange={(val) => setStartDayType(val as "full" | "pm")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Day</SelectItem>
+                      <SelectItem value="pm">Afternoon only (PM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Last Day</Label>
+                  <Select
+                    value={endDayType}
+                    onValueChange={(val) => setEndDayType(val as "full" | "am")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Day</SelectItem>
+                      <SelectItem value="am">Morning only (AM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )
+          )}
 
           {calculatedDays !== null && (
             <div className="rounded-md bg-muted px-3 py-2 text-sm">
