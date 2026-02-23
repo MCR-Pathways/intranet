@@ -352,7 +352,7 @@ export function calculateWorkingDays(
 
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    const dateStr = current.toISOString().slice(0, 10);
+    const dateStr = current.getFullYear() + "-" + String(current.getMonth() + 1).padStart(2, "0") + "-" + String(current.getDate()).padStart(2, "0");
 
     // Skip weekends (0 = Sunday, 6 = Saturday)
     if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidaySet.has(dateStr)) {

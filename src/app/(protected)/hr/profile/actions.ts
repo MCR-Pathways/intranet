@@ -50,32 +50,13 @@ export async function updatePersonalDetails(data: {
     return { success: false, error: "No valid fields to update" };
   }
 
-  // Upsert: create employee_details row if it doesn't exist yet
-  const { data: existing } = await supabase
+  // Upsert: create or update employee_details row atomically
+  const { error } = await supabase
     .from("employee_details")
-    .select("id")
-    .eq("profile_id", user.id)
-    .single();
+    .upsert({ ...sanitized, profile_id: user.id }, { onConflict: "profile_id" });
 
-  if (existing) {
-    const { error } = await supabase
-      .from("employee_details")
-      .update(sanitized)
-      .eq("profile_id", user.id)
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-  } else {
-    const { error } = await supabase
-      .from("employee_details")
-      .insert({ ...sanitized, profile_id: user.id });
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+  if (error) {
+    return { success: false, error: error.message };
   }
 
   revalidatePath("/hr/profile");
