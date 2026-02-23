@@ -1,6 +1,7 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function getNotifications() {
   const { supabase, user } = await getCurrentUser();
@@ -42,6 +43,7 @@ export async function markNotificationRead(
     return { success: false, error: error.message };
   }
 
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -62,5 +64,6 @@ export async function markAllNotificationsRead(): Promise<{ success: boolean; er
     return { success: false, error: error.message };
   }
 
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }

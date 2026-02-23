@@ -830,15 +830,19 @@ export async function editPost(
     };
   }
 
-  // Update post content (author-only via .eq("author_id"))
+  // Update post content (author-only via .eq("author_id")).
+  // .select().single() ensures we get an error when 0 rows match (non-author),
+  // preventing the function from proceeding to attachment operations.
   const { error } = await supabase
     .from("posts")
     .update({ content })
     .eq("id", postId)
-    .eq("author_id", user.id);
+    .eq("author_id", user.id)
+    .select("id")
+    .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: "Post not found or not authorised to edit" };
   }
 
   // Handle attachment changes if provided
