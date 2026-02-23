@@ -320,6 +320,7 @@ export async function cancelLeave(requestId: string) {
       status: "cancelled",
       decided_by: user.id,
       decided_at: new Date().toISOString(),
+      decision_notes: "Leave cancelled by HR admin",
     })
     .eq("id", requestId)
     .select("id")
@@ -352,6 +353,7 @@ export async function recordLeave(data: {
   start_half_day?: boolean;
   end_half_day?: boolean;
   reason?: string;
+  notes?: string;
 }) {
   const { supabase, user } = await requireHRAdmin();
 
@@ -397,7 +399,7 @@ export async function recordLeave(data: {
     status: "approved",
     decided_by: user.id,
     decided_at: new Date().toISOString(),
-    decision_notes: "Recorded by HR admin",
+    decision_notes: data.notes?.trim() || "Recorded by HR admin",
   });
 
   if (error) {

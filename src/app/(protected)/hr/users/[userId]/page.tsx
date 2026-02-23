@@ -6,7 +6,8 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { ComplianceStatus, ContractType, WorkPattern, LeaveType } from "@/lib/hr";
+import { getHolidayCalendar } from "@/lib/hr";
+import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region } from "@/lib/hr";
 
 /** Select columns for employee_details. */
 const EMPLOYEE_DETAILS_SELECT =
@@ -141,7 +142,7 @@ export default async function EmployeeDetailPage({
     supabase
       .from("public_holidays")
       .select("holiday_date")
-      .eq("calendar", profile.region === "glasgow" ? "scotland" : "scotland"),
+      .in("region", [getHolidayCalendar(profile.region as Region | null), "all"]),
   ]);
 
   // Resolve line manager name
