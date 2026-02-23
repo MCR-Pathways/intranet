@@ -42,6 +42,18 @@ export async function completeInduction(): Promise<{ success: boolean; error: st
     return { success: false, error: "Not authenticated" };
   }
 
+  // Server-side verification: ensure all 9 induction items are completed.
+  // Items are defined in src/components/induction/induction-checklist.tsx.
+  const REQUIRED_ITEM_COUNT = 9;
+  const { count } = await supabase
+    .from("induction_progress")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (!count || count < REQUIRED_ITEM_COUNT) {
+    return { success: false, error: "Not all induction items have been completed" };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({

@@ -57,9 +57,17 @@ export async function middleware(request: NextRequest) {
     !profile.induction_completed_at &&
     profile.status === "pending_induction";
 
-  // Allow access to induction page for users who need it
+  // Allow access to induction pages only for users who still need induction.
+  // Completed users are redirected away (covers sub-routes like /intranet/induction/gdpr
+  // which have no page-level guard). The needsInduction check also prevents redirect
+  // loops for new_user types who lack /intranet module access.
   if (pathname.startsWith("/intranet/induction")) {
-    return supabaseResponse;
+    if (needsInduction) {
+      return supabaseResponse;
+    }
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/intranet";
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Redirect to induction if not completed

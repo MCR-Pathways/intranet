@@ -34,6 +34,7 @@ import {
   markAllNotificationsRead,
 } from "@/app/(protected)/notifications/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 const mockNotifications = [
   { id: "n1", user_id: "user-1", type: "course_published", title: "New Course", message: "Check it out", link: "/learning", is_read: false, read_at: null, created_at: "2026-01-15T10:00:00Z" },
@@ -155,6 +156,12 @@ describe("Notification Actions", () => {
       expect(mockEq).toHaveBeenCalledWith("id", "n1");
     });
 
+    it("calls revalidatePath to refresh layout cache after marking read", async () => {
+      await markNotificationRead("n1");
+
+      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    });
+
     it("returns error on DB failure", async () => {
       const mockEq2 = vi
         .fn()
@@ -204,6 +211,12 @@ describe("Notification Actions", () => {
         })
       );
       expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+    });
+
+    it("calls revalidatePath to refresh layout cache after marking all read", async () => {
+      await markAllNotificationsRead();
+
+      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
     });
 
     it("returns error on DB failure", async () => {

@@ -303,8 +303,10 @@ describe("Intranet Post Actions", () => {
 
   describe("editPost", () => {
     it("updates post content successfully", async () => {
-      // .from("posts").update({content}).eq("id", postId).eq("author_id", userId)
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
+      // Chain: .from("posts").update({content}).eq("id", postId).eq("author_id", userId).select("id").single()
+      const editSingle = vi.fn().mockResolvedValue({ data: { id: "post-1" }, error: null });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
       mockEq.mockReturnValue({ eq: mockEq2 });
       mockUpdate.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ update: mockUpdate });
@@ -316,6 +318,7 @@ describe("Intranet Post Actions", () => {
       expect(mockUpdate).toHaveBeenCalledWith({ content: "Updated content" });
       expect(mockEq).toHaveBeenCalledWith("id", "post-1");
       expect(mockEq2).toHaveBeenCalledWith("author_id", "user-1");
+      expect(editSelect).toHaveBeenCalledWith("id");
       expect(revalidatePath).toHaveBeenCalledWith("/intranet");
     });
 
@@ -349,17 +352,49 @@ describe("Intranet Post Actions", () => {
       });
     });
 
+    it("returns error when non-author attempts to edit (prevents attachment injection)", async () => {
+      // .single() returns PGRST116 when 0 rows match (non-author)
+      const editSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" },
+      });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      const result = await editPost("other-user-post", {
+        content: "Injected content",
+        attachments: [{ attachment_type: "link", link_url: "https://evil.com" }],
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Post not found or not authorised to edit",
+      });
+      expect(revalidatePath).not.toHaveBeenCalled();
+      // Crucially, no attachment insert should occur
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
     it("returns error when DB update fails", async () => {
-      const mockEq2 = vi.fn().mockResolvedValue({
+      const editSingle = vi.fn().mockResolvedValue({
+        data: null,
         error: { message: "Update failed" },
       });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
       mockEq.mockReturnValue({ eq: mockEq2 });
       mockUpdate.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ update: mockUpdate });
 
       const result = await editPost("post-1", { content: "Updated" });
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({
+        success: false,
+        error: "Post not found or not authorised to edit",
+      });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
   });

@@ -246,6 +246,34 @@ describe("middleware", () => {
       const response = await middleware(createRequest("/intranet"));
       expectRedirectTo(response, "/intranet/induction");
     });
+
+    it("redirects completed users away from induction sub-pages", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: null,
+      });
+
+      const response = await middleware(
+        createRequest("/intranet/induction/gdpr")
+      );
+      expectRedirectTo(response, "/intranet");
+    });
+
+    it("redirects completed users away from /intranet/induction root", async () => {
+      mockAuthenticatedUser({
+        user_type: "staff",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+        last_sign_in_date: null,
+      });
+
+      const response = await middleware(
+        createRequest("/intranet/induction")
+      );
+      expectRedirectTo(response, "/intranet");
+    });
   });
 
   describe("sign-in access", () => {
