@@ -8,6 +8,7 @@ import {
   Briefcase,
   User,
   Shield,
+  FileCheck,
 } from "lucide-react";
 
 export default async function HRPage() {
@@ -125,6 +126,24 @@ export default async function HRPage() {
               <CardContent>
                 <CardDescription>
                   Manage staff profiles, roles, and induction
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {isHRAdmin && (
+          <Link href="/hr/compliance">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Compliance
+                </CardTitle>
+                <FileCheck className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Track compliance documents and expiry dates
                 </CardDescription>
               </CardContent>
             </Card>

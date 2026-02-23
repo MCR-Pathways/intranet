@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import Link from "next/link";
 import {
   completeUserInduction,
   resetUserInduction,
@@ -26,8 +27,48 @@ import {
   AlertDialogTitle,
   AlertDialogClose,
 } from "@/components/ui/alert-dialog";
-import { Search, Pencil, CheckCircle, RotateCcw, Shield, GraduationCap } from "lucide-react";
-import type { Profile } from "@/types/database.types";
+import {
+  Search,
+  Pencil,
+  CheckCircle,
+  RotateCcw,
+  Shield,
+  GraduationCap,
+} from "lucide-react";
+import {
+  formatFTE,
+  DEPARTMENT_CONFIG,
+  REGION_CONFIG,
+  type Department,
+  type Region,
+} from "@/lib/hr";
+
+/** Profile shape returned by the user management query. */
+export interface UserTableProfile {
+  id: string;
+  full_name: string;
+  preferred_name: string | null;
+  email: string;
+  user_type: string;
+  status: string;
+  is_hr_admin: boolean;
+  is_ld_admin: boolean;
+  is_line_manager: boolean;
+  job_title: string | null;
+  avatar_url: string | null;
+  induction_completed_at: string | null;
+  fte: number | null;
+  department: string | null;
+  region: string | null;
+  contract_type: string | null;
+  work_pattern: string | null;
+  start_date: string | null;
+  probation_end_date: string | null;
+  contract_end_date: string | null;
+  is_external: boolean | null;
+  line_manager_id: string | null;
+  team_id: string | null;
+}
 
 const statusVariants: Record<string, "success" | "destructive" | "warning"> = {
   active: "success",
@@ -48,14 +89,16 @@ const roleLabels: Record<string, string> = {
 };
 
 interface UserTableProps {
-  profiles: Profile[];
+  profiles: UserTableProfile[];
 }
 
 export function UserTable({ profiles }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
-  const [resetTarget, setResetTarget] = useState<Profile | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [editingProfile, setEditingProfile] = useState<UserTableProfile | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserTableProfile | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredProfiles = useMemo(() => {
@@ -65,9 +108,13 @@ export function UserTable({ profiles }: UserTableProps) {
         profile.email.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus =
         statusFilter === "all" || profile.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDepartment =
+        departmentFilter === "all" || profile.department === departmentFilter;
+      const matchesRegion =
+        regionFilter === "all" || profile.region === regionFilter;
+      return matchesSearch && matchesStatus && matchesDepartment && matchesRegion;
     });
-  }, [profiles, searchQuery, statusFilter]);
+  }, [profiles, searchQuery, statusFilter, departmentFilter, regionFilter]);
 
   const handleCompleteInduction = (userId: string) => {
     startTransition(async () => {
@@ -97,7 +144,7 @@ export function UserTable({ profiles }: UserTableProps) {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -105,6 +152,32 @@ export function UserTable({ profiles }: UserTableProps) {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="pending_induction">Pending Induction</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={regionFilter} onValueChange={setRegionFilter}>
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Region" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Regions</SelectItem>
+            {Object.entries(REGION_CONFIG).map(([key, { label }]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -115,31 +188,22 @@ export function UserTable({ profiles }: UserTableProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Email
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Role
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Induction
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Actions
-                </th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Role</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Department</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Region</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">FTE</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Induction</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredProfiles.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
                     No users found
@@ -154,7 +218,12 @@ export function UserTable({ profiles }: UserTableProps) {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div>
-                          <p className="font-medium">{profile.full_name}</p>
+                          <Link
+                            href={`/hr/users/${profile.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {profile.full_name}
+                          </Link>
                           {profile.preferred_name && (
                             <p className="text-xs text-muted-foreground">
                               ({profile.preferred_name})
@@ -181,6 +250,19 @@ export function UserTable({ profiles }: UserTableProps) {
                       <Badge variant={statusVariants[profile.status] || "default"}>
                         {statusLabels[profile.status] || profile.status}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {profile.department
+                        ? DEPARTMENT_CONFIG[profile.department as Department]?.label ?? profile.department
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {profile.region
+                        ? REGION_CONFIG[profile.region as Region]?.label ?? profile.region
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatFTE(profile.fte)}
                     </td>
                     <td className="px-4 py-3">
                       {profile.induction_completed_at ? (
