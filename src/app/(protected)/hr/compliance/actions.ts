@@ -255,12 +255,7 @@ export async function deleteComplianceDocument(docId: string) {
     return { success: false, error: "Document not found" };
   }
 
-  // Delete file from storage if it exists
-  if (doc.file_path) {
-    await supabase.storage.from(HR_DOCUMENTS_BUCKET).remove([doc.file_path]);
-  }
-
-  // Delete database record
+  // Delete database record first to avoid broken references
   const { error } = await supabase
     .from("compliance_documents")
     .delete()
@@ -268,6 +263,12 @@ export async function deleteComplianceDocument(docId: string) {
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Delete file from storage after DB record is removed
+  // An orphaned file is preferable to a broken DB reference
+  if (doc.file_path) {
+    await supabase.storage.from(HR_DOCUMENTS_BUCKET).remove([doc.file_path]);
   }
 
   revalidatePath("/hr/compliance");

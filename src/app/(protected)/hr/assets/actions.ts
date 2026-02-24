@@ -134,7 +134,7 @@ export async function assignAsset(
   }
 
   // Create assignment record
-  const { error: assignError } = await supabase
+  const { data: newAssignment, error: assignError } = await supabase
     .from("asset_assignments")
     .insert({
       asset_id: assetId,
@@ -143,7 +143,9 @@ export async function assignAsset(
       assigned_by: user.id,
       condition_on_assignment: data.condition_on_assignment || null,
       notes: data.notes?.trim() || null,
-    });
+    })
+    .select("id")
+    .single();
 
   if (assignError) {
     return { success: false, error: assignError.message };
@@ -158,6 +160,8 @@ export async function assignAsset(
     .single();
 
   if (updateError) {
+    // Rollback: remove the assignment record to keep state consistent
+    await supabase.from("asset_assignments").delete().eq("id", newAssignment.id);
     return { success: false, error: updateError.message };
   }
 
@@ -216,6 +220,11 @@ export async function returnAsset(
     .single();
 
   if (updateError) {
+    // Rollback: revert assignment to un-returned state
+    await supabase
+      .from("asset_assignments")
+      .update({ returned_date: null, condition_on_return: null })
+      .eq("id", assignmentId);
     return { success: false, error: updateError.message };
   }
 
