@@ -6,8 +6,9 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getHolidayCalendar, getLeaveYearForDate } from "@/lib/hr";
-import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region } from "@/lib/hr";
+import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT } from "@/lib/hr";
+import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
+import type { AbsenceType, ReturnToWorkForm, RTWStatus } from "@/types/hr";
 
 /** Select columns for employee_details. */
 const EMPLOYEE_DETAILS_SELECT =
@@ -91,6 +92,8 @@ export default async function EmployeeDetailPage({
     { data: rawAssignments },
     { data: keyDates },
     { data: publicHolidayRows },
+    { data: absenceRecords },
+    { data: rtwForms },
   ] = await Promise.all([
     supabase
       .from("employee_details")
@@ -142,6 +145,15 @@ export default async function EmployeeDetailPage({
       .select("holiday_date")
       .in("region", [getHolidayCalendar(profile.region as Region | null), "all"])
       .eq("year", leaveYear.year),
+    supabase
+      .from("absence_records")
+      .select(ABSENCE_RECORD_SELECT)
+      .eq("profile_id", userId)
+      .order("start_date", { ascending: false }),
+    supabase
+      .from("return_to_work_forms")
+      .select(RTW_FORM_SELECT)
+      .eq("employee_id", userId),
   ]);
 
   // Resolve line manager name
@@ -270,6 +282,36 @@ export default async function EmployeeDetailPage({
   // Public holidays as string array
   const publicHolidays = (publicHolidayRows ?? []).map((h) => h.holiday_date as string);
 
+  // Build RTW form map keyed by absence_record_id
+  const rtwFormMap: Record<string, ReturnToWorkForm> = {};
+  for (const form of rtwForms ?? []) {
+    rtwFormMap[form.absence_record_id as string] = form as unknown as ReturnToWorkForm;
+  }
+
+  // Flatten absence records with RTW status
+  const flatAbsenceRecords = (absenceRecords ?? []).map((r) => {
+    const rtwForm = rtwFormMap[r.id as string];
+    return {
+      id: r.id as string,
+      profile_id: r.profile_id as string,
+      leave_request_id: r.leave_request_id as string | null,
+      absence_type: r.absence_type as AbsenceType,
+      start_date: r.start_date as string,
+      end_date: r.end_date as string,
+      total_days: r.total_days as number,
+      is_long_term: r.is_long_term as boolean,
+      reason: r.reason as string | null,
+      sickness_category: (r.sickness_category as SicknessCategory) ?? null,
+      fit_note_path: r.fit_note_path as string | null,
+      fit_note_file_name: r.fit_note_file_name as string | null,
+      recorded_by: r.recorded_by as string | null,
+      created_at: r.created_at as string,
+      updated_at: r.updated_at as string,
+      rtw_status: (rtwForm?.status as RTWStatus) ?? null,
+      rtw_form_id: rtwForm?.id ?? null,
+    };
+  });
+
   // Cast profile to the EmployeeProfile shape
   const employeeProfile = {
     id: profile.id as string,
@@ -337,6 +379,8 @@ export default async function EmployeeDetailPage({
         publicHolidays={publicHolidays}
         assetAssignments={assetAssignments}
         keyDates={flatKeyDates}
+        absenceRecords={flatAbsenceRecords}
+        rtwForms={rtwFormMap}
       />
     </div>
   );
