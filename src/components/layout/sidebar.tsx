@@ -31,7 +31,10 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
     { name: "Calendar", href: "/hr/calendar" },
     { name: "My Team", href: "/hr/team" },
     ...(isHRAdmin
-      ? [{ name: "User Management", href: "/hr/users" }]
+      ? [
+          { name: "User Management", href: "/hr/users" },
+          { name: "Absence & Sickness", href: "/hr/absence" },
+        ]
       : []),
   ];
 

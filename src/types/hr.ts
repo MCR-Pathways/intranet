@@ -223,20 +223,40 @@ export interface LeaveBalance {
 // ABSENCE & SICKNESS
 // =============================================
 
+export type AbsenceType = "sick_self_certified" | "sick_fit_note" | "unauthorised" | "other";
+
 export interface AbsenceRecord {
   id: string;
   profile_id: string;
   leave_request_id: string | null;
-  absence_type: "sick_self_certified" | "sick_fit_note" | "unauthorised" | "other";
+  absence_type: AbsenceType;
   start_date: string;
   end_date: string;
   total_days: number;
+  is_long_term: boolean; // Generated column — never write to this
   reason: string | null;
   sickness_category: SicknessCategory | null;
   fit_note_path: string | null;
   fit_note_file_name: string | null;
   recorded_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
+
+/** Absence record with RTW form status and employee details for list views. */
+export interface AbsenceRecordWithRTW extends AbsenceRecord {
+  employee_name: string;
+  employee_avatar: string | null;
+  employee_job_title: string | null;
+  rtw_status: RTWStatus | null; // null = no RTW form yet
+  rtw_form_id: string | null;
+}
+
+// =============================================
+// RETURN TO WORK FORMS
+// =============================================
+
+export type RTWStatus = "draft" | "submitted" | "confirmed" | "locked";
 
 export interface ReturnToWorkForm {
   id: string;
@@ -246,15 +266,48 @@ export interface ReturnToWorkForm {
   completed_at: string;
   absence_start_date: string;
   absence_end_date: string;
-  reason_for_absence: string;
+
+  // Part 1 — Manager prep
+  discussion_date: string | null;
+  reason_for_absence: string | null;
   is_work_related: boolean;
+  is_pregnancy_related: boolean;
+  has_underlying_cause: boolean;
+  wellbeing_discussion: string | null;
+  medical_advice_details: string | null;
+
+  // Trigger points (auto-calculated, manager can override)
+  trigger_point_reached: boolean;
+  trigger_point_details: string | null;
+
+  // Procedures compliance
+  procedures_followed: boolean;
+  procedures_not_followed_reason: string | null;
+
+  // Part 2 — Fitness discussion
   gp_clearance_received: boolean;
   adjustments_needed: string | null;
   phased_return_agreed: boolean;
   phased_return_details: string | null;
   follow_up_date: string | null;
   additional_notes: string | null;
+
+  // Employee confirmation
   employee_comments: string | null;
+  employee_confirmed: boolean;
+  employee_confirmed_at: string | null;
+
+  // Lifecycle
+  status: RTWStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+/** RTW form joined with employee details for dashboard views. */
+export interface ReturnToWorkFormWithEmployee extends ReturnToWorkForm {
+  employee_name: string;
+  employee_avatar: string | null;
+  completed_by_name: string | null;
 }
 
 /** Bradford Factor summary for an employee. */
@@ -265,6 +318,14 @@ export interface BradfordFactorSummary {
   total_days: number;
   bradford_score: number;
   severity: "low" | "medium" | "high" | "critical";
+}
+
+/** Wellbeing prompt derived from absence history (replaces raw Bradford scores). */
+export interface AbsenceWellbeingPrompt {
+  spells_12m: number;
+  total_days_12m: number;
+  prompt: string;
+  severity: "low" | "medium" | "high";
 }
 
 // =============================================
@@ -439,5 +500,6 @@ export type HRNotificationType =
   | "course_renewal_due"
   | "absence_recorded"
   | "return_to_work_due"
+  | "rtw_confirmation_required"
   | "asset_warranty_expiry"
   | "team_clash_warning";

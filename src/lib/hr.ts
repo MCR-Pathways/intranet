@@ -6,7 +6,7 @@
  * as src/lib/sign-in.ts and src/lib/learning.ts.
  */
 
-import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
+import type { LeaveRequest, LeaveRequestWithEmployee, RTWStatus } from "@/types/hr";
 import {
   Calendar,
   Clock,
@@ -219,6 +219,145 @@ export const SICKNESS_CATEGORY_CONFIG = {
 } as const;
 
 export type SicknessCategory = keyof typeof SICKNESS_CATEGORY_CONFIG;
+
+// =============================================
+// ABSENCE TYPE CONFIG
+// =============================================
+
+export const ABSENCE_TYPE_CONFIG = {
+  sick_self_certified: { label: "Sick (Self-Certified)", colour: "text-amber-700", bgColour: "bg-amber-50" },
+  sick_fit_note: { label: "Sick (Fit Note)", colour: "text-orange-700", bgColour: "bg-orange-50" },
+  unauthorised: { label: "Unauthorised", colour: "text-red-700", bgColour: "bg-red-50" },
+  other: { label: "Other", colour: "text-gray-700", bgColour: "bg-gray-50" },
+} as const;
+
+export type AbsenceType = keyof typeof ABSENCE_TYPE_CONFIG;
+
+// =============================================
+// RTW FORM STATUS CONFIG
+// =============================================
+
+export const RTW_STATUS_CONFIG: Record<RTWStatus, { label: string; colour: string; bgColour: string }> = {
+  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-50" },
+  submitted: { label: "Awaiting Confirmation", colour: "text-amber-700", bgColour: "bg-amber-50" },
+  confirmed: { label: "Confirmed", colour: "text-blue-700", bgColour: "bg-blue-50" },
+  locked: { label: "Locked", colour: "text-green-700", bgColour: "bg-green-50" },
+};
+
+// =============================================
+// ABSENCE POLICY CONSTANTS (MCR Absence Management Policy, April 2025)
+// =============================================
+
+/** Calendar days before an absence is classified as "long-term". */
+export const LONG_TERM_ABSENCE_DAYS = 28;
+
+/** Consecutive calendar days requiring a fit note. */
+export const FIT_NOTE_REQUIRED_AFTER_DAYS = 7;
+
+/** Rolling window (months) for trigger point calculation. */
+export const TRIGGER_POINT_WINDOW_MONTHS = 12;
+
+/** Max separate spells before trigger is reached (MCR policy: 4). */
+export const TRIGGER_POINT_MAX_SPELLS = 4;
+
+/** Max working days absent before trigger is reached (MCR policy: 8). */
+export const TRIGGER_POINT_MAX_DAYS = 8;
+
+/** Maximum calendar days for a single absence record (prevents DoS via date range loops). */
+export const MAX_ABSENCE_DAYS = 365;
+
+// =============================================
+// TRIGGER POINT CALCULATION
+// =============================================
+
+export interface TriggerPointResult {
+  reached: boolean;
+  spells: number;
+  days: number;
+  reason: string | null; // Human-readable reason if reached
+}
+
+/**
+ * Determine whether a trigger point has been reached for an employee,
+ * based on their historical absence records in a rolling 12-month window.
+ *
+ * MCR policy triggers:
+ * - 4 separate absences in rolling 12 months
+ * - 8+ working days absent in rolling 12 months
+ * - 29+ continuous calendar days (handled separately via is_long_term column)
+ *
+ * @param absenceRecords - Historical absence records (caller should pass all sickness types)
+ * @param referenceDate - Date to calculate window from (YYYY-MM-DD), typically the absence end date
+ * @returns TriggerPointResult
+ */
+export function calculateTriggerPoint(
+  absenceRecords: Array<{ start_date: string; end_date: string; total_days: number; absence_type: string }>,
+  referenceDate: string,
+): TriggerPointResult {
+  const windowStart = new Date(referenceDate + "T00:00:00");
+  windowStart.setMonth(windowStart.getMonth() - TRIGGER_POINT_WINDOW_MONTHS);
+  const windowStartStr = windowStart.toISOString().slice(0, 10);
+
+  const sickTypes = ["sick_self_certified", "sick_fit_note"];
+  const inWindow = absenceRecords.filter(
+    (r) => sickTypes.includes(r.absence_type) && r.end_date >= windowStartStr,
+  );
+
+  const spells = inWindow.length;
+  const days = inWindow.reduce((sum, r) => sum + Number(r.total_days), 0);
+
+  if (spells >= TRIGGER_POINT_MAX_SPELLS) {
+    return {
+      reached: true,
+      spells,
+      days,
+      reason: `${spells} separate absences in the last 12 months (trigger: ${TRIGGER_POINT_MAX_SPELLS})`,
+    };
+  }
+  if (days >= TRIGGER_POINT_MAX_DAYS) {
+    return {
+      reached: true,
+      spells,
+      days,
+      reason: `${days} working days absent in the last 12 months (trigger: ${TRIGGER_POINT_MAX_DAYS})`,
+    };
+  }
+  return { reached: false, spells, days, reason: null };
+}
+
+// =============================================
+// WELLBEING PROMPTS (replaces raw Bradford Factor in UI)
+// =============================================
+
+/**
+ * Generate a wellbeing prompt for an employee based on their absence history.
+ * Returns null if no prompt is warranted (single absence, low impact).
+ *
+ * HR admins see these instead of raw Bradford Factor scores.
+ */
+export function getWellbeingPrompt(
+  spells12m: number,
+  days12m: number,
+): { prompt: string; severity: "low" | "medium" | "high" } | null {
+  if (spells12m <= 1 && days12m <= 3) return null;
+
+  if (spells12m >= TRIGGER_POINT_MAX_SPELLS || days12m >= TRIGGER_POINT_MAX_DAYS) {
+    return {
+      severity: "high",
+      prompt: `${spells12m} separate absence${spells12m !== 1 ? "s" : ""} (${days12m} days) in the last 12 months. Consider a formal attendance review meeting.`,
+    };
+  }
+  if (spells12m >= 2 || days12m >= 5) {
+    return {
+      severity: "medium",
+      prompt: `${spells12m} absence${spells12m !== 1 ? "s" : ""} (${days12m} days) in the last 12 months. A wellbeing check-in may be helpful.`,
+    };
+  }
+  return {
+    severity: "low",
+    prompt: `${days12m} day${days12m !== 1 ? "s" : ""} absent in the last 12 months. Monitor and offer support if needed.`,
+  };
+}
 
 // =============================================
 // LEAVING REASONS
@@ -599,6 +738,18 @@ export const LEAVE_REQUEST_SELECT =
 /** Select string for leave_requests joined with the requester's profile. */
 export const LEAVE_REQUEST_WITH_EMPLOYEE_SELECT =
   `${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`;
+
+// =============================================
+// ABSENCE RECORD QUERY HELPERS
+// =============================================
+
+/** Explicit column list for absence_records queries. */
+export const ABSENCE_RECORD_SELECT =
+  "id, profile_id, leave_request_id, absence_type, start_date, end_date, total_days, is_long_term, reason, sickness_category, fit_note_path, fit_note_file_name, recorded_by, created_at, updated_at";
+
+/** Explicit column list for return_to_work_forms queries. */
+export const RTW_FORM_SELECT =
+  "id, absence_record_id, employee_id, completed_by, completed_at, absence_start_date, absence_end_date, discussion_date, reason_for_absence, is_work_related, is_pregnancy_related, has_underlying_cause, wellbeing_discussion, medical_advice_details, gp_clearance_received, adjustments_needed, phased_return_agreed, phased_return_details, trigger_point_reached, trigger_point_details, procedures_followed, procedures_not_followed_reason, follow_up_date, additional_notes, employee_comments, employee_confirmed, employee_confirmed_at, status, created_at, updated_at";
 
 /** Map raw Supabase leave request + profile join data to LeaveRequestWithEmployee. */
 export function mapToLeaveRequestWithEmployee(
