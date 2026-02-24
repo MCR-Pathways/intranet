@@ -107,6 +107,48 @@ async function verifyRTWAuthority(
 }
 
 // =============================================
+// WORKING DAYS HELPER (private)
+// =============================================
+
+/**
+ * Fetch public holidays for an employee's region and calculate working days
+ * between two dates. Used by both recordAbsence and updateAbsence.
+ */
+async function fetchWorkingDays(
+  supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
+  profileId: string,
+  startDate: string,
+  endDate: string,
+): Promise<{ workingDays: number; error: string | null }> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("region")
+    .eq("id", profileId)
+    .single();
+
+  if (!profile) {
+    return { workingDays: 0, error: "Employee not found" };
+  }
+
+  const region = (profile.region as Region | null) ?? null;
+  const calendar = getHolidayCalendar(region);
+  const startYear = new Date(startDate + "T00:00:00").getFullYear();
+  const endYear = new Date(endDate + "T00:00:00").getFullYear();
+  const years = startYear === endYear ? [startYear] : [startYear, endYear];
+
+  const { data: holidayRows } = await supabase
+    .from("public_holidays")
+    .select("holiday_date")
+    .in("region", [calendar, "all"])
+    .in("year", years);
+
+  const holidays = (holidayRows ?? []).map((h) => h.holiday_date as string);
+  const workingDays = calculateWorkingDays(startDate, endDate, holidays);
+
+  return { workingDays, error: null };
+}
+
+// =============================================
 // RECORD ABSENCE (HR Admin only)
 // =============================================
 
@@ -165,33 +207,14 @@ export async function recordAbsence(data: {
     return { success: false, error: "This employee already has an absence recorded during this period." };
   }
 
-  // Fetch employee region for public holiday lookup
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("region")
-    .eq("id", data.profile_id)
-    .single();
+  // Calculate working days (fetches employee region + public holidays)
+  const { workingDays: totalDays, error: wdError } = await fetchWorkingDays(
+    supabase, data.profile_id, data.start_date, data.end_date,
+  );
 
-  if (!profile) {
-    return { success: false, error: "Employee not found" };
+  if (wdError) {
+    return { success: false, error: wdError };
   }
-
-  const region = (profile.region as Region | null) ?? null;
-  const calendar = getHolidayCalendar(region);
-  const startYear = new Date(data.start_date + "T00:00:00").getFullYear();
-  const endYear = new Date(data.end_date + "T00:00:00").getFullYear();
-  const years = startYear === endYear ? [startYear] : [startYear, endYear];
-
-  const { data: holidayRows } = await supabase
-    .from("public_holidays")
-    .select("holiday_date")
-    .in("region", [calendar, "all"])
-    .in("year", years);
-
-  const holidays = (holidayRows ?? []).map((h) => h.holiday_date as string);
-
-  // Calculate working days
-  const totalDays = calculateWorkingDays(data.start_date, data.end_date, holidays);
 
   if (totalDays <= 0) {
     return { success: false, error: "No working days in the selected date range" };
@@ -297,27 +320,16 @@ export async function updateAbsence(
       return { success: false, error: "This employee already has an absence recorded during this period." };
     }
 
-    // Fetch holidays for recalculation
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("region")
-      .eq("id", existing.profile_id as string)
-      .single();
+    // Recalculate working days (fetches employee region + public holidays)
+    const { workingDays, error: wdError } = await fetchWorkingDays(
+      supabase, existing.profile_id as string, startDate, endDate,
+    );
 
-    const region = (profile?.region as Region | null) ?? null;
-    const calendar = getHolidayCalendar(region);
-    const updateStartYear = new Date(startDate + "T00:00:00").getFullYear();
-    const updateEndYear = new Date(endDate + "T00:00:00").getFullYear();
-    const updateYears = updateStartYear === updateEndYear ? [updateStartYear] : [updateStartYear, updateEndYear];
+    if (wdError) {
+      return { success: false, error: wdError };
+    }
 
-    const { data: holidayRows } = await supabase
-      .from("public_holidays")
-      .select("holiday_date")
-      .in("region", [calendar, "all"])
-      .in("year", updateYears);
-
-    const holidays = (holidayRows ?? []).map((h) => h.holiday_date as string);
-    sanitised.total_days = calculateWorkingDays(startDate, endDate, holidays);
+    sanitised.total_days = workingDays;
   }
 
   const { data: updated, error } = await supabase
@@ -415,22 +427,18 @@ export async function uploadFitNote(
     return { success: false, error: validationError };
   }
 
-  // Check existing fit note and remove if present
+  // Check for existing fit note (to delete after successful replacement)
   const { data: existing } = await supabase
     .from("absence_records")
     .select("fit_note_path")
     .eq("id", absenceId)
     .single();
 
-  if (existing?.fit_note_path) {
-    await supabase.storage.from("hr-documents").remove([existing.fit_note_path as string]);
-  }
-
   // Generate storage path
   const ext = file.name.split(".").pop() || "pdf";
   const storagePath = `fit-notes/${profileId}/${crypto.randomUUID()}.${ext}`;
 
-  // Upload file
+  // 1. Upload new file first (before deleting old — prevents data loss if upload fails)
   const { error: uploadError } = await supabase.storage
     .from("hr-documents")
     .upload(storagePath, file, { contentType: file.type });
@@ -439,7 +447,7 @@ export async function uploadFitNote(
     return { success: false, error: `Upload failed: ${uploadError.message}` };
   }
 
-  // Update absence record with file reference
+  // 2. Update absence record with new file reference
   const { error: updateError } = await supabase
     .from("absence_records")
     .update({
@@ -449,9 +457,14 @@ export async function uploadFitNote(
     .eq("id", absenceId);
 
   if (updateError) {
-    // Rollback: remove uploaded file
+    // Rollback: remove newly uploaded file
     await supabase.storage.from("hr-documents").remove([storagePath]);
     return { success: false, error: updateError.message };
+  }
+
+  // 3. Delete old file only after everything succeeds (orphaned files are preferable to lost data)
+  if (existing?.fit_note_path) {
+    await supabase.storage.from("hr-documents").remove([existing.fit_note_path as string]);
   }
 
   revalidateAbsencePaths(profileId);
