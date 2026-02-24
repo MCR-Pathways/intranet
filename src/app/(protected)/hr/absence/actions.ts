@@ -736,10 +736,17 @@ export async function submitRTWForm(
 
   if (notifError) {
     // Rollback: revert form status to draft so it can be resubmitted
-    await supabase
+    const { error: rollbackError } = await supabase
       .from("return_to_work_forms")
       .update({ status: "draft" })
       .eq("id", formId);
+
+    if (rollbackError) {
+      console.error(
+        `CRITICAL: Failed to roll back RTW form ${formId} after notification failure.`,
+        rollbackError
+      );
+    }
     return { success: false, error: "Form submitted but could not notify the employee. Please try again." };
   }
 
