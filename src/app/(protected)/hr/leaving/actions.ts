@@ -63,7 +63,7 @@ function revalidateLeavingPaths(profileId?: string) {
  * Verify the current user can manage an employee's leaving form.
  * Must be the employee's line manager or an HR admin.
  */
-async function verifyLeavingAuthority(
+export async function verifyLeavingAuthority(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
   currentUserId: string,
   employeeId: string,
@@ -153,7 +153,7 @@ export async function createLeavingForm(data: {
       leaving_date: data.leaving_date,
       reason_for_leaving: data.reason_for_leaving,
       reason_details: data.reason_details?.trim() || null,
-      final_leave_balance: leaveBalance,
+      final_leave_balance: leaveBalance?.remaining ?? null,
       status: "draft",
     })
     .select("id")
@@ -638,9 +638,7 @@ export async function fetchLeavingFormSummary(profileId: string, leavingDate?: s
   return {
     outstandingAssets,
     activeComplianceDocs,
-    leaveBalance: leaveBalance !== null
-      ? { entitlement: 0, used: 0, remaining: leaveBalance }
-      : null,
+    leaveBalance,
   };
 }
 
@@ -656,7 +654,7 @@ async function calculateFinalLeaveBalance(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
   profileId: string,
   leavingDate?: string,
-): Promise<number | null> {
+): Promise<{ entitlement: number; used: number; remaining: number } | null> {
   const leaveYear = getLeaveYearForDate(leavingDate ? new Date(leavingDate) : undefined);
 
   const [{ data: entitlements }, { data: requests }, { data: profile }] = await Promise.all([
@@ -709,5 +707,8 @@ async function calculateFinalLeaveBalance(
     .filter((r) => (r.leave_type as string) === "annual")
     .reduce((sum, r) => sum + (r.total_days as number), 0);
 
-  return Math.round((totalEntitlement - totalUsed) * 2) / 2;
+  const roundedEntitlement = Math.round(totalEntitlement * 2) / 2;
+  const remaining = Math.round((totalEntitlement - totalUsed) * 2) / 2;
+
+  return { entitlement: roundedEntitlement, used: totalUsed, remaining };
 }

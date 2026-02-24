@@ -6,7 +6,7 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT } from "@/lib/hr";
+import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT, STAFF_LEAVING_FORM_SELECT } from "@/lib/hr";
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
 import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm } from "@/types/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
@@ -158,7 +158,7 @@ export default async function EmployeeDetailPage({
       .eq("employee_id", userId),
     supabase
       .from("staff_leaving_forms")
-      .select("id, profile_id, initiated_by, completed_by, completed_at, status, leaving_date, last_working_date, reason_for_leaving, reason_details, notice_period_start, notice_period_end, exit_interview_completed, exit_interview_notes, knowledge_transfer_completed, knowledge_transfer_notes, equipment_returned, equipment_notes, access_revoked, access_revoked_date, final_leave_balance, rehire_eligible, additional_notes, created_at, updated_at")
+      .select(STAFF_LEAVING_FORM_SELECT)
       .eq("profile_id", userId)
       .neq("status", "cancelled")
       .order("created_at", { ascending: false })

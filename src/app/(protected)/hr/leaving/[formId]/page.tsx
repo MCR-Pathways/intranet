@@ -3,7 +3,7 @@ import { STAFF_LEAVING_FORM_SELECT, calculateLengthOfService } from "@/lib/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 import { notFound, redirect } from "next/navigation";
 import { LeavingFormContent } from "@/components/hr/leaving-form-content";
-import { fetchLeavingFormSummary } from "@/app/(protected)/hr/leaving/actions";
+import { fetchLeavingFormSummary, verifyLeavingAuthority } from "@/app/(protected)/hr/leaving/actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -24,7 +24,7 @@ export default async function LeavingFormPage({
     redirect("/hr");
   }
 
-  const { supabase, user, profile } = result;
+  const { supabase, user } = result;
   if (!user) redirect("/login");
 
   const { formId } = await params;
@@ -41,20 +41,10 @@ export default async function LeavingFormPage({
   }
 
   // Verify authority: must be HR admin or the employee's line manager
-  const isHRAdmin = profile?.is_hr_admin === true;
   const profileId = rawForm.profile_id as string;
-
-  if (!isHRAdmin) {
-    // Check if current user is the line manager
-    const { data: employeeProfile } = await supabase
-      .from("profiles")
-      .select("line_manager_id")
-      .eq("id", profileId)
-      .single();
-
-    if (employeeProfile?.line_manager_id !== user.id) {
-      redirect("/hr");
-    }
+  const { authorised, isHRAdmin } = await verifyLeavingAuthority(supabase, user.id, profileId);
+  if (!authorised) {
+    redirect("/hr");
   }
 
   // Flatten form data
