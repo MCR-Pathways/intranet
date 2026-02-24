@@ -137,10 +137,11 @@ export async function createLeavingForm(data: {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
 
-  // Auto-calculate final leave balance
+  // Auto-calculate final leave balance (using leaving date to pick correct leave year)
   const leaveBalance = await calculateFinalLeaveBalance(
     supabase,
     data.profile_id,
+    data.leaving_date,
   );
 
   // Insert the form
@@ -302,17 +303,20 @@ export async function submitLeavingForm(
     .eq("is_hr_admin", true)
     .eq("status", "active");
 
-  let notifFailed = false;
-  for (const admin of hrAdmins ?? []) {
-    if ((admin.id as string) === user.id) continue;
-    const { error: notifError } = await supabase.from("notifications").insert({
+  const notifRows = (hrAdmins ?? [])
+    .filter((admin) => (admin.id as string) !== user.id)
+    .map((admin) => ({
       user_id: admin.id as string,
       type: "staff_leaving_submitted",
       title: "Leaving Form Submitted",
       message: `A leaving form has been submitted for ${employeeName}. Leaving date: ${leavingDate}.`,
       link: `/hr/leaving/${formId}`,
       metadata: { form_id: formId, profile_id: form.profile_id },
-    });
+    }));
+
+  let notifFailed = false;
+  if (notifRows.length > 0) {
+    const { error: notifError } = await supabase.from("notifications").insert(notifRows);
     if (notifError) {
       notifFailed = true;
     }
@@ -422,8 +426,8 @@ export async function completeLeavingForm(
     return { success: false, error: "Could not complete form. It may have changed status." };
   }
 
-  // Step 2: Insert employment history event
-  const { error: historyError } = await supabase
+  // Step 2: Insert employment history event (capture ID for precise rollback)
+  const { data: historyRow, error: historyError } = await supabase
     .from("employment_history")
     .insert({
       profile_id: profileId,
@@ -433,7 +437,9 @@ export async function completeLeavingForm(
       new_value: `Left — ${reason}`,
       notes: (form.additional_notes as string) || null,
       recorded_by: user.id,
-    });
+    })
+    .select("id")
+    .single();
 
   if (historyError) {
     // Rollback step 1
@@ -461,14 +467,13 @@ export async function completeLeavingForm(
 
   if (profileError) {
     // Rollback steps 1 and 2
-    // Delete the employment history entry we just created
-    await supabase
-      .from("employment_history")
-      .delete()
-      .eq("profile_id", profileId)
-      .eq("event_type", "left")
-      .eq("effective_date", leavingDate)
-      .eq("recorded_by", user.id);
+    // Delete the employment history entry we just created (using captured ID)
+    if (historyRow?.id) {
+      await supabase
+        .from("employment_history")
+        .delete()
+        .eq("id", historyRow.id as string);
+    }
 
     const { error: rollbackError } = await supabase
       .from("staff_leaving_forms")
@@ -555,7 +560,7 @@ export async function cancelLeavingForm(
 // FETCH LEAVING FORM SUMMARY (auto-calculated data)
 // =============================================
 
-export async function fetchLeavingFormSummary(profileId: string): Promise<{
+export async function fetchLeavingFormSummary(profileId: string, leavingDate?: string): Promise<{
   outstandingAssets: Array<{
     id: string;
     asset_tag: string;
@@ -575,7 +580,16 @@ export async function fetchLeavingFormSummary(profileId: string): Promise<{
     remaining: number;
   } | null;
 }> {
-  const { supabase } = await getCurrentUser();
+  const { supabase, user } = await getCurrentUser();
+  if (!user) {
+    return { outstandingAssets: [], activeComplianceDocs: [], leaveBalance: null };
+  }
+
+  // Verify caller is authorised to view this employee's data
+  const auth = await verifyLeavingAuthority(supabase, user.id, profileId);
+  if (!auth.authorised) {
+    return { outstandingAssets: [], activeComplianceDocs: [], leaveBalance: null };
+  }
 
   const [
     { data: rawAssets },
@@ -619,7 +633,7 @@ export async function fetchLeavingFormSummary(profileId: string): Promise<{
     };
   });
 
-  const leaveBalance = await calculateFinalLeaveBalance(supabase, profileId);
+  const leaveBalance = await calculateFinalLeaveBalance(supabase, profileId, leavingDate);
 
   return {
     outstandingAssets,
@@ -641,8 +655,9 @@ export async function fetchLeavingFormSummary(profileId: string): Promise<{
 async function calculateFinalLeaveBalance(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
   profileId: string,
+  leavingDate?: string,
 ): Promise<number | null> {
-  const leaveYear = getLeaveYearForDate();
+  const leaveYear = getLeaveYearForDate(leavingDate ? new Date(leavingDate) : undefined);
 
   const [{ data: entitlements }, { data: requests }] = await Promise.all([
     supabase
@@ -662,22 +677,21 @@ async function calculateFinalLeaveBalance(
     return null;
   }
 
-  // Calculate total annual leave balance (same formula as employee detail page)
-  let totalRemaining = 0;
+  // Calculate total annual leave balance — accumulate across entitlement records
+  // (an employee may have multiple rows, e.g. base + mid-year adjustment)
+  let totalEntitlement = 0;
   for (const ent of entitlements) {
     if ((ent.leave_type as string) !== "annual") continue;
 
-    const entitlement = Math.round(
+    totalEntitlement += Math.round(
       ((ent.base_entitlement_days as number) * (ent.fte_at_calculation as number) +
         (ent.adjustments_days as number)) * 2,
     ) / 2;
-
-    const used = (requests ?? [])
-      .filter((r) => (r.leave_type as string) === "annual")
-      .reduce((sum, r) => sum + (r.total_days as number), 0);
-
-    totalRemaining = entitlement - used;
   }
 
-  return Math.round(totalRemaining * 2) / 2;
+  const totalUsed = (requests ?? [])
+    .filter((r) => (r.leave_type as string) === "annual")
+    .reduce((sum, r) => sum + (r.total_days as number), 0);
+
+  return Math.round((totalEntitlement - totalUsed) * 2) / 2;
 }

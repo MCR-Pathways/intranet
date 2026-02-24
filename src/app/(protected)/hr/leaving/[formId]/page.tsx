@@ -96,7 +96,7 @@ export default async function LeavingFormPage({
   };
 
   // Fetch auto-calculated summary data
-  const summary = await fetchLeavingFormSummary(profileId);
+  const summary = await fetchLeavingFormSummary(profileId, form.leaving_date);
 
   const lengthOfService = employee?.start_date
     ? calculateLengthOfService(employee.start_date, form.leaving_date)
