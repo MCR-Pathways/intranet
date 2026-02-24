@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Loader2, MapPin } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { recordSignIn } from "@/app/(protected)/sign-in/actions";
 import { LOCATIONS } from "@/lib/sign-in";
@@ -37,16 +38,18 @@ export function AddLocationForm() {
       const result = await recordSignIn(location, other);
       if (result.success) {
         const loc = LOCATIONS.find((l) => l.id === location);
-        setSuccessMessage(
+        const message =
           location === "other"
             ? `Recorded: ${other}`
-            : `Recorded: ${loc?.name ?? location}`
-        );
+            : `Recorded: ${loc?.name ?? location}`;
+        setSuccessMessage(message);
+        toast.success("Location recorded");
         setSelectedLocation(null);
         setOtherLocation("");
         router.refresh();
       } else {
         setError(result.error ?? "Failed to record location");
+        toast.error(result.error ?? "Failed to record location");
       }
     });
   }

@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X } from "lucide-react";
 import { HR_DOCUMENT_MAX_SIZE_BYTES } from "@/lib/hr";
+import { toast } from "sonner";
 
 interface DocumentType {
   id: string;
@@ -108,9 +109,11 @@ export function ComplianceUploadDialog({
     startTransition(async () => {
       const result = await uploadComplianceDocument(formData);
       if (result.success) {
+        toast.success("Document uploaded");
         resetForm();
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to upload document");
       }
     });

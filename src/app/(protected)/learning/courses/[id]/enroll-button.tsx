@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, BookOpen } from "lucide-react";
+import { toast } from "sonner";
 import { enrollInCourse } from "./actions";
 
 export function EnrollButton({
@@ -18,8 +19,11 @@ export function EnrollButton({
     startTransition(async () => {
       setError(null);
       const result = await enrollInCourse(courseId);
-      if (!result.success) {
+      if (result.success) {
+        toast.success("Enrolled successfully");
+      } else {
         setError(result.error ?? "Failed to enrol. Please try again.");
+        toast.error(result.error ?? "Failed to enrol. Please try again.");
       }
     });
   }

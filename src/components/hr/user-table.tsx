@@ -42,6 +42,7 @@ import {
   type Department,
   type Region,
 } from "@/lib/hr";
+import { toast } from "sonner";
 
 /** Profile shape returned by the user management query. */
 export interface UserTableProfile {
@@ -99,6 +100,7 @@ export function UserTable({ profiles }: UserTableProps) {
   const [regionFilter, setRegionFilter] = useState("all");
   const [editingProfile, setEditingProfile] = useState<UserTableProfile | null>(null);
   const [resetTarget, setResetTarget] = useState<UserTableProfile | null>(null);
+  const [completeTarget, setCompleteTarget] = useState<UserTableProfile | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredProfiles = useMemo(() => {
@@ -116,16 +118,28 @@ export function UserTable({ profiles }: UserTableProps) {
     });
   }, [profiles, searchQuery, statusFilter, departmentFilter, regionFilter]);
 
-  const handleCompleteInduction = (userId: string) => {
+  const handleCompleteInduction = () => {
+    if (!completeTarget) return;
     startTransition(async () => {
-      await completeUserInduction(userId);
+      const result = await completeUserInduction(completeTarget.id);
+      if (result.success) {
+        toast.success("Induction completed");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+      setCompleteTarget(null);
     });
   };
 
   const handleResetInduction = () => {
     if (!resetTarget) return;
     startTransition(async () => {
-      await resetUserInduction(resetTarget.id);
+      const result = await resetUserInduction(resetTarget.id);
+      if (result.success) {
+        toast.success("Induction reset");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
       setResetTarget(null);
     });
   };
@@ -294,9 +308,7 @@ export function UserTable({ profiles }: UserTableProps) {
                             variant="ghost"
                             size="sm"
                             className="h-7 px-2 text-xs text-green-600 hover:text-green-700"
-                            onClick={() =>
-                              handleCompleteInduction(profile.id)
-                            }
+                            onClick={() => setCompleteTarget(profile)}
                             disabled={isPending}
                           >
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -337,6 +349,36 @@ export function UserTable({ profiles }: UserTableProps) {
           }}
         />
       )}
+
+      {/* Complete Induction Confirmation */}
+      <AlertDialog
+        open={!!completeTarget}
+        onOpenChange={(open) => {
+          if (!open) setCompleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Induction</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark {completeTarget?.full_name}&apos;s induction as
+              complete and change their status to active. They will gain full
+              access to the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button
+              onClick={handleCompleteInduction}
+              disabled={isPending}
+            >
+              {isPending ? "Completing..." : "Complete Induction"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reset Induction Confirmation */}
       <AlertDialog

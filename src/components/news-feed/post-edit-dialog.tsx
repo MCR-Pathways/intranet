@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
@@ -187,9 +188,11 @@ export function PostEditDialog({
         })),
       });
       if (result.success) {
+        toast.success("Post updated");
         onOpenChange(false);
       } else {
         setError(result.error);
+        toast.error(result.error || "Something went wrong");
       }
     });
   };

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { completeLesson } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { LessonType } from "@/types/database.types";
 
 interface MarkCompleteButtonProps {
@@ -57,10 +58,13 @@ export function MarkCompleteButton({
           startTransition(async () => {
             setError(null);
             const result = await completeLesson(lessonId, courseId);
-            if (!result.success) {
+            if (result.success) {
+              toast.success("Lesson completed");
+            } else {
               setError(
                 result.error ?? "Failed to mark complete. Please try again."
               );
+              toast.error(result.error ?? "Failed to mark complete. Please try again.");
             }
           })
         }

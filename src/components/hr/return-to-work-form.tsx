@@ -44,6 +44,7 @@ import {
   fetchTriggerPointStatus,
 } from "@/app/(protected)/hr/absence/actions";
 import { AlertTriangle, CheckCircle2, Info, Loader2, Lock, Unlock } from "lucide-react";
+import { toast } from "sonner";
 
 interface ReturnToWorkFormProps {
   absenceRecord: AbsenceRecord;
@@ -162,9 +163,11 @@ export function ReturnToWorkForm({
       });
 
       if (result.success) {
+        toast.success("Draft saved");
         setSuccess("Draft saved");
         setTimeout(() => setSuccess(null), 2000);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });
@@ -204,8 +207,10 @@ export function ReturnToWorkForm({
       const result = await submitRTWForm(formId);
       if (result.success) {
         setStatus("submitted");
+        toast.success("Form submitted — employee has been notified");
         setSuccess("Form submitted. Employee has been notified.");
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });
@@ -219,8 +224,10 @@ export function ReturnToWorkForm({
       const result = await confirmRTWForm(formId, employeeComments || undefined);
       if (result.success) {
         setStatus("locked");
+        toast.success("Form confirmed");
         setSuccess("Form confirmed and locked. Thank you.");
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });
@@ -234,9 +241,11 @@ export function ReturnToWorkForm({
       const result = await unlockRTWForm(formId);
       if (result.success) {
         setStatus("draft");
+        toast.success("Form unlocked");
         setSuccess("Form unlocked for corrections");
         setTimeout(() => setSuccess(null), 2000);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });

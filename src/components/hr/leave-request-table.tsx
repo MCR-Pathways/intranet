@@ -42,6 +42,7 @@ import {
   cancelLeave,
 } from "@/app/(protected)/hr/leave/actions";
 import { Search, Undo2, Users } from "lucide-react";
+import { toast } from "sonner";
 
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
@@ -95,6 +96,7 @@ export function LeaveRequestTable({
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [approveTarget, setApproveTarget] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -112,22 +114,49 @@ export function LeaveRequestTable({
     });
   }, [requests, statusFilter, typeFilter, search, showEmployee]);
 
+  // Pre-compute team overlap for all filtered requests to avoid O(n*m) per render
+  const overlapMap = useMemo(() => {
+    if (!allRequests || !teamMemberMap) return new Map<string, LeaveRequestWithEmployee[]>();
+    const map = new Map<string, LeaveRequestWithEmployee[]>();
+    for (const request of filteredRequests) {
+      map.set(request.id, getTeamOverlap(request, allRequests, teamMemberMap));
+    }
+    return map;
+  }, [filteredRequests, allRequests, teamMemberMap]);
+
   function handleWithdraw(requestId: string) {
     startTransition(async () => {
-      await withdrawLeave(requestId);
+      const result = await withdrawLeave(requestId);
+      if (result.success) {
+        toast.success("Leave withdrawn");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
     });
   }
 
-  function handleApprove(requestId: string) {
+  function handleApprove() {
+    if (!approveTarget) return;
     startTransition(async () => {
-      await approveLeave(requestId);
+      const result = await approveLeave(approveTarget);
+      if (result.success) {
+        toast.success("Leave approved");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+      setApproveTarget(null);
     });
   }
 
   function handleReject() {
     if (!rejectTarget || !rejectReason.trim()) return;
     startTransition(async () => {
-      await rejectLeave(rejectTarget, rejectReason.trim());
+      const result = await rejectLeave(rejectTarget, rejectReason.trim());
+      if (result.success) {
+        toast.success("Leave rejected");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
       setRejectDialogOpen(false);
       setRejectTarget(null);
       setRejectReason("");
@@ -136,7 +165,12 @@ export function LeaveRequestTable({
 
   function handleCancel(requestId: string) {
     startTransition(async () => {
-      await cancelLeave(requestId);
+      const result = await cancelLeave(requestId);
+      if (result.success) {
+        toast.success("Leave cancelled");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
     });
   }
 
@@ -220,10 +254,7 @@ export function LeaveRequestTable({
                 const canCancel = isHRAdmin && request.status === "approved";
 
                 // Team overlap detection (approver view only)
-                const overlapping =
-                  allRequests && teamMemberMap
-                    ? getTeamOverlap(request, allRequests, teamMemberMap)
-                    : [];
+                const overlapping = overlapMap.get(request.id) ?? [];
                 const teammateIds = teamMemberMap?.[request.profile_id] ?? [];
                 const teamSize = teammateIds.length + 1; // teammates + the requester
                 const availableCount = teamSize - overlapping.length - 1; // minus overlapping and the requester
@@ -309,7 +340,7 @@ export function LeaveRequestTable({
                               variant="default"
                               size="sm"
                               disabled={isPending}
-                              onClick={() => handleApprove(request.id)}
+                              onClick={() => setApproveTarget(request.id)}
                             >
                               Approve
                             </Button>
@@ -362,6 +393,29 @@ export function LeaveRequestTable({
       <p className="text-xs text-muted-foreground">
         Showing {filteredRequests.length} of {requests.length} requests
       </p>
+
+      {/* Approve confirmation dialog */}
+      <AlertDialog
+        open={!!approveTarget}
+        onOpenChange={(open) => {
+          if (!open) setApproveTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve leave request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will approve the leave request and deduct the days from the employee&apos;s balance.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApprove} disabled={isPending}>
+              {isPending ? "Approving..." : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reject reason dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>

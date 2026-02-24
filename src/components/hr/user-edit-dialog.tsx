@@ -29,6 +29,7 @@ import {
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
 import type { UserTableProfile } from "./user-table";
+import { toast } from "sonner";
 
 interface UserEditDialogProps {
   profile: UserTableProfile;
@@ -91,8 +92,10 @@ export function UserEditDialog({
       });
 
       if (result.success) {
+        toast.success("Profile updated");
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to update user");
       }
     });

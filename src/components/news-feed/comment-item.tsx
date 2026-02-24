@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn, timeAgo, getInitials } from "@/lib/utils";
 import { linkifyText } from "@/lib/url";
 import { Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -54,6 +55,7 @@ export function CommentItem({
   const handleDelete = () => {
     startTransition(async () => {
       await deleteComment(comment.id);
+      toast.success("Comment deleted");
       setShowDeleteDialog(false);
     });
   };

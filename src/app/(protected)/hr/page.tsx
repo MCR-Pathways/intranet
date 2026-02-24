@@ -145,6 +145,8 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
 export default async function HRPage() {
   const { supabase, profile } = await getCurrentUser();
   const isHRAdmin = profile?.is_hr_admin ?? false;
+  const isLineManager = profile?.is_line_manager ?? false;
+  const canViewCalendar = isHRAdmin || isLineManager;
 
   // Only fetch stats for HR admins
   const stats = isHRAdmin ? await fetchDashboardStats(supabase) : null;
@@ -278,19 +280,21 @@ export default async function HRPage() {
           </Card>
         </Link>
 
-        <Link href="/hr/calendar">
-          <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Calendar</CardTitle>
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                View team leave calendar
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </Link>
+        {canViewCalendar && (
+          <Link href="/hr/calendar">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Calendar</CardTitle>
+                <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  View team leave calendar
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
         <Link href="/hr/team">
           <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">

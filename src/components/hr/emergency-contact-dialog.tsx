@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EmergencyContact } from "@/types/hr";
+import { toast } from "sonner";
 
 interface EmergencyContactDialogProps {
   /** If provided, edit mode; if absent, create mode. */
@@ -57,8 +58,10 @@ export function EmergencyContactDialog({
       });
 
       if (result.success) {
+        toast.success(isEditing ? "Emergency contact saved" : "Emergency contact added");
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to save emergency contact");
       }
     });

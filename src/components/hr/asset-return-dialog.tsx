@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { returnAsset } from "@/app/(protected)/hr/assets/actions";
+import { toast } from "sonner";
 
 interface AssetReturnDialogProps {
   assignmentId: string;
@@ -44,8 +45,8 @@ export function AssetReturnDialog({
         condition_on_return: condition,
         notes: notes || undefined,
       });
-      if (result.success) { resetForm(); onOpenChange(false); }
-      else { setError(result.error); }
+      if (result.success) { toast.success("Asset return recorded"); resetForm(); onOpenChange(false); }
+      else { toast.error(result.error || "Something went wrong"); setError(result.error); }
     });
   }
 
