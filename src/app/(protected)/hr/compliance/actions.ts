@@ -286,9 +286,9 @@ export async function deleteComplianceDocument(docId: string) {
  * Accessible by HR admins or the document owner.
  */
 export async function getComplianceDocumentUrl(filePath: string) {
-  const { supabase, user } = await getCurrentUser();
+  const { supabase, user, profile } = await getCurrentUser();
 
-  if (!user) {
+  if (!user || !profile) {
     return { success: false, error: "Not authenticated", url: null };
   }
 
@@ -298,17 +298,8 @@ export async function getComplianceDocumentUrl(filePath: string) {
   const fileOwner = pathParts[0];
   const isOwner = fileOwner === user.id;
 
-  if (!isOwner) {
-    // Check if HR admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_hr_admin")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.is_hr_admin) {
-      return { success: false, error: "Access denied", url: null };
-    }
+  if (!isOwner && !profile.is_hr_admin) {
+    return { success: false, error: "Access denied", url: null };
   }
 
   const { data, error } = await supabase.storage

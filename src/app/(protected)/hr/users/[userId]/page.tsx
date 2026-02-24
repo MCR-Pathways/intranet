@@ -140,7 +140,8 @@ export default async function EmployeeDetailPage({
     supabase
       .from("public_holidays")
       .select("holiday_date")
-      .in("region", [getHolidayCalendar(profile.region as Region | null), "all"]),
+      .in("region", [getHolidayCalendar(profile.region as Region | null), "all"])
+      .eq("year", leaveYear.year),
   ]);
 
   // Resolve line manager name

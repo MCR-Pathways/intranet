@@ -115,11 +115,14 @@ export default async function CompliancePage() {
 function statusPriority(status: ComplianceStatus): number {
   switch (status) {
     case "valid":
+      return 4;
+    case "pending_renewal":
       return 3;
     case "expiring_soon":
       return 2;
     case "expired":
       return 1;
+    case "not_applicable":
     default:
       return 0;
   }
