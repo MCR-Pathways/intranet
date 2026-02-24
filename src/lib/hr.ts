@@ -6,6 +6,7 @@
  * as src/lib/sign-in.ts and src/lib/learning.ts.
  */
 
+import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 import {
   Calendar,
   Clock,
@@ -585,4 +586,37 @@ export function validateHRDocument(file: { size: number; type: string }): string
     return "Unsupported file type. Please upload a PDF, JPEG, PNG, or DOCX file.";
   }
   return null;
+}
+
+// =============================================
+// LEAVE REQUEST QUERY HELPERS
+// =============================================
+
+/** Explicit column list for leave_requests queries. */
+export const LEAVE_REQUEST_SELECT =
+  "id, profile_id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, reason, status, decided_by, decided_at, decision_notes, rejection_reason, created_at";
+
+/** Select string for leave_requests joined with the requester's profile. */
+export const LEAVE_REQUEST_WITH_EMPLOYEE_SELECT =
+  `${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`;
+
+/** Map raw Supabase leave request + profile join data to LeaveRequestWithEmployee. */
+export function mapToLeaveRequestWithEmployee(
+  data: Record<string, unknown>[],
+): LeaveRequestWithEmployee[] {
+  return data.map((r) => {
+    const p = r.profiles as {
+      full_name: string;
+      avatar_url: string | null;
+      job_title: string | null;
+    } | null;
+    return {
+      ...r,
+      leave_type: r.leave_type as LeaveType,
+      status: r.status as LeaveRequest["status"],
+      employee_name: (p?.full_name as string) ?? "Unknown",
+      employee_avatar: (p?.avatar_url as string | null) ?? null,
+      employee_job_title: (p?.job_title as string | null) ?? null,
+    } as LeaveRequestWithEmployee;
+  });
 }

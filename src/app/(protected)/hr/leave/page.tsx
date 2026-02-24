@@ -1,13 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { LeaveDashboardContent } from "@/components/hr/leave-dashboard-content";
-import { getLeaveYearForDate, getHolidayCalendar } from "@/lib/hr";
+import { getLeaveYearForDate, getHolidayCalendar, LEAVE_REQUEST_SELECT, LEAVE_REQUEST_WITH_EMPLOYEE_SELECT, mapToLeaveRequestWithEmployee } from "@/lib/hr";
 import type { LeaveType, Region } from "@/lib/hr";
 import type { LeaveBalance, LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
-
-/** Select columns for leave_requests. */
-const LEAVE_REQUEST_SELECT =
-  "id, profile_id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, reason, status, decided_by, decided_at, decision_notes, rejection_reason, created_at";
 
 /** Select columns for leave_entitlements. */
 const LEAVE_ENTITLEMENT_SELECT =
@@ -67,43 +63,23 @@ export default async function LeavePage({
     // Fetch pending requests that need approval (from direct reports or all if HR)
     const { data: pendingData } = await supabase
       .from("leave_requests")
-      .select(`${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`)
+      .select(LEAVE_REQUEST_WITH_EMPLOYEE_SELECT)
       .eq("status", "pending")
       .neq("profile_id", user.id)
       .order("created_at", { ascending: true });
 
-    pendingApprovals = (pendingData ?? []).map((r) => {
-      const p = r.profiles as unknown as { full_name: string; avatar_url: string | null; job_title: string | null } | null;
-      return {
-        ...r,
-        leave_type: r.leave_type as LeaveType,
-        status: r.status as LeaveRequest["status"],
-        employee_name: p?.full_name ?? "Unknown",
-        employee_avatar: p?.avatar_url ?? null,
-        employee_job_title: p?.job_title ?? null,
-      } as LeaveRequestWithEmployee;
-    });
+    pendingApprovals = mapToLeaveRequestWithEmployee((pendingData ?? []) as Record<string, unknown>[]);
 
     // Fetch all requests for calendar / admin view
     const { data: allData } = await supabase
       .from("leave_requests")
-      .select(`${LEAVE_REQUEST_SELECT}, profiles!leave_requests_profile_id_fkey(full_name, avatar_url, job_title)`)
+      .select(LEAVE_REQUEST_WITH_EMPLOYEE_SELECT)
       .gte("start_date", leaveYear.start)
       .lte("start_date", leaveYear.end)
       .in("status", ["pending", "approved"])
       .order("start_date");
 
-    allRequests = (allData ?? []).map((r) => {
-      const p = r.profiles as unknown as { full_name: string; avatar_url: string | null; job_title: string | null } | null;
-      return {
-        ...r,
-        leave_type: r.leave_type as LeaveType,
-        status: r.status as LeaveRequest["status"],
-        employee_name: p?.full_name ?? "Unknown",
-        employee_avatar: p?.avatar_url ?? null,
-        employee_job_title: p?.job_title ?? null,
-      } as LeaveRequestWithEmployee;
-    });
+    allRequests = mapToLeaveRequestWithEmployee((allData ?? []) as Record<string, unknown>[]);
   }
 
   // Build team member map for overlap detection (approver view only)
