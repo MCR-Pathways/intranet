@@ -15,6 +15,7 @@ import { ProfileDocumentsTab } from "./profile-documents-tab";
 import { ProfileLeaveTab } from "./profile-leave-tab";
 import { ProfileAssetsTab } from "./profile-assets-tab";
 import { ProfileAbsenceTab } from "./profile-absence-tab";
+import { ProfileLeavingTab } from "./profile-leaving-tab";
 import { ProfileKeyDatesSection } from "./profile-key-dates-section";
 import { EmploymentEditDialog } from "./employment-edit-dialog";
 import { PersonalDetailsEditDialog } from "./personal-details-edit-dialog";
@@ -33,6 +34,7 @@ import type {
   AbsenceRecord,
   ReturnToWorkForm,
   RTWStatus,
+  StaffLeavingForm,
 } from "@/types/hr";
 import { Pencil, Phone, Mail, User } from "lucide-react";
 
@@ -96,9 +98,11 @@ interface EmployeeDetailContentProps {
   keyDates?: KeyDateRow[];
   absenceRecords?: (AbsenceRecord & { rtw_status: RTWStatus | null; rtw_form_id: string | null })[];
   rtwForms?: Record<string, ReturnToWorkForm>;
+  leavingForm?: StaffLeavingForm | null;
+  isManager?: boolean;
 }
 
-const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets", "absence"];
+const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets", "absence", "leaving"];
 
 export function EmployeeDetailContent({
   profile,
@@ -119,6 +123,8 @@ export function EmployeeDetailContent({
   keyDates = [],
   absenceRecords = [],
   rtwForms = {},
+  leavingForm = null,
+  isManager = false,
 }: EmployeeDetailContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "overview";
 
@@ -136,6 +142,12 @@ export function EmployeeDetailContent({
           <TabsTrigger value="leave">Leave</TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="absence">Absence</TabsTrigger>
+          <TabsTrigger value="leaving">
+            Leaving
+            {leavingForm && leavingForm.status !== "completed" && leavingForm.status !== "cancelled" && (
+              <span className="ml-1.5 h-2 w-2 rounded-full bg-orange-500 inline-block" />
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-4">
@@ -302,6 +314,16 @@ export function EmployeeDetailContent({
             currentUserId={currentUserId}
             isHRAdmin={isHRAdmin}
             isManager={profile.is_line_manager}
+          />
+        </TabsContent>
+
+        <TabsContent value="leaving" className="mt-6">
+          <ProfileLeavingTab
+            profileId={profile.id}
+            profileName={profile.full_name}
+            leavingForm={leavingForm}
+            isHRAdmin={isHRAdmin}
+            isManager={isManager}
           />
         </TabsContent>
       </Tabs>

@@ -81,8 +81,9 @@
 ### HR Phase 2
 - [x] Absence records & sickness tracking
 - [x] Return-to-work forms (digital replacement for paper RTW Discussion Form)
-- [ ] Staff leaving forms (offboarding)
+- [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
 - [ ] Onboarding progress tracker
+- [ ] Flexible working requests (form → manager approval → HR → trial period reminders)
 - [ ] Org chart (`/hr/org-chart` — placeholder exists)
 - [ ] My team view (`/hr/team` — placeholder exists)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
@@ -92,6 +93,7 @@
 - [ ] DEI / equality monitoring
 - [ ] Performance: 1-to-1 records, objectives
 - [ ] Praise / shout-outs
+- [ ] Document signing / acknowledgements
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 

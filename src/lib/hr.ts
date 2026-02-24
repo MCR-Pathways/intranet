@@ -376,6 +376,20 @@ export const LEAVING_REASON_CONFIG = {
 export type LeavingReason = keyof typeof LEAVING_REASON_CONFIG;
 
 // =============================================
+// LEAVING FORM STATUS
+// =============================================
+
+export const LEAVING_STATUS_CONFIG = {
+  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-100", dotColour: "bg-gray-500" },
+  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", dotColour: "bg-blue-500" },
+  in_progress: { label: "In Progress", colour: "text-amber-700", bgColour: "bg-amber-50", dotColour: "bg-amber-500" },
+  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
+  cancelled: { label: "Cancelled", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
+} as const;
+
+export type LeavingFormStatus = keyof typeof LEAVING_STATUS_CONFIG;
+
+// =============================================
 // EMPLOYMENT HISTORY EVENT TYPES
 // =============================================
 
@@ -750,6 +764,18 @@ export const ABSENCE_RECORD_SELECT =
 /** Explicit column list for return_to_work_forms queries. */
 export const RTW_FORM_SELECT =
   "id, absence_record_id, employee_id, completed_by, completed_at, absence_start_date, absence_end_date, discussion_date, reason_for_absence, is_work_related, is_pregnancy_related, has_underlying_cause, wellbeing_discussion, medical_advice_details, gp_clearance_received, adjustments_needed, phased_return_agreed, phased_return_details, trigger_point_reached, trigger_point_details, procedures_followed, procedures_not_followed_reason, follow_up_date, additional_notes, employee_comments, employee_confirmed, employee_confirmed_at, status, created_at, updated_at";
+
+// =============================================
+// STAFF LEAVING FORM QUERY HELPERS
+// =============================================
+
+/** Explicit column list for staff_leaving_forms queries. */
+export const STAFF_LEAVING_FORM_SELECT =
+  "id, profile_id, initiated_by, completed_by, completed_at, status, leaving_date, last_working_date, reason_for_leaving, reason_details, notice_period_start, notice_period_end, exit_interview_completed, exit_interview_notes, knowledge_transfer_completed, knowledge_transfer_notes, equipment_returned, equipment_notes, access_revoked, access_revoked_date, final_leave_balance, rehire_eligible, additional_notes, created_at, updated_at";
+
+/** Select string for staff_leaving_forms joined with the employee's profile. */
+export const STAFF_LEAVING_FORM_WITH_EMPLOYEE_SELECT =
+  `${STAFF_LEAVING_FORM_SELECT}, profiles!staff_leaving_forms_profile_id_fkey(full_name, avatar_url, job_title, department)`;
 
 /** Map raw Supabase leave request + profile join data to LeaveRequestWithEmployee. */
 export function mapToLeaveRequestWithEmployee(

@@ -6,9 +6,10 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT } from "@/lib/hr";
+import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT, STAFF_LEAVING_FORM_SELECT } from "@/lib/hr";
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
-import type { AbsenceType, ReturnToWorkForm, RTWStatus } from "@/types/hr";
+import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm } from "@/types/hr";
+import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 
 /** Select columns for employee_details. */
 const EMPLOYEE_DETAILS_SELECT =
@@ -94,6 +95,7 @@ export default async function EmployeeDetailPage({
     { data: publicHolidayRows },
     { data: absenceRecords },
     { data: rtwForms },
+    { data: rawLeavingForm },
   ] = await Promise.all([
     supabase
       .from("employee_details")
@@ -154,6 +156,14 @@ export default async function EmployeeDetailPage({
       .from("return_to_work_forms")
       .select(RTW_FORM_SELECT)
       .eq("employee_id", userId),
+    supabase
+      .from("staff_leaving_forms")
+      .select(STAFF_LEAVING_FORM_SELECT)
+      .eq("profile_id", userId)
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   // Resolve line manager name
@@ -342,6 +352,40 @@ export default async function EmployeeDetailPage({
     created_at: profile.created_at as string,
   };
 
+  // Flatten leaving form
+  const leavingForm: StaffLeavingForm | null = rawLeavingForm
+    ? {
+        id: rawLeavingForm.id as string,
+        profile_id: rawLeavingForm.profile_id as string,
+        initiated_by: rawLeavingForm.initiated_by as string | null,
+        completed_by: rawLeavingForm.completed_by as string | null,
+        completed_at: rawLeavingForm.completed_at as string | null,
+        status: rawLeavingForm.status as LeavingFormStatus,
+        leaving_date: rawLeavingForm.leaving_date as string,
+        last_working_date: rawLeavingForm.last_working_date as string | null,
+        reason_for_leaving: rawLeavingForm.reason_for_leaving as LeavingReason,
+        reason_details: rawLeavingForm.reason_details as string | null,
+        notice_period_start: rawLeavingForm.notice_period_start as string | null,
+        notice_period_end: rawLeavingForm.notice_period_end as string | null,
+        exit_interview_completed: rawLeavingForm.exit_interview_completed as boolean,
+        exit_interview_notes: rawLeavingForm.exit_interview_notes as string | null,
+        knowledge_transfer_completed: rawLeavingForm.knowledge_transfer_completed as boolean,
+        knowledge_transfer_notes: rawLeavingForm.knowledge_transfer_notes as string | null,
+        equipment_returned: rawLeavingForm.equipment_returned as boolean,
+        equipment_notes: rawLeavingForm.equipment_notes as string | null,
+        access_revoked: rawLeavingForm.access_revoked as boolean,
+        access_revoked_date: rawLeavingForm.access_revoked_date as string | null,
+        final_leave_balance: rawLeavingForm.final_leave_balance as number | null,
+        rehire_eligible: rawLeavingForm.rehire_eligible as boolean | null,
+        additional_notes: rawLeavingForm.additional_notes as string | null,
+        created_at: rawLeavingForm.created_at as string,
+        updated_at: rawLeavingForm.updated_at as string,
+      }
+    : null;
+
+  // Check if current user is the employee's line manager
+  const isCurrentUserManager = (profile.line_manager_id as string | null) === currentUserId;
+
   return (
     <div className="space-y-6">
       {/* Back button + header */}
@@ -381,6 +425,8 @@ export default async function EmployeeDetailPage({
         keyDates={flatKeyDates}
         absenceRecords={flatAbsenceRecords}
         rtwForms={rtwFormMap}
+        leavingForm={leavingForm}
+        isManager={isCurrentUserManager}
       />
     </div>
   );
