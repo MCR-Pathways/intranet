@@ -1,153 +1,127 @@
-# MCR Pathways Intranet - Remaining Development Plan
+# MCR Pathways Intranet — Development Plan
 
-This document outlines only the features and work that still need to be completed.
-
----
-
-## Priority 1: Missing Database Tables
-
-The following tables need to be created (enums already exist):
-
-### Courses & Learning
-- [x] `courses` table - Course catalog (id, title, description, category, duration, required, created_at)
-- [x] `course_enrollments` table - User progress (user_id, course_id, status, started_at, completed_at)
-
-### Leave Management
-- [ ] `leave_requests` table - Leave submissions (user_id, leave_type, start_date, end_date, status, approver_id, notes)
-- [ ] `leave_balances` table - Annual allowances per user
-
-### Content
-- [ ] `news_posts` table - Intranet news (author_id, title, content, published_at, pinned)
-- [ ] `guides` table - Knowledge base articles
-- [ ] `policies` table - Company policy documents
-
-### Tracking
-- [ ] `sign_in_records` table - Daily location tracking (user_id, date, location, notes)
-- [ ] `induction_progress` table - Track induction item completion per user
-- [ ] `assets` table - Company asset tracking
+> **Living document** — updated as features are completed and priorities shift.
+> For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
+> Last updated: 2026-02-24
 
 ---
 
-## Priority 2: Learning Module ✅ COMPLETED
+## Completed Modules
 
-- [x] Create courses table migration
-- [x] Course catalog page (`/learning/courses`) with category filtering
-- [x] Course detail page with enrollment button
-- [x] My courses page showing enrolled/completed courses
-- [x] Progress tracking and completion status
-- [x] Compliance training due date alerts
-- [x] Tool Shed page (`/learning/tool-shed`)
+### Learning & Development ✅
+- Course catalogue with category filtering (`/learning/courses`)
+- Course detail pages with enrolment
+- My courses page (enrolled/completed)
+- Progress tracking and completion status
+- Compliance training due date alerts
+- Tool Shed page (`/learning/tool-shed`)
+- **Admin features:** Course CRUD, admin reports (`/learning/admin/`)
+- Notification system for course publishing (RPC + UI)
 
----
+### Sign-In System ✅
+- Daily location sign-in with DB persistence (`/sign-in`)
+- Today's sign-ins and monthly history
+- Team sign-in overview for line managers
+- Nudge bubble for unsigned-in users
 
-## Priority 3: Leave Management
+### Induction System ✅
+- 9-step induction checklist with DB persistence (`/intranet/induction`)
+- Individual module pages (welcome, policies, H&S, GDPR, EDI, cyber-security, IT setup, email signature, meet the team)
+- Auto-redirect when complete, server-side verification
 
-- [ ] Create leave tables migration
-- [ ] Leave request form (`/hr/leave/new`)
-- [ ] Leave requests list page (`/hr/leave`)
-- [ ] Leave calendar view
-- [ ] Manager approval workflow
-- [ ] Leave balance display
-- [ ] Team leave overview for managers
-- [ ] Email notifications for approvals/rejections
+### News Feed & Content ✅
+- Post composer with attachments and link previews (`/intranet`)
+- Reactions, editing, deletion with confirmation dialogs
+- Auto-link detection with SSRF-hardened OG preview fetching
+- Image lightbox with keyboard navigation
+- Weekly roundup banner
+- Guides section (`/intranet/guides`)
+- Policies section (`/intranet/policies`)
 
----
+### Notifications ✅
+- Real-time notification bell with unread badge
+- Mark as read / mark all as read
+- Course publish notifications via `notify_course_published` RPC
 
-## Priority 4: Sign-In System Backend
+### HR Module Phase 1 ✅
+- User management with full employee detail view (`/hr/users`, `/hr/users/[userId]`)
+- My profile with personal details, emergency contacts, employment history (`/hr/profile`)
+- Leave management with FTE-aware calculations, approvals, calendar (`/hr/leave`, `/hr/calendar`)
+- Asset tracking with full lifecycle (`/hr/assets`)
+- Compliance documents with file storage and verification (`/hr/compliance`)
+- Key dates tracking (`/hr/key-dates`)
+- See [docs/hr-plan.md](./hr-plan.md) for Phase 2/3 roadmap
 
-Currently frontend-only - needs database persistence:
+### Settings (Partial) ✅
+- Profile info display (`/settings`)
+- Preferences section stubbed ("coming soon")
 
-- [ ] Create sign_in_records table migration
-- [ ] API to submit sign-in record
-- [ ] Sign-in history page
-- [ ] Team sign-in overview for managers
-- [ ] Weekly reports
-
----
-
-## Priority 5: Induction System Backend
-
-Currently hardcoded UI - needs database:
-
-- [ ] Create induction_items table
-- [ ] Create induction_progress table
-- [ ] Fetch induction items from database
-- [ ] Persist completion status per user
-- [ ] Auto-update user status when complete
-
----
-
-## Priority 6: News & Content
-
-- [ ] Create news_posts table migration
-- [ ] News post creation form (`/intranet/news/create`)
-- [ ] Rich text editor for content
-- [ ] Post pinning and publishing controls
-- [ ] Guides section (`/intranet/guides`)
-- [ ] Policies section (`/intranet/policies`)
-
----
-
-## Priority 7: HR Module Pages
-
-### Profile
-- [ ] `/hr/profile` - View and edit own profile
-- [ ] Profile photo upload
-- [ ] Update personal details
-
-### Org Chart
-- [ ] `/hr/org-chart` - Organization visualization
-- [ ] Team hierarchy display
-- [ ] Search by name/team
-
-### Team Management
-- [ ] `/hr/team` - View team members (for managers)
-- [ ] Team directory
-
-### Calendar
-- [ ] `/hr/calendar` - Calendar view
-- [ ] Google Calendar integration (fields exist in schema)
-
-### Assets
-- [ ] `/hr/assets` - View assigned assets
-- [ ] Create assets table
+### Infrastructure ✅
+- Security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy)
+- Error and loading boundaries for all protected routes
+- Structured logger (`src/lib/logger.ts`) ready for Sentry/Datadog swap
+- Audit logging via DB triggers on 8+ tables
+- Middleware auth with module access control by user type
 
 ---
 
-## Priority 8: Notifications
+## Remaining Work
 
-Database table exists but UI needs work:
-
-- [ ] Fetch real notification count in header (currently hardcoded "3")
-- [ ] Notification dropdown/panel UI
-- [ ] Mark as read functionality
-- [ ] Create notifications when events occur (leave approved, etc.)
-
----
-
-## Priority 9: Settings
-
-- [ ] `/settings` page
-- [ ] Notification preferences
+### Settings Preferences
+- [ ] Notification preferences (email/in-app toggles)
 - [ ] Google Calendar connection toggle
+- [ ] Theme/display preferences
 
----
+### HR Phase 1 Polish
+- [ ] HR dashboard landing page (`/hr` index with live stats)
+- [ ] Leave team capacity notification (info notice when team is light)
+- [ ] Bradford Factor display (optional, pending culture decision)
+- See [docs/hr-plan.md](./hr-plan.md) for full details
 
-## Priority 10: Admin Features
+### HR Phase 2
+- [ ] Absence records & sickness tracking
+- [ ] Return-to-work forms
+- [ ] Staff leaving forms (offboarding)
+- [ ] Onboarding progress tracker
+- [ ] Org chart (`/hr/org-chart` — placeholder exists)
+- [ ] My team view (`/hr/team` — placeholder exists)
+- See [docs/hr-plan.md](./hr-plan.md) for full details
 
-- [ ] User management page (view all users, edit roles)
-- [ ] Induction item management
-- [ ] Compliance reporting
-- [ ] Content moderation
+### HR Phase 3
+- [ ] Surveys & pulse checks
+- [ ] DEI / equality monitoring
+- [ ] Performance: 1-to-1 records, objectives
+- [ ] Praise / shout-outs
+- [ ] Reports & analytics with charts
+- See [docs/hr-plan.md](./hr-plan.md) for full details
+
+### Content Expansion
+- [ ] Surveys section (`/intranet/surveys` — placeholder exists)
 
 ---
 
 ## Technical Debt
 
-- [x] Remove hardcoded dashboard learning stats (now fetches real compliance course data)
-- [ ] Remove hardcoded dashboard stats (5 posts, 3 events)
-- [ ] Remove hardcoded notification badge count
-- [ ] Remove hardcoded induction checklist items
-- [ ] Add loading states to data fetches
-- [ ] Add proper error handling
-- [ ] Add form validation
+- [x] Remove hardcoded dashboard learning stats
+- [x] Remove hardcoded notification badge count
+- [x] Remove hardcoded induction checklist items
+- [x] Add loading states to data fetches
+- [x] Add error handling (error boundaries)
+- [x] Add form validation
+- [x] Security review (headers, `select("*")` audit, SSRF hardening)
+- [x] Dead code removal (`useUser()` hook deleted)
+- [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
+- [ ] Middleware JWT optimisation (replace DB round-trip with custom claims)
+- [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
+- [ ] Expand test coverage (~5% currently — 14 test files, 295 tests / ~130 source files)
+- [ ] Mobile responsiveness (currently desktop/laptop only)
+
+---
+
+## Test Accounts
+
+| Account | Type | Auth |
+|---------|------|------|
+| `test.worker@mcrpathways.org` | Admin | Magic link |
+| `abdulmuiz.adaranijo+test2@mcrpathways.org` | Staff (Full Test) | Magic link |
+| `test.practice@mcrpathways.org` | Pathways coordinator | Magic link |

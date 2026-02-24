@@ -84,7 +84,7 @@ describe("L&D Course Actions", () => {
       const result = await createCourse({
         title: "Intro to Pathways",
         description: "A beginner course",
-        category: "onboarding",
+        category: "compliance",
         duration_minutes: 30,
         is_required: true,
       });
@@ -95,7 +95,7 @@ describe("L&D Course Actions", () => {
         expect.objectContaining({
           title: "Intro to Pathways",
           description: "A beginner course",
-          category: "onboarding",
+          category: "compliance",
           duration_minutes: 30,
           is_required: true,
           created_by: "admin-123",
@@ -141,7 +141,7 @@ describe("L&D Course Actions", () => {
 
       const result = await createCourse({
         title: "Existing Course",
-        category: "onboarding",
+        category: "compliance",
       });
 
       expect(result).toEqual({
@@ -158,7 +158,7 @@ describe("L&D Course Actions", () => {
       );
 
       await expect(
-        createCourse({ title: "Test", category: "onboarding" })
+        createCourse({ title: "Test", category: "compliance" })
       ).rejects.toThrow("Not authenticated");
     });
 
@@ -168,7 +168,7 @@ describe("L&D Course Actions", () => {
       );
 
       await expect(
-        createCourse({ title: "Test", category: "onboarding" })
+        createCourse({ title: "Test", category: "compliance" })
       ).rejects.toThrow("Unauthorised: L&D admin access required");
     });
   });
