@@ -128,9 +128,10 @@ export function RecordAbsenceDialog({
 
         const uploadResult = await uploadFitNote(formData);
         if (!uploadResult.success) {
-          // Absence was created but fit note upload failed — warn but don't block
+          // Absence was created but fit note upload failed — warn but close dialog
           toast.error(`Absence recorded but fit note upload failed: ${uploadResult.error}`);
-          setError(`Absence recorded but fit note upload failed: ${uploadResult.error}`);
+          resetForm();
+          onOpenChange(false);
           return;
         }
       }
