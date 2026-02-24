@@ -3,7 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, induction_completed_at, last_sign_in_date";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, induction_completed_at, last_sign_in_date, fte, contract_type, department, region, is_external, work_pattern, start_date";
+
+/**
+ * Extended profile select for HR admin views — includes employment details
+ * but still excludes google_refresh_token and other auth-sensitive fields.
+ */
+export const HR_EMPLOYEE_SELECT =
+  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, last_sign_in_date, created_at";
 
 /**
  * Get the current authenticated user and their profile.
