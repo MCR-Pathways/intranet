@@ -153,7 +153,7 @@ export async function updateComplianceDocument(
 
   const sanitized: Record<string, unknown> = {};
   for (const field of ALLOWED_FIELDS) {
-    if (field in data) {
+    if (field in data && data[field as keyof typeof data] !== undefined) {
       sanitized[field] = data[field as keyof typeof data];
     }
   }

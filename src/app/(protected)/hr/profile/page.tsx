@@ -33,33 +33,34 @@ export default async function ProfilePage({
     redirect("/login");
   }
 
-  // Fetch employee personal details
-  const { data: employeeDetails } = await supabase
-    .from("employee_details")
-    .select(EMPLOYEE_DETAILS_SELECT)
-    .eq("profile_id", user.id)
-    .single();
-
-  // Fetch emergency contacts
-  const { data: emergencyContacts } = await supabase
-    .from("emergency_contacts")
-    .select(EMERGENCY_CONTACTS_SELECT)
-    .eq("profile_id", user.id)
-    .order("sort_order");
-
-  // Fetch employment history
-  const { data: employmentHistory } = await supabase
-    .from("employment_history")
-    .select(EMPLOYMENT_HISTORY_SELECT)
-    .eq("profile_id", user.id)
-    .order("effective_date", { ascending: false });
-
-  // Fetch compliance documents with type names
-  const { data: rawDocs } = await supabase
-    .from("compliance_documents")
-    .select(COMPLIANCE_DOCS_SELECT)
-    .eq("profile_id", user.id)
-    .order("expiry_date");
+  // Fetch all profile data in parallel
+  const [
+    { data: employeeDetails },
+    { data: emergencyContacts },
+    { data: employmentHistory },
+    { data: rawDocs },
+  ] = await Promise.all([
+    supabase
+      .from("employee_details")
+      .select(EMPLOYEE_DETAILS_SELECT)
+      .eq("profile_id", user.id)
+      .single(),
+    supabase
+      .from("emergency_contacts")
+      .select(EMERGENCY_CONTACTS_SELECT)
+      .eq("profile_id", user.id)
+      .order("sort_order"),
+    supabase
+      .from("employment_history")
+      .select(EMPLOYMENT_HISTORY_SELECT)
+      .eq("profile_id", user.id)
+      .order("effective_date", { ascending: false }),
+    supabase
+      .from("compliance_documents")
+      .select(COMPLIANCE_DOCS_SELECT)
+      .eq("profile_id", user.id)
+      .order("expiry_date"),
+  ]);
 
   // Flatten the joined type name for the component
   const complianceDocuments = (rawDocs ?? []).map((doc) => {
