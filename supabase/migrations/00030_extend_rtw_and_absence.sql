@@ -105,7 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_rtw_forms_status
 -- This generated column avoids repeating the calculation in every query.
 DO $$ BEGIN
   ALTER TABLE public.absence_records ADD COLUMN is_long_term BOOLEAN
-    GENERATED ALWAYS AS (end_date - start_date >= 28) STORED;
+    GENERATED ALWAYS AS (end_date - start_date >= 27) STORED;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 

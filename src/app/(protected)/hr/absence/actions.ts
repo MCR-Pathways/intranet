@@ -86,22 +86,18 @@ async function verifyRTWAuthority(
   currentUserId: string,
   employeeId: string,
 ): Promise<{ authorised: boolean; isHRAdmin: boolean; error?: string }> {
-  const { data: currentProfile } = await supabase
+  // Single query to fetch both profiles (avoids sequential round-trips)
+  const { data: profiles } = await supabase
     .from("profiles")
-    .select("is_hr_admin")
-    .eq("id", currentUserId)
-    .single();
+    .select("id, is_hr_admin, line_manager_id")
+    .in("id", [currentUserId, employeeId]);
+
+  const currentProfile = profiles?.find((p) => p.id === currentUserId);
+  const employeeProfile = profiles?.find((p) => p.id === employeeId);
 
   if (currentProfile?.is_hr_admin === true) {
     return { authorised: true, isHRAdmin: true };
   }
-
-  // Check if current user is the employee's line manager
-  const { data: employeeProfile } = await supabase
-    .from("profiles")
-    .select("line_manager_id")
-    .eq("id", employeeId)
-    .single();
 
   if (employeeProfile?.line_manager_id !== currentUserId) {
     return { authorised: false, isHRAdmin: false, error: "You are not authorised to manage this employee's RTW form" };

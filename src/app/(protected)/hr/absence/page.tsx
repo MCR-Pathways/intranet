@@ -19,45 +19,28 @@ export default async function AbsenceDashboardPage({
     redirect("/hr");
   }
 
-  // Fetch all absence records with employee names, plus RTW status
+  // Fetch all absence records with employee names and RTW status (via joins)
   const [
     { data: rawAbsences },
     { data: rawPendingRTW },
   ] = await Promise.all([
     supabase
       .from("absence_records")
-      .select(`${ABSENCE_RECORD_SELECT}, profiles!absence_records_profile_id_fkey(full_name)`)
+      .select(`${ABSENCE_RECORD_SELECT}, profiles!absence_records_profile_id_fkey(full_name), return_to_work_forms(id, status)`)
       .order("start_date", { ascending: false })
       .limit(200),
     supabase
       .from("return_to_work_forms")
-      .select("id, absence_record_id, employee_id, absence_start_date, absence_end_date, status, completed_at, completed_by, profiles!return_to_work_forms_employee_id_fkey(full_name)")
+      .select("id, absence_record_id, employee_id, absence_start_date, absence_end_date, status, completed_at, completed_by, profiles!return_to_work_forms_employee_id_fkey(full_name), completed_by_profile:profiles!return_to_work_forms_completed_by_fkey(full_name)")
       .in("status", ["submitted", "draft"])
       .order("completed_at", { ascending: false }),
   ]);
 
-  // Fetch RTW forms for all absence records to map status
-  const absenceIds = (rawAbsences ?? []).map((a) => a.id as string);
-  const { data: rtwForAbsences } = absenceIds.length > 0
-    ? await supabase
-        .from("return_to_work_forms")
-        .select("id, absence_record_id, status")
-        .in("absence_record_id", absenceIds)
-    : { data: [] };
-
-  // Build RTW map: absence_record_id → { id, status }
-  const rtwMap: Record<string, { id: string; status: string }> = {};
-  for (const rtw of rtwForAbsences ?? []) {
-    rtwMap[rtw.absence_record_id as string] = {
-      id: rtw.id as string,
-      status: rtw.status as string,
-    };
-  }
-
-  // Flatten absence records
+  // Flatten absence records (RTW status now comes from the join)
   const absenceRecords = (rawAbsences ?? []).map((r) => {
     const profile = r.profiles as unknown as { full_name: string } | null;
-    const rtw = rtwMap[r.id as string];
+    const rtwForms = r.return_to_work_forms as unknown as Array<{ id: string; status: string }> | null;
+    const rtw = rtwForms?.[0] ?? null;
     return {
       id: r.id as string,
       profile_id: r.profile_id as string,
@@ -74,26 +57,10 @@ export default async function AbsenceDashboardPage({
     };
   });
 
-  // Flatten pending RTW forms — also fetch completed_by name
-  const completedByIds = [...new Set(
-    (rawPendingRTW ?? [])
-      .map((f) => f.completed_by as string | null)
-      .filter(Boolean),
-  )] as string[];
-
-  const completedByMap: Record<string, string> = {};
-  if (completedByIds.length > 0) {
-    const { data: completedByProfiles } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", completedByIds);
-    for (const p of completedByProfiles ?? []) {
-      completedByMap[p.id as string] = p.full_name as string;
-    }
-  }
-
+  // Flatten pending RTW forms (completed_by name now comes from the join)
   const pendingRTWForms = (rawPendingRTW ?? []).map((f) => {
     const profile = f.profiles as unknown as { full_name: string } | null;
+    const completedByProfile = f.completed_by_profile as unknown as { full_name: string } | null;
     return {
       id: f.id as string,
       absence_record_id: f.absence_record_id as string,
@@ -103,7 +70,7 @@ export default async function AbsenceDashboardPage({
       absence_end_date: f.absence_end_date as string,
       status: f.status as "draft" | "submitted" | "confirmed" | "locked",
       completed_at: f.completed_at as string,
-      completed_by_name: completedByMap[f.completed_by as string] ?? null,
+      completed_by_name: completedByProfile?.full_name ?? null,
     };
   });
 
