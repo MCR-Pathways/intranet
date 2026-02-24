@@ -263,6 +263,9 @@ export const TRIGGER_POINT_MAX_SPELLS = 4;
 /** Max working days absent before trigger is reached (MCR policy: 8). */
 export const TRIGGER_POINT_MAX_DAYS = 8;
 
+/** Maximum calendar days for a single absence record (prevents DoS via date range loops). */
+export const MAX_ABSENCE_DAYS = 365;
+
 // =============================================
 // TRIGGER POINT CALCULATION
 // =============================================

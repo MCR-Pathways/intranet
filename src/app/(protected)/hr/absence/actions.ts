@@ -7,6 +7,8 @@ import {
   getHolidayCalendar,
   ABSENCE_RECORD_SELECT,
   RTW_FORM_SELECT,
+  MAX_ABSENCE_DAYS,
+  TRIGGER_POINT_WINDOW_MONTHS,
   validateHRDocument,
 } from "@/lib/hr";
 import type { Region } from "@/lib/hr";
@@ -142,9 +144,29 @@ export async function recordAbsence(data: {
     return { success: false, error: "End date cannot be before start date" };
   }
 
+  // Guard against excessively long date ranges
+  const diffMs = new Date(data.end_date + "T00:00:00").getTime() - new Date(data.start_date + "T00:00:00").getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays > MAX_ABSENCE_DAYS) {
+    return { success: false, error: `Absence cannot exceed ${MAX_ABSENCE_DAYS} days. For longer absences, record separate entries.` };
+  }
+
   // Validate sickness category if provided
   if (data.sickness_category && !VALID_SICKNESS_CATEGORIES.includes(data.sickness_category)) {
     return { success: false, error: "Invalid sickness category" };
+  }
+
+  // Check for overlapping absences
+  const { data: overlapping } = await supabase
+    .from("absence_records")
+    .select("id")
+    .eq("profile_id", data.profile_id)
+    .lte("start_date", data.end_date)
+    .gte("end_date", data.start_date)
+    .limit(1);
+
+  if (overlapping && overlapping.length > 0) {
+    return { success: false, error: "This employee already has an absence recorded during this period." };
   }
 
   // Fetch employee region for public holiday lookup
@@ -160,13 +182,15 @@ export async function recordAbsence(data: {
 
   const region = (profile.region as Region | null) ?? null;
   const calendar = getHolidayCalendar(region);
-  const year = new Date(data.start_date + "T00:00:00").getFullYear();
+  const startYear = new Date(data.start_date + "T00:00:00").getFullYear();
+  const endYear = new Date(data.end_date + "T00:00:00").getFullYear();
+  const years = startYear === endYear ? [startYear] : [startYear, endYear];
 
   const { data: holidayRows } = await supabase
     .from("public_holidays")
     .select("holiday_date")
     .in("region", [calendar, "all"])
-    .eq("year", year);
+    .in("year", years);
 
   const holidays = (holidayRows ?? []).map((h) => h.holiday_date as string);
 
@@ -256,6 +280,27 @@ export async function updateAbsence(
       return { success: false, error: "End date cannot be before start date" };
     }
 
+    // Guard against excessively long date ranges
+    const diffMs = new Date(endDate + "T00:00:00").getTime() - new Date(startDate + "T00:00:00").getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays > MAX_ABSENCE_DAYS) {
+      return { success: false, error: `Absence cannot exceed ${MAX_ABSENCE_DAYS} days. For longer absences, record separate entries.` };
+    }
+
+    // Check for overlapping absences (excluding this record)
+    const { data: overlapping } = await supabase
+      .from("absence_records")
+      .select("id")
+      .eq("profile_id", existing.profile_id as string)
+      .neq("id", absenceId)
+      .lte("start_date", endDate)
+      .gte("end_date", startDate)
+      .limit(1);
+
+    if (overlapping && overlapping.length > 0) {
+      return { success: false, error: "This employee already has an absence recorded during this period." };
+    }
+
     // Fetch holidays for recalculation
     const { data: profile } = await supabase
       .from("profiles")
@@ -265,13 +310,15 @@ export async function updateAbsence(
 
     const region = (profile?.region as Region | null) ?? null;
     const calendar = getHolidayCalendar(region);
-    const year = new Date(startDate + "T00:00:00").getFullYear();
+    const updateStartYear = new Date(startDate + "T00:00:00").getFullYear();
+    const updateEndYear = new Date(endDate + "T00:00:00").getFullYear();
+    const updateYears = updateStartYear === updateEndYear ? [updateStartYear] : [updateStartYear, updateEndYear];
 
     const { data: holidayRows } = await supabase
       .from("public_holidays")
       .select("holiday_date")
       .in("region", [calendar, "all"])
-      .eq("year", year);
+      .in("year", updateYears);
 
     const holidays = (holidayRows ?? []).map((h) => h.holiday_date as string);
     sanitised.total_days = calculateWorkingDays(startDate, endDate, holidays);
@@ -358,6 +405,12 @@ export async function uploadFitNote(
 
   if (!absenceId || !profileId || !file) {
     return { success: false, error: "Missing required fields" };
+  }
+
+  // Validate UUID format to prevent path manipulation in storage paths
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(profileId) || !UUID_REGEX.test(absenceId)) {
+    return { success: false, error: "Invalid ID format" };
   }
 
   // Validate file
@@ -497,10 +550,16 @@ export async function createRTWForm(
   }
 
   // Calculate trigger point from 12-month absence history
+  // Use absence end_date as reference for the rolling window
+  const rtwWindowStart = new Date(absence.end_date + "T00:00:00");
+  rtwWindowStart.setMonth(rtwWindowStart.getMonth() - TRIGGER_POINT_WINDOW_MONTHS);
+  const rtwWindowStartStr = rtwWindowStart.toISOString().slice(0, 10);
+
   const { data: historyRecords } = await supabase
     .from("absence_records")
     .select("start_date, end_date, total_days, absence_type")
     .eq("profile_id", employeeId)
+    .gte("end_date", rtwWindowStartStr)
     .neq("id", absenceId); // Exclude the current absence
 
   const triggerResult = calculateTriggerPoint(
@@ -847,10 +906,17 @@ export async function fetchTriggerPointStatus(
     return { result: { reached: false, spells: 0, days: 0, reason: null }, error: "Not authenticated" };
   }
 
+  // Compute 12-month window from today for the DB-level filter
+  const today = new Date().toISOString().slice(0, 10);
+  const triggerWindowStart = new Date(today + "T00:00:00");
+  triggerWindowStart.setMonth(triggerWindowStart.getMonth() - TRIGGER_POINT_WINDOW_MONTHS);
+  const triggerWindowStartStr = triggerWindowStart.toISOString().slice(0, 10);
+
   let query = supabase
     .from("absence_records")
     .select("start_date, end_date, total_days, absence_type")
-    .eq("profile_id", profileId);
+    .eq("profile_id", profileId)
+    .gte("end_date", triggerWindowStartStr);
 
   if (excludeAbsenceId) {
     query = query.neq("id", excludeAbsenceId);
@@ -861,8 +927,6 @@ export async function fetchTriggerPointStatus(
   if (error) {
     return { result: { reached: false, spells: 0, days: 0, reason: null }, error: error.message };
   }
-
-  const today = new Date().toISOString().slice(0, 10);
   const result = calculateTriggerPoint(
     (data ?? []).map((r) => ({
       start_date: r.start_date as string,

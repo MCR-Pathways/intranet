@@ -124,5 +124,5 @@ CREATE POLICY "Managers and HR can insert notifications"
   ON public.notifications FOR INSERT TO authenticated
   WITH CHECK (
     public.is_hr_admin()
-    OR public.is_line_manager()
+    OR public.manages_user(user_id)
   );
