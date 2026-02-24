@@ -4,6 +4,7 @@ import { getCurrentUser, requireHRAdmin } from "@/lib/auth";
 import {
   STAFF_LEAVING_FORM_SELECT,
   getLeaveYearForDate,
+  calculateProRataEntitlement,
   formatHRDate,
 } from "@/lib/hr";
 import type { LeavingReason } from "@/lib/hr";
@@ -28,7 +29,6 @@ const LEAVING_FORM_ALLOWED_FIELDS = [
   "equipment_notes",
   "access_revoked",
   "access_revoked_date",
-  "final_leave_balance",
   "rehire_eligible",
   "additional_notes",
 ] as const;
@@ -649,8 +649,8 @@ export async function fetchLeavingFormSummary(profileId: string, leavingDate?: s
 // =============================================
 
 /**
- * Calculate final annual leave balance for an employee.
- * Uses the same logic as the employee detail page.
+ * Calculate final annual leave balance for an employee, pro-rated to their leaving date.
+ * For mid-year leavers, entitlement is proportional to days worked in the leave year.
  */
 async function calculateFinalLeaveBalance(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
@@ -659,7 +659,7 @@ async function calculateFinalLeaveBalance(
 ): Promise<number | null> {
   const leaveYear = getLeaveYearForDate(leavingDate ? new Date(leavingDate) : undefined);
 
-  const [{ data: entitlements }, { data: requests }] = await Promise.all([
+  const [{ data: entitlements }, { data: requests }, { data: profile }] = await Promise.all([
     supabase
       .from("leave_entitlements")
       .select("leave_type, base_entitlement_days, fte_at_calculation, adjustments_days")
@@ -671,22 +671,38 @@ async function calculateFinalLeaveBalance(
       .select("leave_type, total_days, status")
       .eq("profile_id", profileId)
       .eq("status", "approved"),
+    supabase
+      .from("profiles")
+      .select("start_date")
+      .eq("id", profileId)
+      .single(),
   ]);
 
   if (!entitlements || entitlements.length === 0) {
     return null;
   }
 
-  // Calculate total annual leave balance — accumulate across entitlement records
-  // (an employee may have multiple rows, e.g. base + mid-year adjustment)
+  const startDate = (profile?.start_date as string) ?? leaveYear.start;
+  const endDate = leavingDate ?? leaveYear.end;
+
+  // Calculate total annual leave entitlement — pro-rated to leaving date
+  // Accumulate across entitlement records (an employee may have multiple rows)
   let totalEntitlement = 0;
   for (const ent of entitlements) {
     if ((ent.leave_type as string) !== "annual") continue;
 
-    totalEntitlement += Math.round(
-      ((ent.base_entitlement_days as number) * (ent.fte_at_calculation as number) +
-        (ent.adjustments_days as number)) * 2,
-    ) / 2;
+    const baseEntitlement = (ent.base_entitlement_days as number) + (ent.adjustments_days as number);
+    const fte = ent.fte_at_calculation as number;
+
+    // Pro-rate entitlement to the period worked (start date → leaving date)
+    totalEntitlement += calculateProRataEntitlement(
+      baseEntitlement,
+      fte,
+      startDate,
+      endDate,
+      leaveYear.start,
+      leaveYear.end,
+    );
   }
 
   const totalUsed = (requests ?? [])

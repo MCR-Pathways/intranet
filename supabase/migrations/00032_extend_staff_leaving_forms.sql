@@ -28,11 +28,12 @@ ALTER TABLE public.staff_leaving_forms ALTER COLUMN completed_by DROP NOT NULL;
 ALTER TABLE public.staff_leaving_forms ALTER COLUMN completed_at DROP NOT NULL;
 ALTER TABLE public.staff_leaving_forms ALTER COLUMN completed_at DROP DEFAULT;
 
--- 6. Partial unique index: one non-cancelled form per employee
--- Ensures no duplicate active leaving forms for the same person
-CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_leaving_active_per_profile
+-- 6. Partial unique index: one active leaving form per employee
+-- Allows rehired employees (completed form) and cancelled forms to coexist
+DROP INDEX IF EXISTS idx_staff_leaving_active_per_profile;
+CREATE UNIQUE INDEX idx_staff_leaving_active_per_profile
   ON public.staff_leaving_forms(profile_id)
-  WHERE status != 'cancelled';
+  WHERE status NOT IN ('completed', 'cancelled');
 
 -- 7. Index on status for dashboard queries
 CREATE INDEX IF NOT EXISTS idx_staff_leaving_status
