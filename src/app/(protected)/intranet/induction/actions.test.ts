@@ -32,7 +32,7 @@ vi.mock("next/cache", () => ({
 
 // Mock redirect to throw like Next.js does
 const REDIRECT_ERROR = new Error("NEXT_REDIRECT");
-(REDIRECT_ERROR as Record<string, unknown>).digest = "NEXT_REDIRECT";
+(REDIRECT_ERROR as unknown as Record<string, unknown>).digest = "NEXT_REDIRECT";
 vi.mock("next/navigation", () => ({
   redirect: vi.fn().mockImplementation(() => {
     throw REDIRECT_ERROR;

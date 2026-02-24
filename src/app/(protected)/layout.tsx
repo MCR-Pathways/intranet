@@ -43,7 +43,7 @@ export default async function ProtectedLayout({
     <TooltipProvider>
       <AppLayout
         user={user}
-        profile={profile as Profile}
+        profile={profile as unknown as Profile}
         needsSignIn={needsSignIn}
         initialNotifications={initialNotifications}
       >
