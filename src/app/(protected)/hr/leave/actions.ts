@@ -154,6 +154,42 @@ export async function withdrawLeave(requestId: string) {
 }
 
 // =============================================
+// AUTHORITY CHECK (shared by approve + reject)
+// =============================================
+
+/**
+ * Verify the current user is authorised to approve/reject a leave request.
+ * Must be the requester's line manager or an HR admin.
+ */
+async function verifyLeaveDecisionAuthority(
+  supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
+  userId: string,
+  requesterId: string,
+): Promise<{ authorised: boolean; error?: string }> {
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("is_hr_admin")
+    .eq("id", userId)
+    .single();
+
+  if (currentProfile?.is_hr_admin === true) {
+    return { authorised: true };
+  }
+
+  const { data: requesterProfile } = await supabase
+    .from("profiles")
+    .select("line_manager_id")
+    .eq("id", requesterId)
+    .single();
+
+  if (requesterProfile?.line_manager_id !== userId) {
+    return { authorised: false, error: "You are not authorised to action this request" };
+  }
+
+  return { authorised: true };
+}
+
+// =============================================
 // APPROVE LEAVE (Manager / HR Admin)
 // =============================================
 
@@ -178,26 +214,9 @@ export async function approveLeave(requestId: string, notes?: string) {
     return { success: false, error: "Request not found or not pending" };
   }
 
-  // Verify authority: line manager or HR admin
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("is_hr_admin")
-    .eq("id", user.id)
-    .single();
-
-  const isHRAdmin = currentProfile?.is_hr_admin === true;
-
-  if (!isHRAdmin) {
-    // Check if current user is the line manager
-    const { data: requesterProfile } = await supabase
-      .from("profiles")
-      .select("line_manager_id")
-      .eq("id", request.profile_id)
-      .single();
-
-    if (requesterProfile?.line_manager_id !== user.id) {
-      return { success: false, error: "You are not authorised to approve this request" };
-    }
+  const auth = await verifyLeaveDecisionAuthority(supabase, user.id, request.profile_id);
+  if (!auth.authorised) {
+    return { success: false, error: auth.error! };
   }
 
   const { error } = await supabase
@@ -251,25 +270,9 @@ export async function rejectLeave(requestId: string, reason: string) {
     return { success: false, error: "Request not found or not pending" };
   }
 
-  // Verify authority
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("is_hr_admin")
-    .eq("id", user.id)
-    .single();
-
-  const isHRAdmin = currentProfile?.is_hr_admin === true;
-
-  if (!isHRAdmin) {
-    const { data: requesterProfile } = await supabase
-      .from("profiles")
-      .select("line_manager_id")
-      .eq("id", request.profile_id)
-      .single();
-
-    if (requesterProfile?.line_manager_id !== user.id) {
-      return { success: false, error: "You are not authorised to reject this request" };
-    }
+  const auth = await verifyLeaveDecisionAuthority(supabase, user.id, request.profile_id);
+  if (!auth.authorised) {
+    return { success: false, error: auth.error! };
   }
 
   const { error } = await supabase
