@@ -91,19 +91,35 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 
 ---
 
-## Phase 2 — PLANNED
+## Phase 2 — IN PROGRESS
 
-Database tables already created in migration `00024`. Need RLS policies (in `00025` or new migration) and UI.
+Database tables created in migration `00024`, extended in `00030`.
 
-### Absence Records & Sickness Tracking
-- **Table:** `absence_records` — extends leave with sickness categories, fit note tracking, GP details
-- **Columns:** `profile_id`, `leave_request_id` (optional link), `start_date`, `end_date`, `sickness_category` (12 categories in `src/lib/hr.ts`), `is_work_related`, `fit_note_received`, `fit_note_expiry`, `gp_referral`, `occupational_health_referral`, `notes`
-- **UI needed:** Sickness record form (HR admin), sickness history tab on employee detail, sickness trends dashboard
+### Absence Records & Sickness Tracking ✅ DONE
+- **Route:** `/hr/absence` (HR admin dashboard with All Absences + Pending RTW tabs)
+- **Components:** `src/components/hr/record-absence-dialog.tsx`, `src/components/hr/profile-absence-tab.tsx`, `src/components/hr/absence-dashboard-content.tsx`
+- **Actions:** `src/app/(protected)/hr/absence/actions.ts`
+- **Capabilities:**
+  - HR admin records absences with type (sick self-certified, sick fit note, unauthorised, other)
+  - Auto-calculates working days (FTE-aware, excludes weekends + public holidays)
+  - Sickness category selection (12 categories from MCR policy)
+  - Fit note upload to `hr-documents/fit-notes/` storage bucket
+  - Generated `is_long_term` column (28+ calendar days, MCR policy)
+  - Wellbeing prompt cards for HR admins (replaces raw Bradford Factor)
+  - Absence tab on employee detail view with history table, RTW status badges, delete with confirmation
 
-### Return-to-Work Forms
-- **Table:** `return_to_work_forms` — structured RTW interview data
-- **Columns:** `absence_record_id`, `employee_id`, `completed_by`, `meeting_date`, `absence_reason`, `support_offered`, `adjustments_needed`, `adjustments_details`, `fit_for_work`, `follow_up_required`, `follow_up_date`, `follow_up_notes`, `employee_comments`, `manager_comments`
-- **UI needed:** RTW form (manager fills in after employee returns), linked from absence record
+### Return-to-Work Forms ✅ DONE
+- **Route:** `/hr/absence/rtw/[formId]` (employee confirmation page)
+- **Components:** `src/components/hr/return-to-work-form.tsx` (Sheet — side drawer with 7 sections)
+- **Lifecycle:** Draft → Submitted → Locked
+  - Manager creates draft (auto-fills dates, auto-calculates trigger point from 12-month history)
+  - Manager fills in sections: Wellbeing Discussion, Return Assessment, Trigger Points, Procedures, Notes
+  - Manager submits → notification sent to employee
+  - Employee reviews, adds comments, clicks "I Confirm This Is Accurate" → form locks
+  - HR admin can unlock for corrections
+- **Trigger point auto-calculation:** 4 spells OR 8+ working days in rolling 12 months (MCR Absence Management Policy, April 2025). Manager can override.
+- **Migration:** `supabase/migrations/00030_extend_rtw_and_absence.sql` — 12 new columns on `return_to_work_forms`, generated `is_long_term` column, notification INSERT policy
+- **Dashboard integration:** Pending RTW Forms stat card on `/hr`, sidebar nav link to `/hr/absence`
 
 ### Staff Leaving Forms (Offboarding)
 - **Table:** `staff_leaving_forms` — offboarding checklist and exit data
@@ -188,7 +204,7 @@ Database tables already created in migration `00024`. Larger features for later.
 | Server actions | `src/app/(protected)/hr/*/actions.ts` |
 | Components | `src/components/hr/*.tsx` |
 | DB types | `src/types/database.types.ts` |
-| Migrations | `supabase/migrations/00024–00029` |
+| Migrations | `supabase/migrations/00024–00030` |
 | Middleware | `src/middleware.ts` (HR access: staff only) |
 | Tests | `src/app/(protected)/hr/users/actions.test.ts` |
 
@@ -196,7 +212,7 @@ Database tables already created in migration `00024`. Larger features for later.
 
 ## Decisions Pending
 
-- [ ] Bradford Factor: Does MCR Pathways want this surfaced in the UI?
+- [x] Bradford Factor: Replaced with wellbeing prompts (decided Feb 2026). `calculateBradfordFactor()` kept as internal utility.
 - [ ] Onboarding checklist: What items should be configurable vs fixed?
 - [ ] Reports priority: Which reports are needed first for board/funding?
 - [ ] Profile photos: Investigate `avatar_url` from Supabase Auth Google OAuth

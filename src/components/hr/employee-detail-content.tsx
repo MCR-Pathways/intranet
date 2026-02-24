@@ -14,6 +14,7 @@ import { ProfileEmploymentTab } from "./profile-employment-tab";
 import { ProfileDocumentsTab } from "./profile-documents-tab";
 import { ProfileLeaveTab } from "./profile-leave-tab";
 import { ProfileAssetsTab } from "./profile-assets-tab";
+import { ProfileAbsenceTab } from "./profile-absence-tab";
 import { ProfileKeyDatesSection } from "./profile-key-dates-section";
 import { EmploymentEditDialog } from "./employment-edit-dialog";
 import { PersonalDetailsEditDialog } from "./personal-details-edit-dialog";
@@ -29,6 +30,9 @@ import type {
   EmploymentHistoryEntry,
   LeaveBalance,
   LeaveRequest,
+  AbsenceRecord,
+  ReturnToWorkForm,
+  RTWStatus,
 } from "@/types/hr";
 import { Pencil, Phone, Mail, User } from "lucide-react";
 
@@ -90,9 +94,11 @@ interface EmployeeDetailContentProps {
   publicHolidays?: string[];
   assetAssignments?: AssetAssignmentRow[];
   keyDates?: KeyDateRow[];
+  absenceRecords?: (AbsenceRecord & { rtw_status: RTWStatus | null; rtw_form_id: string | null })[];
+  rtwForms?: Record<string, ReturnToWorkForm>;
 }
 
-const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets"];
+const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets", "absence"];
 
 export function EmployeeDetailContent({
   profile,
@@ -111,6 +117,8 @@ export function EmployeeDetailContent({
   publicHolidays = [],
   assetAssignments = [],
   keyDates = [],
+  absenceRecords = [],
+  rtwForms = {},
 }: EmployeeDetailContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "overview";
 
@@ -127,6 +135,7 @@ export function EmployeeDetailContent({
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="leave">Leave</TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
+          <TabsTrigger value="absence">Absence</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-4">
@@ -280,6 +289,19 @@ export function EmployeeDetailContent({
             profileName={profile.full_name}
             assignments={assetAssignments}
             isHRAdmin={isHRAdmin}
+          />
+        </TabsContent>
+
+        <TabsContent value="absence" className="mt-6">
+          <ProfileAbsenceTab
+            profileId={profile.id}
+            profileName={profile.full_name}
+            absenceRecords={absenceRecords}
+            rtwForms={rtwForms}
+            publicHolidays={publicHolidays}
+            currentUserId={currentUserId}
+            isHRAdmin={isHRAdmin}
+            isManager={profile.is_line_manager}
           />
         </TabsContent>
       </Tabs>

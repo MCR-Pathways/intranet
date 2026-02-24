@@ -17,6 +17,8 @@ import {
   Package,
   Clock,
   AlertTriangle,
+  Stethoscope,
+  ClipboardCheck,
 } from "lucide-react";
 
 // =============================================
@@ -88,6 +90,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     expiringResult,
     expiredResult,
     overdueResult,
+    pendingRTWResult,
   ] = await Promise.all([
     // Staff on leave today
     supabase
@@ -118,6 +121,11 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
       .select("id", { count: "exact", head: true })
       .eq("is_completed", false)
       .lt("due_date", today),
+    // Pending RTW forms (awaiting employee confirmation)
+    supabase
+      .from("return_to_work_forms")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "submitted"),
   ]);
 
   return {
@@ -126,6 +134,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     complianceExpiring: expiringResult.count ?? 0,
     complianceExpired: expiredResult.count ?? 0,
     keyDatesOverdue: overdueResult.count ?? 0,
+    pendingRTW: pendingRTWResult.count ?? 0,
   };
 }
 
@@ -157,7 +166,7 @@ export default async function HRPage() {
 
       {/* HR Admin dashboard stats */}
       {isHRAdmin && stats && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             title="On Leave Today"
             value={stats.onLeaveToday}
@@ -211,6 +220,15 @@ export default async function HRPage() {
             icon={CalendarClock}
             iconColour={stats.keyDatesOverdue > 0 ? "text-red-600" : "text-muted-foreground"}
             valueColour={stats.keyDatesOverdue > 0 ? "text-red-700" : "text-green-700"}
+          />
+          <StatCard
+            title="Pending RTW Forms"
+            value={stats.pendingRTW}
+            subtitle={stats.pendingRTW > 0 ? "awaiting confirmation" : "all confirmed"}
+            href="/hr/absence"
+            icon={ClipboardCheck}
+            iconColour={stats.pendingRTW > 0 ? "text-amber-600" : "text-muted-foreground"}
+            valueColour={stats.pendingRTW > 0 ? "text-amber-700" : "text-green-700"}
           />
         </div>
       )}
@@ -349,6 +367,24 @@ export default async function HRPage() {
               <CardContent>
                 <CardDescription>
                   Track probations, appraisals, and contract renewals
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {isHRAdmin && (
+          <Link href="/hr/absence">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Absence & Sickness
+                </CardTitle>
+                <Stethoscope className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Record absences, manage return-to-work forms
                 </CardDescription>
               </CardContent>
             </Card>

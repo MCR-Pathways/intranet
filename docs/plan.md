@@ -79,8 +79,8 @@
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 2
-- [ ] Absence records & sickness tracking
-- [ ] Return-to-work forms
+- [x] Absence records & sickness tracking
+- [x] Return-to-work forms (digital replacement for paper RTW Discussion Form)
 - [ ] Staff leaving forms (offboarding)
 - [ ] Onboarding progress tracker
 - [ ] Org chart (`/hr/org-chart` — placeholder exists)
