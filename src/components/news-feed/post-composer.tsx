@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 import { cn, getInitials } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
@@ -77,9 +78,12 @@ export function PostComposer({ userProfile }: PostComposerProps) {
         requestAnimationFrame(() => resize());
         if (result.warning) {
           setError(result.warning);
+        } else {
+          toast.success("Post published");
         }
       } else {
         setError(result.error);
+        toast.error(result.error || "Something went wrong");
       }
     });
   };

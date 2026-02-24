@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import type { CourseCategory } from "@/types/database.types";
 
 interface CourseCreateDialogProps {
@@ -75,10 +76,12 @@ export function CourseCreateDialog({
       });
 
       if (result.success) {
+        toast.success("Course created");
         resetForm();
         onOpenChange(false);
       } else {
         setError(result.error || "Failed to create course");
+        toast.error(result.error || "Failed to create course");
       }
     });
   };

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 interface InductionItemPageProps {
@@ -59,6 +60,7 @@ export function InductionItemPage({
 
     try {
       await markInductionItemComplete(itemId);
+      toast.success("Step completed");
       // Server action calls redirect(), but as a fallback:
       setCompleted(true);
       window.location.href = "/intranet/induction";
@@ -68,6 +70,7 @@ export function InductionItemPage({
       if (error?.message?.includes("NEXT_REDIRECT")) {
         return; // Redirect is happening, do nothing
       }
+      toast.error("Something went wrong");
       logger.error("Error marking item complete", { error: err });
     } finally {
       setIsSubmitting(false);

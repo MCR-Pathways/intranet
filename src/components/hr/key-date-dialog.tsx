@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { createKeyDate, updateKeyDate } from "@/app/(protected)/hr/key-dates/actions";
+import { toast } from "sonner";
 
 const DATE_TYPE_OPTIONS = [
   { value: "probation_end", label: "Probation End" },
@@ -92,8 +93,14 @@ export function KeyDateDialog({
             description: description.trim() || undefined,
           });
 
-      if (result.success) { resetForm(); onOpenChange(false); }
-      else { setError(result.error); }
+      if (result.success) {
+        toast.success(isEditing ? "Key date updated" : "Key date created");
+        resetForm();
+        onOpenChange(false);
+      } else {
+        toast.error(result.error || "Something went wrong");
+        setError(result.error);
+      }
     });
   }
 

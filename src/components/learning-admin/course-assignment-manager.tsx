@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { toast } from "sonner";
 import { Plus, X, Users, UserCheck } from "lucide-react";
 import type { CourseAssignment, Team } from "@/types/database.types";
 
@@ -78,10 +79,12 @@ export function CourseAssignmentManager({
       });
 
       if (result.success) {
+        toast.success("Course assigned");
         setAssignValue("");
         setShowDialog(false);
       } else {
         setError(result.error || "Failed to assign course");
+        toast.error(result.error || "Failed to assign course");
       }
     });
   };
@@ -94,6 +97,7 @@ export function CourseAssignmentManager({
     if (!removeTarget) return;
     startTransition(async () => {
       await removeAssignment(removeTarget.id, courseId);
+      toast.success("Assignment removed");
       setRemoveTarget(null);
     });
   };

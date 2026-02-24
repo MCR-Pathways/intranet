@@ -29,6 +29,7 @@ import {
   FileText,
   HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
@@ -66,6 +67,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
     }));
     startTransition(async () => {
       await reorderLessons(courseId, newOrders);
+      toast.success("Lesson order saved");
     });
   };
 
@@ -77,6 +79,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
     }));
     startTransition(async () => {
       await reorderLessons(courseId, newOrders);
+      toast.success("Lesson order saved");
     });
   };
 
@@ -84,6 +87,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
     if (!deleteTarget) return;
     startTransition(async () => {
       await deleteLesson(deleteTarget.id, courseId);
+      toast.success("Lesson deleted");
       setDeleteTarget(null);
     });
   };

@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { assignAsset } from "@/app/(protected)/hr/assets/actions";
+import { toast } from "sonner";
 
 interface Employee {
   id: string;
@@ -52,8 +53,8 @@ export function AssetAssignDialog({
         condition_on_assignment: condition,
         notes: notes || undefined,
       });
-      if (result.success) { resetForm(); onOpenChange(false); }
-      else { setError(result.error); }
+      if (result.success) { toast.success("Asset assigned successfully"); resetForm(); onOpenChange(false); }
+      else { toast.error(result.error || "Something went wrong"); setError(result.error); }
     });
   }
 

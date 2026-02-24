@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { GENDER_CONFIG, COUNTRY_OPTIONS } from "@/lib/hr";
 import type { EmployeeDetails } from "@/types/hr";
+import { toast } from "sonner";
 
 interface PersonalDetailsEditDialogProps {
   userId: string;
@@ -73,8 +74,10 @@ export function PersonalDetailsEditDialog({
       });
 
       if (result.success) {
+        toast.success("Personal details updated");
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to update personal details");
       }
     });

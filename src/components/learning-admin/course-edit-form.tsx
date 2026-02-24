@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateCourse } from "@/app/(protected)/learning/admin/courses/actions";
+import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,9 +63,11 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
 
       if (result.success) {
         setSuccess(true);
+        toast.success("Course details saved");
         setTimeout(() => setSuccess(false), 3000);
       } else {
         setError(result.error || "Failed to update course");
+        toast.error(result.error || "Failed to update course");
       }
     });
   };

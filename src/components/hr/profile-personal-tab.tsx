@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { GENDER_CONFIG, COUNTRY_OPTIONS } from "@/lib/hr";
 import type { EmployeeDetails, EmergencyContact } from "@/types/hr";
 import { Pencil, Plus, Trash2, Phone, Mail, User } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProfilePersonalTabProps {
   employeeDetails: EmployeeDetails | null;
@@ -97,10 +98,12 @@ export function ProfilePersonalTab({
       });
 
       if (result.success) {
+        toast.success("Personal details updated");
         setIsEditing(false);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to update personal details");
       }
     });
@@ -109,7 +112,12 @@ export function ProfilePersonalTab({
   const handleDeleteContact = () => {
     if (!deleteTarget) return;
     startTransition(async () => {
-      await deleteEmergencyContact(deleteTarget.id);
+      const result = await deleteEmergencyContact(deleteTarget.id);
+      if (result.success) {
+        toast.success("Emergency contact removed");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
       setDeleteTarget(null);
     });
   };

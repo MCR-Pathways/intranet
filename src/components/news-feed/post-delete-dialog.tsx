@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { deletePost } from "@/app/(protected)/intranet/actions";
 
 interface PostDeleteDialogProps {
@@ -30,6 +31,7 @@ export function PostDeleteDialog({
   const handleDelete = () => {
     startTransition(async () => {
       await deletePost(postId);
+      toast.success("Post deleted");
       onOpenChange(false);
     });
   };

@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogClose,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { AlertTriangle, Eye, EyeOff, Undo2 } from "lucide-react";
 
 interface CourseDangerZoneProps {
@@ -45,6 +46,7 @@ export function CourseDangerZone({
       // Activate immediately, no confirmation needed
       startTransition(async () => {
         await toggleCourseActive(courseId, true);
+        toast.success("Course activated");
       });
     }
   };
@@ -52,6 +54,7 @@ export function CourseDangerZone({
   const handleConfirmDeactivate = () => {
     startTransition(async () => {
       await toggleCourseActive(courseId, false);
+      toast.success("Course deactivated");
       setShowDeactivateDialog(false);
     });
   };
@@ -62,7 +65,9 @@ export function CourseDangerZone({
       const result = await unpublishCourse(courseId);
       if (!result.success) {
         setError(result.error ?? "Failed to revert to draft.");
+        toast.error(result.error ?? "Failed to revert to draft");
       } else {
+        toast.success("Course reverted to draft");
         setShowUnpublishDialog(false);
       }
     });

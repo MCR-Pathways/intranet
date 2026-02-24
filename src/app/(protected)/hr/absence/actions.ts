@@ -725,7 +725,7 @@ export async function submitRTWForm(
 
   // Send notification to employee
   const employeeId = form.employee_id as string;
-  await supabase.from("notifications").insert({
+  const { error: notifError } = await supabase.from("notifications").insert({
     user_id: employeeId,
     type: "rtw_confirmation_required",
     title: "Return-to-Work Form Ready",
@@ -733,6 +733,15 @@ export async function submitRTWForm(
     link: `/hr/absence/rtw/${formId}`,
     metadata: { form_id: formId, absence_id: form.absence_record_id },
   });
+
+  if (notifError) {
+    // Rollback: revert form status to draft so it can be resubmitted
+    await supabase
+      .from("return_to_work_forms")
+      .update({ status: "draft" })
+      .eq("id", formId);
+    return { success: false, error: "Form submitted but could not notify the employee. Please try again." };
+  }
 
   revalidateAbsencePaths(employeeId);
   return { success: true, error: null };

@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Clock, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { deleteSignInEntry } from "@/app/(protected)/sign-in/actions";
 import { LOCATION_CONFIG, formatSignInTime, getLocationLabel } from "@/lib/sign-in";
 
@@ -35,6 +36,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
   function handleDelete() {
     startTransition(async () => {
       await deleteSignInEntry(entry.id);
+      toast.success("Sign-in entry removed");
       setShowDeleteDialog(false);
     });
   }

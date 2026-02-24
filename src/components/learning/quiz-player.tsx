@@ -12,6 +12,7 @@ import {
   Loader2,
   Trophy,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { QuizQuestionWithOptions, QuizAttempt, QuestionType } from "@/types/database.types";
 
@@ -85,8 +86,12 @@ export function QuizPlayer({
       const response = await submitQuiz(lessonId, courseId, answers);
       if (!response.success) {
         setError(response.error ?? "Failed to submit quiz. Please try again.");
+        toast.error(response.error ?? "Failed to submit quiz. Please try again.");
       } else if (response.result) {
         setResult(response.result);
+        if (response.result.passed) {
+          toast.success("Quiz passed!");
+        }
       }
     });
   }

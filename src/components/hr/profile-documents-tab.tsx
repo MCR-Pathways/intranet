@@ -30,6 +30,7 @@ import {
   CheckCircle,
   Download,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ComplianceDocumentRow {
   id: string;
@@ -82,14 +83,24 @@ export function ProfileDocumentsTab({
 
   const handleVerify = (docId: string) => {
     startTransition(async () => {
-      await verifyComplianceDocument(docId);
+      const result = await verifyComplianceDocument(docId);
+      if (result.success) {
+        toast.success("Document verified");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
     });
   };
 
   const handleDelete = () => {
     if (!deleteTarget) return;
     startTransition(async () => {
-      await deleteComplianceDocument(deleteTarget.id);
+      const result = await deleteComplianceDocument(deleteTarget.id);
+      if (result.success) {
+        toast.success("Document deleted");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
       setDeleteTarget(null);
     });
   };
@@ -99,6 +110,8 @@ export function ProfileDocumentsTab({
       const result = await getComplianceDocumentUrl(filePath);
       if (result.success && result.url) {
         window.location.href = result.url;
+      } else {
+        toast.error(result.error || "Failed to download document");
       }
     });
   };

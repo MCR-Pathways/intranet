@@ -17,6 +17,7 @@ import { AssetAssignDialog } from "@/components/hr/asset-assign-dialog";
 import { AssetReturnDialog } from "@/components/hr/asset-return-dialog";
 import { retireAsset } from "@/app/(protected)/hr/assets/actions";
 import { Plus, Search, Package, Pencil, UserPlus, RotateCcw, Archive } from "lucide-react";
+import { toast } from "sonner";
 
 interface AssetType {
   id: string;
@@ -93,7 +94,14 @@ export function AssetPageContent({
   }, [assets, statusFilter, typeFilter, search]);
 
   function handleRetire(assetId: string) {
-    startTransition(async () => { await retireAsset(assetId); });
+    startTransition(async () => {
+      const result = await retireAsset(assetId);
+      if (result.success) {
+        toast.success("Asset retired");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+    });
   }
 
   return (

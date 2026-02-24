@@ -16,6 +16,7 @@ import { completeKeyDate, deleteKeyDate } from "@/app/(protected)/hr/key-dates/a
 import { formatHRDate } from "@/lib/hr";
 import { Plus, Search, Check, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface KeyDateRow {
   id: string;
@@ -73,11 +74,25 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
   const completed = filtered.filter((kd) => kd.is_completed);
 
   function handleComplete(id: string) {
-    startTransition(async () => { await completeKeyDate(id); });
+    startTransition(async () => {
+      const result = await completeKeyDate(id);
+      if (result.success) {
+        toast.success("Key date completed");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+    });
   }
 
   function handleDelete(id: string) {
-    startTransition(async () => { await deleteKeyDate(id); });
+    startTransition(async () => {
+      const result = await deleteKeyDate(id);
+      if (result.success) {
+        toast.success("Key date deleted");
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+    });
   }
 
   function renderTable(items: KeyDateRow[], label: string, highlight?: boolean) {

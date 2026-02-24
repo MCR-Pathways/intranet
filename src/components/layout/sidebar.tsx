@@ -34,6 +34,9 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       ? [
           { name: "User Management", href: "/hr/users" },
           { name: "Absence & Sickness", href: "/hr/absence" },
+          { name: "Compliance", href: "/hr/compliance" },
+          { name: "Key Dates", href: "/hr/key-dates" },
+          { name: "Assets", href: "/hr/assets" },
         ]
       : []),
   ];
@@ -65,7 +68,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       icon: GraduationCap,
       module: "learning",
       children: [
-        { name: "My Courses", href: "/learning" },
+        { name: "My Courses", href: "/learning/my-courses" },
         { name: "Compliance", href: "/learning/courses?category=compliance" },
         { name: "Upskilling", href: "/learning/courses?category=upskilling" },
         { name: "Tool Shed", href: "/learning/tool-shed" },

@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import type { ExternalCourse, CourseCategory } from "@/types/database.types";
 
@@ -106,7 +107,9 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
 
       if (!result.success) {
         setError(result.error ?? "Something went wrong");
+        toast.error(result.error ?? "Something went wrong");
       } else {
+        toast.success(mode === "create" ? "External course added" : "External course updated");
         setOpen(false);
         if (mode === "create") resetForm();
       }

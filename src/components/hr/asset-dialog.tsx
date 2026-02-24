@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { createAsset, updateAsset } from "@/app/(protected)/hr/assets/actions";
+import { toast } from "sonner";
 
 interface AssetType {
   id: string;
@@ -83,9 +84,11 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
         : await createAsset(payload);
 
       if (result.success) {
+        toast.success(isEditing ? "Asset updated successfully" : "Asset created successfully");
         resetForm();
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });
