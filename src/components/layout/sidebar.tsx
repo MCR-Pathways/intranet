@@ -37,6 +37,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
           { name: "Compliance", href: "/hr/compliance" },
           { name: "Key Dates", href: "/hr/key-dates" },
           { name: "Assets", href: "/hr/assets" },
+          { name: "Leaving", href: "/hr/leaving" },
         ]
       : []),
   ];

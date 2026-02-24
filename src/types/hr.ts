@@ -15,6 +15,7 @@ import type {
   SicknessCategory,
   ComplianceStatus,
   LeavingReason,
+  LeavingFormStatus,
   EmploymentEventType,
 } from "@/lib/hr";
 
@@ -335,9 +336,12 @@ export interface AbsenceWellbeingPrompt {
 export interface StaffLeavingForm {
   id: string;
   profile_id: string;
-  completed_by: string;
-  completed_at: string;
+  initiated_by: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  status: LeavingFormStatus;
   leaving_date: string;
+  last_working_date: string | null;
   reason_for_leaving: LeavingReason;
   reason_details: string | null;
   notice_period_start: string | null;
@@ -353,6 +357,16 @@ export interface StaffLeavingForm {
   final_leave_balance: number | null;
   rehire_eligible: boolean | null;
   additional_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Leaving form joined with employee details for dashboard views. */
+export interface StaffLeavingFormWithEmployee extends StaffLeavingForm {
+  employee_name: string;
+  employee_avatar: string | null;
+  employee_job_title: string | null;
+  employee_department: string | null;
 }
 
 // =============================================

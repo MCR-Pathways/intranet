@@ -121,10 +121,21 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Migration:** `supabase/migrations/00030_extend_rtw_and_absence.sql` — 12 new columns on `return_to_work_forms`, generated `is_long_term` column, notification INSERT policy
 - **Dashboard integration:** Pending RTW Forms stat card on `/hr`, sidebar nav link to `/hr/absence`
 
-### Staff Leaving Forms (Offboarding)
-- **Table:** `staff_leaving_forms` — offboarding checklist and exit data
-- **Columns:** `profile_id`, `leaving_date`, `last_working_date`, `reason_for_leaving` (7 reasons in `src/lib/hr.ts`), `destination`, `exit_interview_completed`, `exit_interview_notes`, `knowledge_transfer_completed`, `equipment_returned`, `access_revoked`, `final_pay_processed`, `reference_agreed`, `notes`, `completed_by`
-- **UI needed:** Leaving form (HR admin), offboarding checklist view, auto-link to asset returns
+### Staff Leaving Forms (Offboarding) ✅ DONE
+- **Routes:** `/hr/leaving` (dashboard with Active/Completed/All tabs), `/hr/leaving/[formId]` (full form page)
+- **Components:** `src/components/hr/leaving-dashboard-content.tsx`, `src/components/hr/leaving-form-content.tsx`, `src/components/hr/create-leaving-form-dialog.tsx`, `src/components/hr/profile-leaving-tab.tsx`
+- **Actions:** `src/app/(protected)/hr/leaving/actions.ts`
+- **Migration:** `supabase/migrations/00032_extend_staff_leaving_forms.sql` (extends existing table with `status`, `initiated_by`, `last_working_date`; partial unique index for one active form per person)
+- **Capabilities:**
+  - Manager or HR admin initiates a leaving form from the dashboard (employee picker dialog)
+  - Multi-step workflow: Draft → Submitted → In Progress → Completed (+ Cancelled)
+  - Auto-calculated data: outstanding assets, active compliance docs, final leave balance
+  - Offboarding checklist: exit interview, knowledge transfer, equipment return, access revocation
+  - Completion triggers: profile deactivated, "Left Organisation" employment history event, initiator notified
+  - Cancelled forms free the partial unique constraint, allowing a new form for the same person
+  - Employee detail "Leaving" tab shows lightweight summary card with link to full form
+  - Dashboard stat card ("Active Leavers") on HR homepage, sidebar nav link
+- **Replaces:** External web form at mcrpathways.org/staff-leaver
 
 ### Onboarding Progress Tracker (Nexus-inspired)
 - **Table:** New — `onboarding_checklists` or similar
@@ -132,6 +143,16 @@ Database tables created in migration `00024`, extended in `00030`.
 - **UI needed:** Progress bar per new starter, checklist view, dashboard widget showing new starters in pipeline
 - **Ties into:** Existing compliance documents (auto-check PVG/DBS), asset assignments (auto-check equipment)
 - **Mirrors:** `staff_leaving_forms` for offboarding
+
+### Flexible Working Requests
+- **Route:** `/hr/flexible-working`
+- **Table:** `flexible_working_requests` — new table needed
+- **Columns (from MCR paper form):** `profile_id`, `previous_request_date` (max 1 request per 12 months per s.80F ERA 1996), `current_working_pattern` (text — days/hours/times/location), `requested_working_pattern` (text — days/hours/times/location), `requested_start_date`, `trial_period` (3 or 6 months), `trial_end_date`, `status` (pending_manager/pending_hr/approved/rejected/trial_ended), `manager_id`, `manager_decision_at`, `manager_notes`, `hr_received_at`, `hr_notes`, `outcome_recorded_by`, `created_at`, `updated_at`
+- **Workflow:** Employee fills form → line manager approves/rejects → if approved, shared with HR → trial period (3 or 6 months) starts → automatic reminder notifications before trial end date
+- **UI needed:** Request form (employee), approval view (manager), HR overview dashboard, trial period reminder system
+- **Ties into:** Existing `WORK_PATTERN_CONFIG` in `src/lib/hr.ts` (standard, part_time, compressed, term_time already defined), notification system for reminders
+- **Source:** HR team confirmed employees currently use a paper form, want digital workflow with automated reminders
+- **Note on compressed hours:** Already supported in `work_pattern` column on `profiles` (CHECK constraint includes `'compressed'`) and `WORK_PATTERN_CONFIG` in `src/lib/hr.ts` (`daysPerWeek: 4`). Leave calculations handle this via FTE. Staff do work compressed hours (e.g. 4-day week). No term-time only currently.
 
 ### Org Chart
 - **Route:** `/hr/org-chart` (placeholder exists)
@@ -173,6 +194,12 @@ Database tables already created in migration `00024`. Larger features for later.
 - **Columns:** `from_profile_id`, `to_profile_id`, `message`, `category` (teamwork/innovation/customer_focus/above_and_beyond/leadership), `is_public`
 - **UI needed:** Praise cards, team feed, possibly visible on intranet news feed
 
+### Document Signing / Acknowledgements
+- **What:** Lightweight e-signature/acknowledgement system for post-start letters and policy acknowledgements
+- **Context:** HR has no DocuSign access. Google Docs e-signature is an option for post-start documents. Pre-start contracts remain manual for now.
+- **Possible approach:** Built-in acknowledgement system (employee clicks "I have read and agree" with timestamp + IP logging) for policies. Google Docs e-signature for formal letters (needs investigation).
+- **Decision needed:** Whether to build in-app or rely on Google Docs e-signature
+
 ### Reports & Analytics (Nexus-inspired)
 - **Route:** `/hr/reports` (new page)
 - **Reports:**
@@ -204,7 +231,7 @@ Database tables already created in migration `00024`. Larger features for later.
 | Server actions | `src/app/(protected)/hr/*/actions.ts` |
 | Components | `src/components/hr/*.tsx` |
 | DB types | `src/types/database.types.ts` |
-| Migrations | `supabase/migrations/00024–00030` |
+| Migrations | `supabase/migrations/00024–00032` |
 | Middleware | `src/middleware.ts` (HR access: staff only) |
 | Tests | `src/app/(protected)/hr/users/actions.test.ts` |
 
@@ -213,6 +240,10 @@ Database tables already created in migration `00024`. Larger features for later.
 ## Decisions Pending
 
 - [x] Bradford Factor: Replaced with wellbeing prompts (decided Feb 2026). `calculateBradfordFactor()` kept as internal utility.
+- [x] Payroll: Managed by separate provider, no integration needed (confirmed Feb 2026)
+- [ ] Bank information: Currently on Google Forms/Sheets (Lynne, Jacqueline, HR Manager access). Decision needed on whether to store in-app with encryption or keep on Google. Security review required.
+- [ ] Document signing: No DocuSign access for HR. Options: Google Docs e-signature (post-start only) vs built-in acknowledgement system. Needs investigation.
+- [ ] Compressed hours: 4-day week supported. 9-day fortnight mentioned by HR — decide if it needs a new `work_pattern` entry when building flexible working feature.
 - [ ] Onboarding checklist: What items should be configurable vs fixed?
 - [ ] Reports priority: Which reports are needed first for board/funding?
 - [ ] Profile photos: Investigate `avatar_url` from Supabase Auth Google OAuth

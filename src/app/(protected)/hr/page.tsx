@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Stethoscope,
   ClipboardCheck,
+  UserMinus,
 } from "lucide-react";
 
 // =============================================
@@ -91,6 +92,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     expiredResult,
     overdueResult,
     pendingRTWResult,
+    activeLeaversResult,
   ] = await Promise.all([
     // Staff on leave today
     supabase
@@ -126,6 +128,11 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
       .from("return_to_work_forms")
       .select("id", { count: "exact", head: true })
       .eq("status", "submitted"),
+    // Active leaving forms (draft, submitted, in_progress)
+    supabase
+      .from("staff_leaving_forms")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["draft", "submitted", "in_progress"]),
   ]);
 
   return {
@@ -135,6 +142,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     complianceExpired: expiredResult.count ?? 0,
     keyDatesOverdue: overdueResult.count ?? 0,
     pendingRTW: pendingRTWResult.count ?? 0,
+    activeLeavers: activeLeaversResult.count ?? 0,
   };
 }
 
@@ -215,6 +223,15 @@ export default async function HRPage() {
             icon: ClipboardCheck,
             iconColour: "text-amber-600",
             valueColour: "text-amber-700",
+          },
+          stats.activeLeavers > 0 && {
+            title: "Active Leavers",
+            value: stats.activeLeavers,
+            subtitle: "offboarding in progress",
+            href: "/hr/leaving",
+            icon: UserMinus,
+            iconColour: "text-orange-600",
+            valueColour: "text-orange-700",
           },
         ];
         const actionCards = allCards.filter((c): c is StatCardProps => c !== false);
@@ -390,6 +407,24 @@ export default async function HRPage() {
               <CardContent>
                 <CardDescription>
                   Record absences, manage return-to-work forms
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {isHRAdmin && (
+          <Link href="/hr/leaving">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer h-full border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Leaving / Offboarding
+                </CardTitle>
+                <UserMinus className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Manage staff leaving forms and offboarding
                 </CardDescription>
               </CardContent>
             </Card>
