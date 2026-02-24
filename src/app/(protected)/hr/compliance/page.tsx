@@ -69,26 +69,23 @@ export default async function CompliancePage() {
     expired: documents.filter((d) => d.status === "expired").length,
   };
 
-  // Build employee grid data: for each employee, for each document type → status
-  const employeeGrid = (activeProfiles ?? []).map((profile) => {
-    const statuses: Record<string, ComplianceStatus> = {};
-    documents
-      .filter((d) => d.profile_id === (profile.id as string))
-      .forEach((d) => {
-        // If multiple documents of the same type, take the best status
-        const existing = statuses[d.document_type_id];
-        if (!existing || statusPriority(d.status) > statusPriority(existing)) {
-          statuses[d.document_type_id] = d.status;
-        }
-      });
+  // Build status map in a single pass over documents — O(D) instead of O(P×D)
+  const employeeStatusMap = new Map<string, Record<string, ComplianceStatus>>();
+  for (const doc of documents) {
+    const profileStatuses = employeeStatusMap.get(doc.profile_id) ?? {};
+    const existing = profileStatuses[doc.document_type_id];
+    if (!existing || statusPriority(doc.status) > statusPriority(existing)) {
+      profileStatuses[doc.document_type_id] = doc.status;
+    }
+    employeeStatusMap.set(doc.profile_id, profileStatuses);
+  }
 
-    return {
-      profile_id: profile.id as string,
-      full_name: profile.full_name as string,
-      department: profile.department as string | null,
-      statuses,
-    };
-  });
+  const employeeGrid = (activeProfiles ?? []).map((profile) => ({
+    profile_id: profile.id as string,
+    full_name: profile.full_name as string,
+    department: profile.department as string | null,
+    statuses: employeeStatusMap.get(profile.id as string) ?? {},
+  }));
 
   return (
     <div className="space-y-6">
