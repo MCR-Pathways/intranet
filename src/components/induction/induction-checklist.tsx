@@ -36,6 +36,7 @@ import {
   PartyPopper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 interface InductionItem {
@@ -168,6 +169,7 @@ export function InductionChecklist({
     setIsCompleting(true);
     try {
       await completeInduction();
+      toast.success("Induction completed");
       // Server action calls redirect(), but as a fallback:
       window.location.href = "/intranet";
     } catch (err) {
@@ -176,6 +178,7 @@ export function InductionChecklist({
       if (error?.message?.includes("NEXT_REDIRECT")) {
         return;
       }
+      toast.error("Something went wrong");
       logger.error("Error completing induction", { error: err });
     } finally {
       setIsCompleting(false);

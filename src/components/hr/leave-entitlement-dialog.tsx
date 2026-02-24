@@ -28,6 +28,7 @@ import {
   formatLeaveDays,
 } from "@/lib/hr";
 import { upsertLeaveEntitlement } from "@/app/(protected)/hr/leave/actions";
+import { toast } from "sonner";
 
 interface LeaveEntitlementDialogProps {
   profileId: string;
@@ -118,9 +119,11 @@ export function LeaveEntitlementDialog({
       });
 
       if (result.success) {
+        toast.success("Leave entitlement saved");
         resetForm();
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });

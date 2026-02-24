@@ -27,6 +27,7 @@ import {
   formatLeaveDays,
 } from "@/lib/hr";
 import { requestLeave } from "@/app/(protected)/hr/leave/actions";
+import { toast } from "sonner";
 
 interface LeaveRequestDialogProps {
   open: boolean;
@@ -93,9 +94,11 @@ export function LeaveRequestDialog({
       });
 
       if (result.success) {
+        toast.success("Leave request submitted");
         resetForm();
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
       }
     });

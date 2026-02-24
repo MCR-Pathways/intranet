@@ -30,6 +30,7 @@ import {
 } from "@/lib/hr";
 import { recordAbsence, uploadFitNote } from "@/app/(protected)/hr/absence/actions";
 import { AlertTriangle, Info } from "lucide-react";
+import { toast } from "sonner";
 
 interface RecordAbsenceDialogProps {
   profileId: string;
@@ -113,6 +114,7 @@ export function RecordAbsenceDialog({
       });
 
       if (!result.success) {
+        toast.error(result.error || "Something went wrong");
         setError(result.error);
         return;
       }
@@ -126,12 +128,15 @@ export function RecordAbsenceDialog({
 
         const uploadResult = await uploadFitNote(formData);
         if (!uploadResult.success) {
-          // Absence was created but fit note upload failed — warn but don't block
-          setError(`Absence recorded but fit note upload failed: ${uploadResult.error}`);
+          // Absence was created but fit note upload failed — warn but close dialog
+          toast.error(`Absence recorded but fit note upload failed: ${uploadResult.error}`);
+          resetForm();
+          onOpenChange(false);
           return;
         }
       }
 
+      toast.success("Absence recorded");
       resetForm();
       onOpenChange(false);
     });

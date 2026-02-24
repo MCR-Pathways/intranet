@@ -28,6 +28,7 @@ import {
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
 import type { EmployeeProfile } from "@/types/hr";
+import { toast } from "sonner";
 
 interface EmploymentEditDialogProps {
   profile: EmployeeProfile;
@@ -81,8 +82,10 @@ export function EmploymentEditDialog({
       });
 
       if (result.success) {
+        toast.success("Employment details updated");
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to update employment details");
       }
     });

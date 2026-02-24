@@ -119,6 +119,7 @@ export async function requestLeave(data: {
 
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   return { success: true, error: null };
 }
 
@@ -150,6 +151,7 @@ export async function withdrawLeave(requestId: string) {
 
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   return { success: true, error: null };
 }
 
@@ -238,6 +240,7 @@ export async function approveLeave(requestId: string, notes?: string) {
 
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   revalidatePath(`/hr/users/${request.profile_id}`);
   return { success: true, error: null };
 }
@@ -293,6 +296,8 @@ export async function rejectLeave(requestId: string, reason: string) {
   }
 
   revalidatePath("/hr/leave");
+  revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   revalidatePath(`/hr/users/${request.profile_id}`);
   return { success: true, error: null };
 }
@@ -335,6 +340,7 @@ export async function cancelLeave(requestId: string) {
 
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   revalidatePath(`/hr/users/${request.profile_id}`);
   return { success: true, error: null };
 }
@@ -411,6 +417,7 @@ export async function recordLeave(data: {
 
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
+  revalidatePath("/hr");
   revalidatePath(`/hr/users/${data.profile_id}`);
   return { success: true, error: null };
 }

@@ -30,6 +30,7 @@ import {
   CheckSquare,
   Square,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { QuizQuestionWithOptions, QuestionType } from "@/types/database.types";
 
@@ -175,7 +176,9 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
       });
       if (!result.success) {
         setError(result.error ?? "Failed to create question");
+        toast.error(result.error ?? "Failed to create question");
       } else {
+        toast.success("Quiz saved");
         resetNewForm();
       }
     });
@@ -205,7 +208,9 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
       });
       if (!result.success) {
         setError(result.error ?? "Failed to update question");
+        toast.error(result.error ?? "Failed to update question");
       } else {
+        toast.success("Quiz saved");
         setEditingId(null);
         setError(null);
       }
@@ -218,6 +223,9 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
       const result = await deleteQuizQuestion(questionId, courseId);
       if (!result.success) {
         setError(result.error ?? "Failed to delete question");
+        toast.error(result.error ?? "Failed to delete question");
+      } else {
+        toast.success("Question deleted");
       }
     });
   }

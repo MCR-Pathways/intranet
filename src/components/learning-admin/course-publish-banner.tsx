@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { publishCourse } from "@/app/(protected)/learning/admin/courses/actions";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2, Rocket } from "lucide-react";
@@ -24,8 +25,11 @@ export function CoursePublishBanner({
     setError(null);
     startTransition(async () => {
       const result = await publishCourse(courseId);
-      if (!result.success) {
+      if (result.success) {
+        toast.success("Course published");
+      } else {
         setError(result.error ?? "Failed to publish course.");
+        toast.error(result.error ?? "Failed to publish course");
       }
     });
   };

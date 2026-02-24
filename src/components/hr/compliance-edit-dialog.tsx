@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface ComplianceEditDialogProps {
   document: {
@@ -54,8 +55,10 @@ export function ComplianceEditDialog({
       });
 
       if (result.success) {
+        toast.success("Document updated");
         onOpenChange(false);
       } else {
+        toast.error(result.error || "Something went wrong");
         setError(result.error || "Failed to update document");
       }
     });

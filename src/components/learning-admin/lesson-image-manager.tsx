@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogClose,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { Upload, Loader2, Trash2, ImageIcon } from "lucide-react";
 import type { LessonImage } from "@/types/database.types";
 
@@ -50,6 +51,9 @@ export function LessonImageManager({
 
     if (!result.success) {
       setError(result.error ?? "Failed to upload image");
+      toast.error(result.error ?? "Failed to upload image");
+    } else {
+      toast.success("Image uploaded");
     }
     setIsUploading(false);
 
@@ -63,6 +67,9 @@ export function LessonImageManager({
       const result = await deleteLessonImage(deleteTarget.id, courseId);
       if (!result.success) {
         setError(result.error ?? "Failed to delete image");
+        toast.error(result.error ?? "Failed to delete image");
+      } else {
+        toast.success("Image deleted");
       }
       setDeleteTarget(null);
     });

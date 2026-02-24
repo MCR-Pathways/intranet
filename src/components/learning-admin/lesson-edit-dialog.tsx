@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { LessonImageManager } from "./lesson-image-manager";
@@ -129,9 +130,11 @@ export function LessonEditDialog({
         });
 
         if (result.success) {
+          toast.success("Lesson updated");
           onOpenChange(false);
         } else {
           setError(result.error || "Failed to update lesson");
+          toast.error(result.error || "Failed to update lesson");
         }
       } else {
         const result = await createLesson({
@@ -147,10 +150,12 @@ export function LessonEditDialog({
         });
 
         if (result.success) {
+          toast.success("Lesson created");
           resetForm();
           onOpenChange(false);
         } else {
           setError(result.error || "Failed to create lesson");
+          toast.error(result.error || "Failed to create lesson");
         }
       }
     });
