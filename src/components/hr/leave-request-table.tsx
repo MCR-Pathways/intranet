@@ -41,7 +41,7 @@ import {
   rejectLeave,
   cancelLeave,
 } from "@/app/(protected)/hr/leave/actions";
-import { Search, Undo2 } from "lucide-react";
+import { Search, Undo2, Users } from "lucide-react";
 
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
@@ -51,6 +51,27 @@ interface LeaveRequestTableProps {
   isHRAdmin?: boolean;
   isManager?: boolean;
   showEmployee?: boolean;
+  allRequests?: LeaveRequestWithEmployee[];
+  teamMemberMap?: Record<string, string[]>;
+}
+
+/** Find approved leave from teammates that overlaps the given request's dates. */
+function getTeamOverlap(
+  request: AnyLeaveRequest,
+  allRequests: LeaveRequestWithEmployee[],
+  teamMemberMap: Record<string, string[]>,
+): LeaveRequestWithEmployee[] {
+  const teammateIds = teamMemberMap[request.profile_id];
+  if (!teammateIds?.length) return [];
+
+  return allRequests.filter(
+    (r) =>
+      teammateIds.includes(r.profile_id) &&
+      r.status === "approved" &&
+      r.start_date <= request.end_date &&
+      r.end_date >= request.start_date &&
+      r.id !== request.id,
+  );
 }
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -67,6 +88,8 @@ export function LeaveRequestTable({
   isHRAdmin = false,
   isManager = false,
   showEmployee = false,
+  allRequests,
+  teamMemberMap,
 }: LeaveRequestTableProps) {
   const [isPending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -196,6 +219,15 @@ export function LeaveRequestTable({
                   request.status === "pending" && (isManager || isHRAdmin) && !isOwn;
                 const canCancel = isHRAdmin && request.status === "approved";
 
+                // Team overlap detection (approver view only)
+                const overlapping =
+                  allRequests && teamMemberMap
+                    ? getTeamOverlap(request, allRequests, teamMemberMap)
+                    : [];
+                const teammateIds = teamMemberMap?.[request.profile_id] ?? [];
+                const teamSize = teammateIds.length + 1; // teammates + the requester
+                const availableCount = teamSize - overlapping.length - 1; // minus overlapping and the requester
+
                 return (
                   <tr key={request.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                     {showEmployee && (
@@ -208,16 +240,30 @@ export function LeaveRequestTable({
                         {config?.label ?? request.leave_type}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {formatHRDate(request.start_date)}
-                      {request.start_date !== request.end_date && (
-                        <> – {formatHRDate(request.end_date)}</>
-                      )}
-                      {request.start_half_day && (
-                        <span className="text-xs text-muted-foreground ml-1">(PM)</span>
-                      )}
-                      {request.end_half_day && (
-                        <span className="text-xs text-muted-foreground ml-1">(AM)</span>
+                    <td className="px-4 py-3">
+                      <div className="whitespace-nowrap">
+                        {formatHRDate(request.start_date)}
+                        {request.start_date !== request.end_date && (
+                          <> – {formatHRDate(request.end_date)}</>
+                        )}
+                        {request.start_half_day && (
+                          <span className="text-xs text-muted-foreground ml-1">(PM)</span>
+                        )}
+                        {request.end_half_day && (
+                          <span className="text-xs text-muted-foreground ml-1">(AM)</span>
+                        )}
+                      </div>
+                      {overlapping.length > 0 && (
+                        <div className="mt-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                          <Users className="inline h-3 w-3 mr-1 -mt-0.5" />
+                          {overlapping.map((r) => r.employee_name).join(", ")}
+                          {overlapping.length === 1 ? " is" : " are"} also on leave during this period.
+                          {teamSize > 1 && (
+                            <span className="ml-1">
+                              Team: {availableCount}/{teamSize} available.
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3">{formatLeaveDays(request.total_days)}</td>

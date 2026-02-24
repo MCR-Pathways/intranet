@@ -106,6 +106,45 @@ export default async function LeavePage({
     });
   }
 
+  // Build team member map for overlap detection (approver view only)
+  const teamMemberMap: Record<string, string[]> = {};
+
+  if ((isManager || isHRAdmin) && pendingApprovals.length > 0) {
+    const requesterIds = [...new Set(pendingApprovals.map((r) => r.profile_id))];
+
+    // Fetch each requester's line_manager_id
+    const { data: requesterProfiles } = await supabase
+      .from("profiles")
+      .select("id, line_manager_id")
+      .in("id", requesterIds);
+
+    const managerIds = [
+      ...new Set(
+        (requesterProfiles ?? [])
+          .map((p) => p.line_manager_id as string | null)
+          .filter(Boolean)
+      ),
+    ] as string[];
+
+    if (managerIds.length > 0) {
+      // Fetch all direct reports of those managers
+      const { data: allReports } = await supabase
+        .from("profiles")
+        .select("id, line_manager_id")
+        .in("line_manager_id", managerIds);
+
+      // Build map: requesterId → [teammateIds]
+      for (const req of requesterProfiles ?? []) {
+        teamMemberMap[req.id as string] = (allReports ?? [])
+          .filter(
+            (r) =>
+              r.line_manager_id === req.line_manager_id && r.id !== req.id
+          )
+          .map((r) => r.id as string);
+      }
+    }
+  }
+
   // Calculate leave balances
   const requests = (myRequests ?? []) as LeaveRequest[];
   const balances: LeaveBalance[] = (entitlements ?? []).map((ent) => {
@@ -163,6 +202,7 @@ export default async function LeavePage({
         allRequests={allRequests}
         publicHolidays={publicHolidayList}
         activeTab={activeTab}
+        teamMemberMap={teamMemberMap}
       />
     </div>
   );

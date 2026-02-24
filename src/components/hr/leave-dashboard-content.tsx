@@ -25,6 +25,7 @@ interface LeaveDashboardContentProps {
   allRequests: LeaveRequestWithEmployee[];
   publicHolidays: { holiday_date: string; name: string }[];
   activeTab: string;
+  teamMemberMap?: Record<string, string[]>;
 }
 
 const VALID_TABS = ["my-leave", "approvals", "calendar", "admin"];
@@ -37,6 +38,7 @@ export function LeaveDashboardContent({
   allRequests,
   publicHolidays,
   activeTab,
+  teamMemberMap,
 }: LeaveDashboardContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "my-leave";
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -95,6 +97,8 @@ export function LeaveDashboardContent({
                 isHRAdmin={profile.is_hr_admin}
                 isManager={profile.is_line_manager}
                 showEmployee
+                allRequests={allRequests}
+                teamMemberMap={teamMemberMap}
               />
             </div>
           </TabsContent>
