@@ -164,74 +164,75 @@ export default async function HRPage() {
         </p>
       </div>
 
-      {/* HR Admin dashboard stats */}
-      {isHRAdmin && stats && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard
-            title="On Leave Today"
-            value={stats.onLeaveToday}
-            subtitle="staff currently on leave"
-            href="/hr/calendar"
-            icon={Calendar}
-            iconColour="text-muted-foreground"
-            valueColour=""
-          />
-          <StatCard
-            title="Stale Leave Requests"
-            value={stats.staleRequests}
-            subtitle="pending 3+ days"
-            href="/hr/leave"
-            icon={Clock}
-            iconColour={stats.staleRequests > 0 ? "text-amber-600" : "text-muted-foreground"}
-            valueColour={stats.staleRequests > 0 ? "text-amber-700" : "text-green-700"}
-          />
-          <StatCard
-            title="Compliance Attention"
-            value={stats.complianceExpiring + stats.complianceExpired}
-            subtitle={
-              stats.complianceExpired > 0
-                ? `${stats.complianceExpired} expired, ${stats.complianceExpiring} expiring soon`
-                : stats.complianceExpiring > 0
-                  ? `${stats.complianceExpiring} expiring soon`
-                  : "all documents valid"
-            }
-            href="/hr/compliance"
-            icon={AlertTriangle}
-            iconColour={
-              stats.complianceExpired > 0
-                ? "text-red-600"
-                : stats.complianceExpiring > 0
-                  ? "text-amber-600"
-                  : "text-muted-foreground"
-            }
-            valueColour={
-              stats.complianceExpired > 0
-                ? "text-red-700"
-                : stats.complianceExpiring > 0
-                  ? "text-amber-700"
-                  : "text-green-700"
-            }
-          />
-          <StatCard
-            title="Key Dates Overdue"
-            value={stats.keyDatesOverdue}
-            subtitle={stats.keyDatesOverdue > 0 ? "need attention" : "all on track"}
-            href="/hr/key-dates"
-            icon={CalendarClock}
-            iconColour={stats.keyDatesOverdue > 0 ? "text-red-600" : "text-muted-foreground"}
-            valueColour={stats.keyDatesOverdue > 0 ? "text-red-700" : "text-green-700"}
-          />
-          <StatCard
-            title="Pending RTW Forms"
-            value={stats.pendingRTW}
-            subtitle={stats.pendingRTW > 0 ? "awaiting confirmation" : "all confirmed"}
-            href="/hr/absence"
-            icon={ClipboardCheck}
-            iconColour={stats.pendingRTW > 0 ? "text-amber-600" : "text-muted-foreground"}
-            valueColour={stats.pendingRTW > 0 ? "text-amber-700" : "text-green-700"}
-          />
-        </div>
-      )}
+      {/* HR Admin dashboard stats — only show cards that need attention */}
+      {isHRAdmin && stats && (() => {
+        const allCards: (StatCardProps | false)[] = [
+          stats.onLeaveToday > 0 && {
+            title: "On Leave Today",
+            value: stats.onLeaveToday,
+            subtitle: "staff currently on leave",
+            href: "/hr/calendar",
+            icon: Calendar,
+            iconColour: "text-muted-foreground",
+            valueColour: "",
+          },
+          stats.staleRequests > 0 && {
+            title: "Stale Leave Requests",
+            value: stats.staleRequests,
+            subtitle: "pending 3+ days",
+            href: "/hr/leave",
+            icon: Clock,
+            iconColour: "text-amber-600",
+            valueColour: "text-amber-700",
+          },
+          (stats.complianceExpiring + stats.complianceExpired) > 0 && {
+            title: "Compliance Attention",
+            value: stats.complianceExpiring + stats.complianceExpired,
+            subtitle: stats.complianceExpired > 0
+              ? `${stats.complianceExpired} expired, ${stats.complianceExpiring} expiring soon`
+              : `${stats.complianceExpiring} expiring soon`,
+            href: "/hr/compliance",
+            icon: AlertTriangle,
+            iconColour: stats.complianceExpired > 0 ? "text-red-600" : "text-amber-600",
+            valueColour: stats.complianceExpired > 0 ? "text-red-700" : "text-amber-700",
+          },
+          stats.keyDatesOverdue > 0 && {
+            title: "Key Dates Overdue",
+            value: stats.keyDatesOverdue,
+            subtitle: "need attention",
+            href: "/hr/key-dates",
+            icon: CalendarClock,
+            iconColour: "text-red-600",
+            valueColour: "text-red-700",
+          },
+          stats.pendingRTW > 0 && {
+            title: "Pending RTW Forms",
+            value: stats.pendingRTW,
+            subtitle: "awaiting confirmation",
+            href: "/hr/absence",
+            icon: ClipboardCheck,
+            iconColour: "text-amber-600",
+            valueColour: "text-amber-700",
+          },
+        ];
+        const actionCards = allCards.filter((c): c is StatCardProps => c !== false);
+
+        if (actionCards.length === 0) return null;
+
+        const gridCols =
+          actionCards.length >= 4 ? "lg:grid-cols-4"
+          : actionCards.length === 3 ? "lg:grid-cols-3"
+          : actionCards.length === 2 ? "lg:grid-cols-2"
+          : "";
+
+        return (
+          <div className={`grid gap-4 sm:grid-cols-2 ${gridCols}`}>
+            {actionCards.map((card) => (
+              <StatCard key={card.title} {...card} />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Quick actions grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
