@@ -63,7 +63,7 @@ All features fully built with RLS policies, audit logging, and input sanitisatio
 
 ---
 
-## Phase 1 Polish — UP NEXT
+## Phase 1 Polish — COMPLETE
 
 Quick wins inspired by nexus-hr analysis (Feb 2026).
 
@@ -77,19 +77,17 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 - Stat cards only shown to HR admins; regular users see the quick actions grid as before
 - Colours: green (all clear), amber (warning), red (expired/overdue) — matching compliance dashboard palette
 
-### Leave Team Capacity Notification
-- **Where:** `LeaveRequestDialog` (requester view) and approval view (approver)
-- **What:** Informational notice (not a blocker) when requesting/approving leave that would leave the team light:
-  - Only checks team members (same manager's direct reports), not org-wide
-  - Excludes public holidays
-  - Blue/neutral info notice: "Note: [Name] is also on leave [dates]. Your team will have [X/Y] members available."
-- **Effort:** Medium — query approved/pending leave for team members in date range
+### Leave Team Capacity Notification ✅ DONE
+- **Where:** Approval view (`LeaveRequestTable` in Approvals tab)
+- **What:** Blue info notice per row when teammates have approved leave overlapping the request dates
+- **Implementation:** Server fetches `teamMemberMap` (2 indexed queries), client-side `getTeamOverlap()` from already-loaded `allRequests`. Zero additional queries at render time.
+- **Format:** "[Name(s)] is/are also on leave during this period. Team: X/Y available."
 
-### Bradford Factor Display (Optional)
-- **Where:** Employee detail leave tab (HR admin view only)
-- **What:** Small card showing Bradford Factor score (S² × D) with colour indicator: green (<50), amber (50–200), red (>200). `calculateBradfordFactor()` already exists in `src/lib/hr.ts`.
-- **Considerations:** Can be seen as punitive. Never shown to the employee. MCR Pathways to decide if this aligns with their people culture.
-- **Effort:** Very low — one card component
+### Bradford Factor — DECISION: Wellbeing Prompts Instead
+- **Decision (Feb 2026):** Do not surface the raw Bradford score. Research showed it's blind to cause (disability discrimination risk under Equality Act 2010), drives presenteeism, and the BMA has condemned it.
+- **Alternative:** Wellbeing prompts based on absence pattern data (spells count, total days, trends). Prompts like "This employee has had X separate absences in the last 6 months. Consider a wellbeing check-in." HR admins only.
+- **When:** Part of Phase 2 Absence Records & Sickness Tracking (needs `absence_records` data to drive prompts).
+- **Code note:** `calculateBradfordFactor()` in `src/lib/hr.ts` kept as internal utility — not surfaced in UI.
 
 ---
 

@@ -72,10 +72,10 @@
 - [ ] Google Calendar connection toggle
 - [ ] Theme/display preferences
 
-### HR Phase 1 Polish
-- [ ] HR dashboard landing page (`/hr` index with live stats)
-- [ ] Leave team capacity notification (info notice when team is light)
-- [ ] Bradford Factor display (optional, pending culture decision)
+### HR Phase 1 Polish ✅
+- [x] HR dashboard landing page (`/hr` index with live stats)
+- [x] Leave team capacity notification (info notice when team is light)
+- [x] Bradford Factor → replaced with wellbeing prompts approach (part of Phase 2)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 2
@@ -113,7 +113,7 @@
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
 - [ ] Middleware JWT optimisation (replace DB round-trip with custom claims)
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
-- [ ] Expand test coverage (~5% currently — 14 test files, 295 tests / ~130 source files)
+- [ ] Expand test coverage (~5% currently — 14 test files, 300 tests / ~130 source files)
 - [ ] Mobile responsiveness (currently desktop/laptop only)
 
 ---
