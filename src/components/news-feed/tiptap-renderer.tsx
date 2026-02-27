@@ -141,10 +141,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
             break;
           case "link": {
             const href = mark.attrs?.href as string;
-            if (
-              href &&
-              (href.startsWith("http://") || href.startsWith("https://"))
-            ) {
+            if (href && /^https?:\/\//i.test(href)) {
               element = (
                 <a
                   href={href}

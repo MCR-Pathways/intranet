@@ -96,15 +96,15 @@ BEGIN
     FROM public.profiles
     WHERE id = auth.uid();
 
-  -- Build notification content
+  -- Build notification content with deep links to the specific post/comment
   IF p_entity_type = 'post' THEN
     v_title := 'You were mentioned in a post';
     v_message := v_mentioner_name || ' mentioned you in a post.';
-    v_link := '/intranet';
+    v_link := '/intranet?post=' || p_post_id;
   ELSIF p_entity_type = 'comment' THEN
     v_title := 'You were mentioned in a comment';
     v_message := v_mentioner_name || ' mentioned you in a comment.';
-    v_link := '/intranet';
+    v_link := '/intranet?post=' || p_post_id || '#comment-' || p_entity_id;
   ELSE
     RETURN 0;
   END IF;
