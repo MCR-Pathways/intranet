@@ -18,11 +18,13 @@
 - **Admin features:** Course CRUD, admin reports (`/learning/admin/`)
 - Notification system for course publishing (RPC + UI)
 
-### Sign-In System ✅
+### Sign-In System ✅ (v1 — overhaul planned)
 - Daily location sign-in with DB persistence (`/sign-in`)
 - Today's sign-ins and monthly history
 - Team sign-in overview for line managers
 - Nudge bubble for unsigned-in users
+- Manager reports & analytics (charts, CSV export)
+- **Overhaul planned** — see "Sign-In v2" in Remaining Work
 
 ### Induction System ✅
 - 9-step induction checklist with DB persistence (`/intranet/induction`)
@@ -106,6 +108,36 @@
 - [ ] Document signing / acknowledgements
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
+
+### Sign-In v2 — Schedule-Based + Google Calendar Integration
+Current sign-in is a daily manual check-in modelled after a physical sign-in app. Industry research (Kadence, Officely, Google Calendar, Microsoft Teams) shows weekly schedule + auto-sync is the standard. MCR Pathways is on Google Workspace for Education (Working Location API supported).
+
+**Architecture:**
+- [ ] Google Calendar sync: service account + domain-wide delegation reads all staff working locations
+- [ ] Unified `working_locations` cache table (user_id, date, location, source) replaces `sign_ins`
+- [ ] Webhook-triggered incremental sync (`syncToken`) + fallback periodic full sync (6h)
+- [ ] Write-back: intranet check-ins create Google Calendar working location events
+- [ ] Intranet entries override Calendar data for the same day
+
+**UX:**
+- [ ] Dashboard week strip: compact 5-day view with 1-tap location setting (segmented buttons)
+- [ ] Recurring weekly patterns ("always home Mon/Wed/Fri") to reduce interaction to ~1x/week
+- [ ] `/sign-in` becomes "My Schedule" (recurring patterns) + manager team×week grid + reports
+- [ ] Month calendar with coloured dots for personal history (replacing badge list)
+- [ ] Nudge fires only if no Calendar location AND no intranet check-in (weekly, not daily)
+
+**Open decisions:**
+- [ ] Write-back to Calendar: should intranet check-ins create Calendar events? (Recommended: yes)
+- [ ] Migration path: migrate `sign_ins` history to `working_locations`, keep as archive, or drop?
+- [ ] Split-day support: keep multiple locations per day or simplify to one per day?
+- [ ] Kiosk/entrance replacement: simplified "tap your name" view for office entrance, or future phase?
+- [ ] Workspace admin: confirm domain-wide delegation is enabled (Security → API Controls)
+
+**Quick fixes (independent of overhaul):**
+- [ ] Fix `member-detail.tsx` over-fetch (fetches all team history, filters to 1 person)
+- [ ] Extract shared `SignInEntry` type (currently duplicated 5×)
+- [ ] Extract `<LocationBadge>` component (rendering duplicated 6×)
+- [ ] Merge `getTodaySignIns()` + `getMonthlyHistory()` into single query
 
 ### Content Expansion
 - [ ] Surveys section (`/intranet/surveys` — placeholder exists)

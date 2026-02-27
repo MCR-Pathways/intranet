@@ -89,55 +89,65 @@ export function AttachmentEditor({
         );
       }
 
+      // Validate all files first, then upload in parallel
+      const validFiles: { file: File; tempId: string; preview?: string }[] = [];
       for (const file of filesToUpload) {
-        // Client-side validation
         const validationError = validateFile(file);
         if (validationError) {
           onError?.(validationError);
           continue;
         }
-
-        const tempId = crypto.randomUUID();
-        const preview =
-          type === "image" ? URL.createObjectURL(file) : undefined;
-
-        setAttachments((prev) => [
-          ...prev,
-          {
-            id: tempId,
-            type,
-            file_name: file.name,
-            file_size: file.size,
-            preview,
-            uploading: true,
-          },
-        ]);
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const result = await uploadPostAttachment(formData);
-
-        if (result.success && result.url) {
-          setAttachments((prev) =>
-            prev.map((a) =>
-              a.id === tempId
-                ? {
-                    ...a,
-                    file_url: result.url,
-                    file_name: result.fileName,
-                    file_size: result.fileSize,
-                    mime_type: result.mimeType,
-                    uploading: false,
-                  }
-                : a
-            )
-          );
-        } else {
-          setAttachments((prev) => prev.filter((a) => a.id !== tempId));
-          onError?.(result.error ?? "Upload failed");
-        }
+        validFiles.push({
+          file,
+          tempId: crypto.randomUUID(),
+          preview: type === "image" ? URL.createObjectURL(file) : undefined,
+        });
       }
+
+      if (validFiles.length === 0) return;
+
+      // Add all placeholders at once (single state update)
+      setAttachments((prev) => [
+        ...prev,
+        ...validFiles.map(({ tempId, file, preview }) => ({
+          id: tempId,
+          type,
+          file_name: file.name,
+          file_size: file.size,
+          preview,
+          uploading: true,
+        })),
+      ]);
+
+      // Upload all files in parallel
+      await Promise.all(
+        validFiles.map(async ({ file, tempId }) => {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const result = await uploadPostAttachment(formData);
+
+          if (result.success && result.url) {
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === tempId
+                  ? {
+                      ...a,
+                      file_url: result.url,
+                      file_name: result.fileName,
+                      file_size: result.fileSize,
+                      mime_type: result.mimeType,
+                      uploading: false,
+                    }
+                  : a
+              )
+            );
+          } else {
+            setAttachments((prev) => prev.filter((a) => a.id !== tempId));
+            onError?.(result.error ?? "Upload failed");
+          }
+        })
+      );
     },
     [attachments.length, onError]
   );
