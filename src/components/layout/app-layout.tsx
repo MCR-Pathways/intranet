@@ -26,7 +26,7 @@ const SIDEBAR_TOGGLE_EVENT = "mcr-sidebar-toggle";
  */
 function subscribeSidebar(callback: () => void) {
   const handleStorage = (event: StorageEvent) => {
-    if (event.key === SIDEBAR_STORAGE_KEY) {
+    if (event.key === SIDEBAR_STORAGE_KEY || event.key === null) {
       callback();
     }
   };
