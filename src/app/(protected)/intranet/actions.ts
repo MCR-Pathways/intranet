@@ -9,8 +9,8 @@ import {
 } from "@/lib/intranet";
 import { extractUrls } from "@/lib/url";
 import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
-import { logger } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
@@ -354,15 +354,7 @@ async function enrichPosts(
 
   if (postIds.length === 0) return [];
 
-  // Identify posts that have polls (poll_question is non-null)
-  const pollPostIds = postRows
-    .filter((p) => (p as { poll_question?: string | null }).poll_question)
-    .map((p) => (p as { id: string }).id);
-
-  type PollOptionRow = { id: string; post_id: string; option_text: string; display_order: number };
-  type PollVoteRow = { post_id: string; option_id: string; user_id: string };
-
-  const [attachmentsResult, reactionsResult, commentsResult, pollOptionsResult, pollVotesResult] =
+  const [attachmentsResult, reactionsResult, commentsResult] =
     await Promise.all([
       supabase
         .from("post_attachments")
@@ -380,28 +372,11 @@ async function enrichPosts(
         )
         .in("post_id", postIds)
         .order("created_at", { ascending: true }),
-      // Poll options — only for posts with polls
-      pollPostIds.length > 0
-        ? supabase
-            .from("poll_options")
-            .select("id, post_id, option_text, display_order")
-            .in("post_id", pollPostIds)
-            .order("display_order")
-        : Promise.resolve({ data: [] as PollOptionRow[] }),
-      // Poll votes — only for posts with polls
-      pollPostIds.length > 0
-        ? supabase
-            .from("poll_votes")
-            .select("post_id, option_id, user_id")
-            .in("post_id", pollPostIds)
-        : Promise.resolve({ data: [] as PollVoteRow[] }),
     ]);
 
   const attachments = attachmentsResult.data ?? [];
   const reactions = reactionsResult.data ?? [];
   const comments = commentsResult.data ?? [];
-  const pollOptions = (pollOptionsResult.data ?? []) as PollOptionRow[];
-  const pollVotes = (pollVotesResult.data ?? []) as PollVoteRow[];
 
   const attachmentsByPost = new Map<string, typeof attachments>();
   for (const a of attachments) {
@@ -422,20 +397,6 @@ async function enrichPosts(
     const existing = commentsByPost.get(c.post_id) ?? [];
     existing.push(c);
     commentsByPost.set(c.post_id, existing);
-  }
-
-  const pollOptionsByPost = new Map<string, PollOptionRow[]>();
-  for (const opt of pollOptions) {
-    const existing = pollOptionsByPost.get(opt.post_id) ?? [];
-    existing.push(opt);
-    pollOptionsByPost.set(opt.post_id, existing);
-  }
-
-  const pollVotesByPost = new Map<string, PollVoteRow[]>();
-  for (const v of pollVotes) {
-    const existing = pollVotesByPost.get(v.post_id) ?? [];
-    existing.push(v);
-    pollVotesByPost.set(v.post_id, existing);
   }
 
   // Batch-fetch ALL comment reactions in a single query (avoids N sequential queries)
@@ -459,36 +420,45 @@ async function enrichPosts(
     threadedCommentsByPost.set(postId, threaded);
   }
 
+  // ─── Poll data enrichment ─────────────────────────────────────────
+  const pollPostIds = postRows
+    .filter((p) => (p as { poll_question: string | null }).poll_question)
+    .map((p) => (p as { id: string }).id);
+
+  const pollOptionsByPost = new Map<string, Array<{ id: string; option_text: string; display_order: number }>>();
+  const pollVotesByPost = new Map<string, Array<{ option_id: string; user_id: string }>>();
+
+  if (pollPostIds.length > 0) {
+    const [optionsResult, votesResult] = await Promise.all([
+      supabase
+        .from("poll_options")
+        .select("id, post_id, option_text, display_order")
+        .in("post_id", pollPostIds)
+        .order("display_order"),
+      supabase
+        .from("poll_votes")
+        .select("post_id, option_id, user_id")
+        .in("post_id", pollPostIds),
+    ]);
+
+    for (const opt of optionsResult.data ?? []) {
+      const existing = pollOptionsByPost.get(opt.post_id) ?? [];
+      existing.push(opt);
+      pollOptionsByPost.set(opt.post_id, existing);
+    }
+
+    for (const vote of votesResult.data ?? []) {
+      const existing = pollVotesByPost.get(vote.post_id) ?? [];
+      existing.push(vote);
+      pollVotesByPost.set(vote.post_id, existing);
+    }
+  }
+
   return postRows.map((post) => {
     const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
-
-    // Build poll data if this post has a poll
-    let poll: PostWithRelations["poll"] = null;
-    if (p.poll_question) {
-      const options = pollOptionsByPost.get(p.id) ?? [];
-      const votes = pollVotesByPost.get(p.id) ?? [];
-      const userVote = votes.find((v) => v.user_id === userId);
-      const voteCounts = new Map<string, number>();
-      for (const v of votes) {
-        voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
-      }
-      poll = {
-        question: p.poll_question,
-        options: options.map((opt) => ({
-          id: opt.id,
-          option_text: opt.option_text,
-          display_order: opt.display_order,
-          vote_count: voteCounts.get(opt.id) ?? 0,
-        })),
-        total_votes: votes.length,
-        user_vote_option_id: userVote?.option_id ?? null,
-        closes_at: p.poll_closes_at,
-        is_closed: p.poll_closes_at ? new Date(p.poll_closes_at) < new Date() : false,
-      };
-    }
 
     return {
       id: p.id,
@@ -507,10 +477,33 @@ async function enrichPosts(
       reaction_counts: buildReactionCounts(postReactions),
       user_reaction: (userReaction?.reaction_type as ReactionType) ?? null,
       comment_count: postComments.length,
-      poll,
+      poll: p.poll_question ? (() => {
+        const options = pollOptionsByPost.get(p.id) ?? [];
+        const votes = pollVotesByPost.get(p.id) ?? [];
+        const totalVotes = votes.length;
+        const userVote = votes.find((v) => v.user_id === userId);
+        const voteCounts = new Map<string, number>();
+        for (const v of votes) {
+          voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
+        }
+        return {
+          question: p.poll_question!,
+          options: options.map((o) => ({
+            id: o.id,
+            option_text: o.option_text,
+            display_order: o.display_order,
+            vote_count: voteCounts.get(o.id) ?? 0,
+          })),
+          total_votes: totalVotes,
+          user_vote_option_id: userVote?.option_id ?? null,
+          closes_at: p.poll_closes_at,
+          is_closed: p.poll_closes_at ? new Date(p.poll_closes_at) < new Date() : false,
+        };
+      })() : null,
     };
   });
 }
+
 // ─── Helper functions (accept supabase client, avoid multiple getCurrentUser() calls in SSR) ───
 
 /**
@@ -690,10 +683,8 @@ export async function createPost(data: {
   if (data.content_json) {
     postInsert.content_json = data.content_json;
   }
-
-  // Add poll data to the post if provided
-  if (data.poll?.question && data.poll.options.length >= 2 && data.poll.options.length <= 4) {
-    postInsert.poll_question = data.poll.question.trim();
+  if (data.poll?.question) {
+    postInsert.poll_question = data.poll.question;
     if (data.poll.closes_at) {
       postInsert.poll_closes_at = data.poll.closes_at;
     }
@@ -712,23 +703,19 @@ export async function createPost(data: {
     };
   }
 
-  // Insert poll options if poll was included
-  if (data.poll?.question && data.poll.options.length >= 2) {
-    const pollOptionRows = data.poll.options
-      .filter((opt) => opt.trim().length > 0)
-      .slice(0, 4)
-      .map((opt, index) => ({
+  // Insert poll options if this is a poll post
+  if (data.poll?.question && data.poll.options.length >= 2 && post) {
+    const pollOptionsData = data.poll.options
+      .filter((text) => text.trim().length > 0)
+      .map((text, i) => ({
         post_id: post.id,
-        option_text: opt.trim().slice(0, 100),
-        display_order: index,
+        option_text: text.trim(),
+        display_order: i,
       }));
-
-    if (pollOptionRows.length >= 2) {
-      await supabase.from("poll_options").insert(pollOptionRows);
-    }
+    await supabase.from("poll_options").insert(pollOptionsData);
   }
 
-    // Insert mentions if content_json contains @mentions
+  // Insert mentions if content_json contains @mentions
   if (data.content_json) {
     const mentionIds = extractMentionIds(data.content_json);
     if (mentionIds.length > 0) {
@@ -1265,7 +1252,6 @@ export async function addComment(
       await supabase.rpc("notify_post_comment", {
         p_comment_id: comment.id,
         p_post_id: postId,
-        p_actor_id: user.id,
         p_parent_comment_id: parentId ?? null,
         p_comment_preview: commentPreview,
       });
@@ -1562,7 +1548,7 @@ export async function togglePinPost(
   return { success: true, error: null };
 }
 
-// ─── Live Feed Polling ──────────────────────────────────────────────
+// ─── Live feed polling ───────────────────────────────────────────────────────
 
 export async function getNewPostCount(
   sinceTimestamp: string
@@ -1573,17 +1559,14 @@ export async function getNewPostCount(
   const { count, error } = await supabase
     .from("posts")
     .select("id", { count: "exact", head: true })
-    .gt("created_at", sinceTimestamp);
+    .gt("created_at", sinceTimestamp)
+    .eq("is_weekly_roundup", false);
 
-  if (error) {
-    logger.error("Failed to count new posts", { error });
-    return 0;
-  }
-
+  if (error) return 0;
   return count ?? 0;
 }
 
-// ─── Poll Voting ────────────────────────────────────────────────────
+// ─── Poll actions ────────────────────────────────────────────────────────────
 
 export async function votePoll(
   postId: string,
@@ -1592,10 +1575,10 @@ export async function votePoll(
   const { supabase, user } = await getCurrentUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
-  // Check if poll is still open
+  // Check poll is still open
   const { data: post } = await supabase
     .from("posts")
-    .select("poll_closes_at")
+    .select("poll_question, poll_closes_at")
     .eq("id", postId)
     .single();
 
@@ -1614,26 +1597,18 @@ export async function votePoll(
 
   if (!option) return { success: false, error: "Invalid poll option" };
 
-  // Delete existing vote (allows vote changes via UNIQUE constraint)
-  const { error: existingError } = await supabase
-    .from("poll_votes")
-    .delete()
-    .eq("post_id", postId)
-    .eq("user_id", user.id);
-
-  if (existingError) {
-    logger.error("Failed to clear existing vote", { error: existingError });
-  }
-
-  const { error } = await supabase
-    .from("poll_votes")
-    .insert({
+  // Upsert the vote — atomic, handles both new votes and vote changes
+  const { error } = await supabase.from("poll_votes").upsert(
+    {
       post_id: postId,
       option_id: optionId,
       user_id: user.id,
-    });
+    },
+    { onConflict: "post_id,user_id" }
+  );
 
   if (error) {
+    logger.error("Failed to upsert poll vote", { error });
     return { success: false, error: error.message };
   }
 
