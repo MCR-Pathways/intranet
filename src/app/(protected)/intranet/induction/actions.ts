@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function markInductionItemComplete(
   itemId: string
@@ -66,8 +67,16 @@ export async function completeInduction(): Promise<{ success: boolean; error: st
     return { success: false, error: error.message };
   }
 
-  // Refresh session so the JWT picks up the new claims from the DB trigger
-  await supabase.auth.refreshSession();
+  // Refresh session so the JWT picks up the new claims from the DB trigger.
+  // Non-blocking: if this fails, the user keeps stale claims until the next
+  // natural token refresh (~1 hour) but induction completion itself succeeded.
+  const { error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) {
+    logger.warn("Failed to refresh session after induction completion", {
+      userId: user.id,
+      error: refreshError.message,
+    });
+  }
 
   revalidatePath("/intranet/induction");
   revalidatePath("/", "layout");
