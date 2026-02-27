@@ -174,7 +174,7 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [x] Security review (headers, `select("*")` audit, SSRF hardening)
 - [x] Dead code removal (`useUser()` hook deleted)
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
-- [ ] Middleware JWT optimisation (replace DB round-trip with custom claims)
+- [x] Middleware JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, middleware reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [ ] Expand test coverage (~5% currently — 15 test files, 333 tests / ~130 source files)
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
