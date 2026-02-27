@@ -64,9 +64,11 @@ CREATE POLICY "Authors can delete comment mentions"
 -- 2. FIX MENTIONER ID SPOOFING IN notify_mention()
 -- ============================================================================
 
+-- Drop the old function signature first (parameter list changed)
+DROP FUNCTION IF EXISTS public.notify_mention(UUID[], UUID, TEXT, UUID, UUID);
+
 CREATE OR REPLACE FUNCTION public.notify_mention(
   p_mentioned_user_ids UUID[],
-  p_mentioner_id UUID,
   p_entity_type TEXT,  -- 'post' or 'comment'
   p_entity_id UUID,
   p_post_id UUID
