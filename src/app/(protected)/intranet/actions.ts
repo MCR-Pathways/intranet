@@ -742,7 +742,6 @@ export async function createPost(data: {
       // Send notifications via RPC
       await supabase.rpc("notify_mention", {
         p_mentioned_user_ids: mentionIds,
-        p_mentioner_id: user.id,
         p_entity_type: "post",
         p_entity_id: post.id,
         p_post_id: post.id,
@@ -1252,7 +1251,6 @@ export async function addComment(
       );
       await supabase.rpc("notify_mention", {
         p_mentioned_user_ids: mentionIds,
-        p_mentioner_id: user.id,
         p_entity_type: "comment",
         p_entity_id: comment.id,
         p_post_id: postId,
