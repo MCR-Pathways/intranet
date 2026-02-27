@@ -66,6 +66,9 @@ export async function completeInduction(): Promise<{ success: boolean; error: st
     return { success: false, error: error.message };
   }
 
+  // Refresh session so the JWT picks up the new claims from the DB trigger
+  await supabase.auth.refreshSession();
+
   revalidatePath("/intranet/induction");
   revalidatePath("/", "layout");
   redirect("/intranet");
