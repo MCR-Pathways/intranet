@@ -106,7 +106,7 @@ BEGIN
     v_message := v_mentioner_name || ' mentioned you in a comment.';
     v_link := '/intranet?post=' || p_post_id || '#comment-' || p_entity_id;
   ELSE
-    RETURN 0;
+    RAISE EXCEPTION 'Invalid entity type provided: %', p_entity_type;
   END IF;
 
   -- Insert notifications for all mentioned users (skip self-mentions)
