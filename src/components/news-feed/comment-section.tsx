@@ -7,6 +7,7 @@ import { Loader2, Send } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { addComment } from "@/app/(protected)/intranet/actions";
 import { CommentItem } from "./comment-item";
+import type { MentionUser } from "./mention-list";
 import type {
   CommentWithAuthor,
   PostAuthor,
@@ -19,6 +20,8 @@ interface CommentSectionProps {
   currentUserId: string;
   currentUserProfile: PostAuthor;
   isHRAdmin: boolean;
+  /** Users available for @mentions in comments */
+  mentionUsers?: MentionUser[];
   expanded?: boolean;
   onToggleExpanded?: (expanded: boolean) => void;
   onOptimisticComment: (
@@ -38,6 +41,7 @@ export function CommentSection({
   currentUserId,
   currentUserProfile,
   isHRAdmin,
+  mentionUsers: _mentionUsers,
   expanded: controlledExpanded,
   onToggleExpanded,
   onOptimisticComment,
@@ -66,6 +70,7 @@ export function CommentSection({
     post_id: postId,
     author_id: currentUserId,
     content,
+    content_json: null,
     parent_id: parentId ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

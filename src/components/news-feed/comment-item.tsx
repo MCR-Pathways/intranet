@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo, getInitials } from "@/lib/utils";
-import { linkifyText } from "@/lib/url";
 import { Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -17,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteComment, editComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
+import { TiptapRenderer } from "./tiptap-renderer";
 import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
 import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
 
@@ -215,9 +215,7 @@ export function CommentItem({
                 </div>
               </div>
             ) : (
-              <p className="text-sm font-normal whitespace-pre-wrap break-words">
-                {linkifyText(comment.content)}
-              </p>
+              <TiptapRenderer json={comment.content_json} fallback={comment.content} />
             )}
           </div>
 

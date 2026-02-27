@@ -937,6 +937,8 @@ export interface CommentWithAuthor extends PostComment {
   reaction_counts: Record<ReactionType, number>;
   user_reaction: ReactionType | null;
   replies: CommentWithAuthor[];
+  /** Tiptap JSON content (null for plain-text comments created before Tiptap migration) */
+  content_json?: Record<string, unknown> | null;
 }
 
 export interface PostWithRelations extends Post {
@@ -947,4 +949,6 @@ export interface PostWithRelations extends Post {
   reaction_counts: Record<ReactionType, number>;
   user_reaction: ReactionType | null;
   comment_count: number;
+  /** Tiptap JSON content (null for plain-text posts created before Tiptap migration) */
+  content_json?: Record<string, unknown> | null;
 }

@@ -8,33 +8,36 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getInitials } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
-import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
+import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { createPost } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
+import { TiptapComposer } from "./tiptap-composer";
+import type { MentionUser } from "./mention-list";
 import type { PostAuthor } from "@/types/database.types";
 
 interface PostComposerProps {
   userProfile: PostAuthor;
+  mentionUsers: MentionUser[];
 }
 
-export function PostComposer({ userProfile }: PostComposerProps) {
-  const [content, setContent] = useState("");
+export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
+  const [contentJson, setContentJson] = useState<TiptapDocument | null>(null);
+  const [plainText, setPlainText] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
-  const { textareaRef, resize } = useAutoResizeTextarea(80);
   const { autoLinkPreview, isFetchingPreview, dismissPreview, resetPreview } =
-    useAutoLinkPreview({ content });
+    useAutoLinkPreview({ content: plainText });
 
   const displayName =
     userProfile.preferred_name || userProfile.full_name || "User";
 
   // Warn before navigating away with unsaved content
   useEffect(() => {
-    const hasContent = content.trim().length > 0 || attachments.length > 0;
+    const hasContent = plainText.trim().length > 0 || attachments.length > 0;
     if (!hasContent) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -43,7 +46,15 @@ export function PostComposer({ userProfile }: PostComposerProps) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [content, attachments]);
+  }, [plainText, attachments]);
+
+  const handleEditorChange = useCallback(
+    (json: TiptapDocument, text: string) => {
+      setContentJson(json);
+      setPlainText(text);
+    },
+    []
+  );
 
   const handleAttachmentsChange = useCallback(
     (updated: PendingAttachment[]) => {
@@ -52,14 +63,16 @@ export function PostComposer({ userProfile }: PostComposerProps) {
     []
   );
 
-  const handleSubmit = () => {
-    if (!content.trim() && attachments.length === 0) return;
+  const handleSubmit = useCallback(() => {
+    const text = plainText.trim();
+    if (!text && attachments.length === 0) return;
     if (attachments.some((a) => a.uploading)) return;
 
     setError(null);
     startTransition(async () => {
       const result = await createPost({
-        content: content.trim(),
+        content: text,
+        content_json: contentJson,
         attachments: attachments.map((a) => ({
           attachment_type: a.type,
           file_url: a.file_url,
@@ -70,12 +83,11 @@ export function PostComposer({ userProfile }: PostComposerProps) {
       });
 
       if (result.success) {
-        setContent("");
+        setContentJson(null);
+        setPlainText("");
         setAttachments([]);
         resetPreview();
         setResetKey((k) => k + 1);
-        // Reset textarea height after clearing content
-        requestAnimationFrame(() => resize());
         if (result.warning) {
           setError(result.warning);
         } else {
@@ -86,11 +98,12 @@ export function PostComposer({ userProfile }: PostComposerProps) {
         toast.error(result.error || "Something went wrong");
       }
     });
-  };
+  }, [plainText, contentJson, attachments, resetPreview]);
 
+  const charCount = plainText.length;
   const isSubmitDisabled =
     isPending ||
-    (!content.trim() && attachments.length === 0) ||
+    (!plainText.trim() && attachments.length === 0) ||
     attachments.some((a) => a.uploading);
 
   return (
@@ -108,28 +121,24 @@ export function PostComposer({ userProfile }: PostComposerProps) {
           </Avatar>
           <div className="flex-1 space-y-3">
             <div>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  resize();
-                }}
+              <TiptapComposer
+                mentionUsers={mentionUsers}
                 placeholder="Share something with the team..."
-                className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px]"
-                rows={3}
+                onChange={handleEditorChange}
+                onSubmit={handleSubmit}
                 maxLength={POST_MAX_LENGTH}
                 disabled={isPending}
+                resetKey={resetKey}
               />
-              {content.length > 0 && (
+              {charCount > 0 && (
                 <p
                   className={cn(
                     "mt-1 text-right text-xs text-muted-foreground",
-                    content.length > POST_MAX_LENGTH * 0.9 && "text-amber-500",
-                    content.length >= POST_MAX_LENGTH && "text-destructive"
+                    charCount > POST_MAX_LENGTH * 0.9 && "text-amber-500",
+                    charCount >= POST_MAX_LENGTH && "text-destructive"
                   )}
                 >
-                  {content.length.toLocaleString()} /{" "}
+                  {charCount.toLocaleString()} /{" "}
                   {POST_MAX_LENGTH.toLocaleString()}
                 </p>
               )}
@@ -177,7 +186,17 @@ export function PostComposer({ userProfile }: PostComposerProps) {
             )}
 
             {/* Submit button */}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">
+                  ⌘
+                </kbd>{" "}
+                +{" "}
+                <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">
+                  Enter
+                </kbd>{" "}
+                to post
+              </p>
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitDisabled}
