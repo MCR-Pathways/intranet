@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,52 @@ import type { Profile } from "@/types/database.types";
 import type { NotificationData } from "@/types/notification";
 
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
+const SIDEBAR_TOGGLE_EVENT = "mcr-sidebar-toggle";
+
+// ─── useSyncExternalStore for localStorage ──────────────────────────
+// Bridges localStorage (an external store) with React's rendering cycle
+// to avoid the hydration mismatch caused by reading localStorage in a
+// lazy useState initialiser. useSyncExternalStore lets React:
+//   1. Render the server snapshot (false = expanded) during SSR/hydration
+//   2. Subscribe to changes via a namespaced CustomEvent
+//   3. Read the true client value from localStorage after hydration
+
+/**
+ * Subscribe to sidebar state changes. Called by useSyncExternalStore.
+ * Listens to both the in-page CustomEvent and the browser `storage` event
+ * so the sidebar stays in sync across multiple tabs.
+ */
+function subscribeSidebar(callback: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === SIDEBAR_STORAGE_KEY || event.key === null) {
+      callback();
+    }
+  };
+
+  window.addEventListener(SIDEBAR_TOGGLE_EVENT, callback);
+  window.addEventListener("storage", handleStorage);
+
+  return () => {
+    window.removeEventListener(SIDEBAR_TOGGLE_EVENT, callback);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
+/** Read the current sidebar state from localStorage. */
+function getSidebarSnapshot() {
+  try {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Server snapshot — always expanded (false) to match initial HTML. */
+function getSidebarServerSnapshot() {
+  return false;
+}
+
+// ─── Layout Component ───────────────────────────────────────────────
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,17 +66,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-  });
+  const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
   const toggleSidebar = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
+    try {
+      const next = !getSidebarSnapshot();
       localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-      return next;
-    });
+      window.dispatchEvent(new CustomEvent(SIDEBAR_TOGGLE_EVENT));
+    } catch {
+      // localStorage unavailable — toggle is a no-op
+    }
   }, []);
 
   const toggleMobileMenu = useCallback(() => {
