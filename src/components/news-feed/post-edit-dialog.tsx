@@ -21,12 +21,14 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
-import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
+import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { editPost } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
+import { TiptapComposer } from "./tiptap-composer";
+import type { MentionUser } from "./mention-list";
 import type { PostAttachment } from "@/types/database.types";
 
 function mapExistingToPending(
@@ -57,7 +59,9 @@ function filterNonLinkAttachments(
 interface PostEditDialogProps {
   postId: string;
   initialContent: string;
+  initialContentJson?: TiptapDocument | Record<string, unknown> | null;
   initialAttachments: PostAttachment[];
+  mentionUsers?: MentionUser[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -65,11 +69,16 @@ interface PostEditDialogProps {
 export function PostEditDialog({
   postId,
   initialContent,
+  initialContentJson,
   initialAttachments,
+  mentionUsers = [],
   open,
   onOpenChange,
 }: PostEditDialogProps) {
   const [content, setContent] = useState(initialContent);
+  const [contentJson, setContentJson] = useState<TiptapDocument | null>(
+    (initialContentJson as TiptapDocument) ?? null
+  );
   const [attachments, setAttachments] = useState<PendingAttachment[]>(() =>
     filterNonLinkAttachments(mapExistingToPending(initialAttachments))
   );
@@ -77,7 +86,6 @@ export function PostEditDialog({
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
-  const { textareaRef, resize } = useAutoResizeTextarea(120);
 
   // Extract initial link attachment for pre-populating preview
   const initialLinkAttachment = useMemo(
@@ -104,17 +112,15 @@ export function PostEditDialog({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state from prop change on dialog open
       setContent(initialContent);
+      setContentJson((initialContentJson as TiptapDocument) ?? null);
       setAttachments(
         filterNonLinkAttachments(mapExistingToPending(initialAttachments))
       );
       setError(null);
       setResetKey((k) => k + 1);
       resetPreview(initialPreview);
-
-      // Resize textarea after content is set
-      requestAnimationFrame(() => resize());
     }
-  }, [open, initialContent, initialAttachments, initialPreview, resetPreview, resize]);
+  }, [open, initialContent, initialContentJson, initialAttachments, initialPreview, resetPreview]);
 
   // Detect unsaved changes
   const hasChanges = useMemo(() => {
@@ -149,6 +155,14 @@ export function PostEditDialog({
     autoLinkPreview,
   ]);
 
+  const handleEditorChange = useCallback(
+    (json: TiptapDocument, text: string) => {
+      setContentJson(json);
+      setContent(text);
+    },
+    []
+  );
+
   const handleAttachmentsChange = useCallback(
     (updated: PendingAttachment[]) => {
       setAttachments(updated);
@@ -178,6 +192,7 @@ export function PostEditDialog({
       // Only send non-link attachments — server auto-detects links from content
       const result = await editPost(postId, {
         content: content.trim(),
+        content_json: contentJson,
         attachments: attachments.map((a) => ({
           id: a.isExisting ? a.id : undefined,
           attachment_type: a.type,
@@ -226,17 +241,16 @@ export function PostEditDialog({
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  resize();
-                }}
-                className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[120px]"
-                rows={5}
+              <TiptapComposer
+                mentionUsers={mentionUsers}
+                placeholder="Edit your post..."
+                onChange={handleEditorChange}
                 maxLength={POST_MAX_LENGTH}
                 disabled={isPending}
+                resetKey={resetKey}
+                initialContent={
+                  (initialContentJson as TiptapDocument) ?? undefined
+                }
               />
               {content.length > 0 && (
                 <p

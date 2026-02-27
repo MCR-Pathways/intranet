@@ -15,12 +15,13 @@ import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2 } from "
 import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
 import { timeAgo, getInitials } from "@/lib/utils";
-import { linkifyText } from "@/lib/url";
+import { TiptapRenderer } from "./tiptap-renderer";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
+import type { MentionUser } from "./mention-list";
 import type {
   PostWithRelations,
   PostAuthor,
@@ -33,6 +34,7 @@ interface PostCardProps {
   currentUserId: string;
   currentUserProfile: PostAuthor;
   isHRAdmin: boolean;
+  mentionUsers?: MentionUser[];
 }
 
 export function PostCard({
@@ -40,6 +42,7 @@ export function PostCard({
   currentUserId,
   currentUserProfile,
   isHRAdmin,
+  mentionUsers = [],
 }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -277,9 +280,7 @@ export function PostCard({
             </div>
 
             {/* Content */}
-            <div className="whitespace-pre-wrap text-sm break-words">
-              {linkifyText(post.content)}
-            </div>
+            <TiptapRenderer json={post.content_json} fallback={post.content} />
 
             {/* Attachments */}
             <AttachmentDisplay attachments={post.attachments} />
@@ -301,6 +302,7 @@ export function PostCard({
               currentUserId={currentUserId}
               currentUserProfile={currentUserProfile}
               isHRAdmin={isHRAdmin}
+              mentionUsers={mentionUsers}
               expanded={commentsExpanded}
               onToggleExpanded={setCommentsExpanded}
               onOptimisticComment={handleOptimisticComment}
@@ -314,7 +316,9 @@ export function PostCard({
       <PostEditDialog
         postId={post.id}
         initialContent={post.content}
+        initialContentJson={post.content_json}
         initialAttachments={post.attachments}
+        mentionUsers={mentionUsers}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

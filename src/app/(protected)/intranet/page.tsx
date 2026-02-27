@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
 import { WeeklyRoundupBanner } from "@/components/news-feed/weekly-roundup-banner";
-import { fetchPostsWithClient, fetchActiveRoundupWithClient } from "./actions";
+import { fetchPostsWithClient, fetchActiveRoundupWithClient, getActiveProfilesForMentions } from "./actions";
 import type { PostAuthor } from "@/types/database.types";
 
 export default async function IntranetPage() {
@@ -26,11 +26,12 @@ export default async function IntranetPage() {
     job_title: profile.job_title,
   };
 
-  // Fetch initial posts and active roundup using the existing supabase client
+  // Fetch initial posts, active roundup, and mention users using the existing supabase client
   // (avoids creating multiple concurrent auth sessions that cause SSR hangs)
-  const [postsResult, roundupResult] = await Promise.all([
+  const [postsResult, roundupResult, mentionUsers] = await Promise.all([
     fetchPostsWithClient(supabase, user.id, 1, 10),
     fetchActiveRoundupWithClient(supabase),
+    getActiveProfilesForMentions(),
   ]);
 
   return (
@@ -41,7 +42,7 @@ export default async function IntranetPage() {
       />
 
       {/* Post composer — all active users (staff + pathways coordinators) */}
-      {canPost && <PostComposer userProfile={currentUserProfile} />}
+      {canPost && <PostComposer userProfile={currentUserProfile} mentionUsers={mentionUsers} />}
 
       {/* Weekly roundup banner */}
       {roundupResult.roundup && (
@@ -56,6 +57,7 @@ export default async function IntranetPage() {
         isStaff={isStaff}
         isHRAdmin={isHRAdmin}
         initialHasMore={postsResult.hasMore}
+        mentionUsers={mentionUsers}
       />
     </div>
   );
