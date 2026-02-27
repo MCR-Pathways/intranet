@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -94,10 +95,10 @@ interface QuickActionProps {
 function QuickActionCard({ title, description, href, icon: Icon, isAdmin }: QuickActionProps) {
   return (
     <Link href={href}>
-      <Card className={`transition-shadow hover:shadow-md cursor-pointer h-full ${isAdmin ? "border-primary/20" : ""}`}>
+      <Card className={cn("transition-shadow hover:shadow-md cursor-pointer h-full", isAdmin && "border-primary/20")}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <Icon className={`h-4 w-4 ${isAdmin ? "text-primary" : "text-muted-foreground"}`} />
+          <Icon className={cn("h-4 w-4", isAdmin ? "text-primary" : "text-muted-foreground")} />
         </CardHeader>
         <CardContent>
           <CardDescription>{description}</CardDescription>
@@ -274,7 +275,7 @@ export default async function HRPage() {
           : "max-w-sm";
 
         return (
-          <div className={`grid gap-4 ${actionCards.length === 1 ? "" : "sm:grid-cols-2"} ${gridCols}`}>
+          <div className={cn("grid gap-4", actionCards.length !== 1 && "sm:grid-cols-2", gridCols)}>
             {actionCards.map((card) => (
               <StatCard key={card.title} {...card} />
             ))}
