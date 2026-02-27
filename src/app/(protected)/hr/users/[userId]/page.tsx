@@ -387,12 +387,12 @@ export default async function EmployeeDetailPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={profile.full_name as string}
-        subtitle={profile.job_title as string || "No job title set"}
+        title={profile.full_name ?? "User Details"}
+        subtitle={profile.job_title || "No job title set"}
         breadcrumbs={[
           { label: "HR", href: "/hr" },
           { label: "User Management", href: "/hr/users" },
-          { label: profile.full_name as string },
+          { label: profile.full_name ?? "User" },
         ]}
       />
 
