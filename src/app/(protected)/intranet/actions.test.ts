@@ -80,8 +80,9 @@ import {
   deletePost,
   toggleReaction,
   addComment,
+  editComment,
+  togglePinPost,
   fetchLinkPreview,
-  _clearPreviewCacheForTesting,
 } from "@/app/(protected)/intranet/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -153,16 +154,20 @@ describe("Intranet Post Actions", () => {
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it("returns error when user is not staff", async () => {
+    it("allows pathways_coordinator to create posts", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
         supabase: mockSupabase,
         user: mockUser,
         profile: { ...mockProfile, user_type: "pathways_coordinator" },
       } as never);
 
-      const result = await createPost({ content: "Hello" });
+      const result = await createPost({ content: "Hello from coordinator" });
 
-      expect(result).toEqual({ success: false, error: "Only staff can create posts" });
+      expect(result).toEqual({ success: true, error: null, postId: "post-1" });
+      expect(mockInsert).toHaveBeenCalledWith({
+        author_id: "user-1",
+        content: "Hello from coordinator",
+      });
     });
 
     it("returns error when content is empty", async () => {
@@ -855,6 +860,242 @@ describe("Intranet Post Actions", () => {
   });
 
   // ===========================================
+  // editComment
+  // ===========================================
+
+  describe("editComment", () => {
+    it("returns error when not authenticated", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: null,
+        profile: null,
+      } as never);
+
+      const result = await editComment("comment-1", "Updated");
+
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
+    });
+
+    it("returns error when content is empty", async () => {
+      const result = await editComment("comment-1", "");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Comment must be between 1 and 2,000 characters",
+      });
+    });
+
+    it("returns error when content is only whitespace", async () => {
+      const result = await editComment("comment-1", "   ");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Comment must be between 1 and 2,000 characters",
+      });
+    });
+
+    it("returns error when content exceeds 2000 characters", async () => {
+      const result = await editComment("comment-1", "a".repeat(2001));
+
+      expect(result).toEqual({
+        success: false,
+        error: "Comment must be between 1 and 2,000 characters",
+      });
+    });
+
+    it("updates comment successfully", async () => {
+      // Chain: .from("post_comments").update({content}).eq("id").eq("author_id").select("id").single()
+      const editSingle = vi.fn().mockResolvedValue({ data: { id: "comment-1" }, error: null });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      const result = await editComment("comment-1", "Updated comment");
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(mockFrom).toHaveBeenCalledWith("post_comments");
+      expect(mockUpdate).toHaveBeenCalledWith({ content: "Updated comment" });
+      expect(mockEq).toHaveBeenCalledWith("id", "comment-1");
+      expect(mockEq2).toHaveBeenCalledWith("author_id", "user-1");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+    });
+
+    it("trims whitespace from content", async () => {
+      const editSingle = vi.fn().mockResolvedValue({ data: { id: "comment-1" }, error: null });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      await editComment("comment-1", "  Trimmed content  ");
+
+      expect(mockUpdate).toHaveBeenCalledWith({ content: "Trimmed content" });
+    });
+
+    it("returns error when non-author attempts to edit", async () => {
+      const editSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "JSON object requested, multiple (or no) rows returned", code: "PGRST116" },
+      });
+      const editSelect = vi.fn().mockReturnValue({ single: editSingle });
+      const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
+      mockEq.mockReturnValue({ eq: mockEq2 });
+      mockUpdate.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      const result = await editComment("other-comment", "Hijacked");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Comment not found or not authorised to edit",
+      });
+      expect(revalidatePath).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
+  // togglePinPost
+  // ===========================================
+
+  describe("togglePinPost", () => {
+    it("returns error when not authenticated", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: null,
+        profile: null,
+      } as never);
+
+      const result = await togglePinPost("post-1");
+
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
+    });
+
+    it("returns error when user is not HR admin", async () => {
+      const result = await togglePinPost("post-1");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Only HR admins can pin or unpin posts",
+      });
+    });
+
+    it("pins an unpinned post", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, is_hr_admin: true },
+      } as never);
+
+      // First call: fetch current pin state
+      const selectSingle = vi.fn().mockResolvedValue({
+        data: { is_pinned: false },
+        error: null,
+      });
+      const selectEq = vi.fn().mockReturnValue({ single: selectSingle });
+      const selectChain = vi.fn().mockReturnValue({ eq: selectEq });
+
+      // Second call: update pin state
+      const updateEq = vi.fn().mockResolvedValue({ error: null });
+      const updateChain = vi.fn().mockReturnValue({ eq: updateEq });
+
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return { select: selectChain };
+        return { update: updateChain };
+      });
+
+      const result = await togglePinPost("post-1");
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(updateChain).toHaveBeenCalledWith({ is_pinned: true });
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+    });
+
+    it("unpins a pinned post", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, is_hr_admin: true },
+      } as never);
+
+      const selectSingle = vi.fn().mockResolvedValue({
+        data: { is_pinned: true },
+        error: null,
+      });
+      const selectEq = vi.fn().mockReturnValue({ single: selectSingle });
+      const selectChain = vi.fn().mockReturnValue({ eq: selectEq });
+
+      const updateEq = vi.fn().mockResolvedValue({ error: null });
+      const updateChain = vi.fn().mockReturnValue({ eq: updateEq });
+
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return { select: selectChain };
+        return { update: updateChain };
+      });
+
+      const result = await togglePinPost("post-1");
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(updateChain).toHaveBeenCalledWith({ is_pinned: false });
+    });
+
+    it("returns error when post is not found", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, is_hr_admin: true },
+      } as never);
+
+      const selectSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+      const selectEq = vi.fn().mockReturnValue({ single: selectSingle });
+      const selectChain = vi.fn().mockReturnValue({ eq: selectEq });
+      mockFrom.mockReturnValue({ select: selectChain });
+
+      const result = await togglePinPost("nonexistent");
+
+      expect(result).toEqual({ success: false, error: "Post not found" });
+    });
+
+    it("returns error when DB update fails", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, is_hr_admin: true },
+      } as never);
+
+      const selectSingle = vi.fn().mockResolvedValue({
+        data: { is_pinned: false },
+        error: null,
+      });
+      const selectEq = vi.fn().mockReturnValue({ single: selectSingle });
+      const selectChain = vi.fn().mockReturnValue({ eq: selectEq });
+
+      const updateEq = vi.fn().mockResolvedValue({
+        error: { message: "Update failed" },
+      });
+      const updateChain = vi.fn().mockReturnValue({ eq: updateEq });
+
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return { select: selectChain };
+        return { update: updateChain };
+      });
+
+      const result = await togglePinPost("post-1");
+
+      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(revalidatePath).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
   // fetchLinkPreview
   // ===========================================
 
@@ -882,8 +1123,6 @@ describe("Intranet Post Actions", () => {
     beforeEach(() => {
       // Mock global fetch for link preview requests
       vi.stubGlobal("fetch", vi.fn());
-      // Clear server-side preview cache between tests
-      _clearPreviewCacheForTesting();
     });
 
     it("returns error when not authenticated", async () => {
@@ -896,21 +1135,6 @@ describe("Intranet Post Actions", () => {
       const result = await fetchLinkPreview("https://example.com");
 
       expect(result).toEqual({ success: false, error: "Not authenticated" });
-    });
-
-    it("returns error when user is not staff", async () => {
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase,
-        user: mockUser,
-        profile: { ...mockProfile, user_type: "pathways_coordinator" },
-      } as never);
-
-      const result = await fetchLinkPreview("https://example.com");
-
-      expect(result).toEqual({
-        success: false,
-        error: "Only staff can fetch link previews",
-      });
     });
 
     it("returns error for non-HTTP protocol", async () => {

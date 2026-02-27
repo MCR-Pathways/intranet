@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Pin, Sparkles } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2 } from "lucide-react";
+import { togglePinPost } from "@/app/(protected)/intranet/actions";
+import { toast } from "sonner";
 import { timeAgo, getInitials } from "@/lib/utils";
 import { linkifyText } from "@/lib/url";
 import { AttachmentDisplay } from "./attachment-display";
@@ -42,6 +44,7 @@ export function PostCard({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [isPinPending, startPinTransition] = useTransition();
 
   // ─── Optimistic state ──────────────────────────────────────────────
   const [optimisticReactionCounts, setOptimisticReactionCounts] = useState(
@@ -235,6 +238,30 @@ export function PostCard({
                       >
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit Post
+                      </DropdownMenuItem>
+                    )}
+                    {isHRAdmin && (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          startPinTransition(async () => {
+                            const result = await togglePinPost(post.id);
+                            if (result.success) {
+                              toast.success(post.is_pinned ? "Post unpinned" : "Post pinned");
+                            } else {
+                              toast.error(result.error ?? "Failed to update pin status");
+                            }
+                          });
+                        }}
+                        disabled={isPinPending}
+                      >
+                        {isPinPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : post.is_pinned ? (
+                          <PinOff className="mr-2 h-4 w-4" />
+                        ) : (
+                          <Pin className="mr-2 h-4 w-4" />
+                        )}
+                        {post.is_pinned ? "Unpin Post" : "Pin Post"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
