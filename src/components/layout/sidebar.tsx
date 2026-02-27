@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import {
+usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -105,8 +106,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       items: [
         { name: "News Feed", href: "/intranet" },
         { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
-        { name: "Guides", href: "/intranet/guides" },
-        { name: "Policies", href: "/intranet/policies" },
+        { name: "Resources", href: "/intranet/resources" },
         { name: "Surveys", href: "/intranet/surveys" },
       ],
     },

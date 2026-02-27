@@ -42,6 +42,9 @@
 - Policies section (`/intranet/policies`)
 - **Phase 1 polish (PR #44):** Comment editing with "(edited)" indicator, pin/unpin posts (HR admin), pathways_coordinators can post, `enrichPosts()` dedup, parallel file uploads, DB-first delete ordering
 - **Phase 2 — Tiptap + @Mentions (PR #45):** Rich text composer (Tiptap: bold, italic, links, lists), @mention picker with inline people dropdown, `content_json` JSONB storage with plain-text fallback for backward compat, mention notifications via `notify_mention` RPC, TiptapRenderer for posts and comments, shared Tiptap utilities (`src/lib/tiptap.ts`)
+- **Phase 2 security fixes (PR #47):** Sanitise TiptapRenderer link hrefs (stored XSS), tighten mention table RLS to author-only INSERT/DELETE, fix mentioner ID spoofing in `notify_mention()` by using `auth.uid()`
+- **Phase 3 — Live Feed + Polls + Comment Notifications (PR #48):** "X new posts" polling banner (30s count-only query, tab visibility-aware), comment/reply notifications via `notify_post_comment` RPC with mention deduplication, inline polls (2-4 options, vote changing, optional expiry, CSS bar results)
+- **Phase 4 — Resources / Knowledge Base (PR #48):** Two-level Resources module (Categories → Articles) replacing Guides + Policies stubs. Tiptap-powered article composer. HR admins manage content, all users read. 4 seeded categories. Sidebar consolidated to single "Resources" item.
 
 ### Notifications ✅
 - Real-time notification bell with unread badge
@@ -142,16 +145,17 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [ ] Extract `<LocationBadge>` component (rendering duplicated 6×)
 - [ ] Merge `getTodaySignIns()` + `getMonthlyHistory()` into single query
 
-### Intranet Phase 3 — Live Feed + Polls
-- [ ] "X new posts available" polling banner (45s interval, pauses when tab hidden)
-- [ ] Comment/reply notifications ("X commented on your post", "X replied to your comment")
-- [ ] Inline polls in feed posts (2-4 options, vote and see results)
+### Intranet Phase 3 — Live Feed + Polls ✅
+- [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)
+- [x] Comment/reply notifications via `notify_post_comment` RPC (mention dedup, self-exclusion)
+- [x] Inline polls in feed posts (2-4 options, vote changing, optional expiry, CSS bar results)
 
-### Intranet Phase 4 — Resources / Knowledge Base
-- [ ] `/intranet/resources` replaces Guides + Policies stubs
-- [ ] Two-level hierarchy: Categories → Articles (Tiptap editor reused from Phase 2)
-- [ ] HR admins create/edit/publish/delete; all users read
-- [ ] Old `/intranet/guides` and `/intranet/policies` redirect to resources
+### Intranet Phase 4 — Resources / Knowledge Base ✅
+- [x] `/intranet/resources` replaces Guides + Policies stubs
+- [x] Two-level hierarchy: Categories → Articles (Tiptap editor reused from Phase 2)
+- [x] HR admins create/edit/publish/delete; all users read published content
+- [x] Old `/intranet/guides` and `/intranet/policies` redirect to resources
+- [x] Sidebar updated: single "Resources" nav item replaces "Guides" + "Policies"
 
 ### Intranet Phase 5 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
