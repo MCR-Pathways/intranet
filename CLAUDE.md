@@ -141,3 +141,9 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 **Mock auth helpers, not the Supabase client, in server action tests.** Mocking `requireHRAdmin()` / `getCurrentUser()` from `@/lib/auth` is far simpler than mocking the low-level Supabase fluent chain. The fluent API shares `mockEq` across select and update chains, causing fragile test state. Mock one level higher to avoid this.
 
 **Use CSS `drop-shadow` for speech bubble arrows, not `border`.** When building a speech bubble (card + arrow), don't use CSS `border` on either element — the arrow and card borders will always create a visible seam at their junction. Instead, use `filter: drop-shadow(...)` on the wrapper div to trace a unified outline around the entire composite shape. See `src/components/sign-in/sign-in-nudge-bubble.tsx`.
+
+**Sanitise user-controlled URLs before rendering as `href`.** When rendering rich text JSON (e.g. Tiptap content), always whitelist `href` values to `http://` and `https://` protocols. Unsanitised hrefs allow stored XSS via `javascript:` URLs. See `TiptapRenderer` fix in PR #47.
+
+**Write RLS policies with ownership checks, not blanket `true`.** Even when mutations are gated by server actions, RLS is the last line of defence. INSERT/DELETE policies on junction tables (e.g. `post_mentions`, `comment_mentions`) should verify the current user owns the parent record via `EXISTS` subqueries, not rely on `WITH CHECK (true)`.
+
+**Never trust user-supplied IDs in SECURITY DEFINER functions.** In `notify_mention()`, the `p_mentioner_id` parameter was used to look up the sender's name, allowing impersonation. Always use `auth.uid()` for identity inside SECURITY DEFINER functions — treat all parameters as untrusted input.
