@@ -15,6 +15,7 @@ export default async function IntranetPage() {
   }
 
   const isStaff = profile.user_type === "staff";
+  const canPost = profile.user_type === "staff" || profile.user_type === "pathways_coordinator";
   const isHRAdmin = profile.is_hr_admin ?? false;
 
   const currentUserProfile: PostAuthor = {
@@ -40,8 +41,8 @@ export default async function IntranetPage() {
         subtitle="Stay updated with the latest news and announcements"
       />
 
-      {/* Post composer — staff only */}
-      {isStaff && <PostComposer userProfile={currentUserProfile} mentionUsers={mentionUsers} />}
+      {/* Post composer — all active users (staff + pathways coordinators) */}
+      {canPost && <PostComposer userProfile={currentUserProfile} mentionUsers={mentionUsers} />}
 
       {/* Weekly roundup banner */}
       {roundupResult.roundup && (

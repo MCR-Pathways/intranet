@@ -164,25 +164,10 @@ async function resolveExternalUrl(url: string): Promise<string | null> {
 
 // ─── Internal Link Preview Helper ────────────────────────────────────
 
-/** In-memory cache for link preview results to avoid double-fetching. */
-const previewCache = new Map<
-  string,
-  { data: { title?: string; description?: string; imageUrl?: string }; timestamp: number }
->();
-const PREVIEW_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const PREVIEW_CACHE_MAX_SIZE = 50;
-
-/** @internal Exported only for test cleanup — do not use in production code. */
-export async function _clearPreviewCacheForTesting() {
-  previewCache.clear();
-}
-
 /**
  * Internal link preview fetcher (no auth check).
  * Used by createPost/editPost for server-side auto-detection
  * and by the public fetchLinkPreview action.
- * Results are cached in-memory for PREVIEW_CACHE_TTL to avoid
- * re-fetching the same URL when the client previews then posts.
  */
 async function _fetchLinkPreviewInternal(url: string): Promise<{
   title?: string;
@@ -192,12 +177,6 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
   try {
     const parsed = new URL(url);
     if (!["http:", "https:"].includes(parsed.protocol)) return null;
-
-    // Check cache first
-    const cached = previewCache.get(url);
-    if (cached && Date.now() - cached.timestamp < PREVIEW_CACHE_TTL) {
-      return cached.data;
-    }
 
     // Fetch with redirect validation — each hop is checked against private IPs
     const MAX_REDIRECTS = 3;
@@ -272,20 +251,11 @@ async function _fetchLinkPreviewInternal(url: string): Promise<{
       getMetaContent("og:description") ?? getMetaContent("description");
     const imageUrl = getMetaContent("og:image");
 
-    const data = {
+    return {
       title: title?.slice(0, 200),
       description: description?.slice(0, 500),
       imageUrl,
     };
-
-    // Store in cache, evict oldest if at max size
-    if (previewCache.size >= PREVIEW_CACHE_MAX_SIZE) {
-      const oldestKey = previewCache.keys().next().value;
-      if (oldestKey) previewCache.delete(oldestKey);
-    }
-    previewCache.set(url, { data, timestamp: Date.now() });
-
-    return data;
   } catch {
     return null;
   }
@@ -367,46 +337,21 @@ function threadComments(
   return topLevelComments;
 }
 
-// ─── Helper functions (accept supabase client, avoid multiple getCurrentUser() calls in SSR) ───
+// ─── Shared Post Enrichment ─────────────────────────────────────────
 
 /**
- * Fetch posts with an existing supabase client.
- * Used by Server Components that already have an authenticated client.
+ * Enrich raw post rows with attachments, reactions, and threaded comments.
+ * Shared by fetchPostsWithClient and fetchRoundupPostsWithClient to eliminate duplication.
+ * Runs 3 parallel queries (attachments, reactions, comments) + 1 sequential (comment reactions).
  */
-export async function fetchPostsWithClient(
+async function enrichPosts(
   supabase: SupabaseClient,
   userId: string,
-  page: number = 1,
-  pageSize: number = 10
-): Promise<{ posts: PostWithRelations[]; hasMore: boolean; error: string | null }> {
-  const offset = (page - 1) * pageSize;
+  postRows: Record<string, unknown>[]
+): Promise<PostWithRelations[]> {
+  const postIds = postRows.map((p) => (p as { id: string }).id);
 
-  const { data: posts, error: postsError } = await supabase
-    .from("posts")
-    .select(
-      `${POST_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
-    )
-    .order("is_pinned", { ascending: false })
-    .order("created_at", { ascending: false })
-    // Supabase .range() is inclusive on both ends: range(0, 10) returns rows 0..10 = 11 rows.
-    // We request pageSize+1 rows to detect whether another page exists beyond this one.
-    .range(offset, offset + pageSize);
-
-  if (postsError || !posts) {
-    return {
-      posts: [],
-      hasMore: false,
-      error: postsError?.message ?? "Failed to fetch posts",
-    };
-  }
-
-  const hasMore = posts.length > pageSize;
-  const postsSlice = posts.slice(0, pageSize);
-  const postIds = postsSlice.map((p) => p.id);
-
-  if (postIds.length === 0) {
-    return { posts: [], hasMore: false, error: null };
-  }
+  if (postIds.length === 0) return [];
 
   const [attachmentsResult, reactionsResult, commentsResult] =
     await Promise.all([
@@ -474,31 +419,74 @@ export async function fetchPostsWithClient(
     threadedCommentsByPost.set(postId, threaded);
   }
 
-  const enrichedPosts: PostWithRelations[] = postsSlice.map((post) => {
-    const postReactions = reactionsByPost.get(post.id) ?? [];
-    const postComments = commentsByPost.get(post.id) ?? [];
+  return postRows.map((post) => {
+    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; created_at: string; updated_at: string; author: unknown };
+    const postReactions = reactionsByPost.get(p.id) ?? [];
+    const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
 
     return {
-      id: post.id,
-      author_id: post.author_id,
-      content: post.content,
-      content_json: post.content_json ?? null,
-      is_pinned: post.is_pinned,
-      is_weekly_roundup: post.is_weekly_roundup,
-      weekly_roundup_id: post.weekly_roundup_id,
-      created_at: post.created_at,
-      updated_at: post.updated_at,
-      author: post.author as unknown as PostAuthor,
-      attachments: attachmentsByPost.get(post.id) ?? [],
+      id: p.id,
+      author_id: p.author_id,
+      content: p.content,
+      content_json: p.content_json ?? null,
+      is_pinned: p.is_pinned,
+      is_weekly_roundup: p.is_weekly_roundup,
+      weekly_roundup_id: p.weekly_roundup_id,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+      author: p.author as unknown as PostAuthor,
+      attachments: attachmentsByPost.get(p.id) ?? [],
       reactions: postReactions,
-      comments: threadedCommentsByPost.get(post.id) ?? [],
+      comments: threadedCommentsByPost.get(p.id) ?? [],
       reaction_counts: buildReactionCounts(postReactions),
       user_reaction: (userReaction?.reaction_type as ReactionType) ?? null,
       comment_count: postComments.length,
     };
   });
+}
 
+// ─── Helper functions (accept supabase client, avoid multiple getCurrentUser() calls in SSR) ───
+
+/**
+ * Fetch posts with an existing supabase client.
+ * Used by Server Components that already have an authenticated client.
+ */
+export async function fetchPostsWithClient(
+  supabase: SupabaseClient,
+  userId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ posts: PostWithRelations[]; hasMore: boolean; error: string | null }> {
+  const offset = (page - 1) * pageSize;
+
+  const { data: posts, error: postsError } = await supabase
+    .from("posts")
+    .select(
+      `${POST_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
+    )
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false })
+    // Supabase .range() is inclusive on both ends: range(0, 10) returns rows 0..10 = 11 rows.
+    // We request pageSize+1 rows to detect whether another page exists beyond this one.
+    .range(offset, offset + pageSize);
+
+  if (postsError || !posts) {
+    return {
+      posts: [],
+      hasMore: false,
+      error: postsError?.message ?? "Failed to fetch posts",
+    };
+  }
+
+  const hasMore = posts.length > pageSize;
+  const postsSlice = posts.slice(0, pageSize);
+
+  if (postsSlice.length === 0) {
+    return { posts: [], hasMore: false, error: null };
+  }
+
+  const enrichedPosts = await enrichPosts(supabase, userId, postsSlice);
   return { posts: enrichedPosts, hasMore, error: null };
 }
 
@@ -583,112 +571,14 @@ export async function fetchRoundupPostsWithClient(
     .in("id", roundup.post_ids)
     .order("created_at", { ascending: false });
 
+  const roundupData = { id: roundup.id, title: roundup.title, summary: roundup.summary, week_start: roundup.week_start, week_end: roundup.week_end };
+
   if (!posts || posts.length === 0) {
-    return {
-      roundup: { id: roundup.id, title: roundup.title, summary: roundup.summary, week_start: roundup.week_start, week_end: roundup.week_end },
-      posts: [],
-      error: null,
-    };
+    return { roundup: roundupData, posts: [], error: null };
   }
 
-  const postIds = posts.map((p) => p.id);
-
-  const [attachmentsResult, reactionsResult, commentsResult] =
-    await Promise.all([
-      supabase
-        .from("post_attachments")
-        .select(ATTACHMENT_SELECT)
-        .in("post_id", postIds)
-        .order("sort_order"),
-      supabase
-        .from("post_reactions")
-        .select(REACTION_SELECT)
-        .in("post_id", postIds),
-      supabase
-        .from("post_comments")
-        .select(
-          `${COMMENT_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
-        )
-        .in("post_id", postIds)
-        .order("created_at", { ascending: true }),
-    ]);
-
-  const attachments = attachmentsResult.data ?? [];
-  const reactions = reactionsResult.data ?? [];
-  const comments = commentsResult.data ?? [];
-
-  const attachmentsByPost = new Map<string, typeof attachments>();
-  for (const a of attachments) {
-    const existing = attachmentsByPost.get(a.post_id) ?? [];
-    existing.push(a);
-    attachmentsByPost.set(a.post_id, existing);
-  }
-
-  const reactionsByPost = new Map<string, typeof reactions>();
-  for (const r of reactions) {
-    const existing = reactionsByPost.get(r.post_id) ?? [];
-    existing.push(r);
-    reactionsByPost.set(r.post_id, existing);
-  }
-
-  const commentsByPost = new Map<string, typeof comments>();
-  for (const c of comments) {
-    const existing = commentsByPost.get(c.post_id) ?? [];
-    existing.push(c);
-    commentsByPost.set(c.post_id, existing);
-  }
-
-  // Batch-fetch ALL comment reactions in a single query
-  const allCommentIds = comments.map((c) => c.id);
-  const { data: allCommentReactions } =
-    allCommentIds.length > 0
-      ? await supabase
-          .from("comment_reactions")
-          .select(COMMENT_REACTION_SELECT)
-          .in("comment_id", allCommentIds)
-      : { data: [] };
-
-  // Thread comments per-post using pre-fetched reactions (no DB calls)
-  const threadedCommentsByPost = new Map<string, CommentWithAuthor[]>();
-  for (const [postId, postComments] of commentsByPost) {
-    const threaded = threadComments(
-      postComments as unknown as Record<string, unknown>[],
-      allCommentReactions ?? [],
-      userId
-    );
-    threadedCommentsByPost.set(postId, threaded);
-  }
-
-  const enrichedPosts: PostWithRelations[] = posts.map((post) => {
-    const postReactions = reactionsByPost.get(post.id) ?? [];
-    const postComments = commentsByPost.get(post.id) ?? [];
-    const userReaction = postReactions.find((r) => r.user_id === userId);
-
-    return {
-      id: post.id,
-      author_id: post.author_id,
-      content: post.content,
-      content_json: post.content_json ?? null,
-      is_pinned: post.is_pinned,
-      is_weekly_roundup: post.is_weekly_roundup,
-      weekly_roundup_id: post.weekly_roundup_id,
-      created_at: post.created_at,
-      updated_at: post.updated_at,
-      author: post.author as unknown as PostAuthor,
-      attachments: attachmentsByPost.get(post.id) ?? [],
-      reactions: postReactions,
-      comments: threadedCommentsByPost.get(post.id) ?? [],
-      reaction_counts: buildReactionCounts(postReactions),
-      user_reaction: (userReaction?.reaction_type as ReactionType) ?? null,
-      comment_count: postComments.length,
-    };
-  });
-
-  return {
-    roundup: { id: roundup.id, title: roundup.title, summary: roundup.summary, week_start: roundup.week_start, week_end: roundup.week_end },
-    posts: enrichedPosts,
-    error: null,
-  };
+  const enrichedPosts = await enrichPosts(supabase, userId, posts);
+  return { roundup: roundupData, posts: enrichedPosts, error: null };
 }
 
 // ─── Post CRUD ───────────────────────────────────────────────────────
@@ -712,10 +602,6 @@ export async function createPost(data: {
 
   if (!user || !profile) {
     return { success: false, error: "Not authenticated" };
-  }
-
-  if (profile.user_type !== "staff") {
-    return { success: false, error: "Only staff can create posts" };
   }
 
   const content = data.content?.trim();
@@ -1049,24 +935,27 @@ export async function deletePost(
     return { success: false, error: "Not authorised to delete this post" };
   }
 
-  // Delete attachments from storage first
+  // Fetch file URLs before deleting the DB record (needed for storage cleanup)
   const { data: attachments } = await supabase
     .from("post_attachments")
     .select("file_url")
     .eq("post_id", postId);
 
+  // Delete DB record first (cascade handles attachments, reactions, comments).
+  // If this fails, file references remain valid. Orphaned files are preferable
+  // to broken DB references (orphaned files can be batch-cleaned later).
+  const { error } = await supabase.from("posts").delete().eq("id", postId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  // Clean up storage files after successful DB delete
   if (attachments && attachments.length > 0) {
     await deleteAttachmentFiles(
       supabase,
       attachments.map((a) => a.file_url)
     );
-  }
-
-  // Cascade delete handles attachments, reactions, comments
-  const { error } = await supabase.from("posts").delete().eq("id", postId);
-
-  if (error) {
-    return { success: false, error: error.message };
   }
 
   revalidatePath("/intranet");
@@ -1336,10 +1225,6 @@ export async function uploadPostAttachment(
     return { success: false, error: "Not authenticated" };
   }
 
-  if (profile.user_type !== "staff") {
-    return { success: false, error: "Only staff can upload attachments" };
-  }
-
   const file = formData.get("file") as File | null;
   if (!file) {
     return { success: false, error: "No file provided" };
@@ -1392,14 +1277,10 @@ export async function fetchLinkPreview(
   description?: string;
   imageUrl?: string;
 }> {
-  const { user, profile } = await getCurrentUser();
+  const { user } = await getCurrentUser();
 
-  if (!user || !profile) {
+  if (!user) {
     return { success: false, error: "Not authenticated" };
-  }
-
-  if (profile.user_type !== "staff") {
-    return { success: false, error: "Only staff can fetch link previews" };
   }
 
   const result = await _fetchLinkPreviewInternal(url);
@@ -1493,4 +1374,81 @@ export async function getActiveProfilesForMentions(): Promise<MentionableUser[]>
     avatar_url: p.avatar_url,
     job_title: p.job_title,
   }));
+}
+
+// ─── Comment Editing ─────────────────────────────────────────────────
+
+export async function editComment(
+  commentId: string,
+  content: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const trimmed = content?.trim();
+  if (!trimmed || trimmed.length === 0 || trimmed.length > 2000) {
+    return {
+      success: false,
+      error: "Comment must be between 1 and 2,000 characters",
+    };
+  }
+
+  // RLS enforces author-only update. .select().single() ensures we get an error
+  // when 0 rows match (non-author), preventing silent no-ops.
+  const { error } = await supabase
+    .from("post_comments")
+    .update({ content: trimmed })
+    .eq("id", commentId)
+    .eq("author_id", user.id)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: "Comment not found or not authorised to edit" };
+  }
+
+  revalidatePath("/intranet");
+  return { success: true, error: null };
+}
+
+// ─── Pin/Unpin Posts (HR Admin only) ─────────────────────────────────
+
+export async function togglePinPost(
+  postId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user, profile } = await getCurrentUser();
+
+  if (!user || !profile) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  if (!profile.is_hr_admin) {
+    return { success: false, error: "Only HR admins can pin or unpin posts" };
+  }
+
+  // Fetch current pin state
+  const { data: post } = await supabase
+    .from("posts")
+    .select("is_pinned")
+    .eq("id", postId)
+    .single();
+
+  if (!post) {
+    return { success: false, error: "Post not found" };
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ is_pinned: !post.is_pinned })
+    .eq("id", postId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/intranet");
+  return { success: true, error: null };
 }

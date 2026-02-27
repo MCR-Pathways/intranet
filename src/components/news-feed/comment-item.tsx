@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo, getInitials } from "@/lib/utils";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
+import { deleteComment, editComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
 import { TiptapRenderer } from "./tiptap-renderer";
 import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
 import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
@@ -44,10 +44,13 @@ export function CommentItem({
   const [isPending, startTransition] = useTransition();
   const [showPicker, setShowPicker] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const canDelete =
-    comment.author_id === currentUserId || isHRAdmin;
+  const isAuthor = comment.author_id === currentUserId;
+  const canDelete = isAuthor || isHRAdmin;
 
   const displayName =
     comment.author.preferred_name || comment.author.full_name || "User";
@@ -59,6 +62,47 @@ export function CommentItem({
       setShowDeleteDialog(false);
     });
   };
+
+  const handleStartEdit = useCallback(() => {
+    setEditContent(comment.content);
+    setIsEditing(true);
+    // Focus textarea on next tick after render
+    setTimeout(() => editTextareaRef.current?.focus(), 0);
+  }, [comment.content]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditContent(comment.content);
+  }, [comment.content]);
+
+  const handleSaveEdit = useCallback(() => {
+    const trimmed = editContent.trim();
+    if (!trimmed || trimmed === comment.content) {
+      setIsEditing(false);
+      return;
+    }
+    startTransition(async () => {
+      const result = await editComment(comment.id, trimmed);
+      if (result.success) {
+        toast.success("Comment updated");
+        setIsEditing(false);
+      } else {
+        toast.error(result.error ?? "Failed to update comment");
+      }
+    });
+  }, [editContent, comment.content, comment.id]);
+
+  const handleEditKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSaveEdit();
+      } else if (e.key === "Escape") {
+        handleCancelEdit();
+      }
+    },
+    [handleSaveEdit, handleCancelEdit]
+  );
 
   const handleReaction = useCallback(
     (type: ReactionType) => {
@@ -133,7 +177,46 @@ export function CommentItem({
         <div className="relative inline-block">
           <div className="rounded-2xl bg-muted/50 px-3 py-2">
             <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
-            <TiptapRenderer json={comment.content_json} fallback={comment.content} />
+            {isEditing ? (
+              <div className="mt-1 space-y-1.5">
+                <textarea
+                  ref={editTextareaRef}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  onKeyDown={handleEditKeyDown}
+                  className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  rows={2}
+                  maxLength={2000}
+                  disabled={isPending}
+                />
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={handleSaveEdit}
+                    disabled={isPending || !editContent.trim()}
+                  >
+                    {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    <span className="ml-1">Save</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-muted-foreground"
+                    onClick={handleCancelEdit}
+                    disabled={isPending}
+                  >
+                    <X className="h-3 w-3" />
+                    <span className="ml-1">Cancel</span>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <TiptapRenderer json={comment.content_json} fallback={comment.content} />
+            )}
           </div>
 
           {/* Reaction summary badge (bottom-right of bubble) */}
@@ -157,6 +240,9 @@ export function CommentItem({
         <div className="flex items-center gap-3 mt-1 px-1">
           <span className="text-xs text-muted-foreground">
             {timeAgo(comment.created_at)}
+            {comment.updated_at !== comment.created_at && (
+              <span className="ml-1 italic">(edited)</span>
+            )}
           </span>
 
           {/* Like link with hover picker */}
@@ -214,7 +300,20 @@ export function CommentItem({
             </button>
           )}
 
-          {canDelete && (
+          {isAuthor && !isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleStartEdit}
+              disabled={isPending}
+            >
+              <Pencil className="h-3 w-3 mr-0.5" />
+              Edit
+            </Button>
+          )}
+
+          {canDelete && !isEditing && (
             <Button
               variant="ghost"
               size="sm"
