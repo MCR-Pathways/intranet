@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { PostCard } from "./post-card";
 import { getPosts } from "@/app/(protected)/intranet/actions";
+import type { MentionUser } from "./mention-list";
 import type { PostWithRelations, PostAuthor } from "@/types/database.types";
 
 interface PostFeedProps {
@@ -14,6 +15,7 @@ interface PostFeedProps {
   isStaff: boolean;
   isHRAdmin: boolean;
   initialHasMore: boolean;
+  mentionUsers?: MentionUser[];
 }
 
 export function PostFeed({
@@ -23,6 +25,7 @@ export function PostFeed({
   isStaff,
   isHRAdmin,
   initialHasMore,
+  mentionUsers = [],
 }: PostFeedProps) {
   const [posts, setPosts] = useState(initialPosts);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -73,6 +76,7 @@ export function PostFeed({
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
           isHRAdmin={isHRAdmin}
+          mentionUsers={mentionUsers}
         />
       ))}
 

@@ -8,6 +8,7 @@ import {
   ALLOWED_FILE_TYPES,
 } from "@/lib/intranet";
 import { extractUrls } from "@/lib/url";
+import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
 import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,12 +21,12 @@ import type {
 } from "@/types/database.types";
 
 const POST_SELECT =
-  "id, author_id, content, is_pinned, is_weekly_roundup, weekly_roundup_id, created_at, updated_at";
+  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, created_at, updated_at";
 const ATTACHMENT_SELECT =
   "id, post_id, attachment_type, file_url, file_name, file_size, mime_type, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
 const COMMENT_SELECT =
-  "id, post_id, author_id, content, parent_id, created_at, updated_at";
+  "id, post_id, author_id, content, content_json, parent_id, created_at, updated_at";
 const COMMENT_REACTION_SELECT =
   "id, comment_id, user_id, reaction_type, created_at";
 const AUTHOR_SELECT =
@@ -482,6 +483,7 @@ export async function fetchPostsWithClient(
       id: post.id,
       author_id: post.author_id,
       content: post.content,
+      content_json: post.content_json ?? null,
       is_pinned: post.is_pinned,
       is_weekly_roundup: post.is_weekly_roundup,
       weekly_roundup_id: post.weekly_roundup_id,
@@ -666,6 +668,7 @@ export async function fetchRoundupPostsWithClient(
       id: post.id,
       author_id: post.author_id,
       content: post.content,
+      content_json: post.content_json ?? null,
       is_pinned: post.is_pinned,
       is_weekly_roundup: post.is_weekly_roundup,
       weekly_roundup_id: post.weekly_roundup_id,
@@ -692,6 +695,7 @@ export async function fetchRoundupPostsWithClient(
 
 export async function createPost(data: {
   content: string;
+  content_json?: TiptapDocument | null;
   attachments?: {
     attachment_type: "image" | "document" | "link";
     file_url?: string;
@@ -722,9 +726,18 @@ export async function createPost(data: {
     };
   }
 
+  // Build insert payload — include content_json if provided (Tiptap rich text)
+  const postInsert: Record<string, unknown> = {
+    author_id: user.id,
+    content,
+  };
+  if (data.content_json) {
+    postInsert.content_json = data.content_json;
+  }
+
   const { data: post, error: postError } = await supabase
     .from("posts")
-    .insert({ author_id: user.id, content })
+    .insert(postInsert)
     .select("id")
     .single();
 
@@ -733,6 +746,28 @@ export async function createPost(data: {
       success: false,
       error: postError?.message ?? "Failed to create post",
     };
+  }
+
+  // Insert mentions if content_json contains @mentions
+  if (data.content_json) {
+    const mentionIds = extractMentionIds(data.content_json);
+    if (mentionIds.length > 0) {
+      // Insert mention records
+      await supabase.from("post_mentions").insert(
+        mentionIds.map((uid) => ({
+          post_id: post.id,
+          mentioned_user_id: uid,
+        }))
+      );
+      // Send notifications via RPC
+      await supabase.rpc("notify_mention", {
+        p_mentioned_user_ids: mentionIds,
+        p_mentioner_id: user.id,
+        p_entity_type: "post",
+        p_entity_id: post.id,
+        p_post_id: post.id,
+      });
+    }
   }
 
   // Insert attachments if provided
@@ -813,6 +848,7 @@ export async function editPost(
   postId: string,
   data: {
     content: string;
+    content_json?: TiptapDocument | null;
     attachments?: AttachmentInput[];
   }
 ): Promise<{ success: boolean; error: string | null; warning?: string }> {
@@ -830,12 +866,18 @@ export async function editPost(
     };
   }
 
+  // Build update payload — include content_json if provided
+  const updatePayload: Record<string, unknown> = { content };
+  if (data.content_json !== undefined) {
+    updatePayload.content_json = data.content_json;
+  }
+
   // Update post content (author-only via .eq("author_id")).
   // .select().single() ensures we get an error when 0 rows match (non-author),
   // preventing the function from proceeding to attachment operations.
   const { error } = await supabase
     .from("posts")
-    .update({ content })
+    .update(updatePayload)
     .eq("id", postId)
     .eq("author_id", user.id)
     .select("id")
@@ -843,6 +885,22 @@ export async function editPost(
 
   if (error) {
     return { success: false, error: "Post not found or not authorised to edit" };
+  }
+
+  // Update mentions if content_json is provided
+  if (data.content_json) {
+    const mentionIds = extractMentionIds(data.content_json);
+    // Delete old mentions and re-insert (diff-based would be more complex for little gain)
+    await supabase.from("post_mentions").delete().eq("post_id", postId);
+    if (mentionIds.length > 0) {
+      await supabase.from("post_mentions").insert(
+        mentionIds.map((uid) => ({
+          post_id: postId,
+          mentioned_user_id: uid,
+        }))
+      );
+      // Note: we don't re-send mention notifications on edit to avoid spam
+    }
   }
 
   // Handle attachment changes if provided
@@ -1137,7 +1195,8 @@ export async function toggleCommentReaction(
 export async function addComment(
   postId: string,
   content: string,
-  parentId?: string
+  parentId?: string,
+  contentJson?: TiptapDocument | null
 ): Promise<{ success: boolean; error: string | null; commentId?: string }> {
   const { supabase, user } = await getCurrentUser();
 
@@ -1175,7 +1234,7 @@ export async function addComment(
     }
   }
 
-  const insertData: { post_id: string; author_id: string; content: string; parent_id?: string } = {
+  const insertData: Record<string, unknown> = {
     post_id: postId,
     author_id: user.id,
     content: trimmed,
@@ -1183,6 +1242,9 @@ export async function addComment(
 
   if (parentId) {
     insertData.parent_id = parentId;
+  }
+  if (contentJson) {
+    insertData.content_json = contentJson;
   }
 
   const { data: comment, error } = await supabase
@@ -1193,6 +1255,26 @@ export async function addComment(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Insert mentions and send notifications if content_json contains @mentions
+  if (contentJson && comment) {
+    const mentionIds = extractMentionIds(contentJson);
+    if (mentionIds.length > 0) {
+      await supabase.from("comment_mentions").insert(
+        mentionIds.map((uid) => ({
+          comment_id: comment.id,
+          mentioned_user_id: uid,
+        }))
+      );
+      await supabase.rpc("notify_mention", {
+        p_mentioned_user_ids: mentionIds,
+        p_mentioner_id: user.id,
+        p_entity_type: "comment",
+        p_entity_id: comment.id,
+        p_post_id: postId,
+      });
+    }
   }
 
   revalidatePath("/intranet");
@@ -1376,4 +1458,39 @@ export async function getRoundupPosts(
   }
 
   return fetchRoundupPostsWithClient(supabase, user.id, roundupId);
+}
+
+// ─── Mention Picker: Active Profiles ──────────────────────────────────
+
+export interface MentionableUser {
+  id: string;
+  label: string;
+  avatar_url: string | null;
+  job_title: string | null;
+}
+
+/**
+ * Fetches all active profiles for the @mention picker.
+ * Returns minimal data (id, display name, avatar, job title).
+ * For 80+ users this is a single small query — client-side filtering is instant.
+ */
+export async function getActiveProfilesForMentions(): Promise<MentionableUser[]> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, preferred_name, avatar_url, job_title")
+    .eq("status", "active")
+    .order("full_name");
+
+  if (!data) return [];
+
+  return data.map((p) => ({
+    id: p.id,
+    label: p.preferred_name || p.full_name || "User",
+    avatar_url: p.avatar_url,
+    job_title: p.job_title,
+  }));
 }
