@@ -9,20 +9,28 @@ import type { Profile } from "@/types/database.types";
 import type { NotificationData } from "@/types/notification";
 
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
+const SIDEBAR_TOGGLE_EVENT = "mcr-sidebar-toggle";
 
 // ─── useSyncExternalStore for localStorage ──────────────────────────
-// SSR-safe: getServerSnapshot returns false (expanded), avoiding hydration mismatch.
-// Client subscribes to a custom "sidebar-toggle" event for cross-component sync.
+// Bridges localStorage (an external store) with React's rendering cycle
+// to avoid the hydration mismatch caused by reading localStorage in a
+// lazy useState initialiser. useSyncExternalStore lets React:
+//   1. Render the server snapshot (false = expanded) during SSR/hydration
+//   2. Subscribe to changes via a namespaced CustomEvent
+//   3. Read the true client value from localStorage after hydration
 
+/** Subscribe to sidebar state changes. Called by useSyncExternalStore. */
 function subscribeSidebar(callback: () => void) {
-  window.addEventListener("sidebar-toggle", callback);
-  return () => window.removeEventListener("sidebar-toggle", callback);
+  window.addEventListener(SIDEBAR_TOGGLE_EVENT, callback);
+  return () => window.removeEventListener(SIDEBAR_TOGGLE_EVENT, callback);
 }
 
+/** Read the current sidebar state from localStorage. */
 function getSidebarSnapshot() {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
+/** Server snapshot — always expanded (false) to match initial HTML. */
 function getSidebarServerSnapshot() {
   return false;
 }
@@ -42,10 +50,10 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
   const toggleSidebar = useCallback(() => {
-    const next = !getSidebarSnapshot();
+    const next = !isCollapsed;
     localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-    window.dispatchEvent(new Event("sidebar-toggle"));
-  }, []);
+    window.dispatchEvent(new CustomEvent(SIDEBAR_TOGGLE_EVENT, { detail: next }));
+  }, [isCollapsed]);
 
   const toggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen((prev) => !prev);
