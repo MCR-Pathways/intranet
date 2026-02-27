@@ -40,16 +40,43 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Fetch user profile for permission checks
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("user_type, induction_completed_at, status, last_sign_in_date")
-    .eq("id", user.id)
-    .single();
+  // Read claims from JWT — synced by DB trigger, no round-trip needed
+  const claims = user.app_metadata as {
+    user_type?: string;
+    status?: string;
+    induction_completed_at?: string | null;
+  };
 
-  // If no profile exists yet, allow access (trigger should create it)
-  if (!profile) {
-    return supabaseResponse;
+  let profile: {
+    user_type: string;
+    status: string;
+    induction_completed_at: string | null;
+  };
+
+  if (claims.user_type) {
+    // Fast path: read from JWT claims
+    profile = {
+      user_type: claims.user_type,
+      status: claims.status ?? "pending_induction",
+      induction_completed_at: claims.induction_completed_at ?? null,
+    };
+  } else {
+    // Fallback: pre-migration session without claims — query the DB
+    const { data: dbProfile } = await supabase
+      .from("profiles")
+      .select("user_type, induction_completed_at, status")
+      .eq("id", user.id)
+      .single();
+
+    if (!dbProfile) {
+      return supabaseResponse;
+    }
+
+    profile = {
+      user_type: dbProfile.user_type,
+      status: dbProfile.status,
+      induction_completed_at: dbProfile.induction_completed_at,
+    };
   }
 
   // Check if user needs to complete induction

@@ -5,18 +5,18 @@ import { NextRequest, NextResponse } from "next/server";
  * Mock strategy for middleware:
  * We mock `@/lib/supabase/middleware` → `updateSession` to control:
  *   - Whether a user is authenticated (user object or null)
- *   - The Supabase client used for profile fetching
+ *   - The user's app_metadata (JWT claims) for permission checks
  *
- * The middleware then uses the returned supabase client to call:
- *   supabase.from("profiles").select("user_type, induction_completed_at, status, last_sign_in_date")
- *     .eq("id", user.id).single()
+ * The middleware reads claims from user.app_metadata. When claims are
+ * missing (pre-migration session), it falls back to a DB query via the
+ * Supabase client returned from updateSession.
  */
 
+const mockGetUser = vi.hoisted(() => vi.fn());
 const mockSingle = vi.hoisted(() => vi.fn());
 const mockEq = vi.hoisted(() => vi.fn());
 const mockSelect = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
-const mockGetUser = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/supabase/middleware", () => ({
   updateSession: vi.fn().mockImplementation(async (request: NextRequest) => {
@@ -32,33 +32,25 @@ vi.mock("@/lib/supabase/middleware", () => ({
 
 import { middleware } from "@/middleware";
 
-/** Today's date in YYYY-MM-DD format (matches middleware logic) */
-const TODAY = new Date().toISOString().split("T")[0];
-
-/** Yesterday's date in YYYY-MM-DD format */
-const YESTERDAY = (() => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
-})();
-
 /** Helper: create a NextRequest for a given pathname */
 function createRequest(pathname: string): NextRequest {
   return new NextRequest(new URL(pathname, "http://localhost:3000"));
 }
 
-/** Helper: set up mocks for an authenticated user with a profile */
-function mockAuthenticatedUser(profile: {
+/** Helper: set up mocks for an authenticated user with JWT claims */
+function mockAuthenticatedUser(claims: {
   user_type: string;
   induction_completed_at: string | null;
   status: string;
-  last_sign_in_date?: string | null;
 }) {
-  mockGetUser.mockReturnValue({ id: "user-1" });
-  mockSingle.mockResolvedValue({ data: profile, error: null });
-  mockEq.mockReturnValue({ single: mockSingle });
-  mockSelect.mockReturnValue({ eq: mockEq });
-  mockFrom.mockReturnValue({ select: mockSelect });
+  mockGetUser.mockReturnValue({
+    id: "user-1",
+    app_metadata: {
+      user_type: claims.user_type,
+      status: claims.status,
+      induction_completed_at: claims.induction_completed_at,
+    },
+  });
 }
 
 /** Helper: check if a response is a redirect to a given path */
@@ -136,7 +128,6 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/hr/users"));
@@ -192,7 +183,6 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/learning"));
@@ -252,7 +242,6 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: null,
       });
 
       const response = await middleware(
@@ -266,7 +255,6 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: null,
       });
 
       const response = await middleware(
@@ -282,31 +270,17 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: null,
       });
 
       const response = await middleware(createRequest("/sign-in"));
       expect(response.status).toBe(200);
     });
 
-    it("does not force sign-in redirect — staff can access routes without signing in", async () => {
+    it("allows staff to access routes without signing in today", async () => {
       mockAuthenticatedUser({
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: null,
-      });
-
-      const response = await middleware(createRequest("/intranet"));
-      expect(response.status).toBe(200);
-    });
-
-    it("does not force sign-in redirect — staff with yesterday's date can access routes", async () => {
-      mockAuthenticatedUser({
-        user_type: "staff",
-        induction_completed_at: "2024-01-01",
-        status: "active",
-        last_sign_in_date: YESTERDAY,
       });
 
       const response = await middleware(createRequest("/intranet"));
@@ -320,19 +294,6 @@ describe("middleware", () => {
         user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
-        last_sign_in_date: null,
-      });
-
-      const response = await middleware(createRequest("/"));
-      expectRedirectTo(response, "/intranet");
-    });
-
-    it("redirects / to /intranet for active staff with today's sign-in", async () => {
-      mockAuthenticatedUser({
-        user_type: "staff",
-        induction_completed_at: "2024-01-01",
-        status: "active",
-        last_sign_in_date: TODAY,
       });
 
       const response = await middleware(createRequest("/"));
@@ -351,9 +312,28 @@ describe("middleware", () => {
     });
   });
 
-  describe("no profile", () => {
+  describe("missing claims (fallback to DB)", () => {
+    it("falls back to DB query when JWT claims are missing", async () => {
+      mockGetUser.mockReturnValue({ id: "old-user", app_metadata: {} });
+      mockSingle.mockResolvedValue({
+        data: {
+          user_type: "staff",
+          status: "active",
+          induction_completed_at: "2024-01-01",
+        },
+        error: null,
+      });
+      mockEq.mockReturnValue({ single: mockSingle });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ select: mockSelect });
+
+      const response = await middleware(createRequest("/intranet"));
+      expect(response.status).toBe(200);
+      expect(mockFrom).toHaveBeenCalledWith("profiles");
+    });
+
     it("allows access when no profile exists (new user, trigger should create it)", async () => {
-      mockGetUser.mockReturnValue({ id: "new-user" });
+      mockGetUser.mockReturnValue({ id: "new-user", app_metadata: {} });
       mockSingle.mockResolvedValue({ data: null, error: null });
       mockEq.mockReturnValue({ single: mockSingle });
       mockSelect.mockReturnValue({ eq: mockEq });
@@ -361,6 +341,24 @@ describe("middleware", () => {
 
       const response = await middleware(createRequest("/intranet"));
       expect(response.status).toBe(200);
+    });
+
+    it("enforces module access even with fallback DB query", async () => {
+      mockGetUser.mockReturnValue({ id: "old-user", app_metadata: {} });
+      mockSingle.mockResolvedValue({
+        data: {
+          user_type: "pathways_coordinator",
+          status: "active",
+          induction_completed_at: "2024-01-01",
+        },
+        error: null,
+      });
+      mockEq.mockReturnValue({ single: mockSingle });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockFrom.mockReturnValue({ select: mockSelect });
+
+      const response = await middleware(createRequest("/hr/users"));
+      expectRedirectTo(response, "/intranet");
     });
   });
 });

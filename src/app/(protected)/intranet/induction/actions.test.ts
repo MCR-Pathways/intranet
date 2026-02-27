@@ -16,6 +16,7 @@ const mockFrom = vi.hoisted(() => vi.fn());
 
 const mockSupabase = vi.hoisted(() => ({
   from: mockFrom,
+  auth: { refreshSession: vi.fn().mockResolvedValue({}) },
 }));
 
 vi.mock("@/lib/auth", () => ({
