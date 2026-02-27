@@ -155,3 +155,9 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 **Listen to the `storage` event for cross-tab localStorage sync.** When using `useSyncExternalStore` with localStorage, subscribe to both your custom event (same-tab) and the browser `storage` event (cross-tab). Handle `event.key === null` too, which fires when another tab calls `localStorage.clear()`.
 
 **Raise exceptions for invalid inputs in DB functions, don't silently return.** A silent `RETURN 0` on unexpected input masks bugs. Use `RAISE EXCEPTION` to make programming errors (e.g. typos in calling code) immediately obvious.
+
+**Always set `search_path = ''` on SECURITY DEFINER functions.** Without a fixed search path, an attacker can hijack execution by creating objects in a schema they control. All SECURITY DEFINER functions in this project use `SET search_path = ''` and fully qualify table references (e.g. `public.profiles`, `auth.users`).
+
+**Use `raw_app_meta_data` for middleware JWT claims, not session storage.** Store frequently-checked profile fields (`user_type`, `status`, `induction_completed_at`) in `auth.users.raw_app_meta_data` via a DB trigger on profiles. The middleware reads these from `user.app_metadata` (zero DB queries). Always include a DB fallback for sessions issued before the migration.
+
+**Don't block user actions on non-critical follow-up failures.** When `refreshSession()` fails after induction completion, log a warning but don't return an error — the core action (profile update) succeeded. The stale JWT resolves on the next natural token refresh.
