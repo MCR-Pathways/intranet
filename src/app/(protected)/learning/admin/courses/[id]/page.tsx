@@ -8,6 +8,7 @@ import { QuizEditor } from "@/components/learning-admin/quiz-editor";
 import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import type { CourseLesson, QuizQuestionWithOptions, LessonImage } from "@/types/database.types";
 
 export default async function CourseDetailPage({
@@ -146,12 +147,15 @@ export default async function CourseDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{course.title}</h1>
-        <p className="text-muted-foreground">
-          Manage course details, content, and assignments.
-        </p>
-      </div>
+      <PageHeader
+        title={course.title}
+        subtitle="Manage course details, content, and assignments."
+        breadcrumbs={[
+          { label: "Learning", href: "/learning" },
+          { label: "Course Management", href: "/learning/admin/courses" },
+          { label: course.title },
+        ]}
+      />
 
       {/* Draft / Publish banner */}
       <CoursePublishBanner

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { PageHeader } from "@/components/layout/page-header";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
 import { WeeklyRoundupBanner } from "@/components/news-feed/weekly-roundup-banner";
@@ -33,13 +34,10 @@ export default async function IntranetPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">News Feed</h1>
-        <p className="text-muted-foreground mt-1">
-          Stay updated with the latest news and announcements
-        </p>
-      </div>
+      <PageHeader
+        title="News Feed"
+        subtitle="Stay updated with the latest news and announcements"
+      />
 
       {/* Post composer — staff only */}
       {isStaff && <PostComposer userProfile={currentUserProfile} />}

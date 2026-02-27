@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { UserTable } from "@/components/hr/user-table";
+import { PageHeader } from "@/components/layout/page-header";
 
 /** Extended select for the user management table — includes HR fields. */
 const USER_TABLE_SELECT =
@@ -24,12 +25,10 @@ export default async function UserManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage staff profiles, roles, and induction status
-        </p>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle="Manage staff profiles, roles, and induction status"
+      />
       <UserTable profiles={profiles ?? []} />
     </div>
   );

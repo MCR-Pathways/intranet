@@ -3,6 +3,7 @@ import { RTW_FORM_SELECT, ABSENCE_RECORD_SELECT } from "@/lib/hr";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { RTWConfirmationContent } from "./rtw-confirmation-content";
+import { PageHeader } from "@/components/layout/page-header";
 import type { ReturnToWorkForm, AbsenceRecord } from "@/types/hr";
 
 export default async function RTWConfirmationPage({
@@ -43,12 +44,15 @@ export default async function RTWConfirmationPage({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Return-to-Work Form</h1>
-        <p className="text-muted-foreground mt-1">
-          Review and confirm your return-to-work discussion
-        </p>
-      </div>
+      <PageHeader
+        title="Return-to-Work Form"
+        subtitle="Review and confirm your return-to-work discussion"
+        breadcrumbs={[
+          { label: "HR", href: "/hr" },
+          { label: "Absence", href: "/hr/absence" },
+          { label: "RTW Form" },
+        ]}
+      />
 
       <RTWConfirmationContent
         form={form}
