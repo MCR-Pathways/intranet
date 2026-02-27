@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,25 @@ import type { Profile } from "@/types/database.types";
 import type { NotificationData } from "@/types/notification";
 
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
+
+// ─── useSyncExternalStore for localStorage ──────────────────────────
+// SSR-safe: getServerSnapshot returns false (expanded), avoiding hydration mismatch.
+// Client subscribes to a custom "sidebar-toggle" event for cross-component sync.
+
+function subscribeSidebar(callback: () => void) {
+  window.addEventListener("sidebar-toggle", callback);
+  return () => window.removeEventListener("sidebar-toggle", callback);
+}
+
+function getSidebarSnapshot() {
+  return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+}
+
+function getSidebarServerSnapshot() {
+  return false;
+}
+
+// ─── Layout Component ───────────────────────────────────────────────
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,17 +39,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-  });
+  const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
   const toggleSidebar = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-      return next;
-    });
+    const next = !getSidebarSnapshot();
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+    window.dispatchEvent(new Event("sidebar-toggle"));
   }, []);
 
   const toggleMobileMenu = useCallback(() => {
