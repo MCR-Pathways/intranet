@@ -288,7 +288,7 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
                       <div key={group.label ?? gi}>
                         {group.label && (
                           <div className="mb-1.5 mt-4 px-3">
-                            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                               {group.label}
                             </span>
                           </div>
@@ -342,7 +342,7 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
           </Tooltip>
         ) : (
           <div className="flex flex-col gap-1">
-            <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Account
             </span>
             <Link

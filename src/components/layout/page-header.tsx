@@ -18,7 +18,7 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
       className="flex items-center gap-1.5 text-sm text-muted-foreground"
     >
       {items.map((item, i) => (
-        <Fragment key={i}>
+        <Fragment key={item.label}>
           {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
           {item.href ? (
             <Link
