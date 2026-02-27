@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Newspaper,
   Users,
   GraduationCap,
@@ -15,31 +20,96 @@ import {
 } from "lucide-react";
 import type { Profile, UserType } from "@/types/database.types";
 
+// =============================================
+// NAVIGATION DATA MODEL
+// =============================================
+
+interface NavChild {
+  name: string;
+  href: string;
+}
+
+interface NavGroup {
+  label: string | null;
+  items: NavChild[];
+}
+
 interface NavItem {
   name: string;
   href: string;
   icon: React.ElementType;
   module: string | null;
-  children?: { name: string; href: string }[];
+  children?: NavGroup[];
 }
 
 function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
-  const hrChildren = [
-    { name: "My Profile", href: "/hr/profile" },
-    { name: "Org Chart", href: "/hr/org-chart" },
-    { name: "Leave", href: "/hr/leave" },
-    { name: "Calendar", href: "/hr/calendar" },
-    { name: "My Team", href: "/hr/team" },
+  const hrChildren: NavGroup[] = [
+    {
+      label: null,
+      items: [
+        { name: "My Profile", href: "/hr/profile" },
+        { name: "Leave", href: "/hr/leave" },
+        { name: "Calendar", href: "/hr/calendar" },
+        { name: "My Team", href: "/hr/team" },
+        { name: "Assets", href: "/hr/assets" },
+      ],
+    },
+    {
+      label: "Organisation",
+      items: [
+        { name: "Org Chart", href: "/hr/org-chart" },
+      ],
+    },
     ...(isHRAdmin
       ? [
-          { name: "User Management", href: "/hr/users" },
-          { name: "Absence & Sickness", href: "/hr/absence" },
-          { name: "Compliance", href: "/hr/compliance" },
-          { name: "Key Dates", href: "/hr/key-dates" },
-          { name: "Assets", href: "/hr/assets" },
-          { name: "Leaving", href: "/hr/leaving" },
+          {
+            label: "Admin",
+            items: [
+              { name: "User Management", href: "/hr/users" },
+              { name: "Absence & Sickness", href: "/hr/absence" },
+              { name: "Compliance", href: "/hr/compliance" },
+              { name: "Key Dates", href: "/hr/key-dates" },
+              { name: "Leaving", href: "/hr/leaving" },
+            ],
+          },
         ]
       : []),
+  ];
+
+  const learningChildren: NavGroup[] = [
+    {
+      label: null,
+      items: [
+        { name: "My Courses", href: "/learning/my-courses" },
+        { name: "Compliance", href: "/learning/courses?category=compliance" },
+        { name: "Upskilling", href: "/learning/courses?category=upskilling" },
+        { name: "Tool Shed", href: "/learning/tool-shed" },
+      ],
+    },
+    ...(isLDAdmin
+      ? [
+          {
+            label: "Admin",
+            items: [
+              { name: "Course Management", href: "/learning/admin/courses" },
+              { name: "Reports", href: "/learning/admin/reports" },
+            ],
+          },
+        ]
+      : []),
+  ];
+
+  const intranetChildren: NavGroup[] = [
+    {
+      label: null,
+      items: [
+        { name: "News Feed", href: "/intranet" },
+        { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
+        { name: "Guides", href: "/intranet/guides" },
+        { name: "Policies", href: "/intranet/policies" },
+        { name: "Surveys", href: "/intranet/surveys" },
+      ],
+    },
   ];
 
   return [
@@ -48,13 +118,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       href: "/intranet",
       icon: Newspaper,
       module: "intranet",
-      children: [
-        { name: "News Feed", href: "/intranet" },
-        { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
-        { name: "Guides", href: "/intranet/guides" },
-        { name: "Policies", href: "/intranet/policies" },
-        { name: "Surveys", href: "/intranet/surveys" },
-      ],
+      children: intranetChildren,
     },
     {
       name: "HR",
@@ -68,18 +132,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
       href: "/learning",
       icon: GraduationCap,
       module: "learning",
-      children: [
-        { name: "My Courses", href: "/learning/my-courses" },
-        { name: "Compliance", href: "/learning/courses?category=compliance" },
-        { name: "Upskilling", href: "/learning/courses?category=upskilling" },
-        { name: "Tool Shed", href: "/learning/tool-shed" },
-        ...(isLDAdmin
-          ? [
-              { name: "Course Management", href: "/learning/admin/courses" },
-              { name: "Reports", href: "/learning/admin/reports" },
-            ]
-          : []),
-      ],
+      children: learningChildren,
     },
     { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
   ];
@@ -92,13 +145,40 @@ const moduleAccess: Record<string, UserType[]> = {
   intranet: ["staff", "pathways_coordinator"],
 };
 
+// =============================================
+// HELPERS
+// =============================================
+
+function isItemActive(pathname: string, item: NavItem): boolean {
+  if (pathname === item.href || pathname.startsWith(item.href + "/")) return true;
+  if (!item.children) return false;
+  return item.children.some((group) =>
+    group.items.some(
+      (child) =>
+        pathname === child.href || pathname.startsWith(child.href + "/")
+    )
+  );
+}
+
+function isChildActive(pathname: string, child: NavChild, parentHref: string): boolean {
+  return (
+    pathname === child.href ||
+    (child.href !== parentHref && pathname.startsWith(child.href + "/"))
+  );
+}
+
+// =============================================
+// SIDEBAR COMPONENT
+// =============================================
+
 interface SidebarProps {
   profile: Profile | null;
+  collapsed?: boolean;
   className?: string;
   onNavClick?: () => void;
 }
 
-export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
+export function Sidebar({ profile, collapsed = false, className, onNavClick }: SidebarProps) {
   const pathname = usePathname();
 
   const hasModuleAccess = (module: string): boolean => {
@@ -109,33 +189,30 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
   };
 
   const navigation = getNavigation(profile?.is_hr_admin ?? false, profile?.is_ld_admin ?? false);
-
-  // Filter navigation based on user permissions
   const filteredNav = navigation.filter(
     (item) => !item.module || hasModuleAccess(item.module)
   );
 
-  // Check if user needs induction
-  const needsInduction =
-    profile && !profile.induction_completed_at;
+  const needsInduction = profile && !profile.induction_completed_at;
 
   return (
     <aside
       className={cn(
-        "flex h-full w-64 flex-col border-r border-border bg-card",
+        "flex h-full flex-col border-r border-border bg-card transition-all duration-200",
+        collapsed ? "w-16" : "w-64",
         className
       )}
     >
       <ScrollArea className="flex-1 py-4">
-        <nav className="flex flex-col gap-1 px-3">
+        <nav className={cn("flex flex-col gap-3", collapsed ? "px-2" : "px-3")}>
           {/* Induction prompt for new users */}
-          {needsInduction && (
+          {needsInduction && !collapsed && (
             <Link
               href="/intranet/induction"
               onClick={onNavClick}
               className="mb-4 flex items-center gap-3 rounded-lg bg-secondary/10 px-3 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/20"
             >
-              <ClipboardList className="h-5 w-5" />
+              <ClipboardList className="h-5 w-5 shrink-0" />
               <div>
                 <p className="font-semibold">Complete Induction</p>
                 <p className="text-xs opacity-80">Required to continue</p>
@@ -143,15 +220,47 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
             </Link>
           )}
 
+          {needsInduction && collapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/intranet/induction"
+                  onClick={onNavClick}
+                  className="mb-4 flex items-center justify-center rounded-lg bg-secondary/10 p-2 text-secondary transition-colors hover:bg-secondary/20"
+                >
+                  <ClipboardList className="h-5 w-5 shrink-0" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Complete Induction</TooltipContent>
+            </Tooltip>
+          )}
+
           {filteredNav.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              pathname.startsWith(item.href + "/") ||
-              item.children?.some(
-                (child) =>
-                  pathname === child.href ||
-                  pathname.startsWith(child.href + "/")
+            const active = isItemActive(pathname, item);
+
+            if (collapsed) {
+              return (
+                <div key={item.name}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.href}
+                        onClick={onNavClick}
+                        className={cn(
+                          "flex items-center justify-center rounded-lg p-2 transition-colors",
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{item.name}</TooltipContent>
+                  </Tooltip>
+                </div>
               );
+            }
 
             return (
               <div key={item.name}>
@@ -160,43 +269,49 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
                   onClick={onNavClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
+                    active
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground/70 hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
                   <span className="flex-1">{item.name}</span>
-                  {isActive && item.children && (
+                  {active && item.children && (
                     <ChevronRight className="h-4 w-4" />
                   )}
                 </Link>
 
-                {/* Show children when parent is active */}
-                {isActive && item.children && (
-                  <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-border pl-3">
-                    {item.children.map((child) => {
-                      const isChildActive =
-                        pathname === child.href ||
-                        (child.href !== item.href &&
-                          pathname.startsWith(child.href + "/"));
-
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={onNavClick}
-                          className={cn(
-                            "rounded-md px-3 py-1.5 text-sm transition-colors",
-                            isChildActive
-                              ? "bg-muted font-medium text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {child.name}
-                        </Link>
-                      );
-                    })}
+                {/* Show grouped children when parent is active */}
+                {active && item.children && (
+                  <div className="ml-6 mt-1.5 mb-1 flex flex-col border-l-2 border-primary/20 pl-3">
+                    {item.children.map((group, gi) => (
+                      <div key={group.label ?? gi}>
+                        {group.label && (
+                          <div className="mb-1.5 mt-4 px-3">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {group.label}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-1">
+                          {group.items.map((child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={onNavClick}
+                              className={cn(
+                                "rounded-md px-3 py-1.5 text-sm transition-colors",
+                                isChildActive(pathname, child, item.href)
+                                  ? "bg-muted font-medium text-foreground"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              {child.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -206,20 +321,45 @@ export function Sidebar({ profile, className, onNavClick }: SidebarProps) {
       </ScrollArea>
 
       {/* Settings link at bottom */}
-      <div className="border-t border-border p-3">
-        <Link
-          href="/settings"
-          onClick={onNavClick}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            pathname === "/settings"
-              ? "bg-primary text-primary-foreground"
-              : "text-foreground/70 hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <Settings className="h-5 w-5" />
-          Settings
-        </Link>
+      <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/settings"
+                onClick={onNavClick}
+                className={cn(
+                  "flex items-center justify-center rounded-lg p-2 transition-colors",
+                  pathname === "/settings"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Settings</TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Account
+            </span>
+            <Link
+              href="/settings"
+              onClick={onNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/settings"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground/70 hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Settings className="h-5 w-5" />
+              Settings
+            </Link>
+          </div>
+        )}
       </div>
     </aside>
   );

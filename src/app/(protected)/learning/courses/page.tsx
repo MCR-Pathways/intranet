@@ -12,6 +12,7 @@ import {
   PlayCircle,
   BookOpen,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
@@ -156,20 +157,18 @@ export default async function CourseCatalogPage({
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Course Catalogue</h1>
-          <p className="text-muted-foreground mt-1">
-            Browse and enroll in available courses
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href="/learning/my-courses">
-            <BookOpen className="h-4 w-4 mr-2" />
-            My Courses
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Course Catalogue"
+        subtitle="Browse and enrol in available courses"
+        actions={
+          <Button asChild variant="outline">
+            <Link href="/learning/my-courses">
+              <BookOpen className="h-4 w-4 mr-2" />
+              My Courses
+            </Link>
+          </Button>
+        }
+      />
 
       {/* Compliance summary */}
       {complianceCourses.length > 0 && (

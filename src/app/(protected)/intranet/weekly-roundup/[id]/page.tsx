@@ -4,9 +4,7 @@ import { fetchRoundupPostsWithClient } from "../../actions";
 import { formatShortDate } from "@/lib/utils";
 import { PostCard } from "@/components/news-feed/post-card";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { PageHeader } from "@/components/layout/page-header";
 import type { PostAuthor } from "@/types/database.types";
 
 interface RoundupDetailPageProps {
@@ -48,30 +46,16 @@ export default async function RoundupDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/intranet/weekly-roundup">
-          <ArrowLeft className="mr-1.5 h-4 w-4" />
-          All Round Ups
-        </Link>
-      </Button>
-
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">
-            {roundup.title}
-          </h1>
-        </div>
-        <p className="text-muted-foreground mt-1">
-          {formatShortDate(weekStart)} — {formatShortDate(weekEnd)},{" "}
-          {weekEnd.getFullYear()}
-        </p>
-        {roundup.summary && (
-          <p className="text-muted-foreground mt-1">{roundup.summary}</p>
-        )}
-      </div>
+      <PageHeader
+        title={roundup.title}
+        subtitle={`${formatShortDate(weekStart)} — ${formatShortDate(weekEnd)}, ${weekEnd.getFullYear()}${roundup.summary ? ` · ${roundup.summary}` : ""}`}
+        breadcrumbs={[
+          { label: "Intranet", href: "/intranet" },
+          { label: "Weekly Round Up", href: "/intranet/weekly-roundup" },
+          { label: roundup.title },
+        ]}
+      />
 
       {/* Posts */}
       {posts.length === 0 ? (

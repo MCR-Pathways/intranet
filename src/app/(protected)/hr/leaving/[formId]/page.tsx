@@ -4,9 +4,7 @@ import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 import { notFound, redirect } from "next/navigation";
 import { LeavingFormContent } from "@/components/hr/leaving-form-content";
 import { fetchLeavingFormSummary, verifyLeavingAuthority } from "@/app/(protected)/hr/leaving/actions";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function LeavingFormPage({
   params,
@@ -94,19 +92,15 @@ export default async function LeavingFormPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/hr/leaving">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Leaving Form</h1>
-          <p className="text-muted-foreground">
-            {employee?.full_name ?? "Unknown"}{employee?.job_title ? ` — ${employee.job_title}` : ""}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Leaving Form"
+        subtitle={`${employee?.full_name ?? "Unknown"}${employee?.job_title ? ` — ${employee.job_title}` : ""}`}
+        breadcrumbs={[
+          { label: "HR", href: "/hr" },
+          { label: "Leaving", href: "/hr/leaving" },
+          { label: employee?.full_name ?? "Unknown" },
+        ]}
+      />
 
       <LeavingFormContent
         form={form}

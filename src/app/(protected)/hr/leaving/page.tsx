@@ -2,6 +2,7 @@ import { requireHRAdmin } from "@/lib/auth";
 import { STAFF_LEAVING_FORM_WITH_EMPLOYEE_SELECT } from "@/lib/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 import { LeavingDashboardContent } from "@/components/hr/leaving-dashboard-content";
+import { PageHeader } from "@/components/layout/page-header";
 import { redirect } from "next/navigation";
 
 /** Explicit SELECT for active employees (for the create dialog). */
@@ -92,12 +93,10 @@ export default async function LeavingDashboardPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Staff Leaving</h1>
-        <p className="text-muted-foreground">
-          Manage offboarding for departing staff members.
-        </p>
-      </div>
+      <PageHeader
+        title="Staff Leaving"
+        subtitle="Manage offboarding for departing staff members."
+      />
 
       <LeavingDashboardContent
         leavingForms={leavingForms}

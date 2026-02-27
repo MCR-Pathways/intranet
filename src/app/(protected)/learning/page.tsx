@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -107,13 +108,10 @@ export default async function LearningPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Learning</h1>
-        <p className="text-muted-foreground mt-1">
-          Develop your skills and complete required training
-        </p>
-      </div>
+      <PageHeader
+        title="Learning"
+        subtitle="Develop your skills and complete required training"
+      />
 
       {/* Compliance alert */}
       {complianceStats.overdue > 0 ? (
