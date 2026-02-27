@@ -9,6 +9,7 @@ import {
 } from "@/lib/intranet";
 import { extractUrls } from "@/lib/url";
 import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
+import { logger } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
 import dns from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,7 +22,7 @@ import type {
 } from "@/types/database.types";
 
 const POST_SELECT =
-  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, created_at, updated_at";
+  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, created_at, updated_at";
 const ATTACHMENT_SELECT =
   "id, post_id, attachment_type, file_url, file_name, file_size, mime_type, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
@@ -353,7 +354,15 @@ async function enrichPosts(
 
   if (postIds.length === 0) return [];
 
-  const [attachmentsResult, reactionsResult, commentsResult] =
+  // Identify posts that have polls (poll_question is non-null)
+  const pollPostIds = postRows
+    .filter((p) => (p as { poll_question?: string | null }).poll_question)
+    .map((p) => (p as { id: string }).id);
+
+  type PollOptionRow = { id: string; post_id: string; option_text: string; display_order: number };
+  type PollVoteRow = { post_id: string; option_id: string; user_id: string };
+
+  const [attachmentsResult, reactionsResult, commentsResult, pollOptionsResult, pollVotesResult] =
     await Promise.all([
       supabase
         .from("post_attachments")
@@ -371,11 +380,28 @@ async function enrichPosts(
         )
         .in("post_id", postIds)
         .order("created_at", { ascending: true }),
+      // Poll options — only for posts with polls
+      pollPostIds.length > 0
+        ? supabase
+            .from("poll_options")
+            .select("id, post_id, option_text, display_order")
+            .in("post_id", pollPostIds)
+            .order("display_order")
+        : Promise.resolve({ data: [] as PollOptionRow[] }),
+      // Poll votes — only for posts with polls
+      pollPostIds.length > 0
+        ? supabase
+            .from("poll_votes")
+            .select("post_id, option_id, user_id")
+            .in("post_id", pollPostIds)
+        : Promise.resolve({ data: [] as PollVoteRow[] }),
     ]);
 
   const attachments = attachmentsResult.data ?? [];
   const reactions = reactionsResult.data ?? [];
   const comments = commentsResult.data ?? [];
+  const pollOptions = (pollOptionsResult.data ?? []) as PollOptionRow[];
+  const pollVotes = (pollVotesResult.data ?? []) as PollVoteRow[];
 
   const attachmentsByPost = new Map<string, typeof attachments>();
   for (const a of attachments) {
@@ -396,6 +422,20 @@ async function enrichPosts(
     const existing = commentsByPost.get(c.post_id) ?? [];
     existing.push(c);
     commentsByPost.set(c.post_id, existing);
+  }
+
+  const pollOptionsByPost = new Map<string, PollOptionRow[]>();
+  for (const opt of pollOptions) {
+    const existing = pollOptionsByPost.get(opt.post_id) ?? [];
+    existing.push(opt);
+    pollOptionsByPost.set(opt.post_id, existing);
+  }
+
+  const pollVotesByPost = new Map<string, PollVoteRow[]>();
+  for (const v of pollVotes) {
+    const existing = pollVotesByPost.get(v.post_id) ?? [];
+    existing.push(v);
+    pollVotesByPost.set(v.post_id, existing);
   }
 
   // Batch-fetch ALL comment reactions in a single query (avoids N sequential queries)
@@ -420,10 +460,35 @@ async function enrichPosts(
   }
 
   return postRows.map((post) => {
-    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; created_at: string; updated_at: string; author: unknown };
+    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
+
+    // Build poll data if this post has a poll
+    let poll: PostWithRelations["poll"] = null;
+    if (p.poll_question) {
+      const options = pollOptionsByPost.get(p.id) ?? [];
+      const votes = pollVotesByPost.get(p.id) ?? [];
+      const userVote = votes.find((v) => v.user_id === userId);
+      const voteCounts = new Map<string, number>();
+      for (const v of votes) {
+        voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
+      }
+      poll = {
+        question: p.poll_question,
+        options: options.map((opt) => ({
+          id: opt.id,
+          option_text: opt.option_text,
+          display_order: opt.display_order,
+          vote_count: voteCounts.get(opt.id) ?? 0,
+        })),
+        total_votes: votes.length,
+        user_vote_option_id: userVote?.option_id ?? null,
+        closes_at: p.poll_closes_at,
+        is_closed: p.poll_closes_at ? new Date(p.poll_closes_at) < new Date() : false,
+      };
+    }
 
     return {
       id: p.id,
@@ -442,10 +507,10 @@ async function enrichPosts(
       reaction_counts: buildReactionCounts(postReactions),
       user_reaction: (userReaction?.reaction_type as ReactionType) ?? null,
       comment_count: postComments.length,
+      poll,
     };
   });
 }
-
 // ─── Helper functions (accept supabase client, avoid multiple getCurrentUser() calls in SSR) ───
 
 /**
@@ -597,6 +662,11 @@ export async function createPost(data: {
     link_description?: string;
     link_image_url?: string;
   }[];
+  poll?: {
+    question: string;
+    options: string[];
+    closes_at?: string | null;
+  };
 }): Promise<{ success: boolean; error: string | null; postId?: string; warning?: string }> {
   const { supabase, user, profile } = await getCurrentUser();
 
@@ -621,6 +691,14 @@ export async function createPost(data: {
     postInsert.content_json = data.content_json;
   }
 
+  // Add poll data to the post if provided
+  if (data.poll?.question && data.poll.options.length >= 2 && data.poll.options.length <= 4) {
+    postInsert.poll_question = data.poll.question.trim();
+    if (data.poll.closes_at) {
+      postInsert.poll_closes_at = data.poll.closes_at;
+    }
+  }
+
   const { data: post, error: postError } = await supabase
     .from("posts")
     .insert(postInsert)
@@ -634,7 +712,23 @@ export async function createPost(data: {
     };
   }
 
-  // Insert mentions if content_json contains @mentions
+  // Insert poll options if poll was included
+  if (data.poll?.question && data.poll.options.length >= 2) {
+    const pollOptionRows = data.poll.options
+      .filter((opt) => opt.trim().length > 0)
+      .slice(0, 4)
+      .map((opt, index) => ({
+        post_id: post.id,
+        option_text: opt.trim().slice(0, 100),
+        display_order: index,
+      }));
+
+    if (pollOptionRows.length >= 2) {
+      await supabase.from("poll_options").insert(pollOptionRows);
+    }
+  }
+
+    // Insert mentions if content_json contains @mentions
   if (data.content_json) {
     const mentionIds = extractMentionIds(data.content_json);
     if (mentionIds.length > 0) {
@@ -1166,6 +1260,23 @@ export async function addComment(
     }
   }
 
+  // Send comment/reply notifications (runs after mentions so RPC can deduplicate)
+  if (comment) {
+    const commentPreview = trimmed.slice(0, 100);
+    try {
+      await supabase.rpc("notify_post_comment", {
+        p_comment_id: comment.id,
+        p_post_id: postId,
+        p_actor_id: user.id,
+        p_parent_comment_id: parentId ?? null,
+        p_comment_preview: commentPreview,
+      });
+    } catch (err) {
+      // Non-critical — don't fail the comment if notification fails
+      logger.error("Failed to send comment notification", { error: err });
+    }
+  }
+
   revalidatePath("/intranet");
   return { success: true, error: null, commentId: comment?.id };
 }
@@ -1444,6 +1555,105 @@ export async function togglePinPost(
     .from("posts")
     .update({ is_pinned: !post.is_pinned })
     .eq("id", postId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/intranet");
+  return { success: true, error: null };
+}
+
+// ─── Live Feed Polling ──────────────────────────────────────────────
+
+export async function getNewPostCount(
+  sinceTimestamp: string
+): Promise<number> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return 0;
+
+  const { count, error } = await supabase
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .gt("created_at", sinceTimestamp);
+
+  if (error) {
+    logger.error("Failed to count new posts", { error });
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+// ─── Poll Voting ────────────────────────────────────────────────────
+
+export async function votePoll(
+  postId: string,
+  optionId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  // Check if poll is still open
+  const { data: post } = await supabase
+    .from("posts")
+    .select("poll_closes_at")
+    .eq("id", postId)
+    .single();
+
+  if (!post) return { success: false, error: "Post not found" };
+  if (post.poll_closes_at && new Date(post.poll_closes_at) < new Date()) {
+    return { success: false, error: "This poll has closed" };
+  }
+
+  // Verify the option belongs to this post
+  const { data: option } = await supabase
+    .from("poll_options")
+    .select("id")
+    .eq("id", optionId)
+    .eq("post_id", postId)
+    .single();
+
+  if (!option) return { success: false, error: "Invalid poll option" };
+
+  // Delete existing vote (allows vote changes via UNIQUE constraint)
+  const { error: existingError } = await supabase
+    .from("poll_votes")
+    .delete()
+    .eq("post_id", postId)
+    .eq("user_id", user.id);
+
+  if (existingError) {
+    logger.error("Failed to clear existing vote", { error: existingError });
+  }
+
+  const { error } = await supabase
+    .from("poll_votes")
+    .insert({
+      post_id: postId,
+      option_id: optionId,
+      user_id: user.id,
+    });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/intranet");
+  return { success: true, error: null };
+}
+
+export async function removeVote(
+  postId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("poll_votes")
+    .delete()
+    .eq("post_id", postId)
+    .eq("user_id", user.id);
 
   if (error) {
     return { success: false, error: error.message };

@@ -147,3 +147,11 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 **Write RLS policies with ownership checks, not blanket `true`.** Even when mutations are gated by server actions, RLS is the last line of defence. INSERT/DELETE policies on junction tables (e.g. `post_mentions`, `comment_mentions`) should verify the current user owns the parent record via `EXISTS` subqueries, not rely on `WITH CHECK (true)`.
 
 **Never trust user-supplied IDs in SECURITY DEFINER functions.** In `notify_mention()`, the `p_mentioner_id` parameter was used to look up the sender's name, allowing impersonation. Always use `auth.uid()` for identity inside SECURITY DEFINER functions — treat all parameters as untrusted input.
+
+**Use case-insensitive checks for URL protocols.** Per RFC 3986, URL schemes are case-insensitive — `HTTPS://example.com` is valid. Use `/^https?:\/\//i.test(href)` instead of `startsWith("http://")`.
+
+**Wrap localStorage access in try/catch.** `localStorage.getItem()` and `setItem()` can throw in private browsing mode or when storage is disabled/full. Always wrap in try/catch and return a sensible default on failure.
+
+**Listen to the `storage` event for cross-tab localStorage sync.** When using `useSyncExternalStore` with localStorage, subscribe to both your custom event (same-tab) and the browser `storage` event (cross-tab). Handle `event.key === null` too, which fires when another tab calls `localStorage.clear()`.
+
+**Raise exceptions for invalid inputs in DB functions, don't silently return.** A silent `RETURN 0` on unexpected input masks bugs. Use `RAISE EXCEPTION` to make programming errors (e.g. typos in calling code) immediately obvious.

@@ -31,6 +31,7 @@ export type CourseStatus = "draft" | "published";
 export type QuestionType = "single" | "multi";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
 export type AttachmentType = "image" | "document" | "link";
+export type ArticleStatus = "draft" | "published";
 
 export interface Database {
   public: {
@@ -784,6 +785,79 @@ export interface Database {
           created_at?: string;
         };
       };
+      resource_categories: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          icon: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          icon?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          description?: string | null;
+          icon?: string | null;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      resource_articles: {
+        Row: {
+          id: string;
+          category_id: string;
+          title: string;
+          slug: string;
+          content: string;
+          content_json: Record<string, unknown> | null;
+          status: ArticleStatus;
+          author_id: string;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          category_id: string;
+          title: string;
+          slug: string;
+          content?: string;
+          content_json?: Record<string, unknown> | null;
+          status?: ArticleStatus;
+          author_id: string;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          category_id?: string;
+          title?: string;
+          slug?: string;
+          content?: string;
+          content_json?: Record<string, unknown> | null;
+          status?: ArticleStatus;
+          author_id?: string;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -941,6 +1015,22 @@ export interface CommentWithAuthor extends PostComment {
   content_json?: Record<string, unknown> | null;
 }
 
+export interface PostPollOption {
+  id: string;
+  option_text: string;
+  display_order: number;
+  vote_count: number;
+}
+
+export interface PostPoll {
+  question: string;
+  options: PostPollOption[];
+  total_votes: number;
+  user_vote_option_id: string | null;
+  closes_at: string | null;
+  is_closed: boolean;
+}
+
 export interface PostWithRelations extends Post {
   author: PostAuthor;
   attachments: PostAttachment[];
@@ -951,4 +1041,20 @@ export interface PostWithRelations extends Post {
   comment_count: number;
   /** Tiptap JSON content (null for plain-text posts created before Tiptap migration) */
   content_json?: Record<string, unknown> | null;
+  /** Poll data (null for non-poll posts) */
+  poll?: PostPoll | null;
+}
+
+// Resource / Knowledge Base types
+export type ResourceCategory = Database["public"]["Tables"]["resource_categories"]["Row"];
+export type ResourceArticle = Database["public"]["Tables"]["resource_articles"]["Row"];
+
+export type ArticleAuthor = Pick<Profile, "id" | "full_name" | "preferred_name" | "avatar_url">;
+
+export interface ArticleWithAuthor extends ResourceArticle {
+  author: ArticleAuthor;
+}
+
+export interface CategoryWithCount extends ResourceCategory {
+  article_count: number;
 }

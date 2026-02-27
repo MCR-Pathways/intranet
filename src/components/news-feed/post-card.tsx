@@ -19,6 +19,7 @@ import { TiptapRenderer } from "./tiptap-renderer";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
+import { PollDisplay } from "./poll-display";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
 import type { MentionUser } from "./mention-list";
@@ -284,6 +285,11 @@ export function PostCard({
 
             {/* Attachments */}
             <AttachmentDisplay attachments={post.attachments} />
+
+            {/* Poll */}
+            {post.poll && (
+              <PollDisplay postId={post.id} poll={post.poll} />
+            )}
 
             {/* Reactions */}
             <ReactionBar

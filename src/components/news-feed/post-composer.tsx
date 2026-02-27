@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, X } from "lucide-react";
+import { BarChart3, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getInitials } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
@@ -13,6 +13,7 @@ import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { createPost } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
+import { PollComposer, type PollData, computePollClosesAt } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
 import type { MentionUser } from "./mention-list";
 import type { PostAuthor } from "@/types/database.types";
@@ -29,6 +30,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
+  const [pollData, setPollData] = useState<PollData | null>(null);
   const { autoLinkPreview, isFetchingPreview, dismissPreview, resetPreview } =
     useAutoLinkPreview({ content: plainText });
 
@@ -37,7 +39,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
 
   // Warn before navigating away with unsaved content
   useEffect(() => {
-    const hasContent = plainText.trim().length > 0 || attachments.length > 0;
+    const hasContent = plainText.trim().length > 0 || attachments.length > 0 || pollData !== null;
     if (!hasContent) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -46,7 +48,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [plainText, attachments]);
+  }, [plainText, attachments, pollData]);
 
   const handleEditorChange = useCallback(
     (json: TiptapDocument, text: string) => {
@@ -68,6 +70,15 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
     if (!text && attachments.length === 0) return;
     if (attachments.some((a) => a.uploading)) return;
 
+    // Validate poll if present
+    if (pollData) {
+      const filledOptions = pollData.options.filter((o) => o.trim().length > 0);
+      if (!pollData.question.trim() || filledOptions.length < 2) {
+        setError("Poll needs a question and at least 2 options");
+        return;
+      }
+    }
+
     setError(null);
     startTransition(async () => {
       const result = await createPost({
@@ -80,12 +91,22 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
           file_size: a.file_size,
           mime_type: a.mime_type,
         })),
+        ...(pollData
+          ? {
+              poll: {
+                question: pollData.question,
+                options: pollData.options.filter((o) => o.trim().length > 0),
+                closes_at: computePollClosesAt(pollData.duration),
+              },
+            }
+          : {}),
       });
 
       if (result.success) {
         setContentJson(null);
         setPlainText("");
         setAttachments([]);
+        setPollData(null);
         resetPreview();
         setResetKey((k) => k + 1);
         if (result.warning) {
@@ -98,7 +119,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         toast.error(result.error || "Something went wrong");
       }
     });
-  }, [plainText, contentJson, attachments, resetPreview]);
+  }, [plainText, contentJson, attachments, pollData, resetPreview]);
 
   const charCount = plainText.length;
   const isSubmitDisabled =
@@ -181,13 +202,24 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
               resetKey={resetKey}
             />
 
+            {/* Poll composer */}
+            {pollData && (
+              <PollComposer
+                poll={pollData}
+                onChange={setPollData}
+                onRemove={() => setPollData(null)}
+                disabled={isPending}
+              />
+            )}
+
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
 
-            {/* Submit button */}
+            {/* Submit button + add poll toggle */}
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
                 <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">
                   ⌘
                 </kbd>{" "}
@@ -196,7 +228,23 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
                   Enter
                 </kbd>{" "}
                 to post
-              </p>
+                </p>
+                {!pollData && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() =>
+                      setPollData({ question: "", options: ["", ""], duration: "3d" })
+                    }
+                    disabled={isPending}
+                  >
+                    <BarChart3 className="mr-1 h-4 w-4" />
+                    Poll
+                  </Button>
+                )}
+              </div>
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitDisabled}
