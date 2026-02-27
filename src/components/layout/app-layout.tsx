@@ -19,15 +19,34 @@ const SIDEBAR_TOGGLE_EVENT = "mcr-sidebar-toggle";
 //   2. Subscribe to changes via a namespaced CustomEvent
 //   3. Read the true client value from localStorage after hydration
 
-/** Subscribe to sidebar state changes. Called by useSyncExternalStore. */
+/**
+ * Subscribe to sidebar state changes. Called by useSyncExternalStore.
+ * Listens to both the in-page CustomEvent and the browser `storage` event
+ * so the sidebar stays in sync across multiple tabs.
+ */
 function subscribeSidebar(callback: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === SIDEBAR_STORAGE_KEY) {
+      callback();
+    }
+  };
+
   window.addEventListener(SIDEBAR_TOGGLE_EVENT, callback);
-  return () => window.removeEventListener(SIDEBAR_TOGGLE_EVENT, callback);
+  window.addEventListener("storage", handleStorage);
+
+  return () => {
+    window.removeEventListener(SIDEBAR_TOGGLE_EVENT, callback);
+    window.removeEventListener("storage", handleStorage);
+  };
 }
 
 /** Read the current sidebar state from localStorage. */
 function getSidebarSnapshot() {
-  return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  try {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
 /** Server snapshot — always expanded (false) to match initial HTML. */
@@ -50,10 +69,14 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
   const toggleSidebar = useCallback(() => {
-    const next = !isCollapsed;
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-    window.dispatchEvent(new CustomEvent(SIDEBAR_TOGGLE_EVENT, { detail: next }));
-  }, [isCollapsed]);
+    try {
+      const next = !getSidebarSnapshot();
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+      window.dispatchEvent(new CustomEvent(SIDEBAR_TOGGLE_EVENT));
+    } catch {
+      // localStorage unavailable — toggle is a no-op
+    }
+  }, []);
 
   const toggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen((prev) => !prev);
