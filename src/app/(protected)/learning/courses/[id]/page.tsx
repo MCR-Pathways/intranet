@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Clock,
   CheckCircle2,
   PlayCircle,
@@ -14,6 +13,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
@@ -127,15 +127,17 @@ export default async function CourseDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Back navigation */}
-      <Button variant="ghost" asChild className="mb-4">
-        <Link href="/learning/courses">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Course Catalogue
-        </Link>
-      </Button>
-
       {/* Course header */}
+      <PageHeader
+        title={course.title}
+        subtitle={course.description ?? undefined}
+        breadcrumbs={[
+          { label: "Learning", href: "/learning" },
+          { label: "Courses", href: "/learning/courses" },
+          { label: course.title },
+        ]}
+      />
+
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
@@ -147,10 +149,6 @@ export default async function CourseDetailPage({
               <Badge variant="destructive">Required</Badge>
             )}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{course.title}</h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            {course.description}
-          </p>
         </div>
 
         {/* Action card */}

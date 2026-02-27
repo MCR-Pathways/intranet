@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import type {
   CourseLesson,
   LessonType,
@@ -198,15 +199,16 @@ export default async function LessonPage({
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl p-6 space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              Lesson {currentIndex + 1} of {lessons.length}
-            </span>
-          </div>
-
-          <h1 className="text-2xl font-bold tracking-tight">
-            {lesson.title}
-          </h1>
+          <PageHeader
+            title={lesson.title}
+            subtitle={`Lesson ${currentIndex + 1} of ${lessons.length}`}
+            breadcrumbs={[
+              { label: "Learning", href: "/learning" },
+              { label: "Courses", href: "/learning/courses" },
+              { label: course.title, href: `/learning/courses/${courseId}` },
+              { label: lesson.title },
+            ]}
+          />
 
           {/* Content by lesson type */}
           {lessonType === "video" && (

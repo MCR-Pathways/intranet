@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 import type { NotificationData } from "@/types/notification";
+
+const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,6 +20,22 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  const toggleMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen((prev) => !prev);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,13 +44,15 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
         profile={profile}
         needsSignIn={needsSignIn}
         initialNotifications={initialNotifications}
-        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        onMenuToggle={toggleMobileMenu}
+        onSidebarToggle={toggleSidebar}
       />
 
       <div className="flex">
         {/* Desktop sidebar */}
         <Sidebar
           profile={profile}
+          collapsed={isCollapsed}
           className="hidden md:flex fixed left-0 top-16 h-[calc(100vh-4rem)]"
         />
 
@@ -54,8 +74,8 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
         {/* Main content */}
         <main
           className={cn(
-            "flex-1 min-h-[calc(100vh-4rem)]",
-            "md:ml-64" // Account for sidebar width on desktop
+            "flex-1 min-h-[calc(100vh-4rem)] transition-[margin] duration-200",
+            isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
         >
           <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8">

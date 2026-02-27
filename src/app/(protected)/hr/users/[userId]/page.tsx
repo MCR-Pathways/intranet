@@ -3,9 +3,7 @@ import { HR_EMPLOYEE_SELECT } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT, STAFF_LEAVING_FORM_SELECT } from "@/lib/hr";
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
 import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm } from "@/types/hr";
@@ -388,23 +386,15 @@ export default async function EmployeeDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Back button + header */}
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/hr/users">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Users
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {profile.full_name}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {profile.job_title || "No job title set"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={profile.full_name as string}
+        subtitle={profile.job_title as string || "No job title set"}
+        breadcrumbs={[
+          { label: "HR", href: "/hr" },
+          { label: "User Management", href: "/hr/users" },
+          { label: profile.full_name as string },
+        ]}
+      />
 
       <EmployeeDetailContent
         profile={employeeProfile}

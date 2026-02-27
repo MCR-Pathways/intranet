@@ -31,10 +31,11 @@ interface HeaderProps {
   profile: Profile | null;
   needsSignIn?: boolean;
   initialNotifications?: NotificationData[];
-  onMobileMenuToggle?: () => void;
+  onMenuToggle?: () => void;
+  onSidebarToggle?: () => void;
 }
 
-export function Header({ user, profile, needsSignIn, initialNotifications, onMobileMenuToggle }: HeaderProps) {
+export function Header({ user, profile, needsSignIn, initialNotifications, onMenuToggle, onSidebarToggle }: HeaderProps) {
   const isStaff = profile?.user_type === "staff";
 
   const handleSignOut = async () => {
@@ -55,21 +56,34 @@ export function Header({ user, profile, needsSignIn, initialNotifications, onMob
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6">
-        {/* Left side - Logo and mobile menu */}
-        <div className="flex items-center gap-4">
-          {onMobileMenuToggle && (
+      <div className="flex h-16 items-center justify-between">
+        {/* Left side - Hamburger zone (matches sidebar width) + logo */}
+        <div className="flex items-center">
+          {/* Hamburger aligned with sidebar icons — uses same px-3 + px-3 left offset as sidebar items */}
+          {onSidebarToggle && (
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
-              onClick={onMobileMenuToggle}
+              className="hidden md:flex ml-3"
+              onClick={onSidebarToggle}
             >
               <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
+              <span className="sr-only">Toggle sidebar</span>
             </Button>
           )}
-          <Link href="/intranet" className="flex items-center">
+          {/* Mobile hamburger */}
+          {onMenuToggle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-4 md:hidden"
+              onClick={onMenuToggle}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle mobile menu</span>
+            </Button>
+          )}
+          <Link href="/intranet" className="flex items-center ml-4 md:ml-4">
             <Image
               src="/MCR_LOGO-1.svg"
               alt="MCR Pathways"
@@ -81,7 +95,7 @@ export function Header({ user, profile, needsSignIn, initialNotifications, onMob
         </div>
 
         {/* Right side - Notifications and user menu */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-4 md:pr-6">
           {/* Notifications + sign-in nudge */}
           <div className="relative">
             <NotificationBell initialNotifications={initialNotifications} />

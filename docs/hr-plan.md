@@ -1,7 +1,7 @@
 # HR Module — Development Roadmap
 
 > **Living document** — updated as features are completed and priorities shift.
-> Last updated: 2026-02-24
+> Last updated: 2026-02-27
 
 ---
 
@@ -82,6 +82,12 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 - **What:** Blue info notice per row when teammates have approved leave overlapping the request dates
 - **Implementation:** Server fetches `teamMemberMap` (2 indexed queries), client-side `getTeamOverlap()` from already-loaded `allRequests`. Zero additional queries at render time.
 - **Format:** "[Name(s)] is/are also on leave during this period. Team: X/Y available."
+
+### UI/UX Polish ✅ DONE
+- **HR dashboard sections:** Flat 11-card grid replaced with labelled sections (My HR, Organisation, Administration) using `SectionHeader` component
+- **Sidebar grouping:** HR nav items grouped into My HR (My Profile, Leave, Calendar, My Team, Assets), Organisation (Org Chart), Admin (User Management, Absence & Sickness, Compliance, Key Dates, Leaving)
+- **Breadcrumbs:** Added to `/hr/users/[userId]` (HR > User Management > {name}), `/hr/leaving/[formId]` (HR > Leaving > {name}), `/hr/absence/rtw/[formId]` (HR > Absence > RTW Form)
+- **PageHeader:** All HR pages now use shared `PageHeader` component with consistent `text-3xl` title styling
 
 ### Bradford Factor — DECISION: Wellbeing Prompts Instead
 - **Decision (Feb 2026):** Do not surface the raw Bradford score. Research showed it's blind to cause (disability discrimination risk under Equality Act 2010), drives presenteeism, and the BMA has condemned it.
