@@ -32,6 +32,9 @@ import type { PostAuthor } from "@/types/database.types";
 
 export type PendingAction = "photo" | "document" | "poll" | null;
 
+/** Time (ms) for the Radix Dialog open animation to complete and child refs to mount. */
+const DIALOG_ANIMATION_DELAY = 150;
+
 interface PostCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -99,8 +102,8 @@ export function PostCreateDialog({
   useEffect(() => {
     if (!open || !pendingAction) return;
 
-    // Short delay to let the dialog animate in and child components mount,
-    // ensuring refs (e.g. attachmentEditorRef) are available for file pickers.
+    // Wait for the Radix Dialog open animation to complete and child components
+    // (e.g. AttachmentEditor) to mount so their refs are available for file pickers.
     const timer = setTimeout(() => {
       switch (pendingAction) {
         case "photo":
@@ -114,7 +117,7 @@ export function PostCreateDialog({
           break;
       }
       onClearPendingAction();
-    }, 150);
+    }, DIALOG_ANIMATION_DELAY);
 
     return () => clearTimeout(timer);
   }, [open, pendingAction, onClearPendingAction, onPollChange]);

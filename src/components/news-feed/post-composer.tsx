@@ -136,6 +136,10 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
     [resetPreview]
   );
 
+  const handleClearPendingAction = useCallback(() => {
+    setPendingAction(null);
+  }, []);
+
   const openDialog = useCallback((action?: PendingAction) => {
     setPendingAction(action ?? null);
     setDialogOpen(true);
@@ -190,7 +194,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         open={dialogOpen}
         onOpenChange={handleDialogOpenChange}
         pendingAction={pendingAction}
-        onClearPendingAction={() => setPendingAction(null)}
+        onClearPendingAction={handleClearPendingAction}
         userProfile={userProfile}
         mentionUsers={mentionUsers}
         plainText={plainText}
