@@ -31,6 +31,8 @@ interface TiptapComposerProps {
   resetKey?: string | number;
   /** Minimal mode (no formatting toolbar, compact) — used for comments */
   minimal?: boolean;
+  /** Remove border and focus ring — used inside dialogs where the editor is the main content area */
+  borderless?: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ export function TiptapComposer({
   initialContent,
   resetKey,
   minimal = false,
+  borderless = false,
 }: TiptapComposerProps) {
   // Stable suggestion config — only recreate when user list changes
   const suggestion = useMemo(
@@ -145,11 +148,13 @@ export function TiptapComposer({
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm max-w-none focus:outline-none",
+          "prose prose-sm max-w-none",
           // Remove default prose margins for a compact social feed feel
           "[&_p]:my-0 [&_ul]:my-1 [&_ol]:my-1",
           minimal ? "min-h-[36px]" : "min-h-[80px]"
         ),
+        // Override browser's native contenteditable focus outline
+        style: "outline: none",
       },
     },
     onUpdate: ({ editor: e }) => {
@@ -194,8 +199,10 @@ export function TiptapComposer({
   return (
     <div
       className={cn(
-        "rounded-lg border border-input bg-background px-3 py-2 text-sm",
-        "focus-within:ring-2 focus-within:ring-ring",
+        "text-sm",
+        borderless
+          ? "bg-transparent"
+          : "rounded-lg border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring",
         disabled && "opacity-50 cursor-not-allowed",
         // Tiptap placeholder styling
         "[&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground",

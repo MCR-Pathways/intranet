@@ -2,19 +2,17 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BarChart3, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { cn, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { createPost } from "@/app/(protected)/intranet/actions";
-import { AttachmentEditor, type PendingAttachment } from "./attachment-editor";
-import { LinkPreviewCard } from "./link-preview-card";
-import { PollComposer, type PollData, computePollClosesAt } from "./poll-composer";
-import { TiptapComposer } from "./tiptap-composer";
+import type { PendingAttachment } from "./attachment-editor";
+import { PollData, computePollClosesAt } from "./poll-composer";
+import { ComposerActionBar } from "./composer-action-bar";
+import { PostCreateDialog, type PendingAction } from "./post-create-dialog";
 import type { MentionUser } from "./mention-list";
 import type { PostAuthor } from "@/types/database.types";
 
@@ -31,8 +29,11 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
   const [pollData, setPollData] = useState<PollData | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+
   const { autoLinkPreview, isFetchingPreview, dismissPreview, resetPreview } =
-    useAutoLinkPreview({ content: plainText });
+    useAutoLinkPreview({ content: plainText, enabled: dialogOpen });
 
   const displayName =
     userProfile.preferred_name || userProfile.full_name || "User";
@@ -109,6 +110,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         setPollData(null);
         resetPreview();
         setResetKey((k) => k + 1);
+        setDialogOpen(false);
         if (result.warning) {
           setError(result.warning);
         } else {
@@ -121,6 +123,29 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
     });
   }, [plainText, contentJson, attachments, pollData, resetPreview]);
 
+  // Reset state when dialog closes (if no content — discarded)
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setDialogOpen(open);
+      if (!open) {
+        // Reset all state when dialog is closed (user discarded or submitted)
+        setContentJson(null);
+        setPlainText("");
+        setAttachments([]);
+        setPollData(null);
+        setError(null);
+        resetPreview();
+        setResetKey((k) => k + 1);
+      }
+    },
+    [resetPreview]
+  );
+
+  const openDialog = useCallback((action?: PendingAction) => {
+    setPendingAction(action ?? null);
+    setDialogOpen(true);
+  }, []);
+
   const charCount = plainText.length;
   const isSubmitDisabled =
     isPending ||
@@ -128,141 +153,69 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
     attachments.some((a) => a.uploading);
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex gap-3">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage
-              src={userProfile.avatar_url || undefined}
-              alt={displayName}
-            />
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {getInitials(displayName)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-3">
-            <div>
-              <TiptapComposer
-                mentionUsers={mentionUsers}
-                placeholder="Share something with the team..."
-                onChange={handleEditorChange}
-                onSubmit={handleSubmit}
-                maxLength={POST_MAX_LENGTH}
-                disabled={isPending}
-                resetKey={resetKey}
+    <>
+      {/* Collapsed trigger card */}
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          {/* Avatar + pill trigger */}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 shrink-0">
+              <AvatarImage
+                src={userProfile.avatar_url || undefined}
+                alt={displayName}
               />
-              {charCount > 0 && (
-                <p
-                  className={cn(
-                    "mt-1 text-right text-xs text-muted-foreground",
-                    charCount > POST_MAX_LENGTH * 0.9 && "text-amber-500",
-                    charCount >= POST_MAX_LENGTH && "text-destructive"
-                  )}
-                >
-                  {charCount.toLocaleString()} /{" "}
-                  {POST_MAX_LENGTH.toLocaleString()}
-                </p>
-              )}
-            </div>
-
-            {/* Auto-detected link preview */}
-            {(autoLinkPreview || isFetchingPreview) && (
-              <div className="relative">
-                {isFetchingPreview && !autoLinkPreview ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-border p-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Loading preview...
-                    </span>
-                  </div>
-                ) : autoLinkPreview ? (
-                  <>
-                    <LinkPreviewCard
-                      url={autoLinkPreview.url}
-                      title={autoLinkPreview.title}
-                      description={autoLinkPreview.description}
-                      imageUrl={autoLinkPreview.imageUrl}
-                    />
-                    <button
-                      type="button"
-                      onClick={dismissPreview}
-                      className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            )}
-
-            <AttachmentEditor
-              onChange={handleAttachmentsChange}
-              onError={setError}
-              disabled={isPending}
-              resetKey={resetKey}
-            />
-
-            {/* Poll composer */}
-            {pollData && (
-              <PollComposer
-                poll={pollData}
-                onChange={setPollData}
-                onRemove={() => setPollData(null)}
-                disabled={isPending}
-              />
-            )}
-
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-
-            {/* Submit button + add poll toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
-                <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">
-                  ⌘
-                </kbd>{" "}
-                +{" "}
-                <kbd className="rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">
-                  Enter
-                </kbd>{" "}
-                to post
-                </p>
-                {!pollData && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={() =>
-                      setPollData({ question: "", options: ["", ""], duration: "3d" })
-                    }
-                    disabled={isPending}
-                  >
-                    <BarChart3 className="mr-1 h-4 w-4" />
-                    Poll
-                  </Button>
-                )}
-              </div>
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitDisabled}
-                size="sm"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                    Posting...
-                  </>
-                ) : (
-                  "Post"
-                )}
-              </Button>
-            </div>
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {getInitials(displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => openDialog()}
+              className="flex-1 cursor-pointer rounded-full bg-muted px-4 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/80"
+            >
+              Share something with the team...
+            </button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Divider + action bar */}
+          <div className="mt-3 border-t pt-3">
+            <ComposerActionBar
+              onPhotoClick={() => openDialog("photo")}
+              onDocumentClick={() => openDialog("document")}
+              onPollClick={() => openDialog("poll")}
+              pollActive={false}
+              disabled={false}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Create post dialog */}
+      <PostCreateDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogOpenChange}
+        pendingAction={pendingAction}
+        onClearPendingAction={() => setPendingAction(null)}
+        userProfile={userProfile}
+        mentionUsers={mentionUsers}
+        plainText={plainText}
+        charCount={charCount}
+        contentJson={contentJson}
+        attachments={attachments}
+        pollData={pollData}
+        autoLinkPreview={autoLinkPreview}
+        isFetchingPreview={isFetchingPreview}
+        error={error}
+        isPending={isPending}
+        isSubmitDisabled={isSubmitDisabled}
+        resetKey={resetKey}
+        onEditorChange={handleEditorChange}
+        onAttachmentsChange={handleAttachmentsChange}
+        onPollChange={setPollData}
+        onDismissPreview={dismissPreview}
+        onSubmit={handleSubmit}
+        onSetError={setError}
+      />
+    </>
   );
 }
