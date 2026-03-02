@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { sanitizeUrl } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ export function LinkPreviewCard({
   imageUrl,
   variant = "default",
 }: LinkPreviewCardProps) {
+  const [imgError, setImgError] = useState(false);
   const safeHref = sanitizeUrl(url) || "#";
   let displayHostname = url;
   try {
@@ -35,13 +37,14 @@ export function LinkPreviewCard({
         rel="noopener noreferrer"
         className="flex overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
       >
-        {imageUrl ? (
+        {imageUrl && !imgError ? (
           <div className="h-20 w-20 shrink-0 overflow-hidden bg-muted">
             {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
             <img
               src={sanitizeUrl(imageUrl) || undefined}
               alt={title || "Link preview"}
               className="h-full w-full object-cover"
+              onError={() => setImgError(true)}
             />
           </div>
         ) : (
@@ -74,13 +77,14 @@ export function LinkPreviewCard({
       rel="noopener noreferrer"
       className="block overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
     >
-      {imageUrl && (
+      {imageUrl && !imgError && (
         <div className="aspect-video w-full overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
           <img
             src={sanitizeUrl(imageUrl) || undefined}
             alt={title || "Link preview"}
             className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
           />
         </div>
       )}
