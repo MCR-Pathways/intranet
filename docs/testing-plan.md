@@ -172,21 +172,20 @@ Largest untested action file (966 lines, 12 functions):
 
 ## Summary
 
-| Phase | Branch | Tests | Sessions | Priority |
-|-------|--------|-------|----------|----------|
-| 0 | `test/infrastructure` | 0 | 0.5 | Pre-req |
-| 1 | `test/hr-lib-pure-functions` | ~110 | 1 | HIGH |
-| 2 | `test/hr-absence-leave-actions` | ~110 | 2 | CRITICAL |
-| 3 | `test/hr-remaining-actions` | ~90 | 2 | HIGH |
-| 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM |
-| 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM |
-| 6 | `test/hr-learning-components` | ~50 | 2 | LOWER |
-| 7 | `test/hooks` | ~22 | 0.5 | LOWER |
-| **Total** | | **~497** | **~11** | |
+| Phase | Branch | Tests | Sessions | Priority | Status |
+|-------|--------|-------|----------|----------|--------|
+| 0+1 | `test/phase-0-1-infrastructure-and-pure-functions` | 143 | 1 | Pre-req + HIGH | DONE (PR #52) |
+| 2 | `test/hr-absence-leave-actions` | ~110 | 2 | CRITICAL | |
+| 3 | `test/hr-remaining-actions` | ~90 | 2 | HIGH | |
+| 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM | |
+| 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM | |
+| 6 | `test/hr-learning-components` | ~50 | 2 | LOWER | |
+| 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
+| **Total** | | **~530** | **~10.5** | | |
 
-**Dependency graph**: Phase 1 can start immediately (no deps). Phases 2-5 require Phase 0. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent after Phase 0.
+**Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
-**Recommended order**: 0 + 1 (parallel) → 2 → 3 → 4 → 5 → 6 → 7
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 

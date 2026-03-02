@@ -46,29 +46,33 @@ import { vi } from "vitest";
  * introduces new Supabase query patterns.
  */
 export function createMockSupabaseClient() {
+  // ── 1. Define ALL mock functions first (no return values yet) ──
+
   // Query terminators
   const mockSingle = vi.fn().mockResolvedValue({ data: null, error: null });
   const mockOrder = vi.fn().mockResolvedValue({ data: [], error: null });
   const mockLimit = vi.fn().mockResolvedValue({ data: [], error: null });
 
-  // Chain methods — all return an object with further chain methods
-  const chainable = () => ({
-    single: mockSingle,
-    order: mockOrder,
-    limit: mockLimit,
-    eq: mockEq,
-    neq: mockNeq,
-    is: mockIs,
-    in: mockIn,
-    gt: mockGt,
-    gte: mockGte,
-    lt: mockLt,
-    lte: mockLte,
-  });
+  // Filter chain methods
+  const mockEq = vi.fn();
+  const mockNeq = vi.fn();
+  const mockIs = vi.fn();
+  const mockIn = vi.fn();
+  const mockGt = vi.fn();
+  const mockGte = vi.fn();
+  const mockLt = vi.fn();
+  const mockLte = vi.fn();
 
-  const mockEq = vi.fn().mockReturnValue({ ...chainable(), eq: undefined as never });
-  // Re-assign eq in chainable after mockEq is defined
-  const fullChain = () => ({
+  // Primary operations
+  const mockSelect = vi.fn();
+  const mockUpdate = vi.fn();
+  const mockInsert = vi.fn();
+  const mockDelete = vi.fn();
+  const mockUpsert = vi.fn();
+
+  // ── 2. Build the shared chain object (all mocks are defined) ──
+
+  const filterChain = () => ({
     single: mockSingle,
     order: mockOrder,
     limit: mockLimit,
@@ -83,22 +87,24 @@ export function createMockSupabaseClient() {
     select: mockSelect,
   });
 
-  mockEq.mockReturnValue(fullChain());
+  // ── 3. Wire up return values ──
 
-  const mockNeq = vi.fn().mockReturnValue(fullChain());
-  const mockIs = vi.fn().mockReturnValue(fullChain());
-  const mockIn = vi.fn().mockReturnValue(fullChain());
-  const mockGt = vi.fn().mockReturnValue(fullChain());
-  const mockGte = vi.fn().mockReturnValue(fullChain());
-  const mockLt = vi.fn().mockReturnValue(fullChain());
-  const mockLte = vi.fn().mockReturnValue(fullChain());
+  // Filter methods return the full chain
+  mockEq.mockReturnValue(filterChain());
+  mockNeq.mockReturnValue(filterChain());
+  mockIs.mockReturnValue(filterChain());
+  mockIn.mockReturnValue(filterChain());
+  mockGt.mockReturnValue(filterChain());
+  mockGte.mockReturnValue(filterChain());
+  mockLt.mockReturnValue(filterChain());
+  mockLte.mockReturnValue(filterChain());
 
-  // Primary operations
-  const mockSelect = vi.fn().mockReturnValue(fullChain());
-  const mockUpdate = vi.fn().mockReturnValue(fullChain());
-  const mockInsert = vi.fn().mockReturnValue({ ...fullChain(), select: mockSelect });
-  const mockDelete = vi.fn().mockReturnValue(fullChain());
-  const mockUpsert = vi.fn().mockReturnValue({ ...fullChain(), select: mockSelect });
+  // Primary operations return the full chain
+  mockSelect.mockReturnValue(filterChain());
+  mockUpdate.mockReturnValue(filterChain());
+  mockInsert.mockReturnValue({ ...filterChain(), select: mockSelect });
+  mockDelete.mockReturnValue(filterChain());
+  mockUpsert.mockReturnValue({ ...filterChain(), select: mockSelect });
 
   const mockFrom = vi.fn().mockReturnValue({
     select: mockSelect,
