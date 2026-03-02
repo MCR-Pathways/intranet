@@ -40,23 +40,14 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // CSP: Enforcing. unsafe-eval only in dev (React error stack debugging).
-          // Remaining roadmap: replace 'unsafe-inline' with nonce-based CSP via
-          // proxy.ts when the performance trade-off (forced dynamic rendering) is acceptable.
+          // CSP: Enforcing. unsafe-eval omitted in production (only needed for
+          // React error stack debugging in dev). Remaining roadmap: replace
+          // 'unsafe-inline' with nonce-based CSP via proxy.ts when the performance
+          // trade-off (forced dynamic rendering) is acceptable.
           {
             key: "Content-Security-Policy",
-            value: (() => {
-              const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://*.supabase.co";
-              return [
-                "default-src 'self'",
-                `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
-                "style-src 'self' 'unsafe-inline' https://use.typekit.net",
-                `img-src 'self' blob: data: ${supabaseOrigin} https://*.googleusercontent.com`,
-                `connect-src 'self' ${supabaseOrigin}`,
-                "font-src 'self' https://use.typekit.net https://p.typekit.net",
-                "frame-ancestors 'none'",
-              ].join("; ");
-            })(),
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net; img-src 'self' blob: data: https://*.supabase.co https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-ancestors 'none'",
           },
         ],
       },
