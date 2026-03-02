@@ -95,12 +95,12 @@ export function LinkPreviewCard({
       className="block overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
     >
       {proxiedImageUrl && !imgError && (
-        <div className="w-full max-h-[280px] overflow-hidden bg-muted">
+        <div className="aspect-[1.91/1] w-full overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element -- proxied OG image */}
           <img
             src={proxiedImageUrl}
             alt={title || "Link preview"}
-            className="w-full object-cover"
+            className="h-full w-full object-cover"
             onError={() => setImgError(true)}
           />
         </div>
