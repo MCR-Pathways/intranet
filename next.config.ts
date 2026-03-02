@@ -40,15 +40,20 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // CSP: Report-Only for initial rollout. Tightening roadmap:
-          // 1. Monitor browser console for violation reports
-          // 2. Replace 'unsafe-inline' with nonces (requires Next.js nonce support)
-          // 3. Remove 'unsafe-eval' once Turbopack/webpack dev dependency is confirmed prod-safe
-          // 4. Promote to enforcing Content-Security-Policy once stable
+          // CSP: Enforcing. unsafe-eval only in dev (React error stack debugging).
+          // Remaining roadmap: replace 'unsafe-inline' with nonce-based CSP via
+          // proxy.ts when the performance trade-off (forced dynamic rendering) is acceptable.
           {
-            key: "Content-Security-Policy-Report-Only",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://use.typekit.net; img-src 'self' data: https://*.supabase.co https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-ancestors 'none'",
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+              "style-src 'self' 'unsafe-inline' https://use.typekit.net",
+              "img-src 'self' blob: data: https://*.supabase.co https://*.googleusercontent.com",
+              "connect-src 'self' https://*.supabase.co",
+              "font-src 'self' https://use.typekit.net https://p.typekit.net",
+              "frame-ancestors 'none'",
+            ].join("; "),
           },
         ],
       },
