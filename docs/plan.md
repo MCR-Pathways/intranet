@@ -67,7 +67,7 @@
 
 ### Infrastructure ✅
 - Security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, CSP enforcing)
-- **CSP enforcing** (Mar 2026): `unsafe-eval` removed in production (dev-only via env check), `unsafe-inline` retained for Next.js hydration + inline styles. Nonce-based CSP deferred (forces dynamic rendering — disproportionate cost for internal app).
+- **CSP enforcing** (Mar 2026): `unsafe-eval` omitted entirely (dev violations are cosmetic). Static string CSP with `*.supabase.co` wildcard — IIFEs in header values crash Vercel Fluid Compute. `unsafe-inline` retained for Next.js hydration + inline styles. Nonce-based CSP deferred (forces dynamic rendering — disproportionate cost for internal app).
 - Error and loading boundaries for all protected routes
 - Structured logger (`src/lib/logger.ts`) ready for Sentry/Datadog swap
 - Audit logging via DB triggers on 8+ tables
@@ -178,7 +178,7 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [x] Dead code removal (`useUser()` hook deleted)
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
 - [x] Middleware JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, middleware reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
-- [x] CSP tightened to enforcing mode (Mar 2026): removed `unsafe-eval` in production, switched from Report-Only to enforcing. `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
+- [x] CSP tightened to enforcing mode (Mar 2026): switched from Report-Only to enforcing. `unsafe-eval` omitted entirely. Static string CSP (IIFEs crash Vercel Fluid Compute). `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [ ] Expand test coverage (~8% currently — 19 test files, 476 tests / ~130 source files). Phase 0+1 complete (PR #52): test infrastructure + pure function tests. See [docs/testing-plan.md](./testing-plan.md) for full roadmap.
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
