@@ -1311,7 +1311,7 @@ describe("Intranet Post Actions", () => {
         error: null,
         title: "Example Page",
         description: "A description of the page",
-        imageUrl: "https://example.com/image.png",
+        imageUrl: `/api/og-image?url=${encodeURIComponent("https://example.com/image.png")}`,
       });
     });
 
