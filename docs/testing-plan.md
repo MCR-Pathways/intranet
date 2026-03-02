@@ -1,0 +1,207 @@
+# Testing Plan — MCR Pathways Intranet
+
+## Context
+
+The intranet has 15 test files (333 tests) covering server actions and utility libs, but **zero component tests** and major gaps in the HR module. Of 18 action files, 7 have no tests — all in HR. The largest untested file (`hr/absence/actions.ts`) is 966 lines handling sensitive health data. `src/lib/hr.ts` (799 lines of pure business logic for leave calculations, Bradford Factor, trigger points) is completely untested. PRs #50 (CSP enforcement) and #51 (Facebook-style composer) are open and undeployed.
+
+**Goal**: ~500 new tests across 7 phases, bringing coverage from ~6% to ~25-30% file coverage (~830 total tests).
+
+---
+
+## Phase 0: Test Infrastructure ~~(branch: `test/infrastructure`)~~ DONE
+**Tests: 0 | Effort: 0.5 sessions | Priority: Pre-requisite | Status: COMPLETE**
+
+Extend `src/__mocks__/supabase.ts` with:
+- **Storage mocks**: `upload`, `remove`, `createSignedUrl` (needed by absence/compliance actions)
+- **Missing chain methods**: `mockDelete`, `mockUpsert`, `mockIs`, `mockLimit`, `mockIn`, `mockNeq`
+
+Create shared mocks:
+- `src/__mocks__/next-navigation.ts` — `useRouter`, `useSearchParams`, `usePathname`
+- `src/__mocks__/next-cache.ts` — `revalidatePath`, `revalidateTag`
+
+**Files to modify/create:**
+- `src/__mocks__/supabase.ts` (extend)
+- `src/__mocks__/next-navigation.ts` (new)
+- `src/__mocks__/next-cache.ts` (new)
+
+---
+
+## Phase 1: HR Pure Functions ~~(branch: `test/hr-lib-pure-functions`)~~ DONE
+**Tests: 143 actual | Effort: 1 session | Priority: HIGH | Status: COMPLETE**
+**Combined with Phase 0 into branch: `test/phase-0-1-infrastructure-and-pure-functions`**
+
+### `src/lib/hr.test.ts` (~90 tests)
+Every function is pure/deterministic with zero DB calls:
+- `calculateWorkingDays` (~20) — weekends, holidays, half-days, edge cases
+- `calculateFTEAdjustedDays` (~6) — proportional scaling, rounding
+- `calculateProRataEntitlement` (~12) — mid-year starters/leavers, clamping
+- `calculateBradfordFactor` / `getBradfordFactorSeverity` (~10) — formula, boundaries
+- `calculateTriggerPoint` (~10) — thresholds, window filtering, sick-only types
+- `getWellbeingPrompt` (~8) — severity levels
+- `getLeaveYearForDate` (~4) — year boundaries
+- `formatFTE`, `formatLeaveDays`, `formatHRDate`, `formatHRDateLong` (~14) — formatting + null handling
+- `calculateLengthOfService` (~6) — singular/plural, sub-month
+- `validateHRDocument` (~5) — size, type validation
+- `getHolidayCalendar` (~4) — region mapping
+- `mapToLeaveRequestWithEmployee` (~4) — null-safe join mapping
+
+### `src/lib/intranet.test.ts` (~8 tests)
+- `validateFile` — size limit, invalid type, valid types
+- `isImageType` — image vs document MIME types
+
+### `src/lib/sign-in.test.ts` (~8 tests)
+- `formatSignInTime`, `formatSignInDate`, `getLocationLabel`
+
+### `src/lib/learning.test.ts` (~8 tests)
+- `getLockedLessonIds` — quiz blocking logic
+
+---
+
+## Phase 2: HR Absence & Leave Actions (branch: `test/hr-absence-leave-actions`)
+**Tests: ~110 | Effort: 2 sessions | Priority: CRITICAL**
+**Requires Phase 0 for storage mocks**
+
+### `src/app/(protected)/hr/absence/actions.test.ts` (~65 tests)
+Largest untested action file (966 lines, 12 functions):
+- `recordAbsence` (~10) — auth, whitelist, date/type validation, working days calc
+- `updateAbsence` (~8) — whitelist, recalculates total_days
+- `deleteAbsence` (~5) — cascades fit note cleanup from storage
+- `uploadFitNote` / `deleteFitNote` (~8) — file validation, storage ops, DB sync
+- `createRTWForm` (~5) — authority check, duplicate prevention
+- `saveRTWForm` / `submitRTWForm` / `confirmRTWForm` / `unlockRTWForm` (~15) — status transitions, authority at each stage
+- `fetchAbsenceHistory` / `fetchRTWForm` / `fetchTriggerPointStatus` (~8) — auth, data shape
+
+### `src/app/(protected)/hr/leave/actions.test.ts` (~45 tests)
+- `requestLeave` (~10) — only requestable types, date validation, working days
+- `withdrawLeave` (~5) — ownership check, pending-only
+- `approveLeave` / `rejectLeave` / `cancelLeave` (~12) — status transitions, rejection reason required
+- `recordLeave` (~5) — HR admin records on behalf, all types allowed
+- `upsertLeaveEntitlement` (~5) — upsert logic
+- `fetchPublicHolidays` (~5) — region mapping
+
+---
+
+## Phase 3: Remaining HR Actions (branch: `test/hr-remaining-actions`)
+**Tests: ~90 | Effort: 2 sessions | Priority: HIGH**
+**Requires Phase 0**
+
+### `src/app/(protected)/hr/leaving/actions.test.ts` (~25 tests)
+- `verifyLeavingAuthority` (~5) — line manager, HR admin, neither
+- `createLeavingForm` / `updateLeavingForm` (~6) — whitelist, valid reasons
+- Status transitions: draft → submitted → processing → completed + cancel (~10)
+- `fetchLeavingFormSummary` (~4)
+
+### `src/app/(protected)/hr/assets/actions.test.ts` (~25 tests)
+- `createAsset` / `updateAsset` (~9) — whitelist, duplicate tag
+- **`assignAsset`** (~8) — **rollback tests**: assignment insert succeeds but status update fails → verify rollback deletes the assignment
+- **`returnAsset`** (~6) — **rollback tests**: similar pattern
+- `retireAsset` (~3) — cannot retire if assigned
+
+### `src/app/(protected)/hr/compliance/actions.test.ts` (~20 tests)
+- `calculateDocumentStatus` (~5) — pure date logic (expired, expiring_soon, valid)
+- `uploadComplianceDocument` (~5) — file validation, storage, DB
+- `deleteComplianceDocument` (~4) — DB-first delete, storage cleanup
+- `getComplianceDocumentUrl` (~3) — ownership check
+
+### `src/app/(protected)/hr/profile/actions.test.ts` (~15 tests)
+- `updatePersonalDetails` (~6) — self-only, whitelist blocks `date_of_birth`/`ni_number`
+- `upsertEmergencyContact` (~5) — max 2 limit
+- `deleteEmergencyContact` (~4) — ownership check
+
+### `src/app/(protected)/hr/key-dates/actions.test.ts` (~12 tests)
+- CRUD operations (~12) — straightforward HR admin gate + whitelist
+
+---
+
+## Phase 4: Intranet Resources + Notifications (branch: `test/intranet-resources-notifications`)
+**Tests: ~55 | Effort: 1 session | Priority: MEDIUM**
+
+### `src/app/(protected)/intranet/resources/actions.test.ts` (~40 tests)
+- Category CRUD (~15) — slug generation, unique slug dedup, delete-with-articles guard
+- Article CRUD (~18) — slug generation, Tiptap JSON extraction, draft/published
+- `getCategoryArticleCount` (~3)
+
+### `src/lib/notifications.test.ts` (~12 tests)
+- `createNotification` (~6) — correct shape, optional fields default to null
+- `dismissSignInReminders` (~6) — deletes correct type+user combo
+
+---
+
+## Phase 5: Component Tests — News Feed (branch: `test/news-feed-components`)
+**Tests: ~60 | Effort: 2 sessions | Priority: MEDIUM**
+**Establishes component testing patterns for all future component tests**
+
+### `src/components/news-feed/tiptap-renderer.test.tsx` (~10)
+- Plain text fallback (null `content_json`), formatted JSON, @mentions, href sanitisation
+
+### `src/components/news-feed/poll-display.test.tsx` (~10)
+- Vote buttons vs results view, expired poll, percentage calculation, zero votes
+
+### `src/components/news-feed/post-composer.test.tsx` (~12)
+- Collapsed card → dialog open, character count, discard confirmation, disabled when empty
+
+### `src/components/news-feed/attachment-editor.test.tsx` (~10)
+- File validation, max count enforced, remove from list
+
+### `src/components/news-feed/image-lightbox.test.tsx` (~8)
+- Keyboard nav (arrows, Escape), image counter
+
+### `src/components/news-feed/comment-section.test.tsx` (~10)
+- Comment list, reply form, edit toggle, empty state
+
+---
+
+## Phase 6: Component Tests — HR & Learning (branch: `test/hr-learning-components`)
+**Tests: ~50 | Effort: 2 sessions | Priority: LOWER**
+
+- `leave-request-table.test.tsx` (~15) — filters, team overlap notice, approval/rejection
+- `quiz-player.test.tsx` (~12) — answer selection, submit, pass/fail
+- `quiz-editor.test.tsx` (~12) — question CRUD, type switching, option management
+- `return-to-work-form.test.tsx` (~10) — status-dependent fields, readonly mode
+
+---
+
+## Phase 7: Hook Tests (branch: `test/hooks`)
+**Tests: ~22 | Effort: 0.5 sessions | Priority: LOWER**
+
+- `use-auto-link-preview.test.ts` (~10) — debounce, fetch, clear, no re-fetch same URL
+- `use-new-posts-poll.test.ts` (~8) — interval, count reset, tab visibility
+- `use-auto-resize-textarea.test.ts` (~5) — height on input, reset on clear
+
+---
+
+## Summary
+
+| Phase | Branch | Tests | Sessions | Priority | Status |
+|-------|--------|-------|----------|----------|--------|
+| 0+1 | `test/phase-0-1-infrastructure-and-pure-functions` | 143 | 1 | Pre-req + HIGH | DONE (PR #52) |
+| 2 | `test/hr-absence-leave-actions` | ~110 | 2 | CRITICAL | |
+| 3 | `test/hr-remaining-actions` | ~90 | 2 | HIGH | |
+| 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM | |
+| 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM | |
+| 6 | `test/hr-learning-components` | ~50 | 2 | LOWER | |
+| 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
+| **Total** | | **~530** | **~10.5** | | |
+
+**Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
+
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → 2 → 3 → 4 → 5 → 6 → 7
+
+---
+
+## Areas Not in the User's Original List
+
+1. **`src/lib/notifications.ts`** — `createNotification` + `dismissSignInReminders` (service role client, untested)
+2. **`src/app/(protected)/intranet/resources/actions.ts`** — 7 functions for knowledge base CRUD (slug generation, unique enforcement)
+3. **`verifyAbsenceAuthority` / `verifyLeavingAuthority`** — security-critical helper functions checking line-manager-or-HR-admin
+4. **`calculateDocumentStatus`** in compliance — pure date logic exported from a `"use server"` file
+5. **`mapToLeaveRequestWithEmployee`** in `src/lib/hr.ts` — data transformation with null-safe fallbacks
+6. **`app-layout.tsx`** — `useSyncExternalStore` for SSR-safe localStorage (reference implementation worth testing)
+7. **Middleware JWT fallback path** — existing `middleware.test.ts` should verify both fast-path (JWT claims) and slow-path (DB fallback) are covered
+
+## Verification
+
+After each phase:
+1. `npm test` — all tests pass
+2. `npm run build` — no type errors from test-adjacent changes
+3. PR with test count in description
