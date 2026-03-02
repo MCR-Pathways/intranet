@@ -6,13 +6,13 @@ import { sanitizeUrl } from "@/lib/utils";
 
 /**
  * If an image URL is an external http(s) URL, proxy it through /api/og-image
- * so it satisfies CSP img-src 'self'. Already-proxied relative paths and
- * same-origin URLs are returned as-is.
+ * so it satisfies CSP img-src 'self'. Already-proxied relative paths (but not
+ * protocol-relative URLs like //attacker.com) are returned as-is.
  */
 function proxyImageUrl(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
-  // Already a relative proxy path (new posts)
-  if (raw.startsWith("/")) return raw;
+  // Already a relative proxy path (new posts) — exclude protocol-relative URLs
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
   // External URL — proxy it (handles old posts stored with raw OG URLs)
   if (/^https?:\/\//i.test(raw)) {
     return `/api/og-image?url=${encodeURIComponent(raw)}`;
@@ -95,12 +95,12 @@ export function LinkPreviewCard({
       className="block overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
     >
       {proxiedImageUrl && !imgError && (
-        <div className="aspect-video w-full overflow-hidden bg-muted">
+        <div className="w-full max-h-[280px] overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element -- proxied OG image */}
           <img
             src={proxiedImageUrl}
             alt={title || "Link preview"}
-            className="h-full w-full object-cover"
+            className="w-full object-cover"
             onError={() => setImgError(true)}
           />
         </div>
