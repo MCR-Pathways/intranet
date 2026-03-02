@@ -39,10 +39,11 @@ export function isPrivateIP(ip: string): boolean {
   // Plain IPv4
   if (ip.includes(".")) return isPrivateIPv4(ip);
 
-  // Native IPv6 private/reserved ranges
-  if (ip === "::1") return true; // ::1/128 loopback
-  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 ULA
-  if (ip.startsWith("fe80")) return true; // fe80::/10 link-local
+  // Native IPv6 private/reserved ranges (case-insensitive)
+  const lower = ip.toLowerCase();
+  if (lower === "::1") return true; // ::1/128 loopback
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // fc00::/7 ULA
+  if (lower.startsWith("fe80")) return true; // fe80::/10 link-local
   return false;
 }
 
