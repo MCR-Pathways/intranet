@@ -8,6 +8,8 @@ interface LinkPreviewCardProps {
   title?: string | null;
   description?: string | null;
   imageUrl?: string | null;
+  /** "default" = full-width vertical (feed posts), "compact" = horizontal thumbnail (composers) */
+  variant?: "default" | "compact";
 }
 
 export function LinkPreviewCard({
@@ -15,6 +17,7 @@ export function LinkPreviewCard({
   title,
   description,
   imageUrl,
+  variant = "default",
 }: LinkPreviewCardProps) {
   const safeHref = sanitizeUrl(url) || "#";
   let displayHostname = url;
@@ -22,6 +25,46 @@ export function LinkPreviewCard({
     displayHostname = new URL(url).hostname;
   } catch {
     /* keep raw url as fallback */
+  }
+
+  if (variant === "compact") {
+    return (
+      <a
+        href={safeHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
+      >
+        {imageUrl ? (
+          <div className="h-20 w-20 shrink-0 overflow-hidden bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
+            <img
+              src={sanitizeUrl(imageUrl) || undefined}
+              alt={title || "Link preview"}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center bg-muted">
+            <ExternalLink className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col justify-center p-3">
+          {title && (
+            <p className="font-medium text-sm line-clamp-1">{title}</p>
+          )}
+          {description && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+              {description}
+            </p>
+          )}
+          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+            <ExternalLink className="h-3 w-3 shrink-0" />
+            <span className="truncate">{displayHostname}</span>
+          </div>
+        </div>
+      </a>
+    );
   }
 
   return (

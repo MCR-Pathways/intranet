@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition, useCallback } from "react";
+import { useState, useEffect, useMemo, useTransition, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -25,9 +24,11 @@ import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { editPost } from "@/app/(protected)/intranet/actions";
-import { AttachmentEditor, type PendingAttachment } from "./attachment-editor";
+import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
+import { PollComposer, type PollData } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
+import { ComposerActionBar } from "./composer-action-bar";
 import type { MentionUser } from "./mention-list";
 import type { PostAttachment } from "@/types/database.types";
 
@@ -86,6 +87,7 @@ export function PostEditDialog({
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
+  const attachmentEditorRef = useRef<AttachmentEditorHandle>(null);
 
   // Extract initial link attachment for pre-populating preview
   const initialLinkAttachment = useMemo(
@@ -222,7 +224,7 @@ export function PostEditDialog({
         }
       }}>
         <DialogContent
-          className="max-w-lg"
+          className="max-w-lg gap-0"
           onInteractOutside={(e) => {
             if (hasChanges) {
               e.preventDefault();
@@ -237,9 +239,9 @@ export function PostEditDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Edit Post</DialogTitle>
+            <DialogTitle>Edit post</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 pt-3">
             <div>
               <TiptapComposer
                 mentionUsers={mentionUsers}
@@ -251,6 +253,7 @@ export function PostEditDialog({
                 initialContent={
                   (initialContentJson as TiptapDocument) ?? undefined
                 }
+                borderless
               />
               {content.length > 0 && (
                 <p
@@ -266,7 +269,7 @@ export function PostEditDialog({
               )}
             </div>
 
-            {/* Auto-detected link preview */}
+            {/* Auto-detected link preview (compact) */}
             {(autoLinkPreview || isFetchingPreview) && (
               <div className="relative">
                 {isFetchingPreview && !autoLinkPreview ? (
@@ -283,6 +286,7 @@ export function PostEditDialog({
                       title={autoLinkPreview.title}
                       description={autoLinkPreview.description}
                       imageUrl={autoLinkPreview.imageUrl}
+                      variant="compact"
                     />
                     <button
                       type="button"
@@ -298,6 +302,7 @@ export function PostEditDialog({
             )}
 
             <AttachmentEditor
+              ref={attachmentEditorRef}
               initialAttachments={filterNonLinkAttachments(
                 mapExistingToPending(initialAttachments)
               )}
@@ -308,32 +313,48 @@ export function PostEditDialog({
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleClose}
+
+          {/* Action bar with divider */}
+          <div className="mt-3 border-t pt-3">
+            <ComposerActionBar
+              onPhotoClick={() => attachmentEditorRef.current?.triggerImageUpload()}
+              onDocumentClick={() => attachmentEditorRef.current?.triggerDocumentUpload()}
+              onPollClick={() => {/* Polls not supported in edit mode */}}
+              pollActive={true}
               disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={
-                isPending ||
-                !content.trim() ||
-                attachments.some((a) => a.uploading)
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClose}
+                    disabled={isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSave}
+                    size="sm"
+                    disabled={
+                      isPending ||
+                      !content.trim() ||
+                      attachments.some((a) => a.uploading)
+                    }
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </div>
               }
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
