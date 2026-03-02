@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-02-27
+> Last updated: 2026-03-02
 
 ---
 
@@ -65,11 +65,13 @@
 - Preferences section stubbed ("coming soon")
 
 ### Infrastructure ✅
-- Security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy)
+- Security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, CSP enforcing)
+- **CSP enforcing** (Mar 2026): `unsafe-eval` removed in production (dev-only via env check), `unsafe-inline` retained for Next.js hydration + inline styles. Nonce-based CSP deferred (forces dynamic rendering — disproportionate cost for internal app).
 - Error and loading boundaries for all protected routes
 - Structured logger (`src/lib/logger.ts`) ready for Sentry/Datadog swap
 - Audit logging via DB triggers on 8+ tables
 - Middleware auth with module access control by user type
+- **Middleware JWT optimisation** (PR #49): zero DB queries per authenticated request via JWT custom claims
 
 ### UI/UX Polish ✅
 - **Collapsible sidebar** (YouTube-style): hamburger toggle always visible, collapses to 64px icon rail with tooltips, expands to 256px with labels. State persisted in `localStorage`.
@@ -175,6 +177,7 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [x] Dead code removal (`useUser()` hook deleted)
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
 - [x] Middleware JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, middleware reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
+- [x] CSP tightened to enforcing mode (Mar 2026): removed `unsafe-eval` in production, switched from Report-Only to enforcing. `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [ ] Expand test coverage (~5% currently — 15 test files, 333 tests / ~130 source files)
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
