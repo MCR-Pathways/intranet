@@ -352,17 +352,17 @@ describe("HR Absence Actions", () => {
     });
 
     it("recalculates working days when end_date changes", async () => {
-      let callCount = 0;
+      const callCounts: Record<string, number> = {};
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
         const c = chainable();
-        if (table === "absence_records" && callCount === 1) {
+        if (table === "absence_records" && callCounts[table] === 1) {
           // Fetch existing record
           c.single.mockResolvedValue({
             data: { profile_id: "emp-1", start_date: "2026-03-02" },
             error: null,
           });
-        } else if (table === "absence_records" && callCount === 2) {
+        } else if (table === "absence_records" && callCounts[table] === 2) {
           // Overlap check
           c.limit.mockResolvedValue({ data: [], error: null });
         } else if (table === "profiles") {

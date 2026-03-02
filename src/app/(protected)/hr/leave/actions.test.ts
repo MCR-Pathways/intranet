@@ -389,19 +389,19 @@ describe("HR Leave Actions", () => {
     });
 
     it("returns error when user is not authorised", async () => {
-      let callCount = 0;
+      const callCounts: Record<string, number> = {};
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
         const c = chainable();
         if (table === "leave_requests") {
           c.single.mockResolvedValue({
             data: { id: "req-1", profile_id: "emp-1", status: "pending" },
             error: null,
           });
-        } else if (table === "profiles" && callCount === 2) {
+        } else if (table === "profiles" && callCounts[table] === 1) {
           // Check current user — not HR admin
           c.single.mockResolvedValue({ data: { is_hr_admin: false }, error: null });
-        } else if (table === "profiles") {
+        } else if (table === "profiles" && callCounts[table] === 2) {
           // Check requester — different line manager
           c.single.mockResolvedValue({ data: { line_manager_id: "other-manager" }, error: null });
         }
@@ -414,11 +414,11 @@ describe("HR Leave Actions", () => {
     });
 
     it("approves pending request as HR admin", async () => {
-      let callCount = 0;
+      const callCounts: Record<string, number> = {};
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
         const c = chainable();
-        if (table === "leave_requests" && callCount === 1) {
+        if (table === "leave_requests" && callCounts[table] === 1) {
           // Fetch request
           c.single.mockResolvedValue({
             data: { id: "req-1", profile_id: "emp-1", status: "pending" },
@@ -439,19 +439,19 @@ describe("HR Leave Actions", () => {
     });
 
     it("approves pending request as line manager", async () => {
-      let callCount = 0;
+      const callCounts: Record<string, number> = {};
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
         const c = chainable();
-        if (table === "leave_requests" && callCount === 1) {
+        if (table === "leave_requests" && callCounts[table] === 1) {
           c.single.mockResolvedValue({
             data: { id: "req-1", profile_id: "emp-1", status: "pending" },
             error: null,
           });
-        } else if (table === "profiles" && callCount === 2) {
+        } else if (table === "profiles" && callCounts[table] === 1) {
           // Current user — not HR admin
           c.single.mockResolvedValue({ data: { is_hr_admin: false }, error: null });
-        } else if (table === "profiles") {
+        } else if (table === "profiles" && callCounts[table] === 2) {
           // Requester — line manager is current user
           c.single.mockResolvedValue({ data: { line_manager_id: "user-123" }, error: null });
         } else {
@@ -507,11 +507,11 @@ describe("HR Leave Actions", () => {
     });
 
     it("rejects request successfully with reason", async () => {
-      let callCount = 0;
+      const callCounts: Record<string, number> = {};
       mockFrom.mockImplementation((table: string) => {
-        callCount++;
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
         const c = chainable();
-        if (table === "leave_requests" && callCount === 1) {
+        if (table === "leave_requests" && callCounts[table] === 1) {
           c.single.mockResolvedValue({
             data: { id: "req-1", profile_id: "emp-1", status: "pending" },
             error: null,
