@@ -45,15 +45,18 @@ const nextConfig: NextConfig = {
           // proxy.ts when the performance trade-off (forced dynamic rendering) is acceptable.
           {
             key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
-              "style-src 'self' 'unsafe-inline' https://use.typekit.net",
-              `img-src 'self' blob: data: ${process.env.NEXT_PUBLIC_SUPABASE_URL || "https://*.supabase.co"} https://*.googleusercontent.com`,
-              `connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL || "https://*.supabase.co"}`,
-              "font-src 'self' https://use.typekit.net https://p.typekit.net",
-              "frame-ancestors 'none'",
-            ].join("; "),
+            value: (() => {
+              const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://*.supabase.co";
+              return [
+                "default-src 'self'",
+                `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+                "style-src 'self' 'unsafe-inline' https://use.typekit.net",
+                `img-src 'self' blob: data: ${supabaseOrigin} https://*.googleusercontent.com`,
+                `connect-src 'self' ${supabaseOrigin}`,
+                "font-src 'self' https://use.typekit.net https://p.typekit.net",
+                "frame-ancestors 'none'",
+              ].join("; ");
+            })(),
           },
         ],
       },
