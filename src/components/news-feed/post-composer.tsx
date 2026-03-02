@@ -104,12 +104,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
       });
 
       if (result.success) {
-        setContentJson(null);
-        setPlainText("");
-        setAttachments([]);
-        setPollData(null);
-        resetPreview();
-        setResetKey((k) => k + 1);
+        // Close dialog — handleDialogOpenChange resets all state
         setDialogOpen(false);
         if (result.warning) {
           setError(result.warning);
@@ -121,7 +116,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         toast.error(result.error || "Something went wrong");
       }
     });
-  }, [plainText, contentJson, attachments, pollData, resetPreview]);
+  }, [plainText, contentJson, attachments, pollData]);
 
   // Reset state when dialog closes (if no content — discarded)
   const handleDialogOpenChange = useCallback(

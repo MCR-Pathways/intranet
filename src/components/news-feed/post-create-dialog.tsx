@@ -99,6 +99,8 @@ export function PostCreateDialog({
   useEffect(() => {
     if (!open || !pendingAction) return;
 
+    // Short delay to let the dialog animate in and child components mount,
+    // ensuring refs (e.g. attachmentEditorRef) are available for file pickers.
     const timer = setTimeout(() => {
       switch (pendingAction) {
         case "photo":
