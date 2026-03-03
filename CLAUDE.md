@@ -150,6 +150,8 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 
 **Use case-insensitive checks for URL protocols.** Per RFC 3986, URL schemes are case-insensitive — `HTTPS://example.com` is valid. Use `/^https?:\/\//i.test(href)` instead of `startsWith("http://")`.
 
+**Proxy external URLs at both write-time AND render-time for CSP compliance.** When introducing CSP `img-src 'self'`, new records get proxied URLs at creation, but old records still have raw external URLs in the DB. Add a render-time proxy wrapper (e.g. `proxyImageUrl()` in the component) as a safety net. Exclude protocol-relative URLs (`//attacker.com`) from the "already relative" fast path — check `startsWith("/") && !startsWith("//")`.
+
 **Wrap localStorage access in try/catch.** `localStorage.getItem()` and `setItem()` can throw in private browsing mode or when storage is disabled/full. Always wrap in try/catch and return a sensible default on failure.
 
 **Listen to the `storage` event for cross-tab localStorage sync.** When using `useSyncExternalStore` with localStorage, subscribe to both your custom event (same-tab) and the browser `storage` event (cross-tab). Handle `event.key === null` too, which fires when another tab calls `localStorage.clear()`.
