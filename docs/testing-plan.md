@@ -111,8 +111,8 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
-## Phase 4: Intranet Resources + Notifications (branch: `test/intranet-resources-notifications`)
-**Tests: ~55 | Effort: 1 session | Priority: MEDIUM**
+## Phase 4: Intranet Resources + Notifications (branch: `test/phase-4-intranet-resources-notifications`) DONE
+**Tests: 51 actual | Effort: 1 session | Priority: MEDIUM | Status: COMPLETE (PR #57)**
 
 ### `src/app/(protected)/intranet/resources/actions.test.ts` (~40 tests)
 - Category CRUD (~15) — slug generation, unique slug dedup, delete-with-articles guard
@@ -175,7 +175,7 @@ Largest untested action file (966 lines, 12 functions):
 | 0+1 | `test/phase-0-1-infrastructure-and-pure-functions` | 143 | 1 | Pre-req + HIGH | DONE (PR #52) |
 | 2 | `test/phase-2-hr-absence-leave-actions` | 112 | 1 | CRITICAL | DONE (PR #53) |
 | 3 | `test/phase-3-hr-remaining-actions` | 118 | 1 | HIGH | DONE (PR #56) |
-| 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM | |
+| 4 | `test/phase-4-intranet-resources-notifications` | 51 | 1 | MEDIUM | DONE (PR #57) |
 | 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM | |
 | 6 | `test/hr-learning-components` | ~50 | 2 | LOWER | |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
@@ -183,7 +183,7 @@ Largest untested action file (966 lines, 12 functions):
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
-**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → 4 → 5 → 6 → 7
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → 5 → 6 → 7
 
 ---
 
