@@ -6,7 +6,7 @@ export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from 
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, induction_completed_at, last_sign_in_date, fte, contract_type, department, region, is_external, work_pattern, start_date";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, induction_completed_at, last_sign_in_date, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
 
 /**
  * Extended profile select for HR admin views — includes employment details
