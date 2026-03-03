@@ -245,7 +245,7 @@ export function CommentItem({
           </div>
 
           {/* Three-dot menu — hover-revealed, Facebook-style */}
-          {(isAuthor || canDelete) && !isEditing && (
+          {canDelete && !isEditing && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
