@@ -79,7 +79,7 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
       if (result.success) {
         toast.success("Key date completed");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }
@@ -90,7 +90,7 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
       if (result.success) {
         toast.success("Key date deleted");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }

@@ -125,7 +125,7 @@ export function UserTable({ profiles }: UserTableProps) {
       if (result.success) {
         toast.success("Induction completed");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setCompleteTarget(null);
     });
@@ -138,7 +138,7 @@ export function UserTable({ profiles }: UserTableProps) {
       if (result.success) {
         toast.success("Induction reset");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setResetTarget(null);
     });

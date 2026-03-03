@@ -26,7 +26,6 @@ import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { editPost } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
-import { PollComposer, type PollData } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
 import { ComposerActionBar } from "./composer-action-bar";
 import type { MentionUser } from "./mention-list";
@@ -80,14 +79,32 @@ export function PostEditDialog({
   const [contentJson, setContentJson] = useState<TiptapDocument | null>(
     (initialContentJson as TiptapDocument) ?? null
   );
-  const [attachments, setAttachments] = useState<PendingAttachment[]>(() =>
-    filterNonLinkAttachments(mapExistingToPending(initialAttachments))
-  );
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [resetKey, setResetKey] = useState(0);
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const attachmentEditorRef = useRef<AttachmentEditorHandle>(null);
+
+  // Memoise non-link attachments for AttachmentEditor (avoids new array ref every render)
+  const initialNonLinkAttachments = useMemo(
+    () => filterNonLinkAttachments(mapExistingToPending(initialAttachments)),
+    [initialAttachments]
+  );
+
+  // Build Tiptap-compatible initial content — convert plain text for old posts without content_json
+  const tiptapInitialContent = useMemo<TiptapDocument | undefined>(() => {
+    if (initialContentJson) return initialContentJson as TiptapDocument;
+    if (!initialContent) return undefined;
+    // Convert plain text to minimal Tiptap document
+    return {
+      type: "doc",
+      content: initialContent.split("\n").map((line) => ({
+        type: "paragraph",
+        content: line ? [{ type: "text", text: line }] : [],
+      })),
+    };
+  }, [initialContentJson, initialContent]);
 
   // Extract initial link attachment for pre-populating preview
   const initialLinkAttachment = useMemo(
@@ -115,22 +132,19 @@ export function PostEditDialog({
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state from prop change on dialog open
       setContent(initialContent);
       setContentJson((initialContentJson as TiptapDocument) ?? null);
-      setAttachments(
-        filterNonLinkAttachments(mapExistingToPending(initialAttachments))
-      );
+      setAttachments(initialNonLinkAttachments);
       setError(null);
       setResetKey((k) => k + 1);
       resetPreview(initialPreview);
     }
-  }, [open, initialContent, initialContentJson, initialAttachments, initialPreview, resetPreview]);
+  }, [open, initialContent, initialContentJson, initialNonLinkAttachments, initialPreview, resetPreview]);
 
   // Detect unsaved changes
   const hasChanges = useMemo(() => {
     if (content !== initialContent) return true;
 
     // Check non-link attachment changes
-    const initialNonLinkIds = initialAttachments
-      .filter((a) => a.attachment_type !== "link")
+    const initialNonLinkIds = initialNonLinkAttachments
       .map((a) => a.id)
       .sort()
       .join(",");
@@ -152,7 +166,7 @@ export function PostEditDialog({
     content,
     initialContent,
     attachments,
-    initialAttachments,
+    initialNonLinkAttachments,
     initialLinkAttachment,
     autoLinkPreview,
   ]);
@@ -209,7 +223,7 @@ export function PostEditDialog({
         onOpenChange(false);
       } else {
         setError(result.error);
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   };
@@ -250,9 +264,7 @@ export function PostEditDialog({
                 maxLength={POST_MAX_LENGTH}
                 disabled={isPending}
                 resetKey={resetKey}
-                initialContent={
-                  (initialContentJson as TiptapDocument) ?? undefined
-                }
+                initialContent={tiptapInitialContent}
                 borderless
               />
               {content.length > 0 && (
@@ -303,9 +315,7 @@ export function PostEditDialog({
 
             <AttachmentEditor
               ref={attachmentEditorRef}
-              initialAttachments={filterNonLinkAttachments(
-                mapExistingToPending(initialAttachments)
-              )}
+              initialAttachments={initialNonLinkAttachments}
               onChange={handleAttachmentsChange}
               onError={setError}
               disabled={isPending}

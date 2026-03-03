@@ -130,7 +130,7 @@ export function LeaveRequestTable({
       if (result.success) {
         toast.success("Leave withdrawn");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }
@@ -142,7 +142,7 @@ export function LeaveRequestTable({
       if (result.success) {
         toast.success("Leave approved");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setApproveTarget(null);
     });
@@ -155,7 +155,7 @@ export function LeaveRequestTable({
       if (result.success) {
         toast.success("Leave rejected");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setRejectDialogOpen(false);
       setRejectTarget(null);
@@ -169,7 +169,7 @@ export function LeaveRequestTable({
       if (result.success) {
         toast.success("Leave cancelled");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }

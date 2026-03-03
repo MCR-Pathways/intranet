@@ -21,8 +21,14 @@ export default function ProtectedError({
       <AlertTriangle className="h-12 w-12 text-destructive" />
       <h2 className="text-xl font-semibold">Something went wrong</h2>
       <p className="text-muted-foreground text-center max-w-md">
-        An unexpected error occurred. Please try again, or contact support if
-        the problem persists.
+        An unexpected error occurred. Please try again, or contact the{" "}
+        <a
+          href="mailto:helpdesk@mcrpathways.org"
+          className="text-primary underline hover:text-primary/80"
+        >
+          HelpDesk
+        </a>{" "}
+        if the problem persists.
       </p>
       <Button onClick={reset} variant="outline">
         Try again
