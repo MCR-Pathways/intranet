@@ -147,17 +147,17 @@ export type ContractType = keyof typeof CONTRACT_TYPE_CONFIG;
 // =============================================
 
 export const DEPARTMENT_CONFIG = {
-  executive: { label: "Executive", colour: "slate-700" },
-  people: { label: "People", colour: "purple-500" },
-  finance: { label: "Finance", colour: "green-500" },
-  delivery: { label: "Delivery", colour: "orange-500" },
-  development: { label: "Development", colour: "cyan-500" },
-  engagement: { label: "Engagement & Influencing", colour: "pink-500" },
-  systems: { label: "Systems, Evidence & Impact", colour: "slate-500" },
-  fundraising: { label: "Fundraising & Partnerships", colour: "amber-500" },
-  communications: { label: "Communications & Policy", colour: "rose-500" },
-  learning_development: { label: "Learning & Development", colour: "indigo-500" },
-  hr: { label: "HR", colour: "emerald-500" },
+  executive: { label: "Executive", colour: "#334155" },
+  people: { label: "People", colour: "#a855f7" },
+  finance: { label: "Finance", colour: "#22c55e" },
+  delivery: { label: "Delivery", colour: "#f97316" },
+  development: { label: "Development", colour: "#06b6d4" },
+  engagement: { label: "Engagement & Influencing", colour: "#ec4899" },
+  systems: { label: "Systems, Evidence & Impact", colour: "#64748b" },
+  fundraising: { label: "Fundraising & Partnerships", colour: "#f59e0b" },
+  communications: { label: "Communications & Policy", colour: "#f43f5e" },
+  learning_development: { label: "Learning & Development", colour: "#6366f1" },
+  hr: { label: "HR", colour: "#10b981" },
 } as const;
 
 export type Department = keyof typeof DEPARTMENT_CONFIG;
