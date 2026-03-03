@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { LeaveDashboardContent } from "@/components/hr/leave-dashboard-content";
 import { getLeaveYearForDate, getHolidayCalendar, LEAVE_REQUEST_SELECT, LEAVE_REQUEST_WITH_EMPLOYEE_SELECT, mapToLeaveRequestWithEmployee } from "@/lib/hr";
@@ -54,7 +54,7 @@ export default async function LeavePage({
 
   // Fetch pending approvals if manager or HR admin
   const isManager = profile.is_line_manager === true;
-  const isHRAdmin = profile.is_hr_admin === true;
+  const isHRAdmin = isHRAdminEffective(profile);
 
   let pendingApprovals: LeaveRequestWithEmployee[] = [];
   let allRequests: LeaveRequestWithEmployee[] = [];

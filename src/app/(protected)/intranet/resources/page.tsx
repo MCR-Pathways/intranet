@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { fetchCategoriesWithClient } from "./actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResourcesGrid } from "@/components/resources/resources-grid";
@@ -8,7 +8,7 @@ export default async function ResourcesPage() {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const isHRAdmin = profile.is_hr_admin ?? false;
+  const isHRAdmin = isHRAdminEffective(profile);
   const categories = await fetchCategoriesWithClient(supabase);
 
   return (

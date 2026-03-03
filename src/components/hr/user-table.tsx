@@ -54,6 +54,7 @@ export interface UserTableProfile {
   status: string;
   is_hr_admin: boolean;
   is_ld_admin: boolean;
+  is_systems_admin: boolean;
   is_line_manager: boolean;
   job_title: string | null;
   avatar_url: string | null;
@@ -91,9 +92,10 @@ const roleLabels: Record<string, string> = {
 
 interface UserTableProps {
   profiles: UserTableProfile[];
+  currentUserId?: string;
 }
 
-export function UserTable({ profiles }: UserTableProps) {
+export function UserTable({ profiles, currentUserId }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -343,6 +345,7 @@ export function UserTable({ profiles }: UserTableProps) {
       {editingProfile && (
         <UserEditDialog
           profile={editingProfile}
+          currentUserId={currentUserId}
           open={!!editingProfile}
           onOpenChange={(open) => {
             if (!open) setEditingProfile(null);

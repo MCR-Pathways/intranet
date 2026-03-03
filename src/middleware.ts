@@ -45,6 +45,10 @@ export async function middleware(request: NextRequest) {
     user_type?: string;
     status?: string;
     induction_completed_at?: string | null;
+    department?: string | null;
+    is_hr_admin?: boolean;
+    is_ld_admin?: boolean;
+    is_systems_admin?: boolean;
   };
 
   let profile: {

@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { fetchArticleWithClient } from "../../actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { ArticleView } from "@/components/resources/article-view";
@@ -13,7 +13,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const isHRAdmin = profile.is_hr_admin ?? false;
+  const isHRAdmin = isHRAdminEffective(profile);
   const { category, article } = await fetchArticleWithClient(
     supabase,
     categorySlug,

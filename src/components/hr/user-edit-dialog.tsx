@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { updateUserProfile } from "@/app/(protected)/hr/users/actions";
 import {
   Dialog,
@@ -23,27 +23,126 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CONTRACT_TYPE_CONFIG,
   DEPARTMENT_CONFIG,
+  DEPARTMENT_ADMIN_MAP,
   REGION_CONFIG,
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
+import type { Department } from "@/lib/hr";
 import type { UserTableProfile } from "./user-table";
 import { toast } from "sonner";
 
+// =============================================
+// HELPERS
+// =============================================
+
+/** Compute which admin role a department auto-grants (if any) */
+function getDepartmentAdminRole(dept: string | null): "hr_admin" | "ld_admin" | "systems_admin" | null {
+  if (!dept) return null;
+  return DEPARTMENT_ADMIN_MAP[dept as Department] ?? null;
+}
+
+/** Check if a permission is auto-granted by the current department selection */
+function isAutoGranted(dept: string | null, flag: "hr_admin" | "ld_admin" | "systems_admin"): boolean {
+  return getDepartmentAdminRole(dept) === flag;
+}
+
+/** Get the department label for badge text */
+function getDepartmentLabel(dept: string | null): string {
+  if (!dept) return "";
+  return DEPARTMENT_CONFIG[dept as Department]?.label ?? dept;
+}
+
+// =============================================
+// PERMISSION ROW COMPONENT
+// =============================================
+
+interface PermissionRowProps {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  autoGranted: boolean;
+  manualOverride: boolean;
+  departmentLabel: string;
+  disabled: boolean;
+  disabledTooltip?: string;
+}
+
+function PermissionRow({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+  autoGranted,
+  manualOverride,
+  departmentLabel,
+  disabled,
+  disabledTooltip,
+}: PermissionRowProps) {
+  const switchElement = (
+    <Switch
+      id={id}
+      checked={checked || autoGranted}
+      onCheckedChange={onCheckedChange}
+      disabled={disabled || autoGranted}
+    />
+  );
+
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Label htmlFor={id} className="shrink-0">{label}</Label>
+        {autoGranted && (
+          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+            Via {departmentLabel}
+          </span>
+        )}
+        {manualOverride && !autoGranted && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+            Manual override
+          </span>
+        )}
+      </div>
+      {disabled && disabledTooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{switchElement}</TooltipTrigger>
+          <TooltipContent>{disabledTooltip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        switchElement
+      )}
+    </div>
+  );
+}
+
+// =============================================
+// DIALOG COMPONENT
+// =============================================
+
 interface UserEditDialogProps {
   profile: UserTableProfile;
+  currentUserId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function UserEditDialog({
   profile,
+  currentUserId,
   open,
   onOpenChange,
 }: UserEditDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const isSelf = currentUserId === profile.id;
 
   // Existing fields
   const [fullName, setFullName] = useState(profile.full_name);
@@ -52,9 +151,10 @@ export function UserEditDialog({
   const [status, setStatus] = useState<string>(profile.status);
   const [isHRAdmin, setIsHRAdmin] = useState(profile.is_hr_admin);
   const [isLDAdmin, setIsLDAdmin] = useState(profile.is_ld_admin);
+  const [isSystemsAdmin, setIsSystemsAdmin] = useState(profile.is_systems_admin ?? false);
   const [isLineManager, setIsLineManager] = useState(profile.is_line_manager);
 
-  // New HR fields
+  // Employment fields
   const [fte, setFte] = useState(String(profile.fte ?? 1));
   const [contractType, setContractType] = useState(profile.contract_type ?? "permanent");
   const [department, setDepartment] = useState(profile.department ?? "");
@@ -62,6 +162,18 @@ export function UserEditDialog({
   const [workPattern, setWorkPattern] = useState(profile.work_pattern ?? "standard");
   const [startDate, setStartDate] = useState(profile.start_date ?? "");
   const [isExternal, setIsExternal] = useState(profile.is_external ?? false);
+
+  // Compute auto-granted permissions based on selected department
+  const hrAutoGranted = useMemo(() => isAutoGranted(department || null, "hr_admin"), [department]);
+  const ldAutoGranted = useMemo(() => isAutoGranted(department || null, "ld_admin"), [department]);
+  const systemsAutoGranted = useMemo(() => isAutoGranted(department || null, "systems_admin"), [department]);
+
+  const deptLabel = useMemo(() => getDepartmentLabel(department || null), [department]);
+
+  // Whether admin flags differ from what the DB has (manual overrides)
+  const hrManualOverride = isHRAdmin && !hrAutoGranted;
+  const ldManualOverride = isLDAdmin && !ldAutoGranted;
+  const systemsManualOverride = isSystemsAdmin && !systemsAutoGranted;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +193,7 @@ export function UserEditDialog({
         status,
         is_hr_admin: isHRAdmin,
         is_ld_admin: isLDAdmin,
+        is_systems_admin: isSystemsAdmin,
         is_line_manager: isLineManager,
         fte: fteNum,
         contract_type: contractType,
@@ -182,19 +295,34 @@ export function UserEditDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="department">Department</Label>
-                <Select value={department} onValueChange={setDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isSelf ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select value={department} disabled>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Ask another admin to change your department</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Select value={department} onValueChange={setDepartment}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -279,23 +407,47 @@ export function UserEditDialog({
               Permissions
             </p>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_hr_admin">HR Admin</Label>
-              <Switch
-                id="is_hr_admin"
-                checked={isHRAdmin}
-                onCheckedChange={setIsHRAdmin}
-              />
-            </div>
+            {(hrAutoGranted || ldAutoGranted || systemsAutoGranted) && (
+              <p className="text-xs text-muted-foreground -mt-2">
+                Some permissions are automatically granted based on department.
+              </p>
+            )}
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_ld_admin">L&D Admin</Label>
-              <Switch
-                id="is_ld_admin"
-                checked={isLDAdmin}
-                onCheckedChange={setIsLDAdmin}
-              />
-            </div>
+            <PermissionRow
+              id="is_hr_admin"
+              label="HR Admin"
+              checked={isHRAdmin}
+              onCheckedChange={setIsHRAdmin}
+              autoGranted={hrAutoGranted}
+              manualOverride={hrManualOverride}
+              departmentLabel={deptLabel}
+              disabled={isSelf}
+              disabledTooltip="Ask another admin to change your permissions"
+            />
+
+            <PermissionRow
+              id="is_ld_admin"
+              label="L&D Admin"
+              checked={isLDAdmin}
+              onCheckedChange={setIsLDAdmin}
+              autoGranted={ldAutoGranted}
+              manualOverride={ldManualOverride}
+              departmentLabel={deptLabel}
+              disabled={isSelf}
+              disabledTooltip="Ask another admin to change your permissions"
+            />
+
+            <PermissionRow
+              id="is_systems_admin"
+              label="Systems Admin"
+              checked={isSystemsAdmin}
+              onCheckedChange={setIsSystemsAdmin}
+              autoGranted={systemsAutoGranted}
+              manualOverride={systemsManualOverride}
+              departmentLabel={deptLabel}
+              disabled={isSelf}
+              disabledTooltip="Ask another admin to change your permissions"
+            />
 
             <div className="flex items-center justify-between">
               <Label htmlFor="is_line_manager">Line Manager</Label>

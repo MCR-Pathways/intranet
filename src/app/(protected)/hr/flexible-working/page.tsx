@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { FlexibleWorkingDashboard } from "@/components/hr/flexible-working-dashboard";
@@ -23,7 +23,7 @@ export default async function FlexibleWorkingPage({
     checkFWREligibility(),
   ]);
 
-  const isHRAdmin = profile.is_hr_admin === true;
+  const isHRAdmin = isHRAdminEffective(profile);
   const isManager = profile.is_line_manager === true;
 
   // Map raw data to typed objects

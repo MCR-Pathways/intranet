@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AssetPageContent } from "@/components/hr/asset-page-content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export default async function AssetsPage() {
     redirect("/login");
   }
 
-  const isHRAdmin = profile.is_hr_admin === true;
+  const isHRAdmin = isHRAdminEffective(profile);
 
   if (isHRAdmin) {
     // HR admin: full asset catalogue
