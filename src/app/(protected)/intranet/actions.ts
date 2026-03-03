@@ -1429,7 +1429,7 @@ export async function editComment(
   // when 0 rows match (non-author), preventing silent no-ops.
   const { error } = await supabase
     .from("post_comments")
-    .update({ content: trimmed })
+    .update({ content: trimmed, content_json: null })
     .eq("id", commentId)
     .eq("author_id", user.id)
     .select("id")
@@ -1438,6 +1438,12 @@ export async function editComment(
   if (error) {
     return { success: false, error: "Comment not found or not authorised to edit" };
   }
+
+  // Plain-text edit strips all rich formatting — clear stale mentions
+  await supabase
+    .from("comment_mentions")
+    .delete()
+    .eq("comment_id", commentId);
 
   revalidatePath("/intranet");
   return { success: true, error: null };
