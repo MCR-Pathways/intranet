@@ -150,27 +150,30 @@ Largest untested action file (966 lines, 12 functions):
 ---
 
 ## Phase 6: Component Tests — HR & Learning (branch: `test/phase-6-hr-learning-components`) DONE
-**Tests: 70 actual | Effort: 1 session | Priority: LOWER | Status: COMPLETE (PR #61)**
+**Tests: 83 actual | Effort: 1 session | Priority: LOWER | Status: COMPLETE (PR #61)**
 
-### `src/components/news-feed/comment-item.test.tsx` (~14 tests)
+### `src/components/news-feed/comment-item.test.tsx` (18 tests)
 - Three-dot menu visibility (author, HR admin, non-author non-admin)
 - Edit indicator, preferred name, reply link visibility, reactions, delete confirmation
+- Interactions: delete confirm calls action, edit save/cancel, Like reaction
 
-### `src/components/hr/leave-request-table.test.tsx` (~16 tests)
+### `src/components/hr/leave-request-table.test.tsx` (21 tests)
 - Table rendering, employee column visibility, search filter, action buttons (withdraw/approve/reject/cancel)
 - Team overlap notice, empty state, rejection reason display
+- Interactions: withdraw/approve/reject (with reason)/cancel confirm calls actions
 
-### `src/components/learning/quiz-player.test.tsx` (~15 tests)
+### `src/components/learning/quiz-player.test.tsx` (15 tests)
 - Completed state, question rendering, answer selection (single/multi), submit disabled/enabled
 - Pass/fail results, retry reset, error display, last lesson messages
 
-### `src/components/learning-admin/quiz-editor.test.tsx` (~13 tests)
+### `src/components/learning-admin/quiz-editor.test.tsx` (13 tests)
 - Empty state, question display, Multi badge, add question flow with validation
 - Edit mode, option management (max 6), question type toggle
 
-### `src/components/hr/return-to-work-form.test.tsx` (~12 tests)
+### `src/components/hr/return-to-work-form.test.tsx` (16 tests)
 - Header/status display, field editability per role+status, conditional sections (fit note >7 days)
 - Action button visibility (save draft, submit, confirm, unlock), employee confirmation notice
+- Interactions: save draft, submit with confirmation, employee confirm, HR unlock
 
 ---
 
@@ -192,7 +195,7 @@ Largest untested action file (966 lines, 12 functions):
 | 3 | `test/phase-3-hr-remaining-actions` | 118 | 1 | HIGH | DONE (PR #56) |
 | 4 | `test/phase-4-intranet-resources-notifications` | 51 | 1 | MEDIUM | DONE (PR #57) |
 | 5 | `test/phase-5-news-feed-components` | 76 | 1 | MEDIUM | DONE (PR #58) |
-| 6 | `test/phase-6-hr-learning-components` | 70 | 1 | LOWER | DONE (PR #61) |
+| 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
 | **Total** | | **~546** | **~10.5** | | |
 
