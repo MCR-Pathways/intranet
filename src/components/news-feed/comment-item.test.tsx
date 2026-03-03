@@ -256,14 +256,15 @@ describe("CommentItem", () => {
   });
 
   it("hides reaction badge when no reactions", () => {
-    const { container } = render(
+    render(
       <CommentItem
         {...defaultProps}
         comment={makeComment()}
       />
     );
-    // No reaction count number shown
-    expect(container.querySelector(".absolute.-bottom-2\\.5")).not.toBeInTheDocument();
+    // No reaction emojis or count should be visible
+    expect(screen.queryByText("👍")).not.toBeInTheDocument();
+    expect(screen.queryByText("❤️")).not.toBeInTheDocument();
   });
 
   it("shows current user reaction label instead of Like", () => {
