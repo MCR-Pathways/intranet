@@ -81,7 +81,7 @@ Largest untested action file (966 lines, 12 functions):
 ---
 
 ## Phase 3: Remaining HR Actions (branch: `test/phase-3-hr-remaining-actions`) DONE
-**Tests: 117 actual | Effort: 1 session | Priority: HIGH | Status: COMPLETE (PR #56)**
+**Tests: 118 actual | Effort: 1 session | Priority: HIGH | Status: COMPLETE (PR #56)**
 
 ### `src/app/(protected)/hr/leaving/actions.test.ts` (~25 tests)
 - `verifyLeavingAuthority` (~5) — line manager, HR admin, neither
@@ -174,7 +174,7 @@ Largest untested action file (966 lines, 12 functions):
 |-------|--------|-------|----------|----------|--------|
 | 0+1 | `test/phase-0-1-infrastructure-and-pure-functions` | 143 | 1 | Pre-req + HIGH | DONE (PR #52) |
 | 2 | `test/phase-2-hr-absence-leave-actions` | 112 | 1 | CRITICAL | DONE (PR #53) |
-| 3 | `test/phase-3-hr-remaining-actions` | 117 | 1 | HIGH | DONE (PR #56) |
+| 3 | `test/phase-3-hr-remaining-actions` | 118 | 1 | HIGH | DONE (PR #56) |
 | 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM | |
 | 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM | |
 | 6 | `test/hr-learning-components` | ~50 | 2 | LOWER | |
