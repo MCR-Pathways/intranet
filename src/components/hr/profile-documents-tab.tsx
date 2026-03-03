@@ -87,7 +87,7 @@ export function ProfileDocumentsTab({
       if (result.success) {
         toast.success("Document verified");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   };
@@ -99,7 +99,7 @@ export function ProfileDocumentsTab({
       if (result.success) {
         toast.success("Document deleted");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setDeleteTarget(null);
     });

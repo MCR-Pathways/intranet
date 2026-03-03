@@ -106,8 +106,8 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
           : await updateExternalCourse(course!.id, data);
 
       if (!result.success) {
-        setError(result.error ?? "Something went wrong");
-        toast.error(result.error ?? "Something went wrong");
+        setError(result.error ?? "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
+        toast.error(result.error ?? "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       } else {
         toast.success(mode === "create" ? "External course added" : "External course updated");
         setOpen(false);

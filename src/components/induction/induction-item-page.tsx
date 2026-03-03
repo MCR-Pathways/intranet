@@ -70,7 +70,7 @@ export function InductionItemPage({
       if (error?.message?.includes("NEXT_REDIRECT")) {
         return; // Redirect is happening, do nothing
       }
-      toast.error("Something went wrong");
+      toast.error("Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       logger.error("Error marking item complete", { error: err });
     } finally {
       setIsSubmitting(false);

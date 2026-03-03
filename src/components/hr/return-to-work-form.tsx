@@ -167,7 +167,7 @@ export function ReturnToWorkForm({
         setSuccess("Draft saved");
         setTimeout(() => setSuccess(null), 2000);
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error);
       }
     });
@@ -210,7 +210,7 @@ export function ReturnToWorkForm({
         toast.success("Form submitted — employee has been notified");
         setSuccess("Form submitted. Employee has been notified.");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error);
       }
     });
@@ -227,7 +227,7 @@ export function ReturnToWorkForm({
         toast.success("Form confirmed");
         setSuccess("Form confirmed and locked. Thank you.");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error);
       }
     });
@@ -245,7 +245,7 @@ export function ReturnToWorkForm({
         setSuccess("Form unlocked for corrections");
         setTimeout(() => setSuccess(null), 2000);
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error);
       }
     });

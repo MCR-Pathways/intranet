@@ -171,10 +171,14 @@ export function TiptapComposer({
     }
   }, [editor, disabled]);
 
-  // Reset editor when resetKey changes
+  // Reset editor when resetKey changes — restore initialContent if provided, else clear
   useEffect(() => {
     if (editor && resetKey !== undefined) {
-      editor.commands.clearContent(true);
+      if (initialContent) {
+        editor.commands.setContent(initialContent);
+      } else {
+        editor.commands.clearContent(true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
