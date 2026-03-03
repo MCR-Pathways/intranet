@@ -416,12 +416,13 @@ describe("HR Leaving Actions", () => {
       updateResult?: { data: unknown; error: unknown };
       notifError?: boolean;
     }) {
-      const formCallCount = { value: 0 };
+      const callLog: string[] = [];
       mockFrom.mockImplementation((table: string) => {
+        callLog.push(table);
         const c = chainable();
         if (table === "staff_leaving_forms") {
-          formCallCount.value++;
-          if (formCallCount.value === 1) {
+          const formCalls = callLog.filter((t) => t === "staff_leaving_forms").length;
+          if (formCalls === 1) {
             // Fetch form
             c.single.mockResolvedValue({
               data: opts?.formData !== undefined
@@ -447,25 +448,29 @@ describe("HR Leaving Actions", () => {
           return c;
         }
         if (table === "profiles") {
-          const profileCallCount = { value: 0 };
-          // Could be verifyLeavingAuthority or fetch employee name or fetch HR admins
-          c.in.mockResolvedValue({
-            data: opts?.authorised !== false
-              ? [{ id: "user-123", is_hr_admin: true, line_manager_id: null }]
-              : [{ id: "user-123", is_hr_admin: false, line_manager_id: null }],
-            error: null,
-          });
-          c.single.mockResolvedValue({
-            data: { full_name: "John Smith" },
-            error: null,
-          });
-          // HR admins fetch
-          c.eq.mockImplementation(() => {
-            profileCallCount.value++;
-            return c;
-          });
-          // For the last .eq("status", "active") call, resolve with HR admins
-          c.order.mockResolvedValue({ data: [], error: null });
+          const profileCalls = callLog.filter((t) => t === "profiles").length;
+          if (profileCalls === 1) {
+            // verifyLeavingAuthority: .in() chain
+            c.in.mockResolvedValue({
+              data: opts?.authorised !== false
+                ? [{ id: "user-123", is_hr_admin: true, line_manager_id: null }]
+                : [{ id: "user-123", is_hr_admin: false, line_manager_id: null }],
+              error: null,
+            });
+          } else if (profileCalls === 2) {
+            // Fetch employee name: .single() chain
+            c.single.mockResolvedValue({
+              data: { full_name: "John Smith" },
+              error: null,
+            });
+          } else {
+            // Fetch HR admins: .eq().eq() chain — make final .eq() resolve with admin data
+            const secondEq = vi.fn().mockResolvedValue({
+              data: [{ id: "hr-admin-1" }],
+              error: null,
+            });
+            c.eq.mockReturnValue({ eq: secondEq });
+          }
           return c;
         }
         if (table === "notifications") {
@@ -512,6 +517,14 @@ describe("HR Leaving Actions", () => {
       const result = await submitLeavingForm("form-1");
       expect(result.success).toBe(false);
       expect(result.error).toContain("Not authenticated");
+    });
+
+    it("rolls back form status when notification insert fails", async () => {
+      setupSubmitChain({ notifError: true });
+
+      const result = await submitLeavingForm("form-1");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("could not notify HR");
     });
   });
 
@@ -592,6 +605,8 @@ describe("HR Leaving Actions", () => {
       profileError?: boolean;
     }) {
       const callLog: string[] = [];
+      const formRollbackTracker = vi.fn();
+      const historyDeleteTracker = vi.fn();
       mockFrom.mockImplementation((table: string) => {
         const c = chainable();
         callLog.push(table);
@@ -616,6 +631,14 @@ describe("HR Leaving Actions", () => {
             });
           } else {
             // Update (complete or rollback)
+            c.update.mockImplementation((...args: unknown[]) => {
+              // Track rollback calls (status reverted to in_progress)
+              const updateData = args[0] as Record<string, unknown> | undefined;
+              if (updateData?.status === "in_progress") {
+                formRollbackTracker();
+              }
+              return c;
+            });
             c.single.mockResolvedValue(
               opts?.formUpdateError
                 ? { data: null, error: { message: "Form update failed" } }
@@ -625,11 +648,21 @@ describe("HR Leaving Actions", () => {
           return c;
         }
         if (table === "employment_history") {
-          c.single.mockResolvedValue(
-            opts?.historyError
-              ? { data: null, error: { message: "History insert failed" } }
-              : { data: { id: "history-1" }, error: null },
-          );
+          const historyCalls = callLog.filter((t) => t === "employment_history").length;
+          if (historyCalls === 1) {
+            // Insert
+            c.single.mockResolvedValue(
+              opts?.historyError
+                ? { data: null, error: { message: "History insert failed" } }
+                : { data: { id: "history-1" }, error: null },
+            );
+          } else {
+            // Delete (rollback)
+            c.delete.mockImplementation(() => {
+              historyDeleteTracker();
+              return c;
+            });
+          }
           return c;
         }
         if (table === "profiles") {
@@ -656,6 +689,7 @@ describe("HR Leaving Actions", () => {
         }
         return c;
       });
+      return { formRollbackTracker, historyDeleteTracker };
     }
 
     it("completes a leaving form successfully", async () => {
@@ -693,19 +727,24 @@ describe("HR Leaving Actions", () => {
     });
 
     it("rolls back form when employment history insert fails", async () => {
-      setupCompleteChain({ historyError: true });
+      const { formRollbackTracker } = setupCompleteChain({ historyError: true });
 
       const result = await completeLeavingForm("form-1");
       expect(result.success).toBe(false);
       expect(result.error).toContain("employment history");
+      // Verify form status was rolled back to in_progress
+      expect(formRollbackTracker).toHaveBeenCalled();
     });
 
     it("rolls back form and history when profile update fails", async () => {
-      setupCompleteChain({ profileError: true });
+      const { formRollbackTracker, historyDeleteTracker } = setupCompleteChain({ profileError: true });
 
       const result = await completeLeavingForm("form-1");
       expect(result.success).toBe(false);
       expect(result.error).toContain("profile status");
+      // Verify both rollbacks: history entry deleted + form status reverted
+      expect(historyDeleteTracker).toHaveBeenCalled();
+      expect(formRollbackTracker).toHaveBeenCalled();
     });
 
     it("throws when user is not HR admin", async () => {

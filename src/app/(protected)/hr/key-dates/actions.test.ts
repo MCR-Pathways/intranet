@@ -224,6 +224,7 @@ describe("HR Key Dates Actions", () => {
       updateError?: boolean;
     }) {
       const callLog: string[] = [];
+      const updatePayloadTracker = vi.fn();
       mockFrom.mockImplementation(() => {
         callLog.push("call");
         const c = chainable();
@@ -233,6 +234,11 @@ describe("HR Key Dates Actions", () => {
             error: null,
           });
         } else {
+          // Track the update payload
+          c.update.mockImplementation((payload: unknown) => {
+            updatePayloadTracker(payload);
+            return c;
+          });
           c.single.mockResolvedValue(
             opts?.updateError
               ? { data: null, error: { message: "Complete failed" } }
@@ -241,14 +247,25 @@ describe("HR Key Dates Actions", () => {
         }
         return c;
       });
+      return { updatePayloadTracker };
     }
 
     it("marks a key date as completed", async () => {
-      setupCompleteChain();
+      const { updatePayloadTracker } = setupCompleteChain();
 
       const result = await completeKeyDate("kd-1");
       expect(result.success).toBe(true);
       expect(revalidatePath).toHaveBeenCalledWith("/hr/key-dates");
+      // Verify the update sets is_completed, completed_at, and completed_by
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_completed: true,
+          completed_by: "admin-123",
+        }),
+      );
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.objectContaining({ completed_at: expect.any(String) }),
+      );
     });
 
     it("returns error on DB failure", async () => {

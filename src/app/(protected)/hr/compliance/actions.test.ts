@@ -231,6 +231,7 @@ describe("HR Compliance Actions", () => {
       updateError?: boolean;
     }) {
       const callLog: string[] = [];
+      const updatePayloadTracker = vi.fn();
       mockFrom.mockImplementation((table: string) => {
         callLog.push(table);
         const c = chainable();
@@ -242,7 +243,11 @@ describe("HR Compliance Actions", () => {
             error: null,
           });
         } else {
-          // Update
+          // Update — track the payload
+          c.update.mockImplementation((payload: unknown) => {
+            updatePayloadTracker(payload);
+            return c;
+          });
           c.single.mockResolvedValue(
             opts?.updateError
               ? { data: null, error: { message: "Update failed" } }
@@ -251,6 +256,7 @@ describe("HR Compliance Actions", () => {
         }
         return c;
       });
+      return { updatePayloadTracker };
     }
 
     it("updates document metadata", async () => {
@@ -266,13 +272,17 @@ describe("HR Compliance Actions", () => {
     });
 
     it("auto-recalculates status when expiry_date changes", async () => {
-      setupUpdateChain();
+      const { updatePayloadTracker } = setupUpdateChain();
 
       const result = await updateComplianceDocument("doc-1", {
         expiry_date: "2020-01-01", // expired
       });
 
       expect(result.success).toBe(true);
+      // Verify the status was auto-recalculated to "expired"
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "expired", expiry_date: "2020-01-01" }),
+      );
     });
 
     it("returns error when no valid fields provided", async () => {

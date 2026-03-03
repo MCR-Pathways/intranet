@@ -309,6 +309,7 @@ describe("HR Asset Actions", () => {
       statusUpdateError?: boolean;
     }) {
       const callLog: string[] = [];
+      const rollbackTracker = vi.fn();
 
       mockFrom.mockImplementation((table: string) => {
         callLog.push(table);
@@ -323,7 +324,15 @@ describe("HR Asset Actions", () => {
               : { id: "assign-1", asset_id: "asset-1", profile_id: "emp-456" };
             c.single.mockResolvedValue({ data: assignData, error: null });
           } else {
-            // Update assignment with return info (or rollback)
+            // Update assignment with return info or rollback
+            c.update.mockImplementation((...args: unknown[]) => {
+              const updateData = args[0] as Record<string, unknown> | undefined;
+              // Track rollback calls (returned_date set back to null)
+              if (updateData?.returned_date === null) {
+                rollbackTracker();
+              }
+              return c;
+            });
             c.single.mockResolvedValue(
               opts?.returnError
                 ? { data: null, error: { message: "Return update failed" } }
@@ -345,6 +354,7 @@ describe("HR Asset Actions", () => {
 
         return c;
       });
+      return { rollbackTracker };
     }
 
     it("returns an asset successfully", async () => {
@@ -377,12 +387,13 @@ describe("HR Asset Actions", () => {
     });
 
     it("rolls back when asset status update fails", async () => {
-      setupReturnChain({ statusUpdateError: true });
+      const { rollbackTracker } = setupReturnChain({ statusUpdateError: true });
 
       const result = await returnAsset("assign-1", {});
       expect(result.success).toBe(false);
       expect(result.error).toContain("Status update failed");
-      // Rollback should have reverted the returned_date and condition_on_return
+      // Verify rollback reverted returned_date and condition_on_return
+      expect(rollbackTracker).toHaveBeenCalled();
     });
   });
 
