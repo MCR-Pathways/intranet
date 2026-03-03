@@ -1,4 +1,4 @@
-import { requireHRAdmin } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { ABSENCE_RECORD_SELECT } from "@/lib/hr";
 import { redirect } from "next/navigation";
 import { AbsenceDashboardContent } from "@/components/hr/absence-dashboard-content";
@@ -11,11 +11,8 @@ export default async function AbsenceDashboardPage({
   const sp = await searchParams;
   const activeTab = sp.tab || "all";
 
-  let supabase;
-  try {
-    const result = await requireHRAdmin();
-    supabase = result.supabase;
-  } catch {
+  const { supabase, profile } = await getCurrentUser();
+  if (!isHRAdminEffective(profile)) {
     redirect("/hr");
   }
 

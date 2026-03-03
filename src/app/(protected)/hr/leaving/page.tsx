@@ -1,4 +1,4 @@
-import { requireHRAdmin } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { STAFF_LEAVING_FORM_WITH_EMPLOYEE_SELECT } from "@/lib/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 import { LeavingDashboardContent } from "@/components/hr/leaving-dashboard-content";
@@ -13,18 +13,10 @@ export default async function LeavingDashboardPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  let result;
-  try {
-    result = await requireHRAdmin();
-  } catch (error: unknown) {
-    const err = error as Error;
-    if (err?.message === "NEXT_REDIRECT" || (err as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) {
-      throw error;
-    }
+  const { supabase, profile } = await getCurrentUser();
+  if (!isHRAdminEffective(profile)) {
     redirect("/hr");
   }
-
-  const supabase = result.supabase;
   const { tab: activeTab = "active" } = await searchParams;
 
   // Fetch all leaving forms with employee details

@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { LeaveCalendar } from "@/components/hr/leave-calendar";
 import { LEAVE_REQUEST_WITH_EMPLOYEE_SELECT, mapToLeaveRequestWithEmployee } from "@/lib/hr";
@@ -8,7 +8,7 @@ export default async function CalendarPage() {
   const { supabase, profile } = await getCurrentUser();
   if (!profile) redirect("/login");
 
-  const isHRAdmin = profile.is_hr_admin ?? false;
+  const isHRAdmin = isHRAdminEffective(profile);
   const isLineManager = profile.is_line_manager ?? false;
 
   // Determine which leave requests to show

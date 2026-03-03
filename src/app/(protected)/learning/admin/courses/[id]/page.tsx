@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { CourseEditForm } from "@/components/learning-admin/course-edit-form";
 import { LessonManager } from "@/components/learning-admin/lesson-manager";
 import { EnrolmentStatsCard } from "@/components/learning-admin/enrolment-stats-card";
@@ -19,7 +19,7 @@ export default async function CourseDetailPage({
   const { id } = await params;
   const { supabase, profile } = await getCurrentUser();
 
-  if (!profile?.is_ld_admin) {
+  if (!isLDAdminEffective(profile)) {
     redirect("/learning");
   }
 

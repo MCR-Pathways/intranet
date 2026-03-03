@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { ReportsDashboard } from "@/components/learning-admin/reports-dashboard";
 
 export default async function ReportsPage() {
   const { supabase, profile } = await getCurrentUser();
 
-  if (!profile?.is_ld_admin) {
+  if (!isLDAdminEffective(profile)) {
     redirect("/learning");
   }
 

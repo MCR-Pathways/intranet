@@ -1,4 +1,4 @@
-import { requireHRAdmin } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { KeyDatesDashboard } from "@/components/hr/key-dates-dashboard";
 
@@ -6,11 +6,8 @@ const KEY_DATE_SELECT =
   "id, profile_id, date_type, due_date, title, description, is_completed, completed_at, profiles!profile_id(full_name)";
 
 export default async function KeyDatesPage() {
-  let supabase;
-  try {
-    const result = await requireHRAdmin();
-    supabase = result.supabase;
-  } catch {
+  const { supabase, profile } = await getCurrentUser();
+  if (!isHRAdminEffective(profile)) {
     redirect("/hr");
   }
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
@@ -16,7 +16,7 @@ export default async function IntranetPage() {
 
   const isStaff = profile.user_type === "staff";
   const canPost = profile.user_type === "staff" || profile.user_type === "pathways_coordinator";
-  const isHRAdmin = profile.is_hr_admin ?? false;
+  const isHRAdmin = isHRAdminEffective(profile);
 
   const currentUserProfile: PostAuthor = {
     id: profile.id,

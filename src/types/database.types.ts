@@ -51,6 +51,15 @@ export interface Database {
           is_line_manager: boolean;
           is_hr_admin: boolean;
           is_ld_admin: boolean;
+          is_systems_admin: boolean;
+          fte: number;
+          contract_type: string;
+          department: string | null;
+          region: string | null;
+          work_pattern: string;
+          is_external: boolean;
+          probation_end_date: string | null;
+          contract_end_date: string | null;
           line_manager_id: string | null;
           team_id: string | null;
           google_calendar_connected: boolean;
@@ -75,6 +84,15 @@ export interface Database {
           is_line_manager?: boolean;
           is_hr_admin?: boolean;
           is_ld_admin?: boolean;
+          is_systems_admin?: boolean;
+          fte?: number;
+          contract_type?: string;
+          department?: string | null;
+          region?: string | null;
+          work_pattern?: string;
+          is_external?: boolean;
+          probation_end_date?: string | null;
+          contract_end_date?: string | null;
           line_manager_id?: string | null;
           team_id?: string | null;
           google_calendar_connected?: boolean;
@@ -99,6 +117,15 @@ export interface Database {
           is_line_manager?: boolean;
           is_hr_admin?: boolean;
           is_ld_admin?: boolean;
+          is_systems_admin?: boolean;
+          fte?: number;
+          contract_type?: string;
+          department?: string | null;
+          region?: string | null;
+          work_pattern?: string;
+          is_external?: boolean;
+          probation_end_date?: string | null;
+          contract_end_date?: string | null;
           line_manager_id?: string | null;
           team_id?: string | null;
           google_calendar_connected?: boolean;
@@ -869,6 +896,24 @@ export interface Database {
       };
       is_ld_admin: {
         Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_hr_admin_effective: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
+      is_ld_admin_effective: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
+      is_systems_admin_effective: {
+        Args: {
+          p_user_id: string;
+        };
         Returns: boolean;
       };
       is_line_manager: {

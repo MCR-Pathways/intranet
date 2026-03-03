@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -195,9 +195,9 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
 
 export default async function HRPage() {
   const { supabase, profile } = await getCurrentUser();
-  const isHRAdmin = profile?.is_hr_admin ?? false;
-  const isLineManager = profile?.is_line_manager ?? false;
-  const canViewCalendar = isHRAdmin || isLineManager;
+  const isHRAdmin = isHRAdminEffective(profile);
+  const isSystemsAdmin = isSystemsAdminEffective(profile);
+  const hasAnyAdmin = isHRAdmin || isSystemsAdmin;
 
   const stats = isHRAdmin ? await fetchDashboardStats(supabase) : null;
 
@@ -218,7 +218,7 @@ export default async function HRPage() {
             title: "On Leave Today",
             value: stats.onLeaveToday,
             subtitle: "staff currently on leave",
-            href: "/hr/calendar",
+            href: "/hr/leave?tab=calendar",
             icon: Calendar,
             iconColour: "text-blue-600",
             valueColour: "text-blue-700",
@@ -299,10 +299,10 @@ export default async function HRPage() {
         );
       })()}
 
-      {/* My HR */}
+      {/* My HR — self-service items for all staff */}
       <section>
         <SectionHeader>My HR</SectionHeader>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <QuickActionCard
             title="My Profile"
             description="View and update your personal information"
@@ -314,20 +314,6 @@ export default async function HRPage() {
             description="Request and manage your leave"
             href="/hr/leave"
             icon={Calendar}
-          />
-          {canViewCalendar && (
-            <QuickActionCard
-              title="Calendar"
-              description="View team leave calendar"
-              href="/hr/calendar"
-              icon={CalendarClock}
-            />
-          )}
-          <QuickActionCard
-            title="My Team"
-            description="View your team members"
-            href="/hr/team"
-            icon={Users}
           />
           <QuickActionCard
             title="Assets"
@@ -344,10 +330,16 @@ export default async function HRPage() {
         </div>
       </section>
 
-      {/* Organisation */}
+      {/* People — visible to all staff */}
       <section>
-        <SectionHeader>Organisation</SectionHeader>
+        <SectionHeader>People</SectionHeader>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <QuickActionCard
+            title="My Team"
+            description="View your team members"
+            href="/hr/team"
+            icon={Users}
+          />
           <QuickActionCard
             title="Org Chart"
             description="View the organisation structure"
@@ -357,11 +349,12 @@ export default async function HRPage() {
         </div>
       </section>
 
-      {/* Administration (HR Admin only) */}
-      {isHRAdmin && (
+      {/* Administration — HR Admin + Systems Admin */}
+      {hasAnyAdmin && (
         <section>
           <SectionHeader>Administration</SectionHeader>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* User Management: HR admin + systems admin */}
             <QuickActionCard
               title="User Management"
               description="Manage staff profiles, roles, and induction"
@@ -369,34 +362,40 @@ export default async function HRPage() {
               icon={Shield}
               isAdmin
             />
-            <QuickActionCard
-              title="Absence & Sickness"
-              description="Record absences, manage return-to-work forms"
-              href="/hr/absence"
-              icon={Stethoscope}
-              isAdmin
-            />
-            <QuickActionCard
-              title="Compliance"
-              description="Track compliance documents and expiry dates"
-              href="/hr/compliance"
-              icon={FileCheck}
-              isAdmin
-            />
-            <QuickActionCard
-              title="Key Dates"
-              description="Track probations, appraisals, and contract renewals"
-              href="/hr/key-dates"
-              icon={CalendarClock}
-              isAdmin
-            />
-            <QuickActionCard
-              title="Leaving / Offboarding"
-              description="Manage staff leaving forms and offboarding"
-              href="/hr/leaving"
-              icon={UserMinus}
-              isAdmin
-            />
+
+            {/* HR-only admin items */}
+            {isHRAdmin && (
+              <>
+                <QuickActionCard
+                  title="Absence & Sickness"
+                  description="Record absences, manage return-to-work forms"
+                  href="/hr/absence"
+                  icon={Stethoscope}
+                  isAdmin
+                />
+                <QuickActionCard
+                  title="Compliance"
+                  description="Track compliance documents and expiry dates"
+                  href="/hr/compliance"
+                  icon={FileCheck}
+                  isAdmin
+                />
+                <QuickActionCard
+                  title="Key Dates"
+                  description="Track probations, appraisals, and contract renewals"
+                  href="/hr/key-dates"
+                  icon={CalendarClock}
+                  isAdmin
+                />
+                <QuickActionCard
+                  title="Leaving / Offboarding"
+                  description="Manage staff leaving forms and offboarding"
+                  href="/hr/leaving"
+                  icon={UserMinus}
+                  isAdmin
+                />
+              </>
+            )}
           </div>
         </section>
       )}

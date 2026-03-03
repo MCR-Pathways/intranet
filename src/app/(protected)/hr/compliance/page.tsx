@@ -1,4 +1,4 @@
-import { requireHRAdmin } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ComplianceDashboard } from "@/components/hr/compliance-dashboard";
 import type { ComplianceStatus } from "@/lib/hr";
@@ -8,11 +8,8 @@ const COMPLIANCE_DOCS_SELECT =
   "id, profile_id, document_type_id, reference_number, issue_date, expiry_date, status, file_name, verified_at, compliance_document_types(name), profiles!profile_id(full_name, department)";
 
 export default async function CompliancePage() {
-  let supabase;
-  try {
-    const result = await requireHRAdmin();
-    supabase = result.supabase;
-  } catch {
+  const { supabase, profile } = await getCurrentUser();
+  if (!isHRAdminEffective(profile)) {
     redirect("/hr");
   }
 
