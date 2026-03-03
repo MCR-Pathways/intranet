@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils";
 import { LEAVE_TYPE_CONFIG, WORK_PATTERN_CONFIG, formatHRDate } from "@/lib/hr";
 import type { LeaveType, WorkPattern } from "@/lib/hr";
-import { MoreHorizontal, User, Calendar, Eye } from "lucide-react";
+import { MoreHorizontal, User, Calendar, Eye, Cake } from "lucide-react";
 
 // =============================================
 // TYPES
@@ -37,6 +37,11 @@ export interface TeamMember {
 export interface LeaveInfo {
   leave_type: string;
   end_date: string;
+}
+
+export interface AnniversaryInfo {
+  years: number;
+  date: string;
 }
 
 // =============================================
@@ -71,10 +76,11 @@ function getTenure(startDate: string | null): string | null {
 interface TeamMemberCardProps {
   member: TeamMember;
   leaveInfo?: LeaveInfo;
+  anniversaryInfo?: AnniversaryInfo;
   showActions?: boolean;
 }
 
-export function TeamMemberCard({ member, leaveInfo, showActions = false }: TeamMemberCardProps) {
+export function TeamMemberCard({ member, leaveInfo, anniversaryInfo, showActions = false }: TeamMemberCardProps) {
   const isOnLeave = !!leaveInfo;
   const displayName = getDisplayName(member);
   const tenure = getTenure(member.start_date);
@@ -156,6 +162,12 @@ export function TeamMemberCard({ member, leaveInfo, showActions = false }: TeamM
           {isOnLeave && (
             <p className="text-amber-700 font-medium">
               {leaveLabel} until {formatHRDate(leaveInfo.end_date)}
+            </p>
+          )}
+          {anniversaryInfo && (
+            <p className="text-purple-700 font-medium flex items-center gap-1">
+              <Cake className="h-3 w-3 shrink-0" />
+              {anniversaryInfo.years} year{anniversaryInfo.years !== 1 ? "s" : ""} on {formatHRDate(anniversaryInfo.date)}
             </p>
           )}
           {isNonStandard && (

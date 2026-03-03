@@ -4,10 +4,10 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TeamMemberCard } from "@/components/hr/team-member-card";
-import type { TeamMember, LeaveInfo } from "@/components/hr/team-member-card";
+import type { TeamMember, LeaveInfo, AnniversaryInfo } from "@/components/hr/team-member-card";
 import { LEAVE_TYPE_CONFIG, formatHRDate } from "@/lib/hr";
 import type { LeaveType } from "@/lib/hr";
-import { Users, Calendar, Clock, Info } from "lucide-react";
+import { Users, Calendar, Clock, Info, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // =============================================
@@ -18,6 +18,7 @@ interface TeamDashboardContentProps {
   reports: TeamMember[];
   onLeaveMap: Record<string, LeaveInfo>;
   pendingApprovalCount: number;
+  anniversaries: Record<string, AnniversaryInfo>;
   currentUserId: string;
 }
 
@@ -56,9 +57,11 @@ export function TeamDashboardContent({
   reports,
   onLeaveMap,
   pendingApprovalCount,
+  anniversaries,
   currentUserId,
 }: TeamDashboardContentProps) {
   const onLeaveToday = Object.entries(onLeaveMap);
+  const anniversaryEntries = Object.entries(anniversaries);
 
   if (reports.length === 0) {
     return (
@@ -107,6 +110,14 @@ export function TeamDashboardContent({
             href="/hr/leave?tab=approvals"
           />
         )}
+        {anniversaryEntries.length > 0 && (
+          <SummaryPill
+            icon={Cake}
+            label={anniversaryEntries.length === 1 ? "Upcoming anniversary" : "Upcoming anniversaries"}
+            value={anniversaryEntries.length}
+            className="border-purple-200 bg-purple-50 text-purple-700"
+          />
+        )}
       </div>
 
       {/* Who's off banner */}
@@ -130,6 +141,26 @@ export function TeamDashboardContent({
         </div>
       )}
 
+      {/* Anniversary banner */}
+      {anniversaryEntries.length > 0 && (
+        <div className="flex items-start gap-3 rounded-md border border-purple-200 bg-purple-50 px-4 py-3">
+          <Cake className="h-4 w-4 text-purple-600 mt-0.5 shrink-0" />
+          <div className="text-sm text-purple-700">
+            {anniversaryEntries.map(([profileId, info], i) => {
+              const member = reports.find((r) => r.id === profileId);
+              if (!member) return null;
+              const firstName = member.preferred_name ?? member.full_name.split(" ")[0];
+              return (
+                <span key={profileId}>
+                  {i > 0 && ". "}
+                  <span className="font-medium">{firstName}</span> celebrates {info.years} year{info.years !== 1 ? "s" : ""} on {formatHRDate(info.date)}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Card grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reports.map((member) => (
@@ -137,6 +168,7 @@ export function TeamDashboardContent({
             key={member.id}
             member={member}
             leaveInfo={onLeaveMap[member.id]}
+            anniversaryInfo={anniversaries[member.id]}
             showActions
           />
         ))}

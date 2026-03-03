@@ -10,6 +10,38 @@ import { Users } from "lucide-react";
 const TEAM_MEMBER_SELECT =
   "id, full_name, preferred_name, avatar_url, job_title, start_date, work_pattern, status, is_external";
 
+/** Check if a start_date has a work anniversary within the next N days. */
+function getUpcomingAnniversary(
+  startDate: string | null,
+  today: Date,
+  withinDays: number = 14,
+): { years: number; date: string } | null {
+  if (!startDate) return null;
+  const start = new Date(startDate + "T00:00:00");
+  const currentYear = today.getFullYear();
+
+  // Anniversary this year
+  const anniv = new Date(currentYear, start.getMonth(), start.getDate());
+
+  // If already passed, check next year
+  if (anniv < today) {
+    anniv.setFullYear(currentYear + 1);
+  }
+
+  const diff = anniv.getTime() - today.getTime();
+  const daysUntil = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (daysUntil > withinDays) return null;
+
+  const years = anniv.getFullYear() - start.getFullYear();
+  if (years < 1) return null; // Don't count the first year — that's not an anniversary
+
+  return {
+    years,
+    date: anniv.toISOString().split("T")[0],
+  };
+}
+
 export default async function TeamPage() {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
@@ -82,11 +114,20 @@ export default async function TeamPage() {
       .in("profile_id", directReports.map((r) => r.id))
       .eq("status", "pending");
 
+    // Compute upcoming work anniversaries (within 14 days)
+    const todayDate = new Date();
+    const anniversaries: Record<string, { years: number; date: string }> = {};
+    for (const report of directReports) {
+      const anniv = getUpcomingAnniversary(report.start_date, todayDate);
+      if (anniv) anniversaries[report.id] = anniv;
+    }
+
     return (
       <TeamDashboardContent
         reports={directReports}
         onLeaveMap={Object.fromEntries(onLeaveMap)}
         pendingApprovalCount={pendingCount ?? 0}
+        anniversaries={anniversaries}
         currentUserId={user.id}
       />
     );
