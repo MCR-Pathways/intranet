@@ -353,11 +353,9 @@ describe("LeaveRequestTable", () => {
     const reasonInput = screen.getByPlaceholderText("Enter rejection reason...");
     await user.type(reasonInput, "Insufficient notice");
 
-    // Confirm rejection
-    const dialogReject = screen.getAllByRole("button").find(
-      (b) => b.textContent === "Reject" && !b.closest("tr")
-    );
-    await user.click(dialogReject!);
+    // Confirm rejection — scope to dialog
+    const dialog = screen.getByRole("dialog", { name: "Reject Leave Request" });
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
 
     expect(mockRejectLeave).toHaveBeenCalledWith("lr-1", "Insufficient notice");
   });
@@ -375,12 +373,8 @@ describe("LeaveRequestTable", () => {
     await user.click(screen.getByText("Reject"));
 
     // Reject dialog appears — the destructive Reject button should be disabled
-    await screen.findByText("Reject Leave Request");
-    const dialogButtons = screen.getAllByRole("button");
-    const rejectConfirm = dialogButtons.find(
-      (b) => b.textContent === "Reject" && !b.closest("tr")
-    );
-    expect(rejectConfirm).toBeDisabled();
+    const dialog = await screen.findByRole("dialog", { name: "Reject Leave Request" });
+    expect(within(dialog).getByRole("button", { name: "Reject" })).toBeDisabled();
   });
 
   it("calls cancelLeave when Cancel Leave is confirmed", async () => {

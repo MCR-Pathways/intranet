@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommentItem } from "./comment-item";
 import type { CommentWithAuthor, ReactionType } from "@/types/database.types";
@@ -344,9 +344,8 @@ describe("CommentItem", () => {
     await user.click(await screen.findByText("Delete"));
 
     // Confirm in the dialog
-    const confirmDeleteButtons = await screen.findAllByRole("button", { name: "Delete" });
-    // The dialog "Delete" button (not the dropdown item)
-    await user.click(confirmDeleteButtons[confirmDeleteButtons.length - 1]);
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     expect(mockDeleteComment).toHaveBeenCalledWith("comment-1");
   });
@@ -380,11 +379,8 @@ describe("CommentItem", () => {
     await user.clear(textarea);
     await user.type(textarea, "Updated comment!");
 
-    // Click save (checkmark button)
-    const saveButton = screen.getAllByRole("button").find(
-      (b) => b.querySelector("svg.lucide-check")
-    );
-    await user.click(saveButton!);
+    // Click save
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(mockEditComment).toHaveBeenCalledWith(
       "comment-1",
@@ -409,11 +405,8 @@ describe("CommentItem", () => {
     await user.click(moreButton!);
     await user.click(await screen.findByText("Edit"));
 
-    // Click cancel (X button)
-    const cancelButton = screen.getAllByRole("button").find(
-      (b) => b.querySelector("svg.lucide-x")
-    );
-    await user.click(cancelButton!);
+    // Click cancel
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     // Textarea should be gone, original content visible
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();

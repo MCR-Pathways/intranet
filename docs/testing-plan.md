@@ -197,7 +197,7 @@ Largest untested action file (966 lines, 12 functions):
 | 5 | `test/phase-5-news-feed-components` | 76 | 1 | MEDIUM | DONE (PR #58) |
 | 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
-| **Total** | | **~546** | **~10.5** | | |
+| **Total** | | **~569** | **~10.5** | | |
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 

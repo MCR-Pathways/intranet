@@ -160,8 +160,7 @@ describe("QuizPlayer", () => {
 
   it("disables submit when not all questions answered", () => {
     render(<QuizPlayer {...defaultProps} />);
-    const submitBtn = screen.getByText("Submit Quiz");
-    expect(submitBtn.closest("button")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit Quiz" })).toBeDisabled();
   });
 
   it("enables submit after selecting an answer", async () => {
@@ -170,8 +169,7 @@ describe("QuizPlayer", () => {
 
     await user.click(screen.getByText("4"));
 
-    const submitBtn = screen.getByText("Submit Quiz");
-    expect(submitBtn.closest("button")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit Quiz" })).not.toBeDisabled();
   });
 
   // =============================================
@@ -286,8 +284,7 @@ describe("QuizPlayer", () => {
     await user.click(screen.getByText("Retry Quiz"));
 
     // Back to quiz state — submit button should be visible and disabled
-    expect(screen.getByText("Submit Quiz")).toBeInTheDocument();
-    expect(screen.getByText("Submit Quiz").closest("button")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit Quiz" })).toBeDisabled();
     // Score should be gone
     expect(screen.queryByText("40%")).not.toBeInTheDocument();
   });
