@@ -28,8 +28,6 @@ interface LeaveDashboardContentProps {
   teamMemberMap?: Record<string, string[]>;
 }
 
-const VALID_TABS = ["my-leave", "approvals", "calendar", "admin"];
-
 export function LeaveDashboardContent({
   profile,
   balances,
@@ -40,11 +38,16 @@ export function LeaveDashboardContent({
   activeTab,
   teamMemberMap,
 }: LeaveDashboardContentProps) {
-  const tab = VALID_TABS.includes(activeTab) ? activeTab : "my-leave";
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   const showApprovals = profile.is_line_manager || profile.is_hr_admin;
   const showAdmin = profile.is_hr_admin;
+
+  // Build valid tabs based on role
+  const validTabs = ["my-leave"];
+  if (showApprovals) validTabs.push("approvals", "calendar");
+  if (showAdmin) validTabs.push("admin");
+  const tab = validTabs.includes(activeTab) ? activeTab : "my-leave";
   const holidayDates = publicHolidays.map((h) => h.holiday_date);
 
   return (
@@ -63,7 +66,7 @@ export function LeaveDashboardContent({
                 )}
               </TabsTrigger>
             )}
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            {showApprovals && <TabsTrigger value="calendar">Team Calendar</TabsTrigger>}
             {showAdmin && <TabsTrigger value="admin">All Requests</TabsTrigger>}
           </TabsList>
 
@@ -104,13 +107,15 @@ export function LeaveDashboardContent({
           </TabsContent>
         )}
 
-        <TabsContent value="calendar" className="mt-6">
-          <LeaveCalendar
-            requests={showApprovals ? allRequests : requests}
-            publicHolidays={publicHolidays}
-            showEmployee={showApprovals}
-          />
-        </TabsContent>
+        {showApprovals && (
+          <TabsContent value="calendar" className="mt-6">
+            <LeaveCalendar
+              requests={allRequests}
+              publicHolidays={publicHolidays}
+              showEmployee
+            />
+          </TabsContent>
+        )}
 
         {showAdmin && (
           <TabsContent value="admin" className="mt-6 space-y-6">
