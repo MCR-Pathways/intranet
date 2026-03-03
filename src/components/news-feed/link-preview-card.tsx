@@ -13,9 +13,10 @@ function proxyImageUrl(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   // Already a relative proxy path (new posts) — exclude protocol-relative URLs
   if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  // External URL — proxy it (handles old posts stored with raw OG URLs)
-  if (/^https?:\/\//i.test(raw)) {
-    return `/api/og-image?url=${encodeURIComponent(raw)}`;
+  // External URL (including protocol-relative) — proxy it
+  if (/^(\/\/|https?:\/\/)/i.test(raw)) {
+    const urlToProxy = raw.startsWith("//") ? `https:${raw}` : raw;
+    return `/api/og-image?url=${encodeURIComponent(urlToProxy)}`;
   }
   return undefined;
 }
