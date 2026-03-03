@@ -854,11 +854,11 @@ export const FLEXIBLE_WORKING_REQUEST_SELECT =
 
 /** Select string for flexible_working_requests joined with the employee's profile. */
 export const FLEXIBLE_WORKING_REQUEST_WITH_EMPLOYEE_SELECT =
-  `${FLEXIBLE_WORKING_REQUEST_SELECT}, profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department)`;
+  `${FLEXIBLE_WORKING_REQUEST_SELECT}, employee:profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department)`;
 
 /** Select string for flexible_working_requests joined with employee + manager profiles. */
 export const FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT =
-  `${FLEXIBLE_WORKING_REQUEST_SELECT}, profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department), manager:profiles!flexible_working_requests_manager_id_fkey(full_name)`;
+  `${FLEXIBLE_WORKING_REQUEST_SELECT}, employee:profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department), manager:profiles!flexible_working_requests_manager_id_fkey(full_name)`;
 
 /** Explicit column list for fwr_appeals queries. */
 export const FWR_APPEAL_SELECT =

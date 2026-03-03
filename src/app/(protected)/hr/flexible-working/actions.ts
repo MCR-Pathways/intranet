@@ -89,7 +89,15 @@ async function verifyFWRAuthority(
     return { authorised: true, isHRAdmin: true };
   }
 
-  if (requestManagerId === currentUserId) {
+  // Verify manager relationship against profiles table, not just the request's manager_id.
+  // This prevents privilege escalation if manager_id was tampered with.
+  const { data: employeeProfile } = await supabase
+    .from("profiles")
+    .select("line_manager_id")
+    .eq("id", requestProfileId)
+    .single();
+
+  if (employeeProfile?.line_manager_id === currentUserId) {
     return { authorised: true, isHRAdmin: false };
   }
 
@@ -104,14 +112,27 @@ async function verifyFWRAuthority(
 // SANITISE CONSULTATION FIELDS
 // =============================================
 
+const CONSULTATION_FORMAT_VALUES = ["in_person", "video", "phone"] as const;
+const MAX_TEXT_LENGTH = 5000;
+
 function sanitiseConsultationFields(
   data: Record<string, unknown>,
 ): Record<string, unknown> {
   const sanitised: Record<string, unknown> = {};
   for (const field of CONSULTATION_ALLOWED_FIELDS) {
-    if (field in data) {
-      sanitised[field] = data[field];
+    if (!(field in data)) continue;
+    const value = data[field];
+
+    if (field === "consultation_date") {
+      if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) continue;
+    } else if (field === "consultation_format") {
+      if (typeof value !== "string" || !CONSULTATION_FORMAT_VALUES.includes(value as typeof CONSULTATION_FORMAT_VALUES[number])) continue;
+    } else {
+      // Text fields: must be string and within length limit
+      if (typeof value !== "string" || value.length > MAX_TEXT_LENGTH) continue;
     }
+
+    sanitised[field] = value;
   }
   return sanitised;
 }

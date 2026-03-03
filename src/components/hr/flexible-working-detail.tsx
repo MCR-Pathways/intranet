@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ export function FlexibleWorkingDetail({
   isOwner,
   isAssignedManager,
 }: FlexibleWorkingDetailProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -123,7 +125,7 @@ export function FlexibleWorkingDetail({
       const result = await markRequestUnderReview(request.id);
       if (result.success) {
         toast.success("Request marked as under review.");
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error(result.error ?? "Failed to update status.");
       }

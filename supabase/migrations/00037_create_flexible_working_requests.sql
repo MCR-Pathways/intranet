@@ -186,17 +186,24 @@ CREATE POLICY "Managers can view reports fwr"
   ON public.flexible_working_requests FOR SELECT TO authenticated
   USING (public.manages_user(profile_id));
 
--- INSERT: Users can create own requests
+-- INSERT: Users can create own requests (manager_id must match their actual line manager)
 DROP POLICY IF EXISTS "Users can create own fwr" ON public.flexible_working_requests;
 CREATE POLICY "Users can create own fwr"
   ON public.flexible_working_requests FOR INSERT TO authenticated
-  WITH CHECK (profile_id = auth.uid());
+  WITH CHECK (
+    profile_id = auth.uid()
+    AND (
+      manager_id IS NULL
+      OR manager_id = (SELECT p.line_manager_id FROM public.profiles p WHERE p.id = auth.uid())
+    )
+  );
 
--- UPDATE: Users can update own requests (withdraw only — status guard in app layer)
+-- UPDATE: Users can only withdraw own requests (restrict to status change only)
 DROP POLICY IF EXISTS "Users can update own fwr" ON public.flexible_working_requests;
 CREATE POLICY "Users can update own fwr"
   ON public.flexible_working_requests FOR UPDATE TO authenticated
-  USING (profile_id = auth.uid() AND status IN ('submitted', 'under_review'));
+  USING (profile_id = auth.uid() AND status IN ('submitted', 'under_review'))
+  WITH CHECK (profile_id = auth.uid() AND status = 'withdrawn');
 
 -- UPDATE: Managers can update requests they're assigned to (approve/reject/consult)
 DROP POLICY IF EXISTS "Managers can decide reports fwr" ON public.flexible_working_requests;

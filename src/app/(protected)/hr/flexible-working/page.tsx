@@ -28,7 +28,7 @@ export default async function FlexibleWorkingPage({
 
   // Map raw data to typed objects
   const requests: FlexibleWorkingRequestWithEmployee[] = (rawRequests ?? []).map((r) => {
-    const emp = r.profiles as unknown as {
+    const emp = r.employee as unknown as {
       full_name: string;
       avatar_url: string | null;
       job_title: string | null;

@@ -23,7 +23,7 @@ export default async function FlexibleWorkingDetailPage({
   }
 
   // Map raw data
-  const emp = rawRequest.profiles as unknown as {
+  const emp = rawRequest.employee as unknown as {
     full_name: string;
     avatar_url: string | null;
     job_title: string | null;
