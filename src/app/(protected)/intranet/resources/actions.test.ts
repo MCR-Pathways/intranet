@@ -33,7 +33,6 @@ const {
 vi.mock("@/lib/auth", () => ({
   requireHRAdmin: requireHRAdmin,
   getCurrentUser: getCurrentUser,
-  PROFILE_SELECT: "id, full_name",
 }));
 
 vi.mock("next/cache", () => ({
@@ -192,7 +191,8 @@ describe("Intranet Resource Actions", () => {
 
       const result = await createCategory({ name: "Test" });
       expect(result.success).toBe(true);
-      // Slug was deduplicated (suffix added)
+      // Verify slug was deduplicated with suffix
+      expect(result.category?.slug).toBe("test-2");
     });
 
     it("returns error on DB insert failure", async () => {
@@ -389,8 +389,8 @@ describe("Intranet Resource Actions", () => {
                 : {
                     data: {
                       id: "art-1",
-                      title: "Test Article",
-                      slug: "test-article",
+                      title: "Test",
+                      slug: opts?.slugExists ? "test-2" : "test",
                       status: "draft",
                     },
                     error: null,
@@ -448,6 +448,7 @@ describe("Intranet Resource Actions", () => {
 
       const result = await createArticle("cat-1", { title: "Test" });
       expect(result.success).toBe(true);
+      expect(result.article?.slug).toBe("test-2");
     });
 
     it("returns error on DB insert failure", async () => {
