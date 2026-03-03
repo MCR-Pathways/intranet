@@ -903,22 +903,32 @@ describe("Intranet Post Actions", () => {
       });
     });
 
-    it("updates comment successfully", async () => {
-      // Chain: .from("post_comments").update({content}).eq("id").eq("author_id").select("id").single()
+    it("updates comment successfully and clears content_json and mentions", async () => {
+      // Chain: .from("post_comments").update({content, content_json}).eq("id").eq("author_id").select("id").single()
       const editSingle = vi.fn().mockResolvedValue({ data: { id: "comment-1" }, error: null });
       const editSelect = vi.fn().mockReturnValue({ single: editSingle });
       const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
       mockEq.mockReturnValue({ eq: mockEq2 });
       mockUpdate.mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      // Second call: .from("comment_mentions").delete().eq("comment_id", commentId)
+      const mentionDeleteEq = vi.fn().mockResolvedValue({ error: null });
+      const mentionDelete = vi.fn().mockReturnValue({ eq: mentionDeleteEq });
+
+      mockFrom
+        .mockReturnValueOnce({ update: mockUpdate })
+        .mockReturnValueOnce({ delete: mentionDelete });
 
       const result = await editComment("comment-1", "Updated comment");
 
       expect(result).toEqual({ success: true, error: null });
       expect(mockFrom).toHaveBeenCalledWith("post_comments");
-      expect(mockUpdate).toHaveBeenCalledWith({ content: "Updated comment" });
+      expect(mockUpdate).toHaveBeenCalledWith({ content: "Updated comment", content_json: null });
       expect(mockEq).toHaveBeenCalledWith("id", "comment-1");
       expect(mockEq2).toHaveBeenCalledWith("author_id", "user-1");
+      expect(mockFrom).toHaveBeenCalledWith("comment_mentions");
+      expect(mentionDelete).toHaveBeenCalled();
+      expect(mentionDeleteEq).toHaveBeenCalledWith("comment_id", "comment-1");
       expect(revalidatePath).toHaveBeenCalledWith("/intranet");
     });
 
@@ -928,11 +938,17 @@ describe("Intranet Post Actions", () => {
       const mockEq2 = vi.fn().mockReturnValue({ select: editSelect });
       mockEq.mockReturnValue({ eq: mockEq2 });
       mockUpdate.mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ update: mockUpdate });
+
+      const mentionDeleteEq = vi.fn().mockResolvedValue({ error: null });
+      const mentionDelete = vi.fn().mockReturnValue({ eq: mentionDeleteEq });
+
+      mockFrom
+        .mockReturnValueOnce({ update: mockUpdate })
+        .mockReturnValueOnce({ delete: mentionDelete });
 
       await editComment("comment-1", "  Trimmed content  ");
 
-      expect(mockUpdate).toHaveBeenCalledWith({ content: "Trimmed content" });
+      expect(mockUpdate).toHaveBeenCalledWith({ content: "Trimmed content", content_json: null });
     });
 
     it("returns error when non-author attempts to edit", async () => {
