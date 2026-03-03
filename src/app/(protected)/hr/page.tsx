@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   UserMinus,
   Network,
+  Briefcase,
 } from "lucide-react";
 
 // =============================================
@@ -136,6 +137,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     overdueResult,
     pendingRTWResult,
     activeLeaversResult,
+    pendingFWRResult,
   ] = await Promise.all([
     supabase
       .from("leave_requests")
@@ -169,6 +171,10 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
       .from("staff_leaving_forms")
       .select("id", { count: "exact", head: true })
       .in("status", ["draft", "submitted", "in_progress"]),
+    supabase
+      .from("flexible_working_requests")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["submitted", "under_review"]),
   ]);
 
   return {
@@ -179,6 +185,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     keyDatesOverdue: overdueResult.count ?? 0,
     pendingRTW: pendingRTWResult.count ?? 0,
     activeLeavers: activeLeaversResult.count ?? 0,
+    pendingFWR: pendingFWRResult.count ?? 0,
   };
 }
 
@@ -263,6 +270,15 @@ export default async function HRPage() {
             iconColour: "text-orange-600",
             valueColour: "text-orange-700",
           },
+          stats.pendingFWR > 0 && {
+            title: "Flexible Working Requests",
+            value: stats.pendingFWR,
+            subtitle: "awaiting decision",
+            href: "/hr/flexible-working",
+            icon: Briefcase,
+            iconColour: "text-teal-600",
+            valueColour: "text-teal-700",
+          },
         ];
         const actionCards = allCards.filter((c): c is StatCardProps => c !== false);
 
@@ -318,6 +334,12 @@ export default async function HRPage() {
             description="View company assets assigned to you"
             href="/hr/assets"
             icon={Package}
+          />
+          <QuickActionCard
+            title="Flexible Working"
+            description="Request a change to your working pattern"
+            href="/hr/flexible-working"
+            icon={Briefcase}
           />
         </div>
       </section>
