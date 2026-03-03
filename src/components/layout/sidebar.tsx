@@ -53,6 +53,7 @@ function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
         { name: "Calendar", href: "/hr/calendar" },
         { name: "My Team", href: "/hr/team" },
         { name: "Assets", href: "/hr/assets" },
+        { name: "Flexible Working", href: "/hr/flexible-working" },
       ],
     },
     {

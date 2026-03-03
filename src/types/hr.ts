@@ -499,6 +499,63 @@ export interface SurveyResponse {
 }
 
 // =============================================
+// FLEXIBLE WORKING REQUEST TYPES
+// =============================================
+
+export interface FlexibleWorkingRequest {
+  id: string;
+  profile_id: string;
+  manager_id: string | null;
+  request_type: string;
+  current_working_pattern: string;
+  requested_working_pattern: string;
+  proposed_start_date: string;
+  reason: string | null;
+  status: string;
+  response_deadline: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_notes: string | null;
+  rejection_grounds: string[] | null;
+  rejection_explanation: string | null;
+  trial_end_date: string | null;
+  trial_outcome: string | null;
+  trial_outcome_at: string | null;
+  trial_outcome_by: string | null;
+  previous_work_pattern: string | null;
+  consultation_date: string | null;
+  consultation_format: string | null;
+  consultation_attendees: string | null;
+  consultation_summary: string | null;
+  consultation_alternatives: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlexibleWorkingRequestWithEmployee extends FlexibleWorkingRequest {
+  employee_name: string;
+  employee_avatar: string | null;
+  employee_job_title: string | null;
+  employee_department: string | null;
+  manager_name: string | null;
+}
+
+export interface FWRAppeal {
+  id: string;
+  request_id: string;
+  appeal_reason: string;
+  appealed_at: string;
+  meeting_date: string | null;
+  meeting_notes: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// =============================================
 // HR NOTIFICATION TYPES
 // =============================================
 
@@ -516,4 +573,11 @@ export type HRNotificationType =
   | "return_to_work_due"
   | "rtw_confirmation_required"
   | "asset_warranty_expiry"
-  | "team_clash_warning";
+  | "team_clash_warning"
+  | "fwr_submitted"
+  | "fwr_approved"
+  | "fwr_rejected"
+  | "fwr_trial_reminder"
+  | "fwr_appeal_submitted"
+  | "fwr_appeal_decided"
+  | "fwr_deadline_approaching";

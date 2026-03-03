@@ -406,6 +406,7 @@ export const EMPLOYMENT_EVENT_CONFIG = {
   manager_change: { label: "Manager Change", colour: "text-slate-600" },
   region_change: { label: "Region Change", colour: "text-pink-600" },
   left: { label: "Left Organisation", colour: "text-red-600" },
+  work_pattern_change: { label: "Work Pattern Change", colour: "text-emerald-600" },
 } as const;
 
 export type EmploymentEventType = keyof typeof EMPLOYMENT_EVENT_CONFIG;
@@ -776,6 +777,92 @@ export const STAFF_LEAVING_FORM_SELECT =
 /** Select string for staff_leaving_forms joined with the employee's profile. */
 export const STAFF_LEAVING_FORM_WITH_EMPLOYEE_SELECT =
   `${STAFF_LEAVING_FORM_SELECT}, profiles!staff_leaving_forms_profile_id_fkey(full_name, avatar_url, job_title, department)`;
+
+// =============================================
+// FLEXIBLE WORKING REQUEST CONFIG
+// =============================================
+
+/** Request types for flexible working applications. */
+export const FWR_REQUEST_TYPE_CONFIG = {
+  flexible_hours: { label: "Flexible Start/Finish Times" },
+  compressed_hours: { label: "Compressed Hours (e.g. 4-Day Week)" },
+  reduced_hours: { label: "Reduced Hours / Part-Time" },
+  job_sharing: { label: "Job Sharing" },
+  remote_hybrid: { label: "Remote / Hybrid Working" },
+  annualised_hours: { label: "Annualised Hours" },
+  staggered_hours: { label: "Staggered Hours" },
+  term_time: { label: "Term-Time Working" },
+  other: { label: "Other" },
+} as const;
+
+export type FWRRequestType = keyof typeof FWR_REQUEST_TYPE_CONFIG;
+
+/** Status config with display colours for flexible working requests. */
+export const FWR_STATUS_CONFIG = {
+  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", dotColour: "bg-blue-500" },
+  under_review: { label: "Under Review", colour: "text-amber-700", bgColour: "bg-amber-50", dotColour: "bg-amber-500" },
+  approved: { label: "Approved", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
+  approved_trial: { label: "Trial Period", colour: "text-teal-700", bgColour: "bg-teal-50", dotColour: "bg-teal-500" },
+  rejected: { label: "Rejected", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
+  withdrawn: { label: "Withdrawn", colour: "text-gray-700", bgColour: "bg-gray-50", dotColour: "bg-gray-500" },
+  appealed: { label: "Appealed", colour: "text-purple-700", bgColour: "bg-purple-50", dotColour: "bg-purple-500" },
+  appeal_upheld: { label: "Appeal Upheld", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
+  appeal_overturned: { label: "Appeal Overturned", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
+} as const;
+
+export type FWRStatus = keyof typeof FWR_STATUS_CONFIG;
+
+/** The 8 statutory grounds for refusal (s.80G(1ZA) Employment Rights Act 1996). */
+export const FWR_REJECTION_GROUNDS = {
+  additional_costs: "Burden of additional costs",
+  customer_demand: "Detrimental effect on ability to meet customer demand",
+  cannot_reorganise: "Inability to reorganise work among existing staff",
+  cannot_recruit: "Inability to recruit additional staff",
+  quality_impact: "Detrimental impact on quality",
+  performance_impact: "Detrimental impact on performance",
+  insufficient_work: "Insufficiency of work during proposed periods",
+  structural_changes: "Planned structural changes",
+} as const;
+
+export type FWRRejectionGround = keyof typeof FWR_REJECTION_GROUNDS;
+
+/** Trial period outcome options. */
+export const FWR_TRIAL_OUTCOME_CONFIG = {
+  confirmed: { label: "Confirmed Permanent" },
+  extended: { label: "Trial Extended" },
+  reverted: { label: "Reverted to Original Pattern" },
+} as const;
+
+export type FWRTrialOutcome = keyof typeof FWR_TRIAL_OUTCOME_CONFIG;
+
+/** Consultation meeting format options. */
+export const FWR_CONSULTATION_FORMAT_CONFIG = {
+  in_person: { label: "In Person" },
+  video: { label: "Video Call" },
+  phone: { label: "Phone Call" },
+} as const;
+
+export type FWRConsultationFormat = keyof typeof FWR_CONSULTATION_FORMAT_CONFIG;
+
+// =============================================
+// FLEXIBLE WORKING REQUEST QUERY HELPERS
+// =============================================
+
+/** Explicit column list for flexible_working_requests queries. */
+export const FLEXIBLE_WORKING_REQUEST_SELECT =
+  "id, profile_id, manager_id, request_type, current_working_pattern, requested_working_pattern, proposed_start_date, reason, status, response_deadline, decided_by, decided_at, decision_notes, rejection_grounds, rejection_explanation, trial_end_date, trial_outcome, trial_outcome_at, trial_outcome_by, previous_work_pattern, consultation_date, consultation_format, consultation_attendees, consultation_summary, consultation_alternatives, created_at, updated_at";
+
+/** Select string for flexible_working_requests joined with the employee's profile. */
+export const FLEXIBLE_WORKING_REQUEST_WITH_EMPLOYEE_SELECT =
+  `${FLEXIBLE_WORKING_REQUEST_SELECT}, profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department)`;
+
+/** Select string for flexible_working_requests joined with employee + manager profiles. */
+export const FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT =
+  `${FLEXIBLE_WORKING_REQUEST_SELECT}, profiles!flexible_working_requests_profile_id_fkey(full_name, avatar_url, job_title, department), manager:profiles!flexible_working_requests_manager_id_fkey(full_name)`;
+
+/** Explicit column list for fwr_appeals queries. */
+export const FWR_APPEAL_SELECT =
+  "id, request_id, appeal_reason, appealed_at, meeting_date, meeting_notes, outcome, outcome_notes, decided_by, decided_at, created_at, updated_at";
 
 /** Map raw Supabase leave request + profile join data to LeaveRequestWithEmployee. */
 export function mapToLeaveRequestWithEmployee(
