@@ -149,10 +149,9 @@ describe("ImageLightbox", () => {
       />
     );
 
-    // Click the next button (rightmost nav button)
+    // Click the next button (third button: close, prev, next)
     const buttons = screen.getAllByRole("button");
-    const nextButton = buttons[buttons.length - 1]; // Last button before counter
-    await user.click(nextButton);
+    await user.click(buttons[2]);
 
     expect(screen.getByText("2 / 3")).toBeInTheDocument();
   });

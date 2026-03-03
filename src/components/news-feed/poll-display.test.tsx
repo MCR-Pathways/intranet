@@ -200,12 +200,11 @@ describe("PollDisplay", () => {
     });
     render(<PollDisplay postId="p1" poll={poll} />);
 
-    const buttons = screen.getAllByRole("button");
-    // First option button should be "First"
-    const optionButtons = buttons.filter(
-      (b) => b.textContent === "First" || b.textContent === "Second"
-    );
-    expect(optionButtons[0].textContent).toBe("First");
-    expect(optionButtons[1].textContent).toBe("Second");
+    const firstButton = screen.getByRole("button", { name: "First" });
+    const secondButton = screen.getByRole("button", { name: "Second" });
+
+    // Verify First appears before Second in the DOM
+    const position = firstButton.compareDocumentPosition(secondButton);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

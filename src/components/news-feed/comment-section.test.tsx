@@ -97,8 +97,9 @@ describe("CommentSection", () => {
 
   it("disables send button when input is empty", () => {
     render(<CommentSection {...defaultProps} comments={[]} />);
-    const buttons = screen.getAllByRole("button");
-    const sendButton = buttons[buttons.length - 1]; // Last button is Send
+    // Send button is the one next to the comment input
+    const input = screen.getByPlaceholderText("Write a comment...");
+    const sendButton = input.closest("div")?.querySelector("button");
     expect(sendButton).toBeDisabled();
   });
 
@@ -109,8 +110,7 @@ describe("CommentSection", () => {
     const input = screen.getByPlaceholderText("Write a comment...");
     await user.type(input, "Nice!");
 
-    const buttons = screen.getAllByRole("button");
-    const sendButton = buttons[buttons.length - 1];
+    const sendButton = input.closest("div")?.querySelector("button");
     expect(sendButton).not.toBeDisabled();
   });
 
@@ -187,8 +187,8 @@ describe("CommentSection", () => {
     );
     // No comment items rendered, but input is always visible
     expect(screen.getByPlaceholderText("Write a comment...")).toBeInTheDocument();
-    // No comment text in the DOM
-    expect(container.querySelectorAll("[class*='space-y-3']")).toHaveLength(0);
+    // No comment author names in the DOM (no comments rendered)
+    expect(screen.queryByText("Bob Jones")).not.toBeInTheDocument();
   });
 
   // =============================================
