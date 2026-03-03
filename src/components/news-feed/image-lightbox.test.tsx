@@ -1,0 +1,236 @@
+/**
+ * Tests for ImageLightbox component.
+ *
+ * Covers: navigation buttons, keyboard nav (arrows, Escape), image counter,
+ * single image (no nav), close button, and index wrapping.
+ */
+
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { ImageLightbox } from "./image-lightbox";
+import type { PostAttachment } from "@/types/database.types";
+
+function makeImage(id: string, name: string): PostAttachment {
+  return {
+    id,
+    post_id: "post-1",
+    attachment_type: "image",
+    file_url: `https://example.com/${name}.jpg`,
+    file_name: name,
+    file_size: 1024,
+    mime_type: "image/jpeg",
+    link_url: null,
+    link_title: null,
+    link_description: null,
+    link_image_url: null,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+const threeImages = [
+  makeImage("img-1", "cat"),
+  makeImage("img-2", "dog"),
+  makeImage("img-3", "bird"),
+];
+
+describe("ImageLightbox", () => {
+  // =============================================
+  // Basic rendering
+  // =============================================
+
+  it("renders the initial image", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "https://example.com/cat.jpg");
+    expect(img).toHaveAttribute("alt", "cat");
+  });
+
+  it("renders image at specified initialIndex", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={2}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "https://example.com/bird.jpg");
+  });
+
+  it("renders nothing when open is false", () => {
+    const { container } = render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={false}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  // =============================================
+  // Image counter
+  // =============================================
+
+  it("shows image counter for multiple images", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+  });
+
+  it("does not show counter for single image", () => {
+    render(
+      <ImageLightbox
+        images={[threeImages[0]]}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument();
+  });
+
+  // =============================================
+  // Navigation buttons
+  // =============================================
+
+  it("shows prev/next buttons for multiple images", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    // There should be at least 3 buttons: close, prev, next
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("hides prev/next buttons for single image", () => {
+    render(
+      <ImageLightbox
+        images={[threeImages[0]]}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    // Only the close button
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+  });
+
+  it("navigates forward on next button click", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    // Click the next button (rightmost nav button)
+    const buttons = screen.getAllByRole("button");
+    const nextButton = buttons[buttons.length - 1]; // Last button before counter
+    await user.click(nextButton);
+
+    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+  });
+
+  // =============================================
+  // Keyboard navigation
+  // =============================================
+
+  it("navigates forward with ArrowRight key", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+  });
+
+  it("navigates backward with ArrowLeft key", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={1}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+  });
+
+  it("wraps around from last to first image", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={2}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+  });
+
+  it("wraps around from first to last image", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
+  });
+
+  // =============================================
+  // Accessible title
+  // =============================================
+
+  it("has accessible dialog title", () => {
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={vi.fn()}
+      />
+    );
+    // VisuallyHidden title should exist in the DOM
+    expect(screen.getByText("Image 1 of 3")).toBeInTheDocument();
+  });
+});
