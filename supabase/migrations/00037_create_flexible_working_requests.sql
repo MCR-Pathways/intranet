@@ -163,14 +163,37 @@ CREATE TRIGGER check_fwr_limit_trigger
   FOR EACH ROW EXECUTE FUNCTION public.check_fwr_limit();
 
 -- ===========================================
--- 5. ENABLE RLS
+-- 5. IMMUTABLE FIELDS TRIGGER
+-- ===========================================
+-- Prevent profile_id from being changed after creation (defence-in-depth)
+
+CREATE OR REPLACE FUNCTION public.protect_fwr_immutable_fields()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.profile_id IS DISTINCT FROM OLD.profile_id THEN
+    RAISE EXCEPTION 'Cannot change the owner of a flexible working request';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS protect_fwr_immutable_trigger ON public.flexible_working_requests;
+CREATE TRIGGER protect_fwr_immutable_trigger
+  BEFORE UPDATE ON public.flexible_working_requests
+  FOR EACH ROW EXECUTE FUNCTION public.protect_fwr_immutable_fields();
+
+-- ===========================================
+-- 6. ENABLE RLS
 -- ===========================================
 
 ALTER TABLE public.flexible_working_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fwr_appeals ENABLE ROW LEVEL SECURITY;
 
 -- ===========================================
--- 6. RLS POLICIES — flexible_working_requests
+-- 7. RLS POLICIES — flexible_working_requests
 -- ===========================================
 -- Three-tier: self, manager, HR admin (same pattern as leave_requests)
 
@@ -206,10 +229,12 @@ CREATE POLICY "Users can update own fwr"
   WITH CHECK (profile_id = auth.uid() AND status = 'withdrawn');
 
 -- UPDATE: Managers can update requests they're assigned to (approve/reject/consult)
+-- WITH CHECK ensures managers cannot reassign ownership or manager
 DROP POLICY IF EXISTS "Managers can decide reports fwr" ON public.flexible_working_requests;
 CREATE POLICY "Managers can decide reports fwr"
   ON public.flexible_working_requests FOR UPDATE TO authenticated
-  USING (manager_id = auth.uid());
+  USING (manager_id = auth.uid())
+  WITH CHECK (manager_id = auth.uid());
 
 -- ALL: HR admins have full access
 DROP POLICY IF EXISTS "HR admins can manage all fwr" ON public.flexible_working_requests;
@@ -219,7 +244,7 @@ CREATE POLICY "HR admins can manage all fwr"
   WITH CHECK (public.is_hr_admin());
 
 -- ===========================================
--- 7. RLS POLICIES — fwr_appeals
+-- 8. RLS POLICIES — fwr_appeals
 -- ===========================================
 
 -- SELECT: Request owner can view appeals on their own requests

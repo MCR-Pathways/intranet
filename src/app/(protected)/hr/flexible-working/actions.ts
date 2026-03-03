@@ -14,6 +14,7 @@ import type {
   FWRTrialOutcome,
 } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // CONSTANTS
@@ -77,7 +78,7 @@ async function verifyFWRAuthority(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
   currentUserId: string,
   requestProfileId: string,
-  requestManagerId: string | null,
+  _requestManagerId: string | null,
 ): Promise<{ authorised: boolean; isHRAdmin: boolean; error?: string }> {
   const { data: currentProfile } = await supabase
     .from("profiles")
@@ -322,7 +323,7 @@ export async function createFlexibleWorkingRequest(data: {
     if (insertError.code === "23505") {
       return {
         success: false,
-        error: "You already have an active flexible working request. Please wait for it to be resolved before submitting a new one.",
+        error: "You already have an active flexible working request. You can withdraw the existing request from its detail page, or contact HR if you believe this is incorrect.",
       };
     }
     if (insertError.message?.includes("2 flexible working requests")) {
@@ -528,6 +529,7 @@ export async function recordConsultation(
     .single();
 
   if (updateError) {
+    logger.error("Failed to record consultation", { requestId, error: updateError.message });
     return { success: false, error: `Failed to record consultation: ${updateError.message}` };
   }
 
@@ -597,6 +599,7 @@ export async function approveFlexibleWorkingRequest(
     .single();
 
   if (updateError) {
+    logger.error("Failed to approve flexible working request", { requestId, error: updateError.message });
     return { success: false, error: "Could not approve request. It may have already been actioned." };
   }
 
@@ -614,6 +617,9 @@ export async function approveFlexibleWorkingRequest(
         .single();
 
       if (profileError) {
+        logger.error("Failed to update work pattern during FWR approval, rolling back", {
+          requestId, profileId, error: profileError.message,
+        });
         // Rollback step 1
         await supabase
           .from("flexible_working_requests")
@@ -636,23 +642,21 @@ export async function approveFlexibleWorkingRequest(
     }
   }
 
-  // Notify employee (non-blocking)
-  const { data: employee } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", profileId)
-    .single();
-
-  await supabase.from("notifications").insert({
-    user_id: profileId,
-    type: "fwr_approved",
-    title: "Flexible Working Request Approved",
-    message: isTrial
-      ? `Your flexible working request has been approved for a trial period until ${formatHRDate(data.trial_end_date!)}.`
-      : "Your flexible working request has been approved.",
-    link: `/hr/flexible-working/${requestId}`,
-    metadata: { request_id: requestId },
-  });
+  // Notify employee (non-blocking — failure should not break the approval)
+  try {
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      type: "fwr_approved",
+      title: "Flexible Working Request Approved",
+      message: isTrial
+        ? `Your flexible working request has been approved for a trial period until ${formatHRDate(data.trial_end_date!)}.`
+        : "Your flexible working request has been approved.",
+      link: `/hr/flexible-working/${requestId}`,
+      metadata: { request_id: requestId },
+    });
+  } catch (notifError) {
+    logger.warn("Failed to send FWR approval notification", { requestId, profileId, error: notifError });
+  }
 
   revalidateFWRPaths(profileId);
   return { success: true, error: null };
@@ -735,20 +739,25 @@ export async function rejectFlexibleWorkingRequest(
     .single();
 
   if (updateError) {
+    logger.error("Failed to reject flexible working request", { requestId, error: updateError.message });
     return { success: false, error: "Could not reject request. It may have already been actioned." };
   }
 
   const profileId = request.profile_id as string;
 
-  // Notify employee (non-blocking)
-  await supabase.from("notifications").insert({
-    user_id: profileId,
-    type: "fwr_rejected",
-    title: "Flexible Working Request Rejected",
-    message: "Your flexible working request has been rejected. You have the right to appeal this decision.",
-    link: `/hr/flexible-working/${requestId}`,
-    metadata: { request_id: requestId },
-  });
+  // Notify employee (non-blocking — failure should not break the rejection)
+  try {
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      type: "fwr_rejected",
+      title: "Flexible Working Request Rejected",
+      message: "Your flexible working request has been rejected. You have the right to appeal this decision.",
+      link: `/hr/flexible-working/${requestId}`,
+      metadata: { request_id: requestId },
+    });
+  } catch (notifError) {
+    logger.warn("Failed to send FWR rejection notification", { requestId, profileId, error: notifError });
+  }
 
   revalidateFWRPaths(profileId);
   return { success: true, error: null };
@@ -803,9 +812,32 @@ export async function recordTrialOutcome(
   };
 
   if (data.outcome === "confirmed") {
-    // Confirm permanent — change status to approved + update profile
     updatePayload.status = "approved";
+  } else if (data.outcome === "extended") {
+    if (!data.extended_end_date) {
+      return { success: false, error: "Extended end date is required when extending a trial" };
+    }
+    updatePayload.trial_end_date = data.extended_end_date;
+  } else if (data.outcome === "reverted") {
+    updatePayload.status = "approved";
+  }
 
+  // Step 1: Update the request first (safest to roll back from)
+  const { error: updateError } = await supabase
+    .from("flexible_working_requests")
+    .update(updatePayload)
+    .eq("id", requestId)
+    .eq("status", "approved_trial")
+    .select("id")
+    .single();
+
+  if (updateError) {
+    logger.error("Failed to record trial outcome", { requestId, error: updateError.message });
+    return { success: false, error: "Could not record trial outcome." };
+  }
+
+  // Step 2: If confirmed, update the employee's profile work_pattern
+  if (data.outcome === "confirmed") {
     const requestType = request.request_type as string;
     const newWorkPattern = mapRequestTypeToWorkPattern(requestType);
 
@@ -818,6 +850,15 @@ export async function recordTrialOutcome(
         .single();
 
       if (profileError) {
+        logger.error("Failed to update work pattern during trial confirmation, rolling back", {
+          requestId, profileId, error: profileError.message,
+        });
+        // Rollback step 1
+        await supabase
+          .from("flexible_working_requests")
+          .update({ status: "approved_trial", trial_outcome: null, trial_outcome_at: null, trial_outcome_by: null })
+          .eq("id", requestId);
+
         return { success: false, error: "Failed to update employee's work pattern. Please try again." };
       }
 
@@ -832,43 +873,27 @@ export async function recordTrialOutcome(
         recorded_by: user.id,
       });
     }
-  } else if (data.outcome === "extended") {
-    if (!data.extended_end_date) {
-      return { success: false, error: "Extended end date is required when extending a trial" };
-    }
-    updatePayload.trial_end_date = data.extended_end_date;
-  } else if (data.outcome === "reverted") {
-    // Revert to original pattern — no profile update needed (trial never became permanent)
-    updatePayload.status = "approved";
   }
 
-  const { error: updateError } = await supabase
-    .from("flexible_working_requests")
-    .update(updatePayload)
-    .eq("id", requestId)
-    .eq("status", "approved_trial")
-    .select("id")
-    .single();
+  // Notify employee (non-blocking — failure should not break the trial outcome)
+  try {
+    const outcomeLabels: Record<string, string> = {
+      confirmed: "Your flexible working arrangement has been confirmed as permanent.",
+      extended: `Your flexible working trial period has been extended until ${formatHRDate(data.extended_end_date!)}.`,
+      reverted: "Your flexible working trial has ended and your working pattern will revert to its previous arrangement.",
+    };
 
-  if (updateError) {
-    return { success: false, error: "Could not record trial outcome." };
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      type: "fwr_approved",
+      title: "Flexible Working Trial Outcome",
+      message: outcomeLabels[data.outcome] ?? "Your trial outcome has been recorded.",
+      link: `/hr/flexible-working/${requestId}`,
+      metadata: { request_id: requestId },
+    });
+  } catch (notifError) {
+    logger.warn("Failed to send trial outcome notification", { requestId, profileId, error: notifError });
   }
-
-  // Notify employee (non-blocking)
-  const outcomeLabels: Record<string, string> = {
-    confirmed: "Your flexible working arrangement has been confirmed as permanent.",
-    extended: `Your flexible working trial period has been extended until ${formatHRDate(data.extended_end_date!)}.`,
-    reverted: "Your flexible working trial has ended and your working pattern will revert to its previous arrangement.",
-  };
-
-  await supabase.from("notifications").insert({
-    user_id: profileId,
-    type: "fwr_approved",
-    title: "Flexible Working Trial Outcome",
-    message: outcomeLabels[data.outcome] ?? "Your trial outcome has been recorded.",
-    link: `/hr/flexible-working/${requestId}`,
-    metadata: { request_id: requestId },
-  });
 
   revalidateFWRPaths(profileId);
   return { success: true, error: null };
@@ -936,34 +961,38 @@ export async function submitFWRAppeal(
     return { success: false, error: "Could not update request status." };
   }
 
-  // Notify HR admins (non-blocking)
-  const { data: employee } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
+  // Notify HR admins (non-blocking — failure should not break the appeal)
+  try {
+    const { data: employee } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
 
-  const employeeName = (employee?.full_name as string) ?? "Unknown";
+    const employeeName = (employee?.full_name as string) ?? "Unknown";
 
-  const { data: hrAdmins } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("is_hr_admin", true)
-    .eq("status", "active");
+    const { data: hrAdmins } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("is_hr_admin", true)
+      .eq("status", "active");
 
-  const notifRows = (hrAdmins ?? [])
-    .filter((admin) => (admin.id as string) !== user.id)
-    .map((admin) => ({
-      user_id: admin.id as string,
-      type: "fwr_appeal_submitted",
-      title: "Flexible Working Appeal",
-      message: `${employeeName} has appealed their rejected flexible working request.`,
-      link: `/hr/flexible-working/${requestId}`,
-      metadata: { request_id: requestId, profile_id: user.id },
-    }));
+    const notifRows = (hrAdmins ?? [])
+      .filter((admin) => (admin.id as string) !== user.id)
+      .map((admin) => ({
+        user_id: admin.id as string,
+        type: "fwr_appeal_submitted",
+        title: "Flexible Working Appeal",
+        message: `${employeeName} has appealed their rejected flexible working request.`,
+        link: `/hr/flexible-working/${requestId}`,
+        metadata: { request_id: requestId, profile_id: user.id },
+      }));
 
-  if (notifRows.length > 0) {
-    await supabase.from("notifications").insert(notifRows);
+    if (notifRows.length > 0) {
+      await supabase.from("notifications").insert(notifRows);
+    }
+  } catch (notifError) {
+    logger.warn("Failed to send FWR appeal notifications", { requestId, error: notifError });
   }
 
   revalidateFWRPaths(user.id);
@@ -1034,6 +1063,7 @@ export async function decideFWRAppeal(
     .single();
 
   if (appealError) {
+    logger.error("Failed to record appeal decision", { requestId, error: appealError.message });
     return { success: false, error: `Failed to record appeal decision: ${appealError.message}` };
   }
 
@@ -1049,6 +1079,7 @@ export async function decideFWRAppeal(
     .single();
 
   if (updateError) {
+    logger.error("Failed to update request status during appeal decision", { requestId, error: updateError.message });
     return { success: false, error: "Could not update request status." };
   }
 
@@ -1058,10 +1089,29 @@ export async function decideFWRAppeal(
     const newWorkPattern = mapRequestTypeToWorkPattern(requestType);
 
     if (newWorkPattern) {
-      await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ work_pattern: newWorkPattern })
-        .eq("id", profileId);
+        .eq("id", profileId)
+        .select("id")
+        .single();
+
+      if (profileError) {
+        logger.error("Failed to update work pattern during appeal overturn, rolling back", {
+          requestId, profileId, error: profileError.message,
+        });
+        // Rollback steps 1 & 2
+        await supabase
+          .from("flexible_working_requests")
+          .update({ status: "appealed" })
+          .eq("id", requestId);
+        await supabase
+          .from("fwr_appeals")
+          .update({ outcome: null, outcome_notes: null, decided_by: null, decided_at: null })
+          .eq("id", appeal.id as string);
+
+        return { success: false, error: "Failed to update employee's work pattern. Please try again." };
+      }
 
       await supabase.from("employment_history").insert({
         profile_id: profileId,
@@ -1075,19 +1125,23 @@ export async function decideFWRAppeal(
     }
   }
 
-  // Notify employee (non-blocking)
-  const outcomeMessage = data.outcome === "upheld"
-    ? "Your flexible working appeal has been reviewed. The original decision has been upheld."
-    : "Your flexible working appeal has been successful. Your request has been approved.";
+  // Notify employee (non-blocking — failure should not break the appeal decision)
+  try {
+    const outcomeMessage = data.outcome === "upheld"
+      ? "Your flexible working appeal has been reviewed. The original decision has been upheld."
+      : "Your flexible working appeal has been successful. Your request has been approved.";
 
-  await supabase.from("notifications").insert({
-    user_id: profileId,
-    type: "fwr_appeal_decided",
-    title: "Flexible Working Appeal Decision",
-    message: outcomeMessage,
-    link: `/hr/flexible-working/${requestId}`,
-    metadata: { request_id: requestId },
-  });
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      type: "fwr_appeal_decided",
+      title: "Flexible Working Appeal Decision",
+      message: outcomeMessage,
+      link: `/hr/flexible-working/${requestId}`,
+      metadata: { request_id: requestId },
+    });
+  } catch (notifError) {
+    logger.warn("Failed to send appeal decision notification", { requestId, profileId, error: notifError });
+  }
 
   revalidateFWRPaths(profileId);
   return { success: true, error: null };
