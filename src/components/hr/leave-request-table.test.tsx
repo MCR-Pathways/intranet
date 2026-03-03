@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LeaveRequestTable } from "./leave-request-table";
 import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
@@ -211,10 +211,11 @@ describe("LeaveRequestTable", () => {
         requests={[makeRequest({ profile_id: "user-2", status: "approved" })]}
       />
     );
-    // The Cancel button in the actions column (not dialog cancel)
-    const buttons = screen.getAllByRole("button");
-    const cancelButton = buttons.find((b) => b.textContent === "Cancel");
-    expect(cancelButton).toBeDefined();
+    // Scope to the table row to avoid matching dialog Cancel buttons
+    const row = screen.getByText("Approved").closest("tr");
+    expect(row).not.toBeNull();
+    const cancelButton = within(row!).getByRole("button", { name: "Cancel" });
+    expect(cancelButton).toBeInTheDocument();
   });
 
   it("hides Cancel for non-HR on approved requests", () => {

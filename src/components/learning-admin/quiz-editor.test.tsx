@@ -192,11 +192,8 @@ describe("QuizEditor", () => {
     await user.click(screen.getByText("Add Question"));
     expect(screen.getByPlaceholderText("Enter your question...")).toBeInTheDocument();
 
-    // Click Cancel button in the add form
-    const cancelButtons = screen.getAllByRole("button").filter(
-      (b) => b.textContent === "Cancel"
-    );
-    await user.click(cancelButtons[0]);
+    // Click Cancel — only one Cancel button visible when add form is open
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByPlaceholderText("Enter your question...")).not.toBeInTheDocument();
   });
