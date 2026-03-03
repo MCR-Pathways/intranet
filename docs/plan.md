@@ -181,7 +181,7 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [x] Middleware JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, middleware reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
 - [x] CSP tightened to enforcing mode (Mar 2026): switched from Report-Only to enforcing. `unsafe-eval` omitted entirely. Static string CSP (IIFEs crash Vercel Fluid Compute). `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
-- [ ] Expand test coverage (~10% currently — 21 test files, 588 tests / ~130 source files). Phase 0+1 complete (PR #52): test infrastructure + pure function tests. Phase 2 complete: HR absence + leave action tests (112 tests). See [docs/testing-plan.md](./testing-plan.md) for full roadmap.
+- [ ] Expand test coverage (~12% currently — 26 test files, 594 tests / ~236 source files). Phase 0+1 complete (PR #52), Phase 2 complete (PR #53, 112 tests), Phase 3 complete (PR #56, 118 tests). Next: Phase 4 (intranet resources + notifications). See [docs/testing-plan.md](./testing-plan.md).
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
 - [ ] Mobile responsiveness (currently desktop/laptop only)
 

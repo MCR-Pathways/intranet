@@ -57,9 +57,8 @@ Every function is pure/deterministic with zero DB calls:
 
 ---
 
-## Phase 2: HR Absence & Leave Actions (branch: `test/hr-absence-leave-actions`)
-**Tests: ~110 | Effort: 2 sessions | Priority: CRITICAL**
-**Requires Phase 0 for storage mocks**
+## Phase 2: HR Absence & Leave Actions (branch: `test/phase-2-hr-absence-leave-actions`) DONE
+**Tests: 112 actual | Effort: 1 session | Priority: CRITICAL | Status: COMPLETE (PR #53)**
 
 ### `src/app/(protected)/hr/absence/actions.test.ts` (~65 tests)
 Largest untested action file (966 lines, 12 functions):
@@ -81,9 +80,8 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
-## Phase 3: Remaining HR Actions (branch: `test/hr-remaining-actions`)
-**Tests: ~90 | Effort: 2 sessions | Priority: HIGH**
-**Requires Phase 0**
+## Phase 3: Remaining HR Actions (branch: `test/phase-3-hr-remaining-actions`) DONE
+**Tests: 117 actual | Effort: 1 session | Priority: HIGH | Status: COMPLETE (PR #56)**
 
 ### `src/app/(protected)/hr/leaving/actions.test.ts` (~25 tests)
 - `verifyLeavingAuthority` (~5) — line manager, HR admin, neither
@@ -175,8 +173,8 @@ Largest untested action file (966 lines, 12 functions):
 | Phase | Branch | Tests | Sessions | Priority | Status |
 |-------|--------|-------|----------|----------|--------|
 | 0+1 | `test/phase-0-1-infrastructure-and-pure-functions` | 143 | 1 | Pre-req + HIGH | DONE (PR #52) |
-| 2 | `test/hr-absence-leave-actions` | ~110 | 2 | CRITICAL | |
-| 3 | `test/hr-remaining-actions` | ~90 | 2 | HIGH | |
+| 2 | `test/phase-2-hr-absence-leave-actions` | 112 | 1 | CRITICAL | DONE (PR #53) |
+| 3 | `test/phase-3-hr-remaining-actions` | 117 | 1 | HIGH | DONE (PR #56) |
 | 4 | `test/intranet-resources-notifications` | ~55 | 1 | MEDIUM | |
 | 5 | `test/news-feed-components` | ~60 | 2 | MEDIUM | |
 | 6 | `test/hr-learning-components` | ~50 | 2 | LOWER | |
@@ -185,7 +183,7 @@ Largest untested action file (966 lines, 12 functions):
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
-**Recommended order**: ~~0 + 1 (parallel)~~ DONE → 2 → 3 → 4 → 5 → 6 → 7
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → 4 → 5 → 6 → 7
 
 ---
 
