@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ReturnToWorkForm } from "./return-to-work-form";
 import type { AbsenceRecord, ReturnToWorkForm as RTWFormType } from "@/types/hr";
 
@@ -224,5 +225,93 @@ describe("ReturnToWorkForm", () => {
       />
     );
     expect(screen.getByText(/Confirmed by employee/)).toBeInTheDocument();
+  });
+
+  // =============================================
+  // Action button interactions
+  // =============================================
+
+  it("calls saveRTWForm when Save Draft is clicked", async () => {
+    const user = userEvent.setup();
+    render(<ReturnToWorkForm {...defaultProps} />);
+
+    await user.click(screen.getByText("Save Draft"));
+
+    expect(mockSaveRTWForm).toHaveBeenCalledWith(
+      "form-1",
+      expect.objectContaining({
+        is_work_related: false,
+        is_pregnancy_related: false,
+      })
+    );
+  });
+
+  it("shows submit confirmation dialog and calls submitRTWForm", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReturnToWorkForm
+        {...defaultProps}
+        existingForm={makeForm({ reason_for_absence: "Had the flu" })}
+      />
+    );
+
+    await user.click(screen.getByText("Submit for Employee Confirmation"));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Submit RTW Form?")).toBeInTheDocument();
+    expect(screen.getByText(/will notify Alice Smith/)).toBeInTheDocument();
+
+    // Confirm submission
+    const submitBtn = await screen.findByRole("button", { name: "Submit" });
+    await user.click(submitBtn);
+
+    expect(mockSaveRTWForm).toHaveBeenCalled();
+    expect(mockSubmitRTWForm).toHaveBeenCalledWith("form-1");
+  });
+
+  it("calls confirmRTWForm when employee confirms", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReturnToWorkForm
+        {...defaultProps}
+        existingForm={makeForm({ status: "submitted" })}
+        currentUserId="employee-1"
+        isManager={false}
+      />
+    );
+
+    await user.click(screen.getByText("I Confirm This Is Accurate"));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Confirm Return-to-Work Form")).toBeInTheDocument();
+
+    // Confirm
+    const confirmBtn = await screen.findByRole("button", { name: "Confirm" });
+    await user.click(confirmBtn);
+
+    expect(mockConfirmRTWForm).toHaveBeenCalledWith("form-1", undefined);
+  });
+
+  it("calls unlockRTWForm when HR admin unlocks", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReturnToWorkForm
+        {...defaultProps}
+        existingForm={makeForm({ status: "locked" })}
+        isHRAdmin={true}
+        isManager={false}
+      />
+    );
+
+    await user.click(screen.getByText("Unlock for Corrections"));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Unlock RTW Form?")).toBeInTheDocument();
+
+    // Confirm unlock
+    const unlockBtn = await screen.findByRole("button", { name: "Unlock" });
+    await user.click(unlockBtn);
+
+    expect(mockUnlockRTWForm).toHaveBeenCalledWith("form-1");
   });
 });

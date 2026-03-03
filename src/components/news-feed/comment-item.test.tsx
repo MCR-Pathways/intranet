@@ -34,15 +34,21 @@ vi.mock("@/lib/url", () => ({
   linkifyText: vi.fn((text: string) => [text]),
 }));
 
-// Mock reaction constants
+// Mock reaction constants (all 5 reactions)
 vi.mock("./reaction-constants", () => ({
   REACTIONS: [
     { type: "like", emoji: "👍", label: "Like" },
     { type: "love", emoji: "❤️", label: "Love" },
+    { type: "celebrate", emoji: "🎉", label: "Celebrate" },
+    { type: "insightful", emoji: "💡", label: "Insightful" },
+    { type: "curious", emoji: "🤔", label: "Curious" },
   ],
   REACTION_COLORS: {
-    like: "text-blue-600",
-    love: "text-red-600",
+    like: "text-blue-500",
+    love: "text-red-500",
+    celebrate: "text-yellow-500",
+    insightful: "text-yellow-500",
+    curious: "text-yellow-500",
   },
 }));
 
@@ -314,5 +320,134 @@ describe("CommentItem", () => {
     expect(
       await screen.findByText(/All replies will also be removed/)
     ).toBeInTheDocument();
+  });
+
+  // =============================================
+  // Interaction: delete confirmation
+  // =============================================
+
+  it("calls deleteComment when delete is confirmed", async () => {
+    const user = userEvent.setup();
+    render(
+      <CommentItem
+        {...defaultProps}
+        currentUserId="user-1"
+        comment={makeComment({ author_id: "user-1" })}
+      />
+    );
+
+    // Open dropdown → click Delete
+    const moreButton = screen.getAllByRole("button").find(
+      (b) => b.querySelector("svg.lucide-ellipsis")
+    );
+    await user.click(moreButton!);
+    await user.click(await screen.findByText("Delete"));
+
+    // Confirm in the dialog
+    const confirmDeleteButtons = await screen.findAllByRole("button", { name: "Delete" });
+    // The dialog "Delete" button (not the dropdown item)
+    await user.click(confirmDeleteButtons[confirmDeleteButtons.length - 1]);
+
+    expect(mockDeleteComment).toHaveBeenCalledWith("comment-1");
+  });
+
+  // =============================================
+  // Interaction: edit mode
+  // =============================================
+
+  it("enters edit mode and saves edited comment", async () => {
+    const user = userEvent.setup();
+    render(
+      <CommentItem
+        {...defaultProps}
+        currentUserId="user-2"
+        comment={makeComment({ author_id: "user-2" })}
+      />
+    );
+
+    // Open dropdown → click Edit
+    const moreButton = screen.getAllByRole("button").find(
+      (b) => b.querySelector("svg.lucide-ellipsis")
+    );
+    await user.click(moreButton!);
+    await user.click(await screen.findByText("Edit"));
+
+    // Textarea should appear with existing content
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveValue("Great post!");
+
+    // Clear and type new content
+    await user.clear(textarea);
+    await user.type(textarea, "Updated comment!");
+
+    // Click save (checkmark button)
+    const saveButton = screen.getAllByRole("button").find(
+      (b) => b.querySelector("svg.lucide-check")
+    );
+    await user.click(saveButton!);
+
+    expect(mockEditComment).toHaveBeenCalledWith(
+      "comment-1",
+      "Updated comment!"
+    );
+  });
+
+  it("cancels edit mode without calling editComment", async () => {
+    const user = userEvent.setup();
+    render(
+      <CommentItem
+        {...defaultProps}
+        currentUserId="user-2"
+        comment={makeComment({ author_id: "user-2" })}
+      />
+    );
+
+    // Open dropdown → click Edit
+    const moreButton = screen.getAllByRole("button").find(
+      (b) => b.querySelector("svg.lucide-ellipsis")
+    );
+    await user.click(moreButton!);
+    await user.click(await screen.findByText("Edit"));
+
+    // Click cancel (X button)
+    const cancelButton = screen.getAllByRole("button").find(
+      (b) => b.querySelector("svg.lucide-x")
+    );
+    await user.click(cancelButton!);
+
+    // Textarea should be gone, original content visible
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Great post!")).toBeInTheDocument();
+    expect(mockEditComment).not.toHaveBeenCalled();
+  });
+
+  // =============================================
+  // Interaction: reactions
+  // =============================================
+
+  it("calls onOptimisticReaction when Like is clicked", async () => {
+    const user = userEvent.setup();
+    const onOptimisticReaction = vi.fn();
+    render(
+      <CommentItem
+        currentUserId="user-1"
+        isHRAdmin={false}
+        onOptimisticReaction={onOptimisticReaction}
+        comment={makeComment()}
+      />
+    );
+
+    // Click the Like button text
+    await user.click(screen.getByText("Like"));
+
+    expect(onOptimisticReaction).toHaveBeenCalledWith(
+      "comment-1",
+      "like",
+      null // previous reaction
+    );
+    expect(mockToggleCommentReaction).toHaveBeenCalledWith(
+      "comment-1",
+      "like"
+    );
   });
 });

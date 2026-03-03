@@ -12,11 +12,16 @@ import { LeaveRequestTable } from "./leave-request-table";
 import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 
 // Mock server actions
+const mockWithdrawLeave = vi.fn().mockResolvedValue({ success: true });
+const mockApproveLeave = vi.fn().mockResolvedValue({ success: true });
+const mockRejectLeave = vi.fn().mockResolvedValue({ success: true });
+const mockCancelLeave = vi.fn().mockResolvedValue({ success: true });
+
 vi.mock("@/app/(protected)/hr/leave/actions", () => ({
-  withdrawLeave: vi.fn().mockResolvedValue({ success: true }),
-  approveLeave: vi.fn().mockResolvedValue({ success: true }),
-  rejectLeave: vi.fn().mockResolvedValue({ success: true }),
-  cancelLeave: vi.fn().mockResolvedValue({ success: true }),
+  withdrawLeave: (...args: unknown[]) => mockWithdrawLeave(...args),
+  approveLeave: (...args: unknown[]) => mockApproveLeave(...args),
+  rejectLeave: (...args: unknown[]) => mockRejectLeave(...args),
+  cancelLeave: (...args: unknown[]) => mockCancelLeave(...args),
 }));
 
 function makeRequest(overrides?: Partial<LeaveRequest>): LeaveRequest {
@@ -282,5 +287,123 @@ describe("LeaveRequestTable", () => {
       />
     );
     expect(screen.queryByText(/also on leave/)).not.toBeInTheDocument();
+  });
+
+  // =============================================
+  // Action button interactions
+  // =============================================
+
+  it("calls withdrawLeave when Withdraw is confirmed", async () => {
+    const user = userEvent.setup();
+    render(
+      <LeaveRequestTable
+        currentUserId="user-2"
+        requests={[makeRequest({ id: "lr-1", profile_id: "user-2", status: "pending" })]}
+      />
+    );
+
+    await user.click(screen.getByText("Withdraw"));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Withdraw leave request?")).toBeInTheDocument();
+
+    // Confirm withdrawal
+    const dialogWithdraw = await screen.findByRole("button", { name: "Withdraw" });
+    await user.click(dialogWithdraw);
+
+    expect(mockWithdrawLeave).toHaveBeenCalledWith("lr-1");
+  });
+
+  it("calls approveLeave when Approve is confirmed", async () => {
+    const user = userEvent.setup();
+    render(
+      <LeaveRequestTable
+        currentUserId="user-1"
+        isManager={true}
+        requests={[makeRequest({ id: "lr-1", profile_id: "user-2", status: "pending" })]}
+      />
+    );
+
+    await user.click(screen.getByText("Approve"));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Approve leave request?")).toBeInTheDocument();
+
+    // Confirm approval
+    const dialogApprove = await screen.findByRole("button", { name: "Approve" });
+    await user.click(dialogApprove);
+
+    expect(mockApproveLeave).toHaveBeenCalledWith("lr-1");
+  });
+
+  it("calls rejectLeave with reason when Reject is confirmed", async () => {
+    const user = userEvent.setup();
+    render(
+      <LeaveRequestTable
+        currentUserId="user-1"
+        isManager={true}
+        requests={[makeRequest({ id: "lr-1", profile_id: "user-2", status: "pending" })]}
+      />
+    );
+
+    await user.click(screen.getByText("Reject"));
+
+    // Reject dialog appears with reason textarea
+    expect(await screen.findByText("Reject Leave Request")).toBeInTheDocument();
+    const reasonInput = screen.getByPlaceholderText("Enter rejection reason...");
+    await user.type(reasonInput, "Insufficient notice");
+
+    // Confirm rejection
+    const dialogReject = screen.getAllByRole("button").find(
+      (b) => b.textContent === "Reject" && !b.closest("tr")
+    );
+    await user.click(dialogReject!);
+
+    expect(mockRejectLeave).toHaveBeenCalledWith("lr-1", "Insufficient notice");
+  });
+
+  it("disables Reject button when reason is empty", async () => {
+    const user = userEvent.setup();
+    render(
+      <LeaveRequestTable
+        currentUserId="user-1"
+        isManager={true}
+        requests={[makeRequest({ id: "lr-1", profile_id: "user-2", status: "pending" })]}
+      />
+    );
+
+    await user.click(screen.getByText("Reject"));
+
+    // Reject dialog appears — the destructive Reject button should be disabled
+    await screen.findByText("Reject Leave Request");
+    const dialogButtons = screen.getAllByRole("button");
+    const rejectConfirm = dialogButtons.find(
+      (b) => b.textContent === "Reject" && !b.closest("tr")
+    );
+    expect(rejectConfirm).toBeDisabled();
+  });
+
+  it("calls cancelLeave when Cancel Leave is confirmed", async () => {
+    const user = userEvent.setup();
+    render(
+      <LeaveRequestTable
+        currentUserId="user-1"
+        isHRAdmin={true}
+        requests={[makeRequest({ id: "lr-1", profile_id: "user-2", status: "approved" })]}
+      />
+    );
+
+    // Click Cancel in the table row
+    const row = screen.getByText("Approved").closest("tr");
+    await user.click(within(row!).getByRole("button", { name: "Cancel" }));
+
+    // Confirmation dialog appears
+    expect(await screen.findByText("Cancel approved leave?")).toBeInTheDocument();
+
+    // Confirm cancellation
+    const cancelLeaveBtn = await screen.findByRole("button", { name: "Cancel Leave" });
+    await user.click(cancelLeaveBtn);
+
+    expect(mockCancelLeave).toHaveBeenCalledWith("lr-1");
   });
 });
