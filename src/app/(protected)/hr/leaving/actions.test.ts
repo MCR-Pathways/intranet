@@ -306,6 +306,7 @@ describe("HR Leaving Actions", () => {
       updateResult?: { data: unknown; error: unknown };
     }) {
       const formCallCount = { value: 0 };
+      const updatePayloadTracker = vi.fn();
       mockFrom.mockImplementation((table: string) => {
         const c = chainable();
         if (table === "staff_leaving_forms") {
@@ -319,7 +320,11 @@ describe("HR Leaving Actions", () => {
               error: null,
             });
           } else {
-            // Update
+            // Update — track the payload
+            c.update.mockImplementation((payload: unknown) => {
+              updatePayloadTracker(payload);
+              return c;
+            });
             c.single.mockResolvedValue(
               opts?.updateResult !== undefined
                 ? opts.updateResult
@@ -339,6 +344,7 @@ describe("HR Leaving Actions", () => {
         }
         return c;
       });
+      return { updatePayloadTracker };
     }
 
     it("updates a draft form successfully", async () => {
@@ -378,7 +384,7 @@ describe("HR Leaving Actions", () => {
     });
 
     it("sanitises fields — strips disallowed fields", async () => {
-      setupUpdateChain();
+      const { updatePayloadTracker } = setupUpdateChain();
 
       const result = await updateLeavingForm("form-1", {
         reason_details: "Personal",
@@ -386,9 +392,17 @@ describe("HR Leaving Actions", () => {
         initiated_by: "SHOULD_BE_STRIPPED",
       } as Record<string, unknown>);
 
-      // No valid fields from allowed list would match profile_id or initiated_by
-      // But reason_details IS allowed
+      // reason_details IS allowed, but profile_id and initiated_by should be stripped
       expect(result.success).toBe(true);
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.objectContaining({ reason_details: "Personal" }),
+      );
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.not.objectContaining({ profile_id: "SHOULD_BE_STRIPPED" }),
+      );
+      expect(updatePayloadTracker).toHaveBeenCalledWith(
+        expect.not.objectContaining({ initiated_by: "SHOULD_BE_STRIPPED" }),
+      );
     });
 
     it("returns error when no valid fields provided", async () => {

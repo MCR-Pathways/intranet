@@ -173,10 +173,17 @@ describe("HR Asset Actions", () => {
 
       const result = await updateAsset("asset-1", {
         make: "Dell",
-        status: "assigned",
+        id: "SHOULD_BE_STRIPPED",
       } as Parameters<typeof updateAsset>[1]);
 
       expect(result.success).toBe(true);
+      // Verify allowed field passes through but disallowed "id" is stripped
+      expect(c.update).toHaveBeenCalledWith(
+        expect.objectContaining({ make: "Dell" }),
+      );
+      expect(c.update).toHaveBeenCalledWith(
+        expect.not.objectContaining({ id: "SHOULD_BE_STRIPPED" }),
+      );
     });
   });
 
