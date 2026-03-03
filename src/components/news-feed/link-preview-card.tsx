@@ -1,8 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { sanitizeUrl } from "@/lib/utils";
+
+/**
+ * If an image URL is an external http(s) URL, proxy it through /api/og-image
+ * so it satisfies CSP img-src 'self'. Already-proxied relative paths (but not
+ * protocol-relative URLs like //attacker.com) are returned as-is.
+ */
+function proxyImageUrl(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+  // Already a relative proxy path (new posts) — exclude protocol-relative URLs
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  // External URL (including protocol-relative) — proxy it
+  if (/^(\/\/|https?:\/\/)/i.test(raw)) {
+    const urlToProxy = raw.startsWith("//") ? `https:${raw}` : raw;
+    return `/api/og-image?url=${encodeURIComponent(urlToProxy)}`;
+  }
+  return undefined;
+}
 
 interface LinkPreviewCardProps {
   url: string;
@@ -21,6 +38,7 @@ export function LinkPreviewCard({
   variant = "default",
 }: LinkPreviewCardProps) {
   const [imgError, setImgError] = useState(false);
+  const proxiedImageUrl = useMemo(() => proxyImageUrl(imageUrl), [imageUrl]);
   const safeHref = sanitizeUrl(url) || "#";
   let displayHostname = url;
   try {
@@ -37,11 +55,11 @@ export function LinkPreviewCard({
         rel="noopener noreferrer"
         className="flex overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
       >
-        {imageUrl && !imgError ? (
+        {proxiedImageUrl && !imgError ? (
           <div className="h-20 w-20 shrink-0 overflow-hidden bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- proxied OG image */}
             <img
-              src={sanitizeUrl(imageUrl) || undefined}
+              src={proxiedImageUrl}
               alt={title || "Link preview"}
               className="h-full w-full object-cover"
               onError={() => setImgError(true)}
@@ -77,11 +95,11 @@ export function LinkPreviewCard({
       rel="noopener noreferrer"
       className="block overflow-hidden rounded-lg border border-border hover:bg-muted/50 transition-colors"
     >
-      {imageUrl && !imgError && (
-        <div className="aspect-video w-full overflow-hidden bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element -- third-party link preview image */}
+      {proxiedImageUrl && !imgError && (
+        <div className="aspect-[1.91/1] w-full overflow-hidden bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element -- proxied OG image */}
           <img
-            src={sanitizeUrl(imageUrl) || undefined}
+            src={proxiedImageUrl}
             alt={title || "Link preview"}
             className="h-full w-full object-cover"
             onError={() => setImgError(true)}
