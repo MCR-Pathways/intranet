@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ClipboardList,
 } from "lucide-react";
+import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
 import type { Profile, UserType } from "@/types/database.types";
 
 // =============================================
@@ -43,36 +44,51 @@ interface NavItem {
   children?: NavGroup[];
 }
 
-function getNavigation(isHRAdmin: boolean, isLDAdmin: boolean): NavItem[] {
+function getNavigation(
+  isHRAdmin: boolean,
+  isLDAdmin: boolean,
+  isSystemsAdmin: boolean,
+): NavItem[] {
+  // HR admin items — filtered per role
+  const hrAdminItems: NavChild[] = [];
+
+  // User Management + Onboarding: HR admin OR systems admin
+  if (isHRAdmin || isSystemsAdmin) {
+    hrAdminItems.push({ name: "User Management", href: "/hr/users" });
+  }
+
+  // HR-only admin items
+  if (isHRAdmin) {
+    hrAdminItems.push(
+      { name: "Absence & Sickness", href: "/hr/absence" },
+      { name: "Compliance", href: "/hr/compliance" },
+      { name: "Key Dates", href: "/hr/key-dates" },
+      { name: "Leaving", href: "/hr/leaving" },
+    );
+  }
+
   const hrChildren: NavGroup[] = [
     {
       label: null,
       items: [
         { name: "My Profile", href: "/hr/profile" },
         { name: "Leave", href: "/hr/leave" },
-        { name: "Calendar", href: "/hr/calendar" },
-        { name: "My Team", href: "/hr/team" },
         { name: "Assets", href: "/hr/assets" },
         { name: "Flexible Working", href: "/hr/flexible-working" },
       ],
     },
     {
-      label: "Organisation",
+      label: "People",
       items: [
+        { name: "My Team", href: "/hr/team" },
         { name: "Org Chart", href: "/hr/org-chart" },
       ],
     },
-    ...(isHRAdmin
+    ...(hrAdminItems.length > 0
       ? [
           {
             label: "Admin",
-            items: [
-              { name: "User Management", href: "/hr/users" },
-              { name: "Absence & Sickness", href: "/hr/absence" },
-              { name: "Compliance", href: "/hr/compliance" },
-              { name: "Key Dates", href: "/hr/key-dates" },
-              { name: "Leaving", href: "/hr/leaving" },
-            ],
+            items: hrAdminItems,
           },
         ]
       : []),
@@ -189,7 +205,11 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
     return allowedTypes.includes(profile.user_type);
   };
 
-  const navigation = getNavigation(profile?.is_hr_admin ?? false, profile?.is_ld_admin ?? false);
+  const hrAdmin = isHRAdminEffective(profile);
+  const ldAdmin = isLDAdminEffective(profile);
+  const systemsAdmin = isSystemsAdminEffective(profile);
+
+  const navigation = getNavigation(hrAdmin, ldAdmin, systemsAdmin);
   const filteredNav = navigation.filter(
     (item) => !item.module || hasModuleAccess(item.module)
   );

@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { FlexibleWorkingDetail } from "@/components/hr/flexible-working-detail";
@@ -85,7 +85,7 @@ export default async function FlexibleWorkingDetailPage({
       }
     : null;
 
-  const isHRAdmin = profile.is_hr_admin === true;
+  const isHRAdmin = isHRAdminEffective(profile);
   const isOwner = request.profile_id === user.id;
   const isAssignedManager = request.manager_id === user.id;
 

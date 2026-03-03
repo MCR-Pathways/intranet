@@ -1,6 +1,6 @@
 "use server";
 
-import { requireHRAdmin } from "@/lib/auth";
+import { requireHRAdmin, requireHROrSystemsAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function updateUserProfile(
@@ -12,6 +12,7 @@ export async function updateUserProfile(
     status?: string;
     is_hr_admin?: boolean;
     is_ld_admin?: boolean;
+    is_systems_admin?: boolean;
     is_line_manager?: boolean;
     fte?: number;
     contract_type?: string;
@@ -26,7 +27,25 @@ export async function updateUserProfile(
     team_id?: string | null;
   }
 ) {
-  const { supabase } = await requireHRAdmin();
+  // HR admin or systems admin can update profiles
+  const { supabase, user, isHRAdmin, isSystemsAdmin } = await requireHROrSystemsAdmin();
+
+  // Self-promotion prevention (belt 3 — server action layer)
+  // DB trigger (belt 2) also enforces this, but we catch it early for better UX
+  if (user.id === userId) {
+    delete data.department;
+    delete data.is_hr_admin;
+    delete data.is_ld_admin;
+    delete data.is_systems_admin;
+  }
+
+  // Systems-only admins cannot change admin flags or department
+  if (isSystemsAdmin && !isHRAdmin) {
+    delete data.is_hr_admin;
+    delete data.is_ld_admin;
+    delete data.is_systems_admin;
+    delete data.department;
+  }
 
   // Whitelist: only allow expected fields through to the database
   const ALLOWED_FIELDS = [
@@ -36,6 +55,7 @@ export async function updateUserProfile(
     "status",
     "is_hr_admin",
     "is_ld_admin",
+    "is_systems_admin",
     "is_line_manager",
     "fte",
     "contract_type",

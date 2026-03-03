@@ -22,11 +22,17 @@ const mockSupabase = vi.hoisted(() => ({
   rpc: mockRpc,
 }));
 
-// Mock requireHRAdmin — returns { supabase, user } on success
+// Mock auth helpers — returns { supabase, user } on success
 vi.mock("@/lib/auth", () => ({
   requireHRAdmin: vi.fn().mockResolvedValue({
     supabase: mockSupabase,
     user: { id: "admin-123", email: "admin@mcrpathways.org" },
+  }),
+  requireHROrSystemsAdmin: vi.fn().mockResolvedValue({
+    supabase: mockSupabase,
+    user: { id: "admin-123", email: "admin@mcrpathways.org" },
+    isHRAdmin: true,
+    isSystemsAdmin: false,
   }),
 }));
 
@@ -41,7 +47,7 @@ import {
   completeUserInduction,
   resetUserInduction,
 } from "@/app/(protected)/hr/users/actions";
-import { requireHRAdmin } from "@/lib/auth";
+import { requireHRAdmin, requireHROrSystemsAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 describe("HR User Actions", () => {
@@ -54,10 +60,16 @@ describe("HR User Actions", () => {
     mockFrom.mockReturnValue({ update: mockUpdate });
     mockRpc.mockResolvedValue({ error: null });
 
-    // Default: requireHRAdmin succeeds
+    // Default: requireHRAdmin and requireHROrSystemsAdmin succeed
     vi.mocked(requireHRAdmin).mockResolvedValue({
       supabase: mockSupabase as never,
       user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
+    });
+    vi.mocked(requireHROrSystemsAdmin).mockResolvedValue({
+      supabase: mockSupabase as never,
+      user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
+      isHRAdmin: true,
+      isSystemsAdmin: false,
     });
   });
 
@@ -131,7 +143,7 @@ describe("HR User Actions", () => {
     });
 
     it("throws when user is not authenticated", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(
+      vi.mocked(requireHROrSystemsAdmin).mockRejectedValue(
         new Error("Not authenticated")
       );
 
@@ -141,13 +153,13 @@ describe("HR User Actions", () => {
     });
 
     it("throws when user is not an HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(
-        new Error("Unauthorised: HR admin access required")
+      vi.mocked(requireHROrSystemsAdmin).mockRejectedValue(
+        new Error("Unauthorised: HR admin or systems admin access required")
       );
 
       await expect(
         updateUserProfile("user-456", { full_name: "Jane" })
-      ).rejects.toThrow("Unauthorised: HR admin access required");
+      ).rejects.toThrow("Unauthorised: HR admin or systems admin access required");
     });
   });
 

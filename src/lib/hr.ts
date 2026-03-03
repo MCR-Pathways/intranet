@@ -147,20 +147,30 @@ export type ContractType = keyof typeof CONTRACT_TYPE_CONFIG;
 // =============================================
 
 export const DEPARTMENT_CONFIG = {
-  executive: { label: "Executive" },
-  people: { label: "People" },
-  finance: { label: "Finance" },
-  delivery: { label: "Delivery" },
-  development: { label: "Development" },
-  engagement: { label: "Engagement & Influencing" },
-  systems: { label: "Systems, Evidence & Impact" },
-  fundraising: { label: "Fundraising & Partnerships" },
-  communications: { label: "Communications & Policy" },
-  learning_development: { label: "Learning & Development" },
-  hr: { label: "HR" },
+  executive: { label: "Executive", colour: "slate-700" },
+  people: { label: "People", colour: "purple-500" },
+  finance: { label: "Finance", colour: "green-500" },
+  delivery: { label: "Delivery", colour: "orange-500" },
+  development: { label: "Development", colour: "cyan-500" },
+  engagement: { label: "Engagement & Influencing", colour: "pink-500" },
+  systems: { label: "Systems, Evidence & Impact", colour: "slate-500" },
+  fundraising: { label: "Fundraising & Partnerships", colour: "amber-500" },
+  communications: { label: "Communications & Policy", colour: "rose-500" },
+  learning_development: { label: "Learning & Development", colour: "indigo-500" },
+  hr: { label: "HR", colour: "emerald-500" },
 } as const;
 
 export type Department = keyof typeof DEPARTMENT_CONFIG;
+
+/**
+ * Maps departments to admin roles they auto-grant.
+ * Only these three departments confer special access.
+ */
+export const DEPARTMENT_ADMIN_MAP: Partial<Record<Department, "hr_admin" | "ld_admin" | "systems_admin">> = {
+  hr: "hr_admin",
+  learning_development: "ld_admin",
+  systems: "systems_admin",
+} as const;
 
 // =============================================
 // REGIONS
