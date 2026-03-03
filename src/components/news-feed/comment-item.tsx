@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo, getInitials } from "@/lib/utils";
-import { Trash2, Loader2, Pencil, Check, X } from "lucide-react";
+import { Trash2, Loader2, Pencil, Check, X, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -15,6 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { deleteComment, editComment, toggleCommentReaction } from "@/app/(protected)/intranet/actions";
 import { TiptapRenderer } from "./tiptap-renderer";
 import { REACTIONS, REACTION_COLORS } from "./reaction-constants";
@@ -174,69 +180,104 @@ export function CommentItem({
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="relative inline-block">
-          <div className="rounded-2xl bg-muted/50 px-3 py-2">
-            <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
-            {isEditing ? (
-              <div className="mt-1 space-y-1.5">
-                <textarea
-                  ref={editTextareaRef}
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  onKeyDown={handleEditKeyDown}
-                  className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  rows={2}
-                  maxLength={2000}
-                  disabled={isPending}
-                />
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={handleSaveEdit}
-                    disabled={isPending || !editContent.trim()}
-                  >
-                    {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                    <span className="ml-1">Save</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-muted-foreground"
-                    onClick={handleCancelEdit}
+        {/* Bubble row: comment bubble + three-dot menu */}
+        <div className="flex items-center gap-1">
+          <div className="relative inline-block">
+            <div className="rounded-2xl bg-muted/50 px-3 py-2">
+              <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
+              {isEditing ? (
+                <div className="mt-1 space-y-1.5">
+                  <textarea
+                    ref={editTextareaRef}
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    onKeyDown={handleEditKeyDown}
+                    className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    rows={2}
+                    maxLength={2000}
                     disabled={isPending}
-                  >
-                    <X className="h-3 w-3" />
-                    <span className="ml-1">Cancel</span>
-                  </Button>
+                  />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={handleSaveEdit}
+                      disabled={isPending || !editContent.trim()}
+                    >
+                      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span className="ml-1">Save</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-muted-foreground"
+                      onClick={handleCancelEdit}
+                      disabled={isPending}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="ml-1">Cancel</span>
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <TiptapRenderer json={comment.content_json} fallback={comment.content} />
+              )}
+            </div>
+
+            {/* Reaction summary badge (bottom-right of bubble) */}
+            {totalReactions > 0 && (
+              <div className="absolute -bottom-2.5 right-1 flex items-center gap-0.5 bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
+                <span className="flex -space-x-0.5">
+                  {activeReactions.map((r) => (
+                    <span key={r.type} className="text-xs leading-none">
+                      {r.emoji}
+                    </span>
+                  ))}
+                </span>
+                {totalReactions > 1 && (
+                  <span className="text-[10px] text-muted-foreground ml-0.5">{totalReactions}</span>
+                )}
               </div>
-            ) : (
-              <TiptapRenderer json={comment.content_json} fallback={comment.content} />
             )}
           </div>
 
-          {/* Reaction summary badge (bottom-right of bubble) */}
-          {totalReactions > 0 && (
-            <div className="absolute -bottom-2.5 right-1 flex items-center gap-0.5 bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm">
-              <span className="flex -space-x-0.5">
-                {activeReactions.map((r) => (
-                  <span key={r.type} className="text-xs leading-none">
-                    {r.emoji}
-                  </span>
-                ))}
-              </span>
-              {totalReactions > 1 && (
-                <span className="text-[10px] text-muted-foreground ml-0.5">{totalReactions}</span>
-              )}
-            </div>
+          {/* Three-dot menu — hover-revealed, Facebook-style */}
+          {(isAuthor || canDelete) && !isEditing && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {isAuthor && (
+                  <DropdownMenuItem onSelect={handleStartEdit}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 
-        {/* Footer: time, Like, Reply, Delete */}
+        {/* Footer: time, Like, Reply */}
         <div className="flex items-center gap-3 mt-1 px-1">
           <span className="text-xs text-muted-foreground">
             {timeAgo(comment.created_at)}
@@ -298,32 +339,6 @@ export function CommentItem({
             >
               Reply
             </button>
-          )}
-
-          {isAuthor && !isEditing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleStartEdit}
-              disabled={isPending}
-            >
-              <Pencil className="h-3 w-3 mr-0.5" />
-              Edit
-            </Button>
-          )}
-
-          {canDelete && !isEditing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isPending}
-            >
-              <Trash2 className="h-3 w-3 mr-0.5" />
-              Delete
-            </Button>
           )}
         </div>
       </div>
