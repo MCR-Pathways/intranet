@@ -69,11 +69,13 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
       triggerDocumentUpload: () => docInputRef.current?.click(),
     }));
 
-    // Reset internal state when resetKey changes (intentional setState in effect for prop sync)
+    // Reset internal state when resetKey changes (intentional setState in effect for prop sync).
+    // Only depend on resetKey — NOT initialAttachments — to avoid infinite loops
+    // when the parent passes a new array reference on every render.
     useEffect(() => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state from prop change
       setAttachments(initialAttachments ?? []);
-    }, [resetKey, initialAttachments]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resetKey]);
 
     // Notify parent whenever attachments change
     useEffect(() => {

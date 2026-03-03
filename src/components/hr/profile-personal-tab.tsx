@@ -103,7 +103,7 @@ export function ProfilePersonalTab({
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error || "Failed to update personal details");
       }
     });
@@ -116,7 +116,7 @@ export function ProfilePersonalTab({
       if (result.success) {
         toast.success("Emergency contact removed");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
       setDeleteTarget(null);
     });

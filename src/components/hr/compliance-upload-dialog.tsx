@@ -113,7 +113,7 @@ export function ComplianceUploadDialog({
         resetForm();
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error || "Failed to upload document");
       }
     });

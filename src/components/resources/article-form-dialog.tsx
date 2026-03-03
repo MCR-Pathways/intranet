@@ -83,7 +83,7 @@ export function ArticleFormDialog({
         );
         setOpen(false);
       } else {
-        toast.error(result.error ?? "Something went wrong");
+        toast.error(result.error ?? "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }

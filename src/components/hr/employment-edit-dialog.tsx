@@ -85,7 +85,7 @@ export function EmploymentEditDialog({
         toast.success("Employment details updated");
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
         setError(result.error || "Failed to update employment details");
       }
     });

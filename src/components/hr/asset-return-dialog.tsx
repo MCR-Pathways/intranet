@@ -46,7 +46,7 @@ export function AssetReturnDialog({
         notes: notes || undefined,
       });
       if (result.success) { toast.success("Asset return recorded"); resetForm(); onOpenChange(false); }
-      else { toast.error(result.error || "Something went wrong"); setError(result.error); }
+      else { toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org"); setError(result.error); }
     });
   }
 

@@ -99,7 +99,7 @@ export function AssetPageContent({
       if (result.success) {
         toast.success("Asset retired");
       } else {
-        toast.error(result.error || "Something went wrong");
+        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
   }

@@ -178,7 +178,7 @@ export function InductionChecklist({
       if (error?.message?.includes("NEXT_REDIRECT")) {
         return;
       }
-      toast.error("Something went wrong");
+      toast.error("Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       logger.error("Error completing induction", { error: err });
     } finally {
       setIsCompleting(false);
