@@ -31,12 +31,12 @@ const {
 });
 
 vi.mock("@/lib/auth", () => ({
-  requireHRAdmin: requireHRAdmin,
-  getCurrentUser: getCurrentUser,
+  requireHRAdmin,
+  getCurrentUser,
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: revalidatePath,
+  revalidatePath,
 }));
 
 vi.mock("@/lib/tiptap", () => ({

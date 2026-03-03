@@ -19,17 +19,6 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: vi.fn(() => mockServiceClient),
 }));
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function chainable() {
-  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-  const self = () => chain;
-  chain.insert = vi.fn().mockImplementation(self);
-  chain.delete = vi.fn().mockImplementation(self);
-  chain.eq = vi.fn().mockImplementation(self);
-  return chain;
-}
-
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 
 import { createNotification, dismissSignInReminders } from "./notifications";
@@ -49,9 +38,8 @@ describe("Notification Helpers", () => {
 
   describe("createNotification", () => {
     it("creates a notification with all fields", async () => {
-      const c = chainable();
-      c.insert.mockResolvedValue({ error: null });
-      mockFrom.mockReturnValue(c);
+      const insertMock = vi.fn().mockResolvedValue({ error: null });
+      mockFrom.mockReturnValue({ insert: insertMock });
 
       const result = await createNotification({
         userId: "user-1",
@@ -64,7 +52,7 @@ describe("Notification Helpers", () => {
 
       expect(result.error).toBeNull();
       expect(mockFrom).toHaveBeenCalledWith("notifications");
-      expect(c.insert).toHaveBeenCalledWith({
+      expect(insertMock).toHaveBeenCalledWith({
         user_id: "user-1",
         type: "course_published",
         title: "New Course",
@@ -75,9 +63,8 @@ describe("Notification Helpers", () => {
     });
 
     it("defaults link and metadata to null when not provided", async () => {
-      const c = chainable();
-      c.insert.mockResolvedValue({ error: null });
-      mockFrom.mockReturnValue(c);
+      const insertMock = vi.fn().mockResolvedValue({ error: null });
+      mockFrom.mockReturnValue({ insert: insertMock });
 
       const result = await createNotification({
         userId: "user-1",
@@ -87,7 +74,7 @@ describe("Notification Helpers", () => {
       });
 
       expect(result.error).toBeNull();
-      expect(c.insert).toHaveBeenCalledWith(
+      expect(insertMock).toHaveBeenCalledWith(
         expect.objectContaining({
           link: null,
           metadata: null,
@@ -96,9 +83,8 @@ describe("Notification Helpers", () => {
     });
 
     it("returns error on DB failure", async () => {
-      const c = chainable();
-      c.insert.mockResolvedValue({ error: { message: "Insert failed" } });
-      mockFrom.mockReturnValue(c);
+      const insertMock = vi.fn().mockResolvedValue({ error: { message: "Insert failed" } });
+      mockFrom.mockReturnValue({ insert: insertMock });
 
       const result = await createNotification({
         userId: "user-1",
