@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-03
+> Last updated: 2026-03-04
 
 ---
 
@@ -106,8 +106,8 @@
 - [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
 - [ ] Onboarding progress tracker
 - [ ] Flexible working requests (form → manager approval → HR → trial period reminders)
-- [ ] Org chart (`/hr/org-chart` — placeholder exists)
-- [ ] My team view (`/hr/team` — placeholder exists)
+- [x] Org chart — interactive tree with react-d3-tree (PR #66), UI/UX improvement (PR on `feature/org-chart-improvement`): bigger cards, click-to-navigate, curved connectors, zoom controls, department colour legend, search with auto-expand, dynamic centring
+- [x] My Team page with manager and peer views (PR #65), accessibility + work anniversaries (PR #67)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 3
