@@ -81,6 +81,11 @@ export async function updateUserProfile(
     return { success: false, error: "No valid fields to update" };
   }
 
+  // Auto-derive: pathways coordinators are always external
+  if (sanitized.user_type === "pathways_coordinator") {
+    sanitized.is_external = true;
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update(sanitized)
@@ -127,67 +132,6 @@ export async function resetUserInduction(userId: string) {
   }
 
   revalidatePath("/hr/users");
-  return { success: true, error: null };
-}
-
-/**
- * Update employment-related fields on a target employee's profile.
- * HR admin only.
- */
-export async function updateEmployeeEmployment(
-  userId: string,
-  data: {
-    fte?: number;
-    contract_type?: string;
-    department?: string | null;
-    region?: string | null;
-    work_pattern?: string;
-    start_date?: string | null;
-    probation_end_date?: string | null;
-    contract_end_date?: string | null;
-    line_manager_id?: string | null;
-    team_id?: string | null;
-    is_external?: boolean;
-  }
-) {
-  const { supabase } = await requireHRAdmin();
-
-  const ALLOWED_FIELDS = [
-    "fte",
-    "contract_type",
-    "department",
-    "region",
-    "work_pattern",
-    "start_date",
-    "probation_end_date",
-    "contract_end_date",
-    "line_manager_id",
-    "team_id",
-    "is_external",
-  ] as const;
-
-  const sanitized: Record<string, unknown> = {};
-  for (const field of ALLOWED_FIELDS) {
-    if (field in data) {
-      sanitized[field] = data[field as keyof typeof data];
-    }
-  }
-
-  if (Object.keys(sanitized).length === 0) {
-    return { success: false, error: "No valid fields to update" };
-  }
-
-  const { error } = await supabase
-    .from("profiles")
-    .update(sanitized)
-    .eq("id", userId);
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  revalidatePath("/hr/users");
-  revalidatePath(`/hr/users/${userId}`);
   return { success: true, error: null };
 }
 

@@ -150,40 +150,68 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Ties into:** Existing compliance documents (auto-check PVG/DBS), asset assignments (auto-check equipment)
 - **Mirrors:** `staff_leaving_forms` for offboarding
 
-### Flexible Working Requests
-- **Route:** `/hr/flexible-working`
-- **Table:** `flexible_working_requests` — new table needed
-- **Columns (from MCR paper form):** `profile_id`, `previous_request_date` (max 1 request per 12 months per s.80F ERA 1996), `current_working_pattern` (text — days/hours/times/location), `requested_working_pattern` (text — days/hours/times/location), `requested_start_date`, `trial_period` (3 or 6 months), `trial_end_date`, `status` (pending_manager/pending_hr/approved/rejected/trial_ended), `manager_id`, `manager_decision_at`, `manager_notes`, `hr_received_at`, `hr_notes`, `outcome_recorded_by`, `created_at`, `updated_at`
-- **Workflow:** Employee fills form → line manager approves/rejects → if approved, shared with HR → trial period (3 or 6 months) starts → automatic reminder notifications before trial end date
-- **UI needed:** Request form (employee), approval view (manager), HR overview dashboard, trial period reminder system
-- **Ties into:** Existing `WORK_PATTERN_CONFIG` in `src/lib/hr.ts` (standard, part_time, compressed, term_time already defined), notification system for reminders
-- **Source:** HR team confirmed employees currently use a paper form, want digital workflow with automated reminders
-- **Note on compressed hours:** Already supported in `work_pattern` column on `profiles` (CHECK constraint includes `'compressed'`) and `WORK_PATTERN_CONFIG` in `src/lib/hr.ts` (`daysPerWeek: 4`). Leave calculations handle this via FTE. Staff do work compressed hours (e.g. 4-day week). No term-time only currently.
+### Flexible Working Requests ✅ DONE
+- **Route:** `/hr/flexible-working` (employee + HR admin views)
+- **Table:** `flexible_working_requests` + `fwr_appeals` (migration 00037)
+- **Actions:** `src/app/(protected)/hr/flexible-working/actions.ts` (12 server actions)
+- **Capabilities:** Full digital workflow per Employment Relations (Flexible Working) Act 2023 — day-one right, 2 requests/12 months, 2-month deadline, mandatory consultation, 8 statutory grounds. Auto-updates `profiles.work_pattern` + employment history on approval. Trial periods with outcome recording. Appeals process.
+- **PR:** #62
 
-### Org Chart ✅ DONE
-- **Route:** `/hr/org-chart`
-- **Components:** `src/components/hr/org-chart-content.tsx`
-- **What:** Interactive reporting hierarchy using `manager_id` relationships from `profiles`, rendered with `react-d3-tree`
-- **Initial build (PR #66):** Tree visualisation with expand/collapse, search, department filtering
-- **UI/UX Improvement (`feature/org-chart-improvement`):**
-  - Bigger cards (280×120px) with coloured avatar fallbacks matching department colour, "N reports" badge
-  - Focus mode: click focus button on manager to drill into subtree with breadcrumb trail back
-  - Animated expand/collapse (`enableLegacyTransitions` + `transitionDuration={300}`), `shouldCollapseNeighborNodes` for tidy navigation
-  - Click-to-centre with `dimensions` + `centeringTransitionDuration={600}`
-  - Department filtering with ancestor chain (`getFilteredPeopleWithAncestors()` walks up `line_manager_id` to CEO) — no virtual "MCR Pathways" root. Ancestor nodes shown with dashed borders and opacity
-  - `react-d3-tree` `data` prop accepts `RawNodeDatum[]` (array) for multiple roots — no virtual root needed
-  - Fixed connecting lines: CSS variable `hsl(var(--border))` was invalid (Tailwind v4 `--border` is hex, not HSL channels) — hardcoded `#94a3b8` (slate-400)
-  - Hover lift effect (`hover:-translate-y-0.5 hover:shadow-lg`), rounded-xl corners, expand/collapse chevron badge below managers with count
-  - Zoom controls with backdrop blur, keyboard hint, ResizeObserver for dynamic centring
-  - Curved diagonal connectors (`pathFunc="diagonal"`)
-  - Shadcn Select for department filter, search with clear button and auto-expand
-- **Seed data:** ~86 profiles with real MCR job titles and fake names. 5 levels deep (CEO → Directors → Heads/Managers → PMs/Officers → Coordinators). 4 regions (West, East, North, England). GCC external employees marked. Pathways Coordinators with fractional FTEs.
+### Department-Based Access Model ✅ DONE
+- **Migration:** `supabase/migrations/00038_department_based_access.sql` — `is_systems_admin` column, `is_hr_admin_effective()` / `is_ld_admin_effective()` / `is_systems_admin_effective()` SQL functions, self-promotion prevention trigger, JWT sync
+- **Auth helpers:** `src/lib/auth-helpers.ts` (client-safe), `src/lib/auth.ts` (server-side `requireSystemsAdmin`, `requireHROrSystemsAdmin`)
+- **Sidebar restructure:** Self-Service / People / Admin groups with role-filtered items
+- **Permission UX:** Department auto-grant badges ("Via HR Department"), manual override toggles, self-edit protection
+- **PR:** #63
+
+### Decouple Permissions from Departments ✅ DONE
+- **Migration:** `supabase/migrations/00039_decouple_permissions_and_departments.sql` — backfills explicit admin flags, simplifies `_effective` RPCs (removes department checks), creates `departments` table, seeds 11 departments
+- **Changes:** Admin roles are now explicitly granted (not auto-derived from department membership). Departments are purely organisational. Permission confirmation AlertDialogs for granting/revoking access. Dynamic department dropdowns from DB.
+- **New page:** `/hr/departments` — CRUD management for departments (colour, sort order, activate/deactivate)
+- **PR:** #68
+
+### User Management Interface Improvement ✅ DONE
+- **What:** Compact 4-column table (Person, Status, Organisation, Actions) with two-line rows replacing 9-column cluttered table. Split overloaded UserEditDialog into three focused dialogs (ProfileEditDialog, EmploymentEditDialog, PermissionsEditDialog). Searchable comboboxes for line manager/team assignment. Auto-derive `is_external = true` for pathways coordinators. System Permissions card on detail page overview. `is_external` moved from header badges to Employment card as "Classification".
+- **Components:** `person-combobox.tsx`, `team-combobox.tsx`, `permissions-edit-dialog.tsx`, `command.tsx`, `popover.tsx` (NEW); `user-table.tsx`, `user-edit-dialog.tsx`, `employment-edit-dialog.tsx`, `profile-overview-tab.tsx`, `employee-detail-content.tsx` (REFACTOR)
+- **Dependencies:** `cmdk`, `@radix-ui/react-popover` (Popover + Command UI primitives)
+- **Server actions:** Removed `updateEmployeeEmployment` (consolidated into `updateUserProfile`), added `is_external` auto-derive for pathways coordinators
+- **Types:** Added `is_systems_admin` to `ProfileSummary` in `types/hr.ts`
+- **Permission audit:** Comprehensive audit for UI elements that promise actions the server silently blocks. Fixed: Department field in EmploymentEditDialog disabled for non-HR admins (server strips it), induction Complete/Reset menu items hidden for non-HR admins (server rejects), admin permission toggles disabled for non-HR admins in both UserEditDialog and PermissionsEditDialog. `isCurrentUserHRAdmin` prop threaded through all dialog chains.
+
+### Leave Calendar Tab ✅ DONE
+- Calendar removed from sidebar, now a "Team Calendar" tab within `/hr/leave` (managers/HR admins only)
+- `/hr/calendar` redirects to `/hr/leave?tab=calendar` for backward compatibility
+- Role-aware tab validation — non-managers/non-admins can't access calendar/approvals tabs
+- **PR:** #64
 
 ### My Team ✅ DONE
 - **Route:** `/hr/team`
-- **What:** Team directory for line managers showing direct reports and peers
-- **Initial build (PR #65):** Manager and peer views with profile cards
-- **Accessibility + polish (PR #67):** Accessibility improvements, work anniversaries display
+- **Components:** `src/components/hr/team-dashboard-content.tsx` (manager view), `src/components/hr/team-peer-content.tsx` (non-manager view), `src/components/hr/team-member-card.tsx` (shared card)
+- **Capabilities:**
+  - Manager view: direct reports grid, on-leave indicators, pending approvals pill, who's off banner, work anniversary detection (14-day window) with purple summary pill and cake icon
+  - Non-manager view: peers (same line_manager_id), manager info card, on-leave indicators
+  - Orphan state: empty state prompting HR contact
+  - Action menu: View in User Management, View Leave, View on Calendar
+- **PRs:** #65, #67
+
+### Org Chart ✅ DONE
+- **Route:** `/hr/org-chart`
+- **Components:** `src/components/hr/org-chart-content.tsx` (main client component), `src/components/hr/org-chart-person-card.tsx` (foreignObject card)
+- **Library:** `react-d3-tree` (dynamic import, SSR-safe)
+- **Capabilities:**
+  - Interactive tree built from `line_manager_id` relationships
+  - Virtual root "MCR Pathways" when multiple roots exist
+  - Search by name/title, department filter dropdown, "Find Me" button, expand/collapse all
+  - Person cards: avatar, name, job title, department colour border, on-leave amber dot, GCC badge, FTE badge
+  - Accessibility: `role="img"`, `aria-label`, `aria-roledescription` on container; `aria-label` on each card
+- **PRs:** #66, #67
+
+### Onboarding Progress Tracker
+- **Table:** New — `onboarding_templates`, `onboarding_checklists`, `onboarding_checklist_items`
+- **What:** Configurable checklist for new starters (Right to Work, Contract Signed, IT Equipment Assigned, DBS/PVG Submitted, Bank Details Received, etc.)
+- **UI needed:** Progress bar per new starter, checklist view, dashboard widget showing new starters in pipeline, template management
+- **Ties into:** Existing compliance documents (auto-check PVG/DBS), asset assignments (auto-check equipment)
+- **Mirrors:** `staff_leaving_forms` for offboarding
 
 ---
 

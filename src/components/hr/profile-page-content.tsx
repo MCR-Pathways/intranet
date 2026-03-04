@@ -42,6 +42,7 @@ interface ProfilePageContentProps {
     is_external: boolean;
     is_hr_admin: boolean;
     is_ld_admin: boolean;
+    is_systems_admin: boolean;
     is_line_manager: boolean;
   };
   employeeDetails: EmployeeDetails | null;

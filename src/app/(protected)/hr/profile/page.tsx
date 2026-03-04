@@ -95,6 +95,7 @@ export default async function ProfilePage({
     is_external: profile.is_external ?? false,
     is_hr_admin: profile.is_hr_admin ?? false,
     is_ld_admin: profile.is_ld_admin ?? false,
+    is_systems_admin: profile.is_systems_admin ?? false,
     is_line_manager: profile.is_line_manager ?? false,
   };
 
