@@ -14,15 +14,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-
-interface SignInEntry {
-  id: string;
-  user_id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
+import type { TeamSignInEntry } from "@/lib/sign-in";
 
 const locationLabels: Record<string, string> = {
   home: "Home",
@@ -39,7 +31,7 @@ const locationColors: Record<string, string> = {
 };
 
 interface LocationChartsProps {
-  entries: SignInEntry[];
+  entries: TeamSignInEntry[];
 }
 
 export function LocationCharts({ entries }: LocationChartsProps) {

@@ -147,11 +147,11 @@ Current sign-in is a daily manual check-in modelled after a physical sign-in app
 - [ ] Kiosk/entrance replacement: simplified "tap your name" view for office entrance, or future phase?
 - [ ] Workspace admin: confirm domain-wide delegation is enabled (Security → API Controls)
 
-**Quick fixes (independent of overhaul):**
-- [ ] Fix `member-detail.tsx` over-fetch (fetches all team history, filters to 1 person)
-- [ ] Extract shared `SignInEntry` type (currently duplicated 5×)
-- [ ] Extract `<LocationBadge>` component (rendering duplicated 6×)
-- [ ] Merge `getTodaySignIns()` + `getMonthlyHistory()` into single query
+**Quick fixes (independent of overhaul):** ✅
+- [x] Fix `member-detail.tsx` over-fetch → new `getTeamMemberHistory()` server action queries single user
+- [x] Extract shared `SignInEntry` + `TeamSignInEntry` types to `src/lib/sign-in.ts` (was duplicated 7×)
+- [x] Extract `<LocationBadge>` component to `src/components/sign-in/location-badge.tsx` (was duplicated 5×)
+- [x] Merge `getTodaySignIns()` + `getMonthlyHistory()` → single `getSignInHistory()` query
 
 ### Intranet Phase 3 — Live Feed + Polls ✅
 - [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)
