@@ -212,6 +212,48 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
+## Phase 9: HR Admin Components (branch: `test/hr-admin-components`)
+
+New components from PRs #68 and #69 — department management, split dialogs, searchable comboboxes.
+
+### `src/components/hr/department-management-content.test.tsx` (~15 tests)
+- Renders department list with colour dots and staff counts
+- Create department dialog (name, slug, colour picker)
+- Edit department (name, colour, sort order)
+- Activate/deactivate toggle with confirmation dialog
+- Deactivation blocked when department has active staff
+- Sort order drag/reorder or manual input
+
+### `src/components/hr/permissions-edit-dialog.test.tsx` (~10 tests)
+- Renders current permission states (HR Admin, L&D Admin, Systems Admin, Line Manager)
+- Toggle permissions with confirmation AlertDialog
+- Self-edit blocked (own profile)
+- Non-HR admin cannot toggle admin flags (disabled state)
+- Save calls `updateUserProfile` with correct payload
+
+### `src/components/hr/person-combobox.test.tsx` (~8 tests)
+- Renders searchable dropdown with profile list
+- Filters profiles by typed text
+- Selects a person and calls `onSelect`
+- Clear selection
+- `excludeId` prop hides current entity from picker
+- Empty state ("No results")
+
+### `src/components/hr/team-combobox.test.tsx` (~6 tests)
+- Renders team list in searchable dropdown
+- Selects a team and calls `onSelect`
+- Clear selection
+- Empty state
+
+### `src/app/(protected)/hr/departments/actions.test.ts` (~12 tests)
+- `createDepartment` — valid input, duplicate slug, missing fields
+- `updateDepartment` — valid update, slug uniqueness
+- `toggleDepartmentActive` — deactivate blocked with active staff, activate succeeds
+- `reorderDepartments` — updates sort_order for all departments
+- Auth gating: all actions require HR admin
+
+---
+
 ## Summary
 
 | Phase | Branch | Tests | Sessions | Priority | Status |
@@ -224,11 +266,12 @@ Largest untested action file (966 lines, 12 functions):
 | 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
 | 8 | `test/org-chart-components` | ~30 | 0.5 | LOWER | |
-| **Total** | | **~599** | **~11** | | |
+| 9 | `test/hr-admin-components` | ~51 | 1 | LOWER | |
+| **Total** | | **~650** | **~12** | | |
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
-**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → 7 → 8
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → 7 → 8 → 9
 
 ---
 

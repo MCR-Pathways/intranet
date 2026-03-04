@@ -106,11 +106,11 @@
 - [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
 - [x] Flexible working requests (PR #62) — full digital workflow per Employment Relations (Flexible Working) Act 2023
 - [x] Department-based access model (PR #63) — auto-grant admin from department, 4-layer security, sidebar restructure
-  - [x] Decoupled permissions from departments (PR #68) — admin roles explicitly granted (not auto-derived from department), dynamic departments table, permission confirmation dialogs
-  - [x] User Management interface improvement — compact 4-column table, split edit dialogs, searchable comboboxes, auto-derive is_external for pathways coordinators
+  - [x] Decoupled permissions from departments (PR #68) — admin roles explicitly granted (not auto-derived from department), dynamic departments table (migration `00040`), permission confirmation dialogs
+  - [x] User Management interface improvement (PR #69) — compact 4-column table, split edit dialogs (Profile/Employment/Permissions), searchable comboboxes (`cmdk` + Radix Popover), auto-derive is_external for pathways coordinators, `isCurrentUserHRAdmin` permission gating
 - [x] Leave calendar tab (PR #64) — calendar moved into `/hr/leave` as manager/HR admin tab
 - [x] My Team (PR #65, #67) — manager + peer views, on-leave indicators, work anniversaries
-- [x] Org Chart (PR #66, #67) — interactive react-d3-tree, search/filter, accessibility
+- [x] Org Chart (PRs #66, #67, #70) — interactive react-d3-tree, search with auto-focus on match subtree, department filter with ancestor chain, focus mode with breadcrumbs, zoom controls, click-to-navigate, bigger cards with `line-clamp-2` titles, MCR org structure seed data (~70-80 profiles)
 - [ ] Onboarding progress tracker
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
