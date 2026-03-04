@@ -90,6 +90,16 @@ export function ReportsPanel() {
     }));
   }, [signIns, members]);
 
+  /** Sanitise a cell value to prevent CSV injection (formula injection). */
+  function sanitiseCSVCell(value: string): string {
+    // Prefix formula-triggering characters with a single quote so
+    // Excel/Sheets treats the cell as plain text, not a formula.
+    if (/^[=+\-@\t\r]/.test(value)) {
+      return `'${value}`;
+    }
+    return value;
+  }
+
   function exportCSV() {
     const headers = ["Name", "Date", "Time", "Location", "Other Location"];
     const rows = signIns.map((entry) => {
@@ -105,7 +115,7 @@ export function ReportsPanel() {
         formatSignInTime(entry.signed_in_at),
         loc,
         entry.other_location ?? "",
-      ];
+      ].map(sanitiseCSVCell);
     });
 
     const csvContent = [

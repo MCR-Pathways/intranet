@@ -26,16 +26,20 @@ interface MemberDetailProps {
 
 export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
   const [history, setHistory] = useState<TeamSignInEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!member || !open) return;
 
+    setError(null);
     startTransition(async () => {
       // Fetch only this member's history (not all team members)
       const result = await getTeamMemberHistory(member.id);
 
-      if (!result.error && result.data) {
+      if (result.error) {
+        setError(result.error);
+      } else if (result.data) {
         setHistory(result.data);
       }
     });
@@ -98,6 +102,10 @@ export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : error ? (
+          <p className="text-sm text-destructive text-center py-4">
+            {error}
+          </p>
         ) : (
           <div className="space-y-4">
             {/* Summary stats */}
