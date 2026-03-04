@@ -104,10 +104,14 @@
 - [x] Absence records & sickness tracking
 - [x] Return-to-work forms (digital replacement for paper RTW Discussion Form)
 - [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
+- [x] Flexible working requests (PR #62) — full digital workflow per Employment Relations (Flexible Working) Act 2023
+- [x] Department-based access model (PR #63) — auto-grant admin from department, 4-layer security, sidebar restructure
+  - [x] Decoupled permissions from departments (PR #68) — admin roles explicitly granted (not auto-derived from department), dynamic departments table, permission confirmation dialogs
+  - [x] User Management interface improvement — compact 4-column table, split edit dialogs, searchable comboboxes, auto-derive is_external for pathways coordinators
+- [x] Leave calendar tab (PR #64) — calendar moved into `/hr/leave` as manager/HR admin tab
+- [x] My Team (PR #65, #67) — manager + peer views, on-leave indicators, work anniversaries
+- [x] Org Chart (PR #66, #67) — interactive react-d3-tree, search/filter, accessibility
 - [ ] Onboarding progress tracker
-- [x] Flexible working requests (PR #62) — full digital workflow per Employment Relations (Flexible Working) Act 2023: day-one right, 2 requests/12 months, mandatory consultation, 8 statutory grounds, appeal process. Auto-updates `profiles.work_pattern` + employment history on approval.
-- [x] Org chart — interactive tree with react-d3-tree (PR #66), UI/UX improvement (PR on `feature/org-chart-improvement`): bigger cards (280×130), coloured avatar fallbacks, "N reports" badge, focus mode (drill into subtree with breadcrumb trail), animated expand/collapse, click-to-centre with smooth transitions, department filtering with ancestor chain (no virtual root), fixed CSS variable connecting lines (`#94a3b8` hex — Tailwind v4 `--border` is hex not HSL), zoom controls with backdrop blur, keyboard hints, search auto-focuses on match's manager subtree with breadcrumb navigation, search + department filter coordination (searching resets filter to "all", filtering clears search), `line-clamp-2` for long job titles (multi-line wrapping)
-- [x] My Team page with manager and peer views (PR #65), accessibility + work anniversaries (PR #67)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 3
