@@ -1,7 +1,7 @@
 # HR Module — Development Roadmap
 
 > **Living document** — updated as features are completed and priorities shift.
-> Last updated: 2026-02-27
+> Last updated: 2026-03-04
 
 ---
 
@@ -160,15 +160,30 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Source:** HR team confirmed employees currently use a paper form, want digital workflow with automated reminders
 - **Note on compressed hours:** Already supported in `work_pattern` column on `profiles` (CHECK constraint includes `'compressed'`) and `WORK_PATTERN_CONFIG` in `src/lib/hr.ts` (`daysPerWeek: 4`). Leave calculations handle this via FTE. Staff do work compressed hours (e.g. 4-day week). No term-time only currently.
 
-### Org Chart
-- **Route:** `/hr/org-chart` (placeholder exists)
-- **What:** Visual reporting hierarchy using `manager_id` relationships from `profiles`
-- **Dependencies:** Needs `manages_user_recursive()` function (already exists in RLS)
+### Org Chart ✅ DONE
+- **Route:** `/hr/org-chart`
+- **Components:** `src/components/hr/org-chart-content.tsx`
+- **What:** Interactive reporting hierarchy using `manager_id` relationships from `profiles`, rendered with `react-d3-tree`
+- **Initial build (PR #66):** Tree visualisation with expand/collapse, search, department filtering
+- **UI/UX Improvement (`feature/org-chart-improvement`):**
+  - Bigger cards (280×120px) with coloured avatar fallbacks matching department colour, "N reports" badge
+  - Focus mode: click focus button on manager to drill into subtree with breadcrumb trail back
+  - Animated expand/collapse (`enableLegacyTransitions` + `transitionDuration={300}`), `shouldCollapseNeighborNodes` for tidy navigation
+  - Click-to-centre with `dimensions` + `centeringTransitionDuration={600}`
+  - Department filtering with ancestor chain (`getFilteredPeopleWithAncestors()` walks up `line_manager_id` to CEO) — no virtual "MCR Pathways" root. Ancestor nodes shown with dashed borders and opacity
+  - `react-d3-tree` `data` prop accepts `RawNodeDatum[]` (array) for multiple roots — no virtual root needed
+  - Fixed connecting lines: CSS variable `hsl(var(--border))` was invalid (Tailwind v4 `--border` is hex, not HSL channels) — hardcoded `#94a3b8` (slate-400)
+  - Hover lift effect (`hover:-translate-y-0.5 hover:shadow-lg`), rounded-xl corners, expand/collapse chevron badge below managers with count
+  - Zoom controls with backdrop blur, keyboard hint, ResizeObserver for dynamic centring
+  - Curved diagonal connectors (`pathFunc="diagonal"`)
+  - Shadcn Select for department filter, search with clear button and auto-expand
+- **Seed data:** ~86 profiles with real MCR job titles and fake names. 5 levels deep (CEO → Directors → Heads/Managers → PMs/Officers → Coordinators). 4 regions (West, East, North, England). GCC external employees marked. Pathways Coordinators with fractional FTEs.
 
-### My Team
-- **Route:** `/hr/team` (placeholder exists)
-- **What:** Team directory and management tools for line managers
-- **Dependencies:** Manager relationships, leave data, compliance status
+### My Team ✅ DONE
+- **Route:** `/hr/team`
+- **What:** Team directory for line managers showing direct reports and peers
+- **Initial build (PR #65):** Manager and peer views with profile cards
+- **Accessibility + polish (PR #67):** Accessibility improvements, work anniversaries display
 
 ---
 
