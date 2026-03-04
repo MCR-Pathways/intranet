@@ -162,16 +162,6 @@ export const DEPARTMENT_CONFIG = {
 
 export type Department = keyof typeof DEPARTMENT_CONFIG;
 
-/**
- * Maps departments to admin roles they auto-grant.
- * Only these three departments confer special access.
- */
-export const DEPARTMENT_ADMIN_MAP: Partial<Record<Department, "hr_admin" | "ld_admin" | "systems_admin">> = {
-  hr: "hr_admin",
-  learning_development: "ld_admin",
-  systems: "systems_admin",
-} as const;
-
 // =============================================
 // REGIONS
 // =============================================

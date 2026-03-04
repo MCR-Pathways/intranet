@@ -19,10 +19,22 @@ export default async function UserManagementPage() {
     redirect("/intranet");
   }
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select(USER_TABLE_SELECT)
-    .order("full_name");
+  const [{ data: profiles }, { data: departmentRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(USER_TABLE_SELECT)
+      .order("full_name"),
+    supabase
+      .from("departments")
+      .select("slug, name")
+      .eq("is_active", true)
+      .order("sort_order"),
+  ]);
+
+  const departments = (departmentRows ?? []).map((d) => ({
+    slug: d.slug as string,
+    name: d.name as string,
+  }));
 
   return (
     <div className="space-y-6">
@@ -30,7 +42,7 @@ export default async function UserManagementPage() {
         title="User Management"
         subtitle="Manage staff profiles, roles, and induction status"
       />
-      <UserTable profiles={profiles ?? []} currentUserId={user.id} />
+      <UserTable profiles={profiles ?? []} currentUserId={user.id} departments={departments} isCurrentUserHRAdmin={isHRAdminEffective(profile)} />
     </div>
   );
 }

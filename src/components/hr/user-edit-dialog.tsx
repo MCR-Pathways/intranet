@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { updateUserProfile } from "@/app/(protected)/hr/users/actions";
 import {
   Dialog,
@@ -10,6 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogClose,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,35 +38,30 @@ import {
 } from "@/components/ui/tooltip";
 import {
   CONTRACT_TYPE_CONFIG,
-  DEPARTMENT_CONFIG,
-  DEPARTMENT_ADMIN_MAP,
   REGION_CONFIG,
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
-import type { Department } from "@/lib/hr";
 import type { UserTableProfile } from "./user-table";
 import { toast } from "sonner";
 
 // =============================================
-// HELPERS
+// PERMISSION CONFIRMATION MESSAGES
 // =============================================
 
-/** Compute which admin role a department auto-grants (if any) */
-function getDepartmentAdminRole(dept: string | null): "hr_admin" | "ld_admin" | "systems_admin" | null {
-  if (!dept) return null;
-  return DEPARTMENT_ADMIN_MAP[dept as Department] ?? null;
-}
+const PERMISSION_WARNINGS: Record<string, string> = {
+  is_hr_admin:
+    "Granting HR Admin access will allow this person to view and manage all employee records, leave requests, absence data, compliance documents, and grant admin permissions to others.",
+  is_ld_admin:
+    "Granting L&D Admin access will allow this person to create, edit, and publish learning courses and manage all learner enrolments.",
+  is_systems_admin:
+    "Granting Systems Admin access will allow this person to manage company assets, user accounts, and system configuration.",
+};
 
-/** Check if a permission is auto-granted by the current department selection */
-function isAutoGranted(dept: string | null, flag: "hr_admin" | "ld_admin" | "systems_admin"): boolean {
-  return getDepartmentAdminRole(dept) === flag;
-}
-
-/** Get the department label for badge text */
-function getDepartmentLabel(dept: string | null): string {
-  if (!dept) return "";
-  return DEPARTMENT_CONFIG[dept as Department]?.label ?? dept;
-}
+const PERMISSION_LABELS: Record<string, string> = {
+  is_hr_admin: "HR Admin",
+  is_ld_admin: "L&D Admin",
+  is_systems_admin: "Systems Admin",
+};
 
 // =============================================
 // PERMISSION ROW COMPONENT
@@ -68,9 +72,6 @@ interface PermissionRowProps {
   label: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-  autoGranted: boolean;
-  manualOverride: boolean;
-  departmentLabel: string;
   disabled: boolean;
   disabledTooltip?: string;
 }
@@ -80,36 +81,21 @@ function PermissionRow({
   label,
   checked,
   onCheckedChange,
-  autoGranted,
-  manualOverride,
-  departmentLabel,
   disabled,
   disabledTooltip,
 }: PermissionRowProps) {
   const switchElement = (
     <Switch
       id={id}
-      checked={checked || autoGranted}
+      checked={checked}
       onCheckedChange={onCheckedChange}
-      disabled={disabled || autoGranted}
+      disabled={disabled}
     />
   );
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <Label htmlFor={id} className="shrink-0">{label}</Label>
-        {autoGranted && (
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-            Via {departmentLabel}
-          </span>
-        )}
-        {manualOverride && !autoGranted && (
-          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-            Manual override
-          </span>
-        )}
-      </div>
+      <Label htmlFor={id} className="shrink-0">{label}</Label>
       {disabled && disabledTooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>{switchElement}</TooltipTrigger>
@@ -126,9 +112,18 @@ function PermissionRow({
 // DIALOG COMPONENT
 // =============================================
 
+/** Department option from DB */
+export interface DepartmentOption {
+  slug: string;
+  name: string;
+}
+
 interface UserEditDialogProps {
   profile: UserTableProfile;
   currentUserId?: string;
+  departments?: DepartmentOption[];
+  /** Whether the current user is an HR admin (only HR admins can change admin flags) */
+  isCurrentUserHRAdmin?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -136,6 +131,8 @@ interface UserEditDialogProps {
 export function UserEditDialog({
   profile,
   currentUserId,
+  departments = [],
+  isCurrentUserHRAdmin = false,
   open,
   onOpenChange,
 }: UserEditDialogProps) {
@@ -157,23 +154,32 @@ export function UserEditDialog({
   // Employment fields
   const [fte, setFte] = useState(String(profile.fte ?? 1));
   const [contractType, setContractType] = useState(profile.contract_type ?? "permanent");
-  const [department, setDepartment] = useState(profile.department ?? "");
-  const [region, setRegion] = useState(profile.region ?? "");
+  const [department, setDepartment] = useState(profile.department || "__none__");
+  const [region, setRegion] = useState(profile.region || "__none__");
   const [workPattern, setWorkPattern] = useState(profile.work_pattern ?? "standard");
   const [startDate, setStartDate] = useState(profile.start_date ?? "");
   const [isExternal, setIsExternal] = useState(profile.is_external ?? false);
 
-  // Compute auto-granted permissions based on selected department
-  const hrAutoGranted = useMemo(() => isAutoGranted(department || null, "hr_admin"), [department]);
-  const ldAutoGranted = useMemo(() => isAutoGranted(department || null, "ld_admin"), [department]);
-  const systemsAutoGranted = useMemo(() => isAutoGranted(department || null, "systems_admin"), [department]);
+  // Permission confirmation dialog state
+  const [pendingPermission, setPendingPermission] = useState<{
+    field: string;
+    newValue: boolean;
+  } | null>(null);
 
-  const deptLabel = useMemo(() => getDepartmentLabel(department || null), [department]);
+  const handlePermissionToggle = useCallback((field: string, currentValue: boolean, setter: (v: boolean) => void) => {
+    const newValue = !currentValue;
+    // Show confirmation for both granting and revoking
+    setPendingPermission({ field, newValue });
+  }, []);
 
-  // Whether admin flags differ from what the DB has (manual overrides)
-  const hrManualOverride = isHRAdmin && !hrAutoGranted;
-  const ldManualOverride = isLDAdmin && !ldAutoGranted;
-  const systemsManualOverride = isSystemsAdmin && !systemsAutoGranted;
+  const confirmPermission = useCallback(() => {
+    if (!pendingPermission) return;
+    const { field, newValue } = pendingPermission;
+    if (field === "is_hr_admin") setIsHRAdmin(newValue);
+    else if (field === "is_ld_admin") setIsLDAdmin(newValue);
+    else if (field === "is_systems_admin") setIsSystemsAdmin(newValue);
+    setPendingPermission(null);
+  }, [pendingPermission, setIsHRAdmin, setIsLDAdmin, setIsSystemsAdmin]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,8 +203,8 @@ export function UserEditDialog({
         is_line_manager: isLineManager,
         fte: fteNum,
         contract_type: contractType,
-        department: department || null,
-        region: region || null,
+        department: department === "__none__" ? null : department,
+        region: region === "__none__" ? null : region,
         work_pattern: workPattern,
         start_date: startDate || null,
         is_external: isExternal,
@@ -214,277 +220,307 @@ export function UserEditDialog({
     });
   };
 
+  const permissionConfirmTitle = pendingPermission
+    ? pendingPermission.newValue
+      ? `Grant ${PERMISSION_LABELS[pendingPermission.field]} Access`
+      : `Remove ${PERMISSION_LABELS[pendingPermission.field]} Access`
+    : "";
+
+  const permissionConfirmDescription = pendingPermission
+    ? pendingPermission.newValue
+      ? PERMISSION_WARNINGS[pendingPermission.field]
+      : `Removing ${PERMISSION_LABELS[pendingPermission.field]} access from ${profile.full_name} will take effect immediately.`
+    : "";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>
-            Update {profile.full_name}&apos;s profile and permissions.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            {/* Core fields */}
-            <div className="grid gap-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" value={profile.email} disabled />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="job_title">Job Title</Label>
-              <Input
-                id="job_title"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="e.g. Programme Coordinator"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update {profile.full_name}&apos;s profile and permissions.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              {/* Core fields */}
               <div className="grid gap-2">
-                <Label htmlFor="user_type">Role</Label>
-                <Select value={userType} onValueChange={setUserType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="pathways_coordinator">
-                      Pathways Coordinator
-                    </SelectItem>
-                    <SelectItem value="new_user">New User</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  id="full_name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending_induction">
-                      Pending Induction
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={profile.email} disabled />
               </div>
-            </div>
 
-            <Separator />
-
-            {/* Employment fields */}
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Employment
-            </p>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="department">Department</Label>
-                {isSelf ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Select value={department} disabled>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                        </Select>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Ask another admin to change your department</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Select value={department} onValueChange={setDepartment}>
+                <Label htmlFor="job_title">Job Title</Label>
+                <Input
+                  id="job_title"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Programme Coordinator"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="user_type">Role</Label>
+                  <Select value={userType} onValueChange={setUserType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="pathways_coordinator">
+                        Pathways Coordinator
+                      </SelectItem>
+                      <SelectItem value="new_user">New User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="pending_induction">
+                        Pending Induction
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Employment fields */}
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Employment
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="department">Department</Label>
+                  {isSelf ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Select value={department} disabled>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                          </Select>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Ask another admin to change your department</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Select value={department} onValueChange={setDepartment}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.slug} value={dept.slug}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="region">Region</Label>
+                  <Select value={region} onValueChange={setRegion}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
+                      <SelectItem value="__none__">None</SelectItem>
+                      {Object.entries(REGION_CONFIG).map(([key, { label }]) => (
                         <SelectItem key={key} value={key}>
                           {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="fte">FTE</Label>
+                  <Input
+                    id="fte"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={fte}
+                    onChange={(e) => setFte(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="contract_type">Contract</Label>
+                  <Select value={contractType} onValueChange={setContractType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CONTRACT_TYPE_CONFIG).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="work_pattern">Pattern</Label>
+                  <Select value={workPattern} onValueChange={setWorkPattern}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(WORK_PATTERN_CONFIG).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="region">Region</Label>
-                <Select value={region} onValueChange={setRegion}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {Object.entries(REGION_CONFIG).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fte">FTE</Label>
+                <Label htmlFor="start_date">Start Date</Label>
                 <Input
-                  id="fte"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={fte}
-                  onChange={(e) => setFte(e.target.value)}
+                  id="start_date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="contract_type">Contract</Label>
-                <Select value={contractType} onValueChange={setContractType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CONTRACT_TYPE_CONFIG).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Separator />
 
-              <div className="grid gap-2">
-                <Label htmlFor="work_pattern">Pattern</Label>
-                <Select value={workPattern} onValueChange={setWorkPattern}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(WORK_PATTERN_CONFIG).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="start_date">Start Date</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-
-            <Separator />
-
-            {/* Permission toggles */}
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Permissions
-            </p>
-
-            {(hrAutoGranted || ldAutoGranted || systemsAutoGranted) && (
-              <p className="text-xs text-muted-foreground -mt-2">
-                Some permissions are automatically granted based on department.
+              {/* Permission toggles */}
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Permissions
               </p>
-            )}
 
-            <PermissionRow
-              id="is_hr_admin"
-              label="HR Admin"
-              checked={isHRAdmin}
-              onCheckedChange={setIsHRAdmin}
-              autoGranted={hrAutoGranted}
-              manualOverride={hrManualOverride}
-              departmentLabel={deptLabel}
-              disabled={isSelf}
-              disabledTooltip="Ask another admin to change your permissions"
-            />
-
-            <PermissionRow
-              id="is_ld_admin"
-              label="L&D Admin"
-              checked={isLDAdmin}
-              onCheckedChange={setIsLDAdmin}
-              autoGranted={ldAutoGranted}
-              manualOverride={ldManualOverride}
-              departmentLabel={deptLabel}
-              disabled={isSelf}
-              disabledTooltip="Ask another admin to change your permissions"
-            />
-
-            <PermissionRow
-              id="is_systems_admin"
-              label="Systems Admin"
-              checked={isSystemsAdmin}
-              onCheckedChange={setIsSystemsAdmin}
-              autoGranted={systemsAutoGranted}
-              manualOverride={systemsManualOverride}
-              departmentLabel={deptLabel}
-              disabled={isSelf}
-              disabledTooltip="Ask another admin to change your permissions"
-            />
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_line_manager">Line Manager</Label>
-              <Switch
-                id="is_line_manager"
-                checked={isLineManager}
-                onCheckedChange={setIsLineManager}
+              <PermissionRow
+                id="is_hr_admin"
+                label="HR Admin"
+                checked={isHRAdmin}
+                onCheckedChange={() => handlePermissionToggle("is_hr_admin", isHRAdmin, setIsHRAdmin)}
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
               />
-            </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="is_external">External Employee</Label>
-              <Switch
-                id="is_external"
-                checked={isExternal}
-                onCheckedChange={setIsExternal}
+              <PermissionRow
+                id="is_ld_admin"
+                label="L&D Admin"
+                checked={isLDAdmin}
+                onCheckedChange={() => handlePermissionToggle("is_ld_admin", isLDAdmin, setIsLDAdmin)}
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
               />
-            </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-          </div>
-          <DialogFooter>
+              <PermissionRow
+                id="is_systems_admin"
+                label="Systems Admin"
+                checked={isSystemsAdmin}
+                onCheckedChange={() => handlePermissionToggle("is_systems_admin", isSystemsAdmin, setIsSystemsAdmin)}
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
+              />
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_line_manager">Line Manager</Label>
+                <Switch
+                  id="is_line_manager"
+                  checked={isLineManager}
+                  onCheckedChange={setIsLineManager}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_external">External Employee</Label>
+                <Switch
+                  id="is_external"
+                  checked={isExternal}
+                  onCheckedChange={setIsExternal}
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permission confirmation dialog */}
+      <AlertDialog
+        open={!!pendingPermission}
+        onOpenChange={(open) => {
+          if (!open) setPendingPermission(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{permissionConfirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {permissionConfirmDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </AlertDialogClose>
             <Button
               type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+              variant={pendingPermission?.newValue ? "default" : "destructive"}
+              onClick={confirmPermission}
             >
-              Cancel
+              {pendingPermission?.newValue ? "Grant Access" : "Remove Access"}
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
