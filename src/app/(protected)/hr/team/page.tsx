@@ -10,6 +10,20 @@ import { Users } from "lucide-react";
 const TEAM_MEMBER_SELECT =
   "id, full_name, preferred_name, avatar_url, job_title, start_date, work_pattern, status, is_external";
 
+/** Map a Supabase profile row to a TeamMember-compatible object. */
+function toTeamMember(r: Record<string, unknown>) {
+  return {
+    id: r.id as string,
+    full_name: r.full_name as string,
+    preferred_name: r.preferred_name as string | null,
+    avatar_url: r.avatar_url as string | null,
+    job_title: r.job_title as string | null,
+    start_date: r.start_date as string | null,
+    work_pattern: r.work_pattern as string | null,
+    is_external: (r.is_external as boolean) ?? false,
+  };
+}
+
 /** Check if a start_date has a work anniversary within the next N days. */
 function getUpcomingAnniversary(
   startDate: string | null,
@@ -83,16 +97,7 @@ export default async function TeamPage() {
         .gte("end_date", today),
     ]);
 
-    const directReports = (reports ?? []).map((r) => ({
-      id: r.id as string,
-      full_name: r.full_name as string,
-      preferred_name: r.preferred_name as string | null,
-      avatar_url: r.avatar_url as string | null,
-      job_title: r.job_title as string | null,
-      start_date: r.start_date as string | null,
-      work_pattern: r.work_pattern as string | null,
-      is_external: (r.is_external as boolean) ?? false,
-    }));
+    const directReports = (reports ?? []).map(toTeamMember);
 
     // Build on-leave map: profileId → { leave_type, end_date }
     const onLeaveMap = new Map<string, { leave_type: string; end_date: string }>();
@@ -128,7 +133,6 @@ export default async function TeamPage() {
         onLeaveMap={Object.fromEntries(onLeaveMap)}
         pendingApprovalCount={pendingCount ?? 0}
         anniversaries={anniversaries}
-        currentUserId={user.id}
       />
     );
   }
@@ -157,16 +161,7 @@ export default async function TeamPage() {
       .gte("end_date", today),
   ]);
 
-  const peerList = (peers ?? []).map((r) => ({
-    id: r.id as string,
-    full_name: r.full_name as string,
-    preferred_name: r.preferred_name as string | null,
-    avatar_url: r.avatar_url as string | null,
-    job_title: r.job_title as string | null,
-    start_date: r.start_date as string | null,
-    work_pattern: r.work_pattern as string | null,
-    is_external: (r.is_external as boolean) ?? false,
-  }));
+  const peerList = (peers ?? []).map(toTeamMember);
 
   // Build on-leave map for peers
   const peerIds = new Set(peerList.map((p) => p.id));

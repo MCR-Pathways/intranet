@@ -93,7 +93,7 @@ function buildTree(
         fte: person.fte,
         avatarUrl: person.avatar_url ?? "",
         directReportCount: children.length,
-      } as unknown as Record<string, string | number | boolean>,
+      } as Record<string, string | number | boolean>,
       children: children.map(toNode),
     };
   }
@@ -114,7 +114,7 @@ function buildTree(
       fte: 1,
       avatarUrl: "",
       directReportCount: roots.length,
-    } as unknown as Record<string, string | number | boolean>,
+    } as Record<string, string | number | boolean>,
     children: roots.map(toNode),
   };
 }

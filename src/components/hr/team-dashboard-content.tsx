@@ -19,7 +19,6 @@ interface TeamDashboardContentProps {
   onLeaveMap: Record<string, LeaveInfo>;
   pendingApprovalCount: number;
   anniversaries: Record<string, AnniversaryInfo>;
-  currentUserId: string;
 }
 
 // =============================================
@@ -58,7 +57,6 @@ export function TeamDashboardContent({
   onLeaveMap,
   pendingApprovalCount,
   anniversaries,
-  currentUserId,
 }: TeamDashboardContentProps) {
   const onLeaveToday = Object.entries(onLeaveMap);
   const anniversaryEntries = Object.entries(anniversaries);
