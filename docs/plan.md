@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-03
+> Last updated: 2026-03-04
 
 ---
 
@@ -105,9 +105,9 @@
 - [x] Return-to-work forms (digital replacement for paper RTW Discussion Form)
 - [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
 - [ ] Onboarding progress tracker
-- [ ] Flexible working requests (form → manager approval → HR → trial period reminders)
-- [ ] Org chart (`/hr/org-chart` — placeholder exists)
-- [ ] My team view (`/hr/team` — placeholder exists)
+- [x] Flexible working requests (PR #62) — full digital workflow per Employment Relations (Flexible Working) Act 2023: day-one right, 2 requests/12 months, mandatory consultation, 8 statutory grounds, appeal process. Auto-updates `profiles.work_pattern` + employment history on approval.
+- [x] Org chart — interactive tree with react-d3-tree (PR #66), UI/UX improvement (PR on `feature/org-chart-improvement`): bigger cards (280×130), coloured avatar fallbacks, "N reports" badge, focus mode (drill into subtree with breadcrumb trail), animated expand/collapse, click-to-centre with smooth transitions, department filtering with ancestor chain (no virtual root), fixed CSS variable connecting lines (`#94a3b8` hex — Tailwind v4 `--border` is hex not HSL), zoom controls with backdrop blur, keyboard hints, search auto-focuses on match's manager subtree with breadcrumb navigation, search + department filter coordination (searching resets filter to "all", filtering clears search), `line-clamp-2` for long job titles (multi-line wrapping)
+- [x] My Team page with manager and peer views (PR #65), accessibility + work anniversaries (PR #67)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 3
