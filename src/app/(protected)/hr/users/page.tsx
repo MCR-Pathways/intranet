@@ -42,7 +42,7 @@ export default async function UserManagementPage() {
         title="User Management"
         subtitle="Manage staff profiles, roles, and induction status"
       />
-      <UserTable profiles={profiles ?? []} currentUserId={user.id} departments={departments} />
+      <UserTable profiles={profiles ?? []} currentUserId={user.id} departments={departments} isCurrentUserHRAdmin={isHRAdminEffective(profile)} />
     </div>
   );
 }

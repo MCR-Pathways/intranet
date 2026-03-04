@@ -95,9 +95,11 @@ interface UserTableProps {
   profiles: UserTableProfile[];
   currentUserId?: string;
   departments?: DepartmentOption[];
+  /** Whether the current user is an HR admin (controls permission toggle visibility) */
+  isCurrentUserHRAdmin?: boolean;
 }
 
-export function UserTable({ profiles, currentUserId, departments = [] }: UserTableProps) {
+export function UserTable({ profiles, currentUserId, departments = [], isCurrentUserHRAdmin = false }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -349,6 +351,7 @@ export function UserTable({ profiles, currentUserId, departments = [] }: UserTab
           profile={editingProfile}
           currentUserId={currentUserId}
           departments={departments}
+          isCurrentUserHRAdmin={isCurrentUserHRAdmin}
           open={!!editingProfile}
           onOpenChange={(open) => {
             if (!open) setEditingProfile(null);

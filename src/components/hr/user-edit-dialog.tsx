@@ -122,6 +122,8 @@ interface UserEditDialogProps {
   profile: UserTableProfile;
   currentUserId?: string;
   departments?: DepartmentOption[];
+  /** Whether the current user is an HR admin (only HR admins can change admin flags) */
+  isCurrentUserHRAdmin?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -130,6 +132,7 @@ export function UserEditDialog({
   profile,
   currentUserId,
   departments = [],
+  isCurrentUserHRAdmin = false,
   open,
   onOpenChange,
 }: UserEditDialogProps) {
@@ -176,7 +179,7 @@ export function UserEditDialog({
     else if (field === "is_ld_admin") setIsLDAdmin(newValue);
     else if (field === "is_systems_admin") setIsSystemsAdmin(newValue);
     setPendingPermission(null);
-  }, [pendingPermission]);
+  }, [pendingPermission, setIsHRAdmin, setIsLDAdmin, setIsSystemsAdmin]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -428,8 +431,8 @@ export function UserEditDialog({
                 label="HR Admin"
                 checked={isHRAdmin}
                 onCheckedChange={() => handlePermissionToggle("is_hr_admin", isHRAdmin, setIsHRAdmin)}
-                disabled={isSelf}
-                disabledTooltip="Ask another admin to change your permissions"
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
               />
 
               <PermissionRow
@@ -437,8 +440,8 @@ export function UserEditDialog({
                 label="L&D Admin"
                 checked={isLDAdmin}
                 onCheckedChange={() => handlePermissionToggle("is_ld_admin", isLDAdmin, setIsLDAdmin)}
-                disabled={isSelf}
-                disabledTooltip="Ask another admin to change your permissions"
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
               />
 
               <PermissionRow
@@ -446,8 +449,8 @@ export function UserEditDialog({
                 label="Systems Admin"
                 checked={isSystemsAdmin}
                 onCheckedChange={() => handlePermissionToggle("is_systems_admin", isSystemsAdmin, setIsSystemsAdmin)}
-                disabled={isSelf}
-                disabledTooltip="Ask another admin to change your permissions"
+                disabled={isSelf || !isCurrentUserHRAdmin}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins can change admin permissions"}
               />
 
               <div className="flex items-center justify-between">
