@@ -162,4 +162,8 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 
 **Use `raw_app_meta_data` for middleware JWT claims, not session storage.** Store frequently-checked profile fields (`user_type`, `status`, `induction_completed_at`) in `auth.users.raw_app_meta_data` via a DB trigger on profiles. The middleware reads these from `user.app_metadata` (zero DB queries). Always include a DB fallback for sessions issued before the migration.
 
+**Sanitise user-controlled fields in CSV exports (CSV injection).** When exporting data to CSV, user-controlled text fields (e.g. `other_location`, names, comments) can contain formula-triggering characters (`=`, `+`, `-`, `@`, `\t`, `\r`) that Excel/Sheets interprets as formulas. Prefix these with a single quote (`'`) to force plain-text rendering. See `sanitiseCSVCell()` in `reports-panel.tsx`.
+
+**Sign-in module key files**: Shared types (`SignInEntry`, `TeamSignInEntry`) and config (`LOCATION_CONFIG`, formatters) in `src/lib/sign-in.ts`. `LocationBadge` component in `src/components/sign-in/location-badge.tsx`. Server actions in `src/app/(protected)/sign-in/actions.ts` — `getSignInHistory()` (single query, splits today/history), `getTeamMemberHistory()` (single member with line-manager verification), `getTeamSignInsToday()`, `getTeamSignInHistory()` (date-range report).
+
 **Don't block user actions on non-critical follow-up failures.** When `refreshSession()` fails after induction completion, log a warning but don't return an error — the core action (profile update) succeeded. The stale JWT resolves on the next natural token refresh.
