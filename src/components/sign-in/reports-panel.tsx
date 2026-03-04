@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileDown, Loader2, BarChart3, AlertTriangle } from "lucide-react";
 import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
-import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel } from "@/lib/sign-in";
+import { LOCATION_CONFIG, formatSignInTime } from "@/lib/sign-in";
+import { LocationBadge } from "./location-badge";
 import { getInitials } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { StatsCards } from "./stats-cards";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TeamSignInEntry } from "@/lib/sign-in";
 
 const LocationCharts = dynamic(() => import("./location-charts").then((m) => m.LocationCharts), {
   ssr: false,
@@ -24,15 +26,6 @@ const LocationCharts = dynamic(() => import("./location-charts").then((m) => m.L
     </div>
   ),
 });
-
-interface SignInEntry {
-  id: string;
-  user_id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
 
 interface TeamMember {
   id: string;
@@ -56,7 +49,7 @@ export function ReportsPanel() {
   const defaults = getDefaultDateRange();
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
-  const [signIns, setSignIns] = useState<SignInEntry[]>([]);
+  const [signIns, setSignIns] = useState<TeamSignInEntry[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [truncated, setTruncated] = useState(false);
@@ -84,7 +77,7 @@ export function ReportsPanel() {
 
   // Group sign-ins by member
   const memberBreakdown = useMemo(() => {
-    const map = new Map<string, SignInEntry[]>();
+    const map = new Map<string, TeamSignInEntry[]>();
     for (const entry of signIns) {
       const existing = map.get(entry.user_id) ?? [];
       existing.push(entry);
@@ -96,6 +89,16 @@ export function ReportsPanel() {
       entries: map.get(member.id) ?? [],
     }));
   }, [signIns, members]);
+
+  /** Sanitise a cell value to prevent CSV injection (formula injection). */
+  function sanitiseCSVCell(value: string): string {
+    // Prefix formula-triggering characters with a single quote so
+    // Excel/Sheets treats the cell as plain text, not a formula.
+    if (/^[=+\-@\t\r]/.test(value)) {
+      return `'${value}`;
+    }
+    return value;
+  }
 
   function exportCSV() {
     const headers = ["Name", "Date", "Time", "Location", "Other Location"];
@@ -112,7 +115,7 @@ export function ReportsPanel() {
         formatSignInTime(entry.signed_in_at),
         loc,
         entry.other_location ?? "",
-      ];
+      ].map(sanitiseCSVCell);
     });
 
     const csvContent = [
@@ -258,28 +261,15 @@ export function ReportsPanel() {
                           </p>
                         ) : (
                           <div className="flex flex-wrap gap-1.5 pl-9">
-                            {entries.map((entry) => {
-                              const config =
-                                LOCATION_CONFIG[entry.location] ??
-                                LOCATION_CONFIG.other;
-                              const Icon = config.icon;
-                              const label = getLocationLabel(entry.location, entry.other_location);
-
-                              return (
-                                <Badge
-                                  key={entry.id}
-                                  variant={config.variant}
-                                  className="gap-1 text-xs"
-                                >
-                                  <Icon className="h-3 w-3" />
-                                  {formatSignInDate(entry.sign_in_date)}
-                                  <span className="font-mono">
-                                    {formatSignInTime(entry.signed_in_at)}
-                                  </span>
-                                  {label}
-                                </Badge>
-                              );
-                            })}
+                            {entries.map((entry) => (
+                              <LocationBadge
+                                key={entry.id}
+                                entry={entry}
+                                showDate
+                                showTime
+                                className="text-xs"
+                              />
+                            ))}
                           </div>
                         )}
                       </div>

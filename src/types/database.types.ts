@@ -1025,6 +1025,7 @@ export interface EnrolmentWithCourse extends CourseEnrolment {
 export type SignIn = Database["public"]["Tables"]["sign_ins"]["Row"];
 
 export interface TeamMemberSignInEntry {
+  sign_in_date: string;
   location: string;
   other_location: string | null;
   signed_in_at: string;

@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -16,22 +15,13 @@ import {
 import { Clock, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteSignInEntry } from "@/app/(protected)/sign-in/actions";
-import { LOCATION_CONFIG, formatSignInTime, getLocationLabel } from "@/lib/sign-in";
+import { formatSignInTime } from "@/lib/sign-in";
+import { LocationBadge } from "./location-badge";
+import type { SignInEntry } from "@/lib/sign-in";
 
-interface TimelineEntry {
-  id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
-
-function TimelineItem({ entry }: { entry: TimelineEntry }) {
+function TimelineItem({ entry }: { entry: SignInEntry }) {
   const [isPending, startTransition] = useTransition();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const config = LOCATION_CONFIG[entry.location] ?? LOCATION_CONFIG.other;
-  const Icon = config.icon;
-  const label = getLocationLabel(entry.location, entry.other_location);
 
   function handleDelete() {
     startTransition(async () => {
@@ -54,10 +44,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
       </span>
 
       {/* Location badge */}
-      <Badge variant={config.variant} className="gap-1.5">
-        <Icon className="h-3 w-3" />
-        {label}
-      </Badge>
+      <LocationBadge entry={entry} className="gap-1.5" />
 
       {/* Delete button */}
       <Button
@@ -113,7 +100,7 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
 }
 
 interface TodayTimelineProps {
-  entries: TimelineEntry[];
+  entries: SignInEntry[];
 }
 
 export function TodayTimeline({ entries }: TodayTimelineProps) {

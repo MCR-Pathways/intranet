@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { getTodaySignIns, getMonthlyHistory, getTeamSignInsToday } from "./actions";
+import { getSignInHistory, getTeamSignInsToday } from "./actions";
 import { SignInPageContent } from "@/components/sign-in/sign-in-page-content";
 
 export default async function SignInPage() {
@@ -11,15 +11,11 @@ export default async function SignInPage() {
     redirect("/login");
   }
 
-  const [todaySignIns, monthlyHistory] = await Promise.all([
-    getTodaySignIns(),
-    getMonthlyHistory(),
+  // Single query fetches both today + 30-day history
+  const [signInHistory, teamData] = await Promise.all([
+    getSignInHistory(),
+    profile.is_line_manager ? getTeamSignInsToday() : null,
   ]);
-
-  // Fetch team data only for line managers
-  const teamData = profile.is_line_manager
-    ? await getTeamSignInsToday()
-    : null;
 
   return (
     <div className="space-y-6">
@@ -28,8 +24,8 @@ export default async function SignInPage() {
         subtitle="Record and track your working location"
       />
       <SignInPageContent
-        todaySignIns={todaySignIns}
-        monthlyHistory={monthlyHistory}
+        todaySignIns={signInHistory.today}
+        monthlyHistory={signInHistory.history}
         teamData={teamData}
         isManager={!!profile.is_line_manager}
       />

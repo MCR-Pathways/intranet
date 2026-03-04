@@ -6,23 +6,7 @@ import { TodayTimeline } from "./today-timeline";
 import { MonthlyHistory } from "./monthly-history";
 import { ManagerDashboard } from "./manager-dashboard";
 import type { TeamMemberSignIn } from "@/types/database.types";
-
-interface SignInEntry {
-  id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-  created_at?: string;
-}
-
-interface HistoryEntry {
-  id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
+import type { SignInEntry } from "@/lib/sign-in";
 
 interface TeamData {
   members: TeamMemberSignIn[];
@@ -31,7 +15,7 @@ interface TeamData {
 
 interface SignInPageContentProps {
   todaySignIns: SignInEntry[];
-  monthlyHistory: HistoryEntry[];
+  monthlyHistory: SignInEntry[];
   teamData: TeamData | null;
   isManager: boolean;
 }

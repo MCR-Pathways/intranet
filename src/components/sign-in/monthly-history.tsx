@@ -2,21 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
-import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel } from "@/lib/sign-in";
-
-interface HistoryEntry {
-  id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
+import { formatSignInDate } from "@/lib/sign-in";
+import { LocationBadge } from "./location-badge";
+import type { SignInEntry } from "@/lib/sign-in";
 
 interface MonthlyHistoryProps {
-  entries: HistoryEntry[];
+  entries: SignInEntry[];
 }
 
 export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
@@ -25,7 +18,7 @@ export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
   // Group entries by date, excluding today
   const groupedByDate = useMemo(() => {
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-    const groups = new Map<string, HistoryEntry[]>();
+    const groups = new Map<string, SignInEntry[]>();
 
     for (const entry of entries) {
       if (entry.sign_in_date === today) continue;
@@ -80,25 +73,14 @@ export function MonthlyHistory({ entries }: MonthlyHistoryProps) {
               {formatSignInDate(date)}
             </span>
             <div className="flex flex-wrap gap-2">
-              {dateEntries.map((entry) => {
-                const config = LOCATION_CONFIG[entry.location] ?? LOCATION_CONFIG.other;
-                const Icon = config.icon;
-                const label = getLocationLabel(entry.location, entry.other_location);
-
-                return (
-                  <Badge
-                    key={entry.id}
-                    variant={config.variant}
-                    className="gap-1.5"
-                  >
-                    <Icon className="h-3 w-3" />
-                    <span className="font-mono text-xs">
-                      {formatSignInTime(entry.signed_in_at)}
-                    </span>
-                    {label}
-                  </Badge>
-                );
-              })}
+              {dateEntries.map((entry) => (
+                <LocationBadge
+                  key={entry.id}
+                  entry={entry}
+                  showTime
+                  className="gap-1.5"
+                />
+              ))}
             </div>
           </div>
         ))}

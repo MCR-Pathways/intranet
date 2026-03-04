@@ -58,11 +58,11 @@ vi.mock("@/lib/logger", () => ({
 
 import {
   recordSignIn,
-  getTodaySignIns,
-  getMonthlyHistory,
+  getSignInHistory,
   deleteSignInEntry,
   getTeamSignInsToday,
   getTeamSignInHistory,
+  getTeamMemberHistory,
   checkAndCreateSignInNudge,
 } from "@/app/(protected)/sign-in/actions";
 import { getCurrentUser } from "@/lib/auth";
@@ -252,21 +252,25 @@ describe("Sign-in Actions", () => {
     });
   });
 
-  describe("getTodaySignIns", () => {
-    it("returns empty array when not authenticated", async () => {
+  describe("getSignInHistory", () => {
+    it("returns empty today and history when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
         supabase: mockSupabase as never,
         user: null,
         profile: null,
       });
 
-      const result = await getTodaySignIns();
-      expect(result).toEqual([]);
+      const result = await getSignInHistory();
+      expect(result).toEqual({ today: [], history: [] });
     });
 
-    it("returns array of today's sign-in records", async () => {
+    it("splits entries into today and history", async () => {
       const today = getUKToday();
-      const signInData = [
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+
+      const allEntries = [
         {
           id: "si-1",
           sign_in_date: today,
@@ -277,7 +281,7 @@ describe("Sign-in Actions", () => {
         },
         {
           id: "si-2",
-          sign_in_date: today,
+          sign_in_date: yesterdayStr,
           location: "glasgow_office",
           other_location: null,
           signed_in_at: "2024-01-01T13:00:00Z",
@@ -285,10 +289,11 @@ describe("Sign-in Actions", () => {
         },
       ];
 
-      // Chain: .from().select().eq("user_id").eq("sign_in_date").order()
-      mockOrder.mockResolvedValue({ data: signInData });
-      const mockEq2 = vi.fn().mockReturnValue({ order: mockOrder });
-      mockEq.mockReturnValue({ eq: mockEq2 });
+      // Chain: .from().select().eq("user_id").gte("sign_in_date").order().order()
+      const mockOrder2 = vi.fn().mockResolvedValue({ data: allEntries });
+      mockOrder.mockReturnValue({ order: mockOrder2 });
+      const mockGte = vi.fn().mockReturnValue({ order: mockOrder });
+      mockEq.mockReturnValue({ gte: mockGte });
       mockSelect.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect });
 
@@ -298,22 +303,11 @@ describe("Sign-in Actions", () => {
         profile: { user_type: "staff" } as never,
       });
 
-      const result = await getTodaySignIns();
-      expect(result).toEqual(signInData);
-      expect(result).toHaveLength(2);
-    });
-  });
-
-  describe("getMonthlyHistory", () => {
-    it("returns empty array when not authenticated", async () => {
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as never,
-        user: null,
-        profile: null,
-      });
-
-      const result = await getMonthlyHistory();
-      expect(result).toEqual([]);
+      const result = await getSignInHistory();
+      expect(result.today).toHaveLength(1);
+      expect(result.today[0].id).toBe("si-1");
+      expect(result.history).toHaveLength(1);
+      expect(result.history[0].id).toBe("si-2");
     });
   });
 
@@ -441,6 +435,38 @@ describe("Sign-in Actions", () => {
 
       const result = await getTeamSignInsToday();
       expect(result).toEqual({ members: [], error: null });
+    });
+  });
+
+  describe("getTeamMemberHistory", () => {
+    it("returns error for non-managers", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "user-1" } as never,
+        profile: { is_line_manager: false } as never,
+      });
+
+      const result = await getTeamMemberHistory("member-1");
+      expect(result).toEqual({ data: [], error: "Unauthorised" });
+    });
+
+    it("returns error when member is not a direct report", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "manager-1" } as never,
+        profile: { is_line_manager: true } as never,
+      });
+
+      // Verify member: single() returns null/error
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+      const mockActiveEq = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockManagerEq = vi.fn().mockReturnValue({ eq: mockActiveEq });
+      const mockIdEq = vi.fn().mockReturnValue({ eq: mockManagerEq });
+      mockSelect.mockReturnValue({ eq: mockIdEq });
+      mockFrom.mockReturnValue({ select: mockSelect });
+
+      const result = await getTeamMemberHistory("unrelated-user");
+      expect(result).toEqual({ data: [], error: "Member not found or not a direct report" });
     });
   });
 
