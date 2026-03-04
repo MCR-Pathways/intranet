@@ -93,7 +93,7 @@ function buildTree(
         fte: person.fte,
         avatarUrl: person.avatar_url ?? "",
         directReportCount: children.length,
-      } as unknown as Record<string, string | number | boolean>,
+      } as Record<string, string | number | boolean>,
       children: children.map(toNode),
     };
   }
@@ -114,7 +114,7 @@ function buildTree(
       fte: 1,
       avatarUrl: "",
       directReportCount: roots.length,
-    } as unknown as Record<string, string | number | boolean>,
+    } as Record<string, string | number | boolean>,
     children: roots.map(toNode),
   };
 }
@@ -243,6 +243,7 @@ export function OrgChartContent({
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
+              aria-label="Filter by department"
               className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All departments</option>
@@ -289,6 +290,9 @@ export function OrgChartContent({
 
       <div
         ref={containerRef}
+        role="img"
+        aria-label={`Organisation chart showing ${people.length} staff members${departmentFilter !== "all" ? ` in ${DEPARTMENT_CONFIG[departmentFilter as Department]?.label ?? departmentFilter}` : ""}`}
+        aria-roledescription="organisation chart"
         className="relative h-[calc(100vh-220px)] min-h-[400px] overflow-hidden rounded-lg border bg-background"
       >
         <Tree
