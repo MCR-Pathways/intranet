@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { LOCATION_CONFIG, getLocationLabel, formatSignInTime, formatSignInDate } from "@/lib/sign-in";
 import type { SignInEntry } from "@/lib/sign-in";
 
@@ -36,7 +37,7 @@ export function LocationBadge({
   const label = getLocationLabel(entry.location, entry.other_location);
 
   return (
-    <Badge variant={config.variant} className={className ? `gap-1 ${className}` : "gap-1"}>
+    <Badge variant={config.variant} className={cn("gap-1", className)}>
       <Icon className="h-3 w-3" />
       {showDate && (
         <span>{formatSignInDate(entry.sign_in_date)}</span>

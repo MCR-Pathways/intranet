@@ -104,12 +104,7 @@ export function TeamOverview({ members }: TeamOverviewProps) {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <LocationBadge
-                        entry={{
-                          location: latestSignIn.location,
-                          other_location: latestSignIn.other_location,
-                          signed_in_at: latestSignIn.signed_in_at,
-                          sign_in_date: "",
-                        }}
+                        entry={latestSignIn}
                         className="text-xs"
                       />
                       {member.sign_ins.length > 1 && (

@@ -126,10 +126,17 @@ export async function getSignInHistory() {
   const all = data ?? [];
 
   // Split into today and history in a single pass
-  const todayEntries = all.filter((e) => e.sign_in_date === today);
-  const historyEntries = all.filter((e) => e.sign_in_date !== today);
-
-  return { today: todayEntries, history: historyEntries };
+  return all.reduce(
+    (acc, entry) => {
+      if (entry.sign_in_date === today) {
+        acc.today.push(entry);
+      } else {
+        acc.history.push(entry);
+      }
+      return acc;
+    },
+    { today: [] as typeof all, history: [] as typeof all }
+  );
 }
 
 /**
@@ -208,7 +215,7 @@ export async function getTeamSignInsToday() {
   // Get today's sign-ins for those members
   const { data: signIns } = await supabase
     .from("sign_ins")
-    .select("user_id, location, other_location, signed_in_at")
+    .select("user_id, sign_in_date, location, other_location, signed_in_at")
     .in("user_id", memberIds)
     .eq("sign_in_date", today)
     .order("signed_in_at", { ascending: true });
@@ -216,7 +223,7 @@ export async function getTeamSignInsToday() {
   // Build map: user_id -> array of sign-ins
   const signInMap = new Map<
     string,
-    { user_id: string; location: string; other_location: string | null; signed_in_at: string }[]
+    { user_id: string; sign_in_date: string; location: string; other_location: string | null; signed_in_at: string }[]
   >();
   for (const s of signIns ?? []) {
     const arr = signInMap.get(s.user_id) ?? [];
