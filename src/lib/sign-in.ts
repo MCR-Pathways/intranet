@@ -1,6 +1,35 @@
 import { Home, Building2, Globe } from "lucide-react";
 import type { WorkLocation } from "@/types/database.types";
 
+// =============================================
+// SHARED TYPES
+// =============================================
+
+/**
+ * A single sign-in entry for the current user (no user_id needed).
+ * Used in today-timeline, monthly-history, sign-in-page-content.
+ */
+export interface SignInEntry {
+  id: string;
+  sign_in_date: string;
+  location: string;
+  other_location: string | null;
+  signed_in_at: string;
+  created_at?: string;
+}
+
+/**
+ * A sign-in entry that includes user_id — used in team/reports context
+ * where entries from multiple users are displayed together.
+ */
+export interface TeamSignInEntry extends SignInEntry {
+  user_id: string;
+}
+
+// =============================================
+// LOCATION CONFIG
+// =============================================
+
 /**
  * Location display configuration for badges and labels.
  * Used across timeline, history, team overview, member detail, and reports.

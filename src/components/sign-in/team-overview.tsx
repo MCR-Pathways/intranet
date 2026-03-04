@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { MemberDetail } from "./member-detail";
-import { LOCATION_CONFIG, getLocationLabel } from "@/lib/sign-in";
-import { getInitials } from "@/lib/utils";
+import { LocationBadge } from "./location-badge";
+import { LOCATION_CONFIG } from "@/lib/sign-in";
 import type { TeamMemberSignIn } from "@/types/database.types";
 
 interface TeamOverviewProps {
@@ -80,9 +80,6 @@ export function TeamOverview({ members }: TeamOverviewProps) {
               {signedIn.map((member) => {
                 const displayName = member.preferred_name ?? member.full_name;
                 const latestSignIn = member.sign_ins[member.sign_ins.length - 1];
-                const config =
-                  LOCATION_CONFIG[latestSignIn.location] ?? LOCATION_CONFIG.other;
-                const locationLabel = getLocationLabel(latestSignIn.location, latestSignIn.other_location);
 
                 return (
                   <button
@@ -106,10 +103,15 @@ export function TeamOverview({ members }: TeamOverviewProps) {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge variant={config.variant} className="gap-1 text-xs">
-                        <config.icon className="h-3 w-3" />
-                        {locationLabel}
-                      </Badge>
+                      <LocationBadge
+                        entry={{
+                          location: latestSignIn.location,
+                          other_location: latestSignIn.other_location,
+                          signed_in_at: latestSignIn.signed_in_at,
+                          sign_in_date: "",
+                        }}
+                        className="text-xs"
+                      />
                       {member.sign_ins.length > 1 && (
                         <span className="text-xs text-muted-foreground">
                           +{member.sign_ins.length - 1} more

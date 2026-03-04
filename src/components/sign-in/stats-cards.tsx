@@ -3,18 +3,10 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Home, Building2, TrendingUp } from "lucide-react";
-
-interface SignInEntry {
-  id: string;
-  user_id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
+import type { TeamSignInEntry } from "@/lib/sign-in";
 
 interface StatsCardsProps {
-  entries: SignInEntry[];
+  entries: TeamSignInEntry[];
   memberCount: number;
 }
 

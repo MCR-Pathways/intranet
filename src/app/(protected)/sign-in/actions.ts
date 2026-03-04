@@ -99,49 +99,37 @@ export async function recordSignIn(
 }
 
 /**
- * Get all of the current user's sign-in entries for today.
- * Returns an array ordered by signed_in_at ascending (earliest first).
+ * Get the current user's sign-in entries for the past 30 days (including today).
+ * Returns all entries in a single query — the page splits today vs history client-side.
+ * This replaces the previous getTodaySignIns() + getMonthlyHistory() two-query pattern.
+ *
+ * Ordered by sign_in_date DESC, signed_in_at ASC (newest dates first, earliest time first within each day).
  */
-export async function getTodaySignIns() {
+export async function getSignInHistory() {
   const { supabase, user } = await getCurrentUser();
 
-  if (!user) return [];
+  if (!user) return { today: [], history: [] };
 
   const today = getUKToday();
-
-  const { data } = await supabase
-    .from("sign_ins")
-    .select("id, sign_in_date, location, other_location, signed_in_at, created_at")
-    .eq("user_id", user.id)
-    .eq("sign_in_date", today)
-    .order("signed_in_at", { ascending: true });
-
-  return data ?? [];
-}
-
-/**
- * Get the current user's sign-in history for the past 30 days.
- * Returns entries ordered by sign_in_date DESC, signed_in_at ASC.
- * Grouping by date is done on the client side.
- */
-export async function getMonthlyHistory() {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) return [];
-
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const startDate = thirtyDaysAgo.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 
   const { data } = await supabase
     .from("sign_ins")
-    .select("id, sign_in_date, location, other_location, signed_in_at")
+    .select("id, sign_in_date, location, other_location, signed_in_at, created_at")
     .eq("user_id", user.id)
     .gte("sign_in_date", startDate)
     .order("sign_in_date", { ascending: false })
     .order("signed_in_at", { ascending: true });
 
-  return data ?? [];
+  const all = data ?? [];
+
+  // Split into today and history in a single pass
+  const todayEntries = all.filter((e) => e.sign_in_date === today);
+  const historyEntries = all.filter((e) => e.sign_in_date !== today);
+
+  return { today: todayEntries, history: historyEntries };
 }
 
 /**
@@ -242,6 +230,50 @@ export async function getTeamSignInsToday() {
   }));
 
   return { members: membersWithSignIns, error: null };
+}
+
+/**
+ * Get historical sign-in data for a single team member.
+ * More efficient than getTeamSignInHistory — queries only one user
+ * instead of fetching all team members and filtering client-side.
+ */
+export async function getTeamMemberHistory(memberId: string) {
+  const { supabase, user, profile } = await getCurrentUser();
+
+  if (!user || !profile?.is_line_manager) {
+    return { data: [], error: "Unauthorised" };
+  }
+
+  // Verify the requested member is a direct report
+  const { data: member } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", memberId)
+    .eq("line_manager_id", user.id)
+    .eq("status", "active")
+    .single();
+
+  if (!member) {
+    return { data: [], error: "Member not found or not a direct report" };
+  }
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const startDate = thirtyDaysAgo.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+
+  const { data: signIns, error } = await supabase
+    .from("sign_ins")
+    .select("id, user_id, sign_in_date, location, other_location, signed_in_at")
+    .eq("user_id", memberId)
+    .gte("sign_in_date", startDate)
+    .order("sign_in_date", { ascending: false })
+    .order("signed_in_at", { ascending: true });
+
+  if (error) {
+    return { data: [], error: error.message };
+  }
+
+  return { data: signIns ?? [], error: null };
 }
 
 /**

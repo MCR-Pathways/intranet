@@ -9,22 +9,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { getTeamSignInHistory } from "@/app/(protected)/sign-in/actions";
-import { LOCATION_CONFIG, formatSignInTime, formatSignInDate, getLocationLabel } from "@/lib/sign-in";
+import { getTeamMemberHistory } from "@/app/(protected)/sign-in/actions";
+import { formatSignInDate } from "@/lib/sign-in";
+import { LocationBadge } from "./location-badge";
 import { getInitials } from "@/lib/utils";
 import type { TeamMemberSignIn } from "@/types/database.types";
-
-interface HistoryEntry {
-  id: string;
-  user_id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
+import type { TeamSignInEntry } from "@/lib/sign-in";
 
 interface MemberDetailProps {
   member: TeamMemberSignIn | null;
@@ -33,31 +25,25 @@ interface MemberDetailProps {
 }
 
 export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [history, setHistory] = useState<TeamSignInEntry[]>([]);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!member || !open) return;
 
     startTransition(async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const result = await getTeamSignInHistory({
-        startDate: thirtyDaysAgo.toISOString().split("T")[0],
-        endDate: new Date().toISOString().split("T")[0],
-      });
+      // Fetch only this member's history (not all team members)
+      const result = await getTeamMemberHistory(member.id);
 
       if (!result.error && result.data) {
-        // Filter to just this member's entries
-        setHistory(result.data.filter((e) => e.user_id === member.id));
+        setHistory(result.data);
       }
     });
   }, [member, open]);
 
   // Group entries by date
   const groupedHistory = useMemo(() => {
-    const groups = new Map<string, HistoryEntry[]>();
+    const groups = new Map<string, TeamSignInEntry[]>();
 
     for (const entry of history) {
       const existing = groups.get(entry.sign_in_date) ?? [];
@@ -144,27 +130,14 @@ export function MemberDetail({ member, open, onClose }: MemberDetailProps) {
                         {formatSignInDate(date)}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {entries.map((entry) => {
-                          const config =
-                            LOCATION_CONFIG[entry.location] ??
-                            LOCATION_CONFIG.other;
-                          const Icon = config.icon;
-                          const label = getLocationLabel(entry.location, entry.other_location);
-
-                          return (
-                            <Badge
-                              key={entry.id}
-                              variant={config.variant}
-                              className="gap-1 text-xs"
-                            >
-                              <Icon className="h-3 w-3" />
-                              <span className="font-mono">
-                                {formatSignInTime(entry.signed_in_at)}
-                              </span>
-                              {label}
-                            </Badge>
-                          );
-                        })}
+                        {entries.map((entry) => (
+                          <LocationBadge
+                            key={entry.id}
+                            entry={entry}
+                            showTime
+                            className="text-xs"
+                          />
+                        ))}
                       </div>
                     </div>
                   ))
