@@ -11,6 +11,7 @@ import type { Department } from "@/lib/hr";
 // =============================================
 
 interface OrgChartPersonCardProps {
+  personId: string;
   name: string;
   jobTitle: string;
   department: Department | "";
@@ -27,6 +28,7 @@ interface OrgChartPersonCardProps {
 // =============================================
 
 export function OrgChartPersonCard({
+  personId,
   name,
   jobTitle,
   department,
@@ -42,19 +44,30 @@ export function OrgChartPersonCard({
     : "#94a3b8";
 
   return (
-    <foreignObject width={220} height={90} x={-110} y={-40}>
+    <foreignObject width={260} height={100} x={-130} y={-45}>
       <div
         className={cn(
-          "flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 shadow-sm min-w-[200px] transition-shadow",
+          "flex items-center gap-3 rounded-lg border bg-card px-3.5 py-3 shadow-sm min-w-[240px] cursor-pointer transition-shadow hover:shadow-md",
           isExternal && "bg-sky-50 border-sky-200",
           isHighlighted && "ring-2 ring-primary ring-offset-2"
         )}
         style={{ borderLeftWidth: 3, borderLeftColor: deptColour }}
         aria-label={`${name}${jobTitle ? `, ${jobTitle}` : ""}${directReportCount > 0 ? `, ${directReportCount} direct reports` : ""}`}
+        onClick={() => {
+          if (personId) window.location.href = `/hr/users/${personId}`;
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && personId) {
+            e.preventDefault();
+            window.location.href = `/hr/users/${personId}`;
+          }
+        }}
       >
         {/* Avatar with status indicator */}
         <div className="relative shrink-0">
-          <Avatar className="h-9 w-9">
+          <Avatar className="h-10 w-10">
             <AvatarImage src={avatarUrl || undefined} alt={name} />
             <AvatarFallback className="text-xs">{getInitials(name)}</AvatarFallback>
           </Avatar>
@@ -71,20 +84,20 @@ export function OrgChartPersonCard({
 
         {/* Info */}
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold leading-tight truncate">{name}</p>
+          <p className="text-sm font-semibold leading-tight truncate">{name}</p>
           {jobTitle && (
-            <p className="text-[10px] text-muted-foreground leading-tight truncate mt-0.5">
+            <p className="text-xs text-muted-foreground leading-tight truncate mt-0.5">
               {jobTitle}
             </p>
           )}
           <div className="flex items-center gap-1.5 mt-1">
             {isExternal && (
-              <span className="rounded bg-sky-100 px-1 py-0.5 text-[9px] font-medium text-sky-700 leading-none">
+              <span className="rounded bg-sky-100 px-1 py-0.5 text-[10px] font-medium text-sky-700 leading-none">
                 GCC
               </span>
             )}
             {fte !== 1 && (
-              <span className="rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground leading-none">
+              <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground leading-none">
                 {fte} FTE
               </span>
             )}

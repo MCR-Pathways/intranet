@@ -1,15 +1,34 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { select } from "d3-selection";
+import { zoomIdentity } from "d3-zoom";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { OrgChartPersonCard } from "@/components/hr/org-chart-person-card";
 import { DEPARTMENT_CONFIG } from "@/lib/hr";
 import type { Department } from "@/lib/hr";
-import { Users, Search, Locate, Maximize2, Minimize2 } from "lucide-react";
+import {
+  Users,
+  Search,
+  Locate,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  X,
+} from "lucide-react";
 import type { RawNodeDatum, TreeNodeDatum } from "react-d3-tree";
 
 // Dynamically import Tree to avoid SSR issues with D3
@@ -120,6 +139,89 @@ function buildTree(
 }
 
 // =============================================
+// ZOOM HELPERS
+// =============================================
+
+function applyZoomTransform(
+  containerEl: HTMLDivElement,
+  scaleBy: number,
+) {
+  const svg = containerEl.querySelector("svg");
+  if (!svg) return;
+
+  try {
+    // Access D3 zoom's internal state via __zoom on the SVG element
+    const svgSelection = select(svg);
+    const currentTransform =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (svg as any).__zoom ?? zoomIdentity;
+
+    const newScale = currentTransform.k * scaleBy;
+    // Clamp between 0.1 and 3
+    if (newScale < 0.1 || newScale > 3) return;
+
+    // Create new transform centred on the SVG midpoint
+    const midX = svg.clientWidth / 2;
+    const midY = svg.clientHeight / 2;
+
+    const newTransform = zoomIdentity
+      .translate(midX, midY)
+      .scale(newScale)
+      .translate(
+        -midX + (currentTransform.x - midX * (1 - currentTransform.k)) / currentTransform.k,
+        -midY + (currentTransform.y - midY * (1 - currentTransform.k)) / currentTransform.k,
+      );
+
+    // Apply via D3 zoom
+    svgSelection.property("__zoom", newTransform);
+    svgSelection
+      .select("g")
+      .attr(
+        "transform",
+        `translate(${newTransform.x},${newTransform.y}) scale(${newTransform.k})`,
+      );
+  } catch {
+    // Silently fail if D3 zoom internals aren't accessible
+  }
+}
+
+function fitToScreen(containerEl: HTMLDivElement) {
+  const svg = containerEl.querySelector("svg");
+  if (!svg) return;
+
+  try {
+    const svgSelection = select(svg);
+    const g = svg.querySelector("g");
+    if (!g) return;
+
+    // Get the bounding box of the tree content
+    const bbox = g.getBBox();
+    const svgWidth = svg.clientWidth;
+    const svgHeight = svg.clientHeight;
+
+    const padding = 40;
+    const scaleX = (svgWidth - padding * 2) / bbox.width;
+    const scaleY = (svgHeight - padding * 2) / bbox.height;
+    const scale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x
+
+    const translateX = svgWidth / 2 - (bbox.x + bbox.width / 2) * scale;
+    const translateY = svgHeight / 2 - (bbox.y + bbox.height / 2) * scale;
+
+    const newTransform = zoomIdentity.translate(translateX, translateY).scale(scale);
+
+    svgSelection.property("__zoom", newTransform);
+    svgSelection
+      .select("g")
+      .attr(
+        "transform",
+        `translate(${newTransform.x},${newTransform.y}) scale(${newTransform.k})`,
+      );
+  } catch {
+    // Silently fail
+  }
+}
+
+// =============================================
 // COMPONENT
 // =============================================
 
@@ -132,8 +234,16 @@ export function OrgChartContent({
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [expandAll, setExpandAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [translate, setTranslate] = useState({ x: 0, y: 60 });
 
   const onLeaveSet = useMemo(() => new Set(onLeaveIds), [onLeaveIds]);
+
+  // Dynamically centre the tree based on container width
+  useEffect(() => {
+    if (containerRef.current) {
+      setTranslate({ x: containerRef.current.clientWidth / 2, y: 60 });
+    }
+  }, []);
 
   // Filter people by department if selected
   const filteredPeople = useMemo(() => {
@@ -146,8 +256,8 @@ export function OrgChartContent({
     [filteredPeople, onLeaveSet]
   );
 
-  // Get unique departments for filter
-  const departments = useMemo(() => {
+  // Get unique departments for filter and legend
+  const activeDepartments = useMemo(() => {
     const depts = new Set<string>();
     people.forEach((p) => {
       if (p.department) depts.add(p.department);
@@ -166,13 +276,36 @@ export function OrgChartContent({
     );
   }, [searchQuery, people]);
 
+  // Auto-expand tree when search finds a match
+  const hasSearchInput = searchQuery.trim().length > 0;
+
   // Find Me — locate current user
   const handleFindMe = useCallback(() => {
     const me = people.find((p) => p.id === currentUserId);
     if (me) {
       setSearchQuery(me.full_name);
+      setExpandAll(true);
     }
   }, [people, currentUserId]);
+
+  // Clear search
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery("");
+    setExpandAll(false);
+  }, []);
+
+  // Zoom controls
+  const handleZoomIn = useCallback(() => {
+    if (containerRef.current) applyZoomTransform(containerRef.current, 1.3);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (containerRef.current) applyZoomTransform(containerRef.current, 0.7);
+  }, []);
+
+  const handleFitToScreen = useCallback(() => {
+    if (containerRef.current) fitToScreen(containerRef.current);
+  }, []);
 
   const renderCustomNode = useCallback(
     ({ nodeDatum }: { nodeDatum: TreeNodeDatum }) => {
@@ -180,7 +313,7 @@ export function OrgChartContent({
       if (!attrs.personId) {
         // Virtual root node
         return (
-          <foreignObject width={200} height={50} x={-100} y={-25}>
+          <foreignObject width={220} height={56} x={-110} y={-28}>
             <div className="flex h-full items-center justify-center rounded-lg border bg-card px-3 py-2 shadow-sm">
               <span className="text-sm font-semibold">{nodeDatum.name}</span>
             </div>
@@ -192,6 +325,7 @@ export function OrgChartContent({
 
       return (
         <OrgChartPersonCard
+          personId={attrs.personId}
           name={nodeDatum.name}
           jobTitle={attrs.jobTitle}
           department={attrs.department as Department | ""}
@@ -223,6 +357,9 @@ export function OrgChartContent({
     );
   }
 
+  // Determine tree depth: expand all if searching, otherwise use toggle
+  const effectiveExpandAll = expandAll || (hasSearchInput && !!searchMatch);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -230,29 +367,41 @@ export function OrgChartContent({
         subtitle={`${people.length} active staff`}
         actions={
           <div className="flex items-center gap-2">
+            {/* Search input with clear button */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by name or title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-56 pl-9 h-9"
+                className="w-56 pl-9 pr-8 h-9"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              aria-label="Filter by department"
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All departments</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {DEPARTMENT_CONFIG[d as Department]?.label ?? d}
-                </option>
-              ))}
-            </select>
+            {/* Department filter — Shadcn Select */}
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-44 h-9">
+                <SelectValue placeholder="All departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All departments</SelectItem>
+                {activeDepartments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {DEPARTMENT_CONFIG[d as Department]?.label ?? d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Button variant="outline" size="sm" onClick={handleFindMe}>
               <Locate className="h-4 w-4 mr-1" />
@@ -280,12 +429,36 @@ export function OrgChartContent({
         }
       />
 
-      {/* Search result indicator */}
-      {searchMatch && (
+      {/* Search result / no-match indicator */}
+      {hasSearchInput && searchMatch && (
         <p className="text-sm text-muted-foreground">
           Found: <span className="font-medium text-foreground">{searchMatch.full_name}</span>
           {searchMatch.job_title && ` — ${searchMatch.job_title}`}
         </p>
+      )}
+      {hasSearchInput && !searchMatch && (
+        <p className="text-sm text-muted-foreground">
+          No matches found for &ldquo;{searchQuery}&rdquo;
+        </p>
+      )}
+
+      {/* Department legend */}
+      {activeDepartments.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {activeDepartments.map((d) => {
+            const config = DEPARTMENT_CONFIG[d as Department];
+            if (!config) return null;
+            return (
+              <div key={d} className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: config.colour }}
+                />
+                <span className="text-xs text-muted-foreground">{config.label}</span>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div
@@ -293,23 +466,61 @@ export function OrgChartContent({
         role="img"
         aria-label={`Organisation chart showing ${people.length} staff members${departmentFilter !== "all" ? ` in ${DEPARTMENT_CONFIG[departmentFilter as Department]?.label ?? departmentFilter}` : ""}`}
         aria-roledescription="organisation chart"
-        className="relative h-[calc(100vh-220px)] min-h-[400px] overflow-hidden rounded-lg border bg-background"
+        className="relative h-[calc(100vh-260px)] min-h-[400px] overflow-hidden rounded-lg border bg-background"
       >
-        <Tree
-          data={treeData}
-          orientation="vertical"
-          pathFunc="step"
-          translate={{ x: 400, y: 60 }}
-          nodeSize={{ x: 240, y: 120 }}
-          separation={{ siblings: 1.2, nonSiblings: 1.5 }}
-          renderCustomNodeElement={renderCustomNode}
-          initialDepth={expandAll ? undefined : 2}
-          key={`${departmentFilter}-${expandAll}`}
-          zoomable
-          draggable
-          collapsible
-          pathClassFunc={() => "stroke-border"}
-        />
+        {translate.x > 0 && (
+          <Tree
+            data={treeData}
+            orientation="vertical"
+            pathFunc="diagonal"
+            translate={translate}
+            nodeSize={{ x: 280, y: 140 }}
+            separation={{ siblings: 1.3, nonSiblings: 1.6 }}
+            renderCustomNodeElement={renderCustomNode}
+            initialDepth={effectiveExpandAll ? undefined : 2}
+            key={`${departmentFilter}-${effectiveExpandAll}`}
+            zoomable
+            draggable
+            collapsible
+            hasInteractiveNodes
+            pathClassFunc={() => "stroke-border !stroke-[1.5]"}
+            scaleExtent={{ min: 0.1, max: 3 }}
+          />
+        )}
+
+        {/* Zoom controls — bottom-right overlay */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-background shadow-sm"
+            onClick={handleZoomIn}
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-background shadow-sm"
+            onClick={handleZoomOut}
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-background shadow-sm"
+            onClick={handleFitToScreen}
+            aria-label="Fit to screen"
+          >
+            <Maximize className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
