@@ -69,6 +69,7 @@ export default async function UserManagementPage() {
         isCurrentUserHRAdmin={isHRAdminEffective(profile)}
         people={people}
         teams={teamOptions}
+        isCurrentUserHRAdmin={isHRAdminEffective(profile)}
       />
     </div>
   );

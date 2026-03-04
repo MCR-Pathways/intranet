@@ -355,6 +355,7 @@ export function EmployeeDetailContent({
         departments={departments}
         people={people}
         teams={teams}
+        isCurrentUserHRAdmin={isHRAdmin}
         open={employmentDialogOpen}
         onOpenChange={setEmploymentDialogOpen}
       />
@@ -362,6 +363,7 @@ export function EmployeeDetailContent({
         profileId={profile.id}
         profileName={profile.full_name}
         currentUserId={currentUserId}
+        isCurrentUserHRAdmin={isHRAdmin}
         isHRAdmin={profile.is_hr_admin}
         isLDAdmin={profile.is_ld_admin}
         isSystemsAdmin={profile.is_systems_admin}

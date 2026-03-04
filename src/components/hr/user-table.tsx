@@ -116,6 +116,8 @@ interface UserTableProps {
   isCurrentUserHRAdmin?: boolean;
   people?: PersonOption[];
   teams?: TeamOption[];
+  /** Whether the current user is an HR admin (controls permission toggle visibility) */
+  isCurrentUserHRAdmin?: boolean;
 }
 
 export function UserTable({
@@ -125,6 +127,7 @@ export function UserTable({
   isCurrentUserHRAdmin = false,
   people = [],
   teams = [],
+  isCurrentUserHRAdmin = false,
 }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -389,8 +392,8 @@ export function UserTable({
                             <Shield className="h-4 w-4" />
                             Edit Permissions
                           </DropdownMenuItem>
-                          {/* Induction actions — show based on state */}
-                          {!profile.induction_completed_at && (
+                          {/* Induction actions — HR admins only */}
+                          {isCurrentUserHRAdmin && !profile.induction_completed_at && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -401,7 +404,7 @@ export function UserTable({
                               </DropdownMenuItem>
                             </>
                           )}
-                          {profile.induction_completed_at && (
+                          {isCurrentUserHRAdmin && profile.induction_completed_at && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -444,6 +447,7 @@ export function UserTable({
           departments={departments}
           people={people}
           teams={teams}
+          isCurrentUserHRAdmin={isCurrentUserHRAdmin}
           open={!!employmentProfile}
           onOpenChange={(open) => {
             if (!open) setEmploymentProfile(null);
@@ -457,6 +461,7 @@ export function UserTable({
           profileId={permissionsProfile.id}
           profileName={permissionsProfile.full_name}
           currentUserId={currentUserId}
+          isCurrentUserHRAdmin={isCurrentUserHRAdmin}
           isHRAdmin={permissionsProfile.is_hr_admin}
           isLDAdmin={permissionsProfile.is_ld_admin}
           isSystemsAdmin={permissionsProfile.is_systems_admin}

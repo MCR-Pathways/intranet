@@ -176,6 +176,7 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Dependencies:** `cmdk`, `@radix-ui/react-popover` (Popover + Command UI primitives)
 - **Server actions:** Removed `updateEmployeeEmployment` (consolidated into `updateUserProfile`), added `is_external` auto-derive for pathways coordinators
 - **Types:** Added `is_systems_admin` to `ProfileSummary` in `types/hr.ts`
+- **Permission audit:** Comprehensive audit for UI elements that promise actions the server silently blocks. Fixed: Department field in EmploymentEditDialog disabled for non-HR admins (server strips it), induction Complete/Reset menu items hidden for non-HR admins (server rejects), admin permission toggles disabled for non-HR admins in both UserEditDialog and PermissionsEditDialog. `isCurrentUserHRAdmin` prop threaded through all dialog chains.
 
 ### Leave Calendar Tab ✅ DONE
 - Calendar removed from sidebar, now a "Team Calendar" tab within `/hr/leave` (managers/HR admins only)

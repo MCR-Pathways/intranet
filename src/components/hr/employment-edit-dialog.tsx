@@ -48,6 +48,8 @@ interface EmploymentEditDialogProps {
   people?: PersonOption[];
   /** Teams for team combobox */
   teams?: TeamOption[];
+  /** Whether the current user is an HR admin (only HR admins can change department) */
+  isCurrentUserHRAdmin?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -57,6 +59,7 @@ export function EmploymentEditDialog({
   departments = [],
   people = [],
   teams = [],
+  isCurrentUserHRAdmin = false,
   open,
   onOpenChange,
 }: EmploymentEditDialogProps) {
@@ -167,7 +170,7 @@ export function EmploymentEditDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="department">Department</Label>
-                <Select value={department} onValueChange={setDepartment}>
+                <Select value={department} onValueChange={setDepartment} disabled={!isCurrentUserHRAdmin}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
