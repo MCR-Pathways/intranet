@@ -28,8 +28,10 @@ import {
   ZoomOut,
   Maximize,
   X,
+  ChevronRight,
+  Home,
 } from "lucide-react";
-import type { RawNodeDatum, TreeNodeDatum } from "react-d3-tree";
+import type { RawNodeDatum, TreeNodeDatum, CustomNodeElementProps } from "react-d3-tree";
 
 // Dynamically import Tree to avoid SSR issues with D3
 const Tree = dynamic(() => import("react-d3-tree").then((mod) => mod.default), {
@@ -77,12 +79,69 @@ interface OrgNodeAttributes {
   fte: number;
   avatarUrl: string;
   directReportCount: number;
+  totalReportCount: number;
+  isAncestor: boolean; // true if this node is included only as an ancestor (not in the filtered department)
+  hasChildren: boolean;
+}
+
+/**
+ * Build an ancestor-inclusive filtered set.
+ * When filtering by department, include all people in that department
+ * PLUS their ancestors up to the CEO. This preserves the tree hierarchy
+ * instead of creating disconnected roots that need a virtual node.
+ */
+function getFilteredPeopleWithAncestors(
+  people: OrgPerson[],
+  departmentFilter: string,
+): { filtered: OrgPerson[]; ancestorIds: Set<string> } {
+  if (departmentFilter === "all") {
+    return { filtered: people, ancestorIds: new Set() };
+  }
+
+  const byId = new Map(people.map((p) => [p.id, p]));
+  const deptPeople = people.filter((p) => p.department === departmentFilter);
+  const ancestorIds = new Set<string>();
+  const includedIds = new Set(deptPeople.map((p) => p.id));
+
+  // Walk up the manager chain for each department member
+  for (const person of deptPeople) {
+    let current = person;
+    while (current.line_manager_id) {
+      if (includedIds.has(current.line_manager_id)) break;
+      const parent = byId.get(current.line_manager_id);
+      if (!parent) break;
+      includedIds.add(parent.id);
+      ancestorIds.add(parent.id);
+      current = parent;
+    }
+  }
+
+  return {
+    filtered: people.filter((p) => includedIds.has(p.id)),
+    ancestorIds,
+  };
+}
+
+/**
+ * Count total descendants (not just direct children) for display.
+ */
+function countDescendants(
+  personId: string,
+  childrenMap: Map<string | null, OrgPerson[]>,
+): number {
+  const children = childrenMap.get(personId) ?? [];
+  let count = children.length;
+  for (const child of children) {
+    count += countDescendants(child.id, childrenMap);
+  }
+  return count;
 }
 
 function buildTree(
   people: OrgPerson[],
   onLeaveSet: Set<string>,
-): RawNodeDatum | null {
+  ancestorIds: Set<string>,
+): RawNodeDatum | RawNodeDatum[] | null {
   // Build children map
   const childrenMap = new Map<string | null, OrgPerson[]>();
   for (const person of people) {
@@ -112,30 +171,60 @@ function buildTree(
         fte: person.fte,
         avatarUrl: person.avatar_url ?? "",
         directReportCount: children.length,
+        totalReportCount: countDescendants(person.id, childrenMap),
+        isAncestor: ancestorIds.has(person.id),
+        hasChildren: children.length > 0,
       } as Record<string, string | number | boolean>,
       children: children.map(toNode),
     };
   }
 
-  // If single root, use it directly; if multiple, create a virtual root
+  // Single root → return single node. Multiple → return array (react-d3-tree supports it)
   if (roots.length === 1) {
     return toNode(roots[0]);
   }
 
-  return {
-    name: "MCR Pathways",
-    attributes: {
-      personId: "",
-      jobTitle: "",
-      department: "",
-      isExternal: false,
-      isOnLeave: false,
-      fte: 1,
-      avatarUrl: "",
-      directReportCount: roots.length,
-    } as Record<string, string | number | boolean>,
-    children: roots.map(toNode),
-  };
+  return roots.map(toNode);
+}
+
+/**
+ * Build a subtree rooted at a specific person.
+ * Used for "focus mode" — clicking into a person's subtree.
+ */
+function buildSubtree(
+  rootPerson: OrgPerson,
+  people: OrgPerson[],
+  onLeaveSet: Set<string>,
+): RawNodeDatum | null {
+  const childrenMap = new Map<string | null, OrgPerson[]>();
+  for (const person of people) {
+    const parent = person.line_manager_id;
+    if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+    childrenMap.get(parent)!.push(person);
+  }
+
+  function toNode(person: OrgPerson): RawNodeDatum {
+    const children = childrenMap.get(person.id) ?? [];
+    return {
+      name: person.full_name,
+      attributes: {
+        personId: person.id,
+        jobTitle: person.job_title ?? "",
+        department: person.department ?? "",
+        isExternal: person.is_external,
+        isOnLeave: onLeaveSet.has(person.id),
+        fte: person.fte,
+        avatarUrl: person.avatar_url ?? "",
+        directReportCount: children.length,
+        totalReportCount: countDescendants(person.id, childrenMap),
+        isAncestor: false,
+        hasChildren: children.length > 0,
+      } as Record<string, string | number | boolean>,
+      children: children.map(toNode),
+    };
+  }
+
+  return toNode(rootPerson);
 }
 
 // =============================================
@@ -150,17 +239,14 @@ function applyZoomTransform(
   if (!svg) return;
 
   try {
-    // Access D3 zoom's internal state via __zoom on the SVG element
     const svgSelection = select(svg);
     const currentTransform =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (svg as any).__zoom ?? zoomIdentity;
 
     const newScale = currentTransform.k * scaleBy;
-    // Clamp between 0.1 and 3
     if (newScale < 0.1 || newScale > 3) return;
 
-    // Create new transform centred on the SVG midpoint
     const midX = svg.clientWidth / 2;
     const midY = svg.clientHeight / 2;
 
@@ -172,7 +258,6 @@ function applyZoomTransform(
         -midY + (currentTransform.y - midY * (1 - currentTransform.k)) / currentTransform.k,
       );
 
-    // Apply via D3 zoom
     svgSelection.property("__zoom", newTransform);
     svgSelection
       .select("g")
@@ -194,15 +279,14 @@ function fitToScreen(containerEl: HTMLDivElement) {
     const g = svg.querySelector("g");
     if (!g) return;
 
-    // Get the bounding box of the tree content
     const bbox = g.getBBox();
     const svgWidth = svg.clientWidth;
     const svgHeight = svg.clientHeight;
 
-    const padding = 40;
+    const padding = 60;
     const scaleX = (svgWidth - padding * 2) / bbox.width;
     const scaleY = (svgHeight - padding * 2) / bbox.height;
-    const scale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x
+    const scale = Math.min(scaleX, scaleY, 1.2);
 
     const translateX = svgWidth / 2 - (bbox.x + bbox.width / 2) * scale;
     const translateY = svgHeight / 2 - (bbox.y + bbox.height / 2) * scale;
@@ -233,28 +317,59 @@ export function OrgChartContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [expandAll, setExpandAll] = useState(true);
+  const [focusedPersonId, setFocusedPersonId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 60 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | undefined>(undefined);
 
   const onLeaveSet = useMemo(() => new Set(onLeaveIds), [onLeaveIds]);
 
-  // Dynamically centre the tree based on container width
+  // Dynamically centre the tree and set dimensions for click-to-centre
   useEffect(() => {
-    if (containerRef.current) {
-      setTranslate({ x: containerRef.current.clientWidth / 2, y: 60 });
-    }
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateDimensions = () => {
+      setTranslate({ x: el.clientWidth / 2, y: 80 });
+      setDimensions({ width: el.clientWidth, height: el.clientHeight });
+    };
+
+    updateDimensions();
+
+    const observer = new ResizeObserver(updateDimensions);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
-  // Filter people by department if selected
-  const filteredPeople = useMemo(() => {
-    if (departmentFilter === "all") return people;
-    return people.filter((p) => p.department === departmentFilter);
+  // Build focused person's breadcrumb trail
+  const focusBreadcrumbs = useMemo(() => {
+    if (!focusedPersonId) return [];
+    const byId = new Map(people.map((p) => [p.id, p]));
+    const trail: OrgPerson[] = [];
+    let current = byId.get(focusedPersonId);
+    while (current) {
+      trail.unshift(current);
+      current = current.line_manager_id ? byId.get(current.line_manager_id) : undefined;
+    }
+    return trail;
+  }, [focusedPersonId, people]);
+
+  // Filter people by department (with ancestor chain preservation)
+  const { filteredPeople, ancestorIds } = useMemo(() => {
+    const { filtered, ancestorIds } = getFilteredPeopleWithAncestors(people, departmentFilter);
+    return { filteredPeople: filtered, ancestorIds };
   }, [people, departmentFilter]);
 
-  const treeData = useMemo(
-    () => buildTree(filteredPeople, onLeaveSet),
-    [filteredPeople, onLeaveSet]
-  );
+  // Build tree data — either focused subtree or full tree
+  const treeData = useMemo(() => {
+    if (focusedPersonId) {
+      const focusedPerson = people.find((p) => p.id === focusedPersonId);
+      if (focusedPerson) {
+        return buildSubtree(focusedPerson, filteredPeople, onLeaveSet);
+      }
+    }
+    return buildTree(filteredPeople, onLeaveSet, ancestorIds);
+  }, [filteredPeople, onLeaveSet, ancestorIds, focusedPersonId, people]);
 
   // Get unique departments for filter and legend
   const activeDepartments = useMemo(() => {
@@ -265,19 +380,28 @@ export function OrgChartContent({
     return Array.from(depts).sort();
   }, [people]);
 
-  // Search: find the node that matches and highlight it
-  const searchMatch = useMemo(() => {
-    if (!searchQuery.trim()) return null;
+  // Search: find matching people
+  const searchMatches = useMemo(() => {
+    if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
-    return people.find(
+    return people.filter(
       (p) =>
         p.full_name.toLowerCase().includes(q) ||
         (p.job_title && p.job_title.toLowerCase().includes(q))
     );
   }, [searchQuery, people]);
 
-  // Auto-expand tree when search finds a match
+  const searchMatch = searchMatches.length > 0 ? searchMatches[0] : null;
   const hasSearchInput = searchQuery.trim().length > 0;
+
+  // Auto-focus on search match's manager so the person is visible in context
+  useEffect(() => {
+    if (!searchMatch) return;
+    // Focus on the matched person's manager (so we see them + siblings)
+    // If they have no manager (CEO), focus on them directly
+    const focusTarget = searchMatch.line_manager_id ?? searchMatch.id;
+    setFocusedPersonId(focusTarget);
+  }, [searchMatch]);
 
   // Find Me — locate current user
   const handleFindMe = useCallback(() => {
@@ -288,10 +412,29 @@ export function OrgChartContent({
     }
   }, [people, currentUserId]);
 
-  // Clear search
+  // Clear search and exit focus mode
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
-    setExpandAll(false);
+    setFocusedPersonId(null);
+  }, []);
+
+  // Focus on a person's subtree (drill down)
+  const handleFocusPerson = useCallback((personId: string) => {
+    setFocusedPersonId(personId);
+    setSearchQuery("");
+    setExpandAll(true);
+    // Reset translate to re-centre
+    if (containerRef.current) {
+      setTranslate({ x: containerRef.current.clientWidth / 2, y: 80 });
+    }
+  }, []);
+
+  // Exit focus mode (back to full tree)
+  const handleExitFocus = useCallback(() => {
+    setFocusedPersonId(null);
+    if (containerRef.current) {
+      setTranslate({ x: containerRef.current.clientWidth / 2, y: 80 });
+    }
   }, []);
 
   // Zoom controls
@@ -308,18 +451,8 @@ export function OrgChartContent({
   }, []);
 
   const renderCustomNode = useCallback(
-    ({ nodeDatum }: { nodeDatum: TreeNodeDatum }) => {
+    ({ nodeDatum, toggleNode }: CustomNodeElementProps) => {
       const attrs = nodeDatum.attributes as unknown as OrgNodeAttributes;
-      if (!attrs.personId) {
-        // Virtual root node
-        return (
-          <foreignObject width={220} height={56} x={-110} y={-28}>
-            <div className="flex h-full items-center justify-center rounded-lg border bg-card px-3 py-2 shadow-sm">
-              <span className="text-sm font-semibold">{nodeDatum.name}</span>
-            </div>
-          </foreignObject>
-        );
-      }
 
       const isHighlighted = searchMatch?.id === attrs.personId;
 
@@ -334,11 +467,17 @@ export function OrgChartContent({
           isOnLeave={attrs.isOnLeave}
           fte={attrs.fte}
           directReportCount={attrs.directReportCount}
+          totalReportCount={attrs.totalReportCount}
           isHighlighted={isHighlighted}
+          isAncestor={attrs.isAncestor}
+          hasChildren={attrs.hasChildren}
+          isCollapsed={nodeDatum.__rd3t?.collapsed ?? false}
+          onToggleExpand={toggleNode}
+          onFocus={handleFocusPerson}
         />
       );
     },
-    [searchMatch]
+    [searchMatch, handleFocusPerson]
   );
 
   if (!treeData) {
@@ -361,10 +500,10 @@ export function OrgChartContent({
   const effectiveExpandAll = expandAll || (hasSearchInput && !!searchMatch);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <PageHeader
         title="Org Chart"
-        subtitle={`${people.length} active staff`}
+        subtitle={`${people.length} people across the organisation`}
         actions={
           <div className="flex items-center gap-2">
             {/* Search input with clear button */}
@@ -373,7 +512,16 @@ export function OrgChartContent({
               <Input
                 placeholder="Search by name or title..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  // Reset department filter when searching so the matched person is visible
+                  if (e.target.value.trim()) {
+                    setDepartmentFilter("all");
+                  } else {
+                    // Clearing search → exit focus mode
+                    setFocusedPersonId(null);
+                  }
+                }}
                 className="w-56 pl-9 pr-8 h-9"
               />
               {searchQuery && (
@@ -389,7 +537,11 @@ export function OrgChartContent({
             </div>
 
             {/* Department filter — Shadcn Select */}
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <Select value={departmentFilter} onValueChange={(val) => {
+              setDepartmentFilter(val);
+              setFocusedPersonId(null); // Reset focus when changing department
+              setSearchQuery(""); // Clear search when filtering by department
+            }}>
               <SelectTrigger className="w-44 h-9">
                 <SelectValue placeholder="All departments" />
               </SelectTrigger>
@@ -430,16 +582,54 @@ export function OrgChartContent({
       />
 
       {/* Search result / no-match indicator */}
-      {hasSearchInput && searchMatch && (
-        <p className="text-sm text-muted-foreground">
-          Found: <span className="font-medium text-foreground">{searchMatch.full_name}</span>
-          {searchMatch.job_title && ` — ${searchMatch.job_title}`}
-        </p>
+      {hasSearchInput && searchMatches.length > 0 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Found {searchMatches.length} {searchMatches.length === 1 ? "match" : "matches"}:
+          </span>
+          <span className="font-medium text-foreground">{searchMatch!.full_name}</span>
+          {searchMatch!.job_title && (
+            <span className="text-muted-foreground">— {searchMatch!.job_title}</span>
+          )}
+          {searchMatches.length > 1 && (
+            <span className="text-xs text-muted-foreground">(+{searchMatches.length - 1} more)</span>
+          )}
+        </div>
       )}
-      {hasSearchInput && !searchMatch && (
+      {hasSearchInput && searchMatches.length === 0 && (
         <p className="text-sm text-muted-foreground">
           No matches found for &ldquo;{searchQuery}&rdquo;
         </p>
+      )}
+
+      {/* Focus mode breadcrumbs */}
+      {focusedPersonId && focusBreadcrumbs.length > 0 && (
+        <div className="flex items-center gap-1 text-sm">
+          <button
+            type="button"
+            onClick={handleExitFocus}
+            className="flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            <Home className="h-3.5 w-3.5" />
+            Full Org
+          </button>
+          {focusBreadcrumbs.map((person, i) => (
+            <span key={person.id} className="flex items-center gap-1">
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              {i === focusBreadcrumbs.length - 1 ? (
+                <span className="font-medium text-foreground">{person.full_name}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleFocusPerson(person.id)}
+                  className="text-primary hover:text-primary/80 transition-colors"
+                >
+                  {person.full_name}
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
       )}
 
       {/* Department legend */}
@@ -466,7 +656,7 @@ export function OrgChartContent({
         role="img"
         aria-label={`Organisation chart showing ${people.length} staff members${departmentFilter !== "all" ? ` in ${DEPARTMENT_CONFIG[departmentFilter as Department]?.label ?? departmentFilter}` : ""}`}
         aria-roledescription="organisation chart"
-        className="relative h-[calc(100vh-260px)] min-h-[400px] overflow-hidden rounded-lg border bg-background"
+        className="relative h-[calc(100vh-260px)] min-h-[500px] overflow-hidden rounded-xl border bg-muted/30"
       >
         {translate.x > 0 && (
           <Tree
@@ -474,16 +664,21 @@ export function OrgChartContent({
             orientation="vertical"
             pathFunc="diagonal"
             translate={translate}
-            nodeSize={{ x: 280, y: 140 }}
-            separation={{ siblings: 1.3, nonSiblings: 1.6 }}
+            dimensions={dimensions}
+            centeringTransitionDuration={600}
+            nodeSize={{ x: 300, y: 170 }}
+            separation={{ siblings: 1.2, nonSiblings: 1.5 }}
             renderCustomNodeElement={renderCustomNode}
             initialDepth={effectiveExpandAll ? undefined : 2}
-            key={`${departmentFilter}-${effectiveExpandAll}`}
+            key={`${departmentFilter}-${effectiveExpandAll}-${focusedPersonId ?? "root"}`}
             zoomable
             draggable
             collapsible
             hasInteractiveNodes
-            pathClassFunc={() => "stroke-border !stroke-[1.5]"}
+            shouldCollapseNeighborNodes
+            enableLegacyTransitions
+            transitionDuration={300}
+            pathClassFunc={() => "org-chart-link"}
             scaleExtent={{ min: 0.1, max: 3 }}
           />
         )}
@@ -494,7 +689,7 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon"
-            className="h-8 w-8 bg-background shadow-sm"
+            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomIn}
             aria-label="Zoom in"
           >
@@ -504,7 +699,7 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon"
-            className="h-8 w-8 bg-background shadow-sm"
+            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomOut}
             aria-label="Zoom out"
           >
@@ -514,14 +709,30 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon"
-            className="h-8 w-8 bg-background shadow-sm"
+            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleFitToScreen}
             aria-label="Fit to screen"
           >
             <Maximize className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Keyboard hint */}
+        <div className="absolute bottom-4 left-4 text-[11px] text-muted-foreground/60">
+          Scroll to zoom · Drag to pan · Click card to view profile
+        </div>
       </div>
+
+      {/* Global styles for connector lines */}
+      <style>{`
+        .org-chart-link {
+          stroke: #94a3b8;
+          stroke-width: 2;
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+      `}</style>
     </div>
   );
 }
