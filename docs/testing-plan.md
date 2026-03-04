@@ -186,6 +186,32 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
+## Phase 8: Org Chart Component Tests (branch: `test/org-chart-components`)
+**Tests: ~30 | Effort: 0.5 sessions | Priority: LOWER**
+
+### `src/components/hr/org-chart-content.test.tsx` (~20 tests)
+- Tree rendering with people data, correct root node
+- Search filtering — matches by name and job title
+- Search auto-focus — sets focusedPersonId to match's manager, shows breadcrumbs
+- Search + department filter coordination — searching resets filter to "all", filtering clears search
+- Department filtering — ancestor chain preservation (ancestors marked with `isAncestor`)
+- Focus mode — drill-down builds subtree, breadcrumbs show full path, "Full Org" exits focus
+- Expand/collapse toggle, Find Me button
+- Empty state when no people data
+
+### `src/components/hr/org-chart-person-card.test.tsx` (~10 tests)
+- Card rendering with person data (name, job title, department colour)
+- Avatar fallback with department colour and initials
+- "N reports" badge visibility (hidden when 0)
+- Long job title wrapping (line-clamp-2)
+- Highlight ring when `isHighlighted` is true
+- Ancestor styling (dashed border, reduced opacity) when `isAncestor` is true
+- Expand/collapse chevron visibility (only when `hasChildren`)
+- Focus button visibility on hover (only when `hasChildren`)
+- External badge (GCC) and FTE badge visibility
+
+---
+
 ## Summary
 
 | Phase | Branch | Tests | Sessions | Priority | Status |
@@ -197,11 +223,12 @@ Largest untested action file (966 lines, 12 functions):
 | 5 | `test/phase-5-news-feed-components` | 76 | 1 | MEDIUM | DONE (PR #58) |
 | 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
-| **Total** | | **~569** | **~10.5** | | |
+| 8 | `test/org-chart-components` | ~30 | 0.5 | LOWER | |
+| **Total** | | **~599** | **~11** | | |
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
-**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → 7
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → 7 → 8
 
 ---
 
