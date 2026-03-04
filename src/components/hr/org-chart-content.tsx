@@ -232,7 +232,7 @@ export function OrgChartContent({
 }: OrgChartContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
-  const [expandAll, setExpandAll] = useState(false);
+  const [expandAll, setExpandAll] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 60 });
 
