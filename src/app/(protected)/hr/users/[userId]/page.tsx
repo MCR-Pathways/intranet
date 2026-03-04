@@ -95,6 +95,8 @@ export default async function EmployeeDetailPage({
     { data: rtwForms },
     { data: rawLeavingForm },
     { data: departmentRows },
+    { data: activeProfiles },
+    { data: allTeams },
   ] = await Promise.all([
     supabase
       .from("employee_details")
@@ -168,6 +170,17 @@ export default async function EmployeeDetailPage({
       .select("slug, name")
       .eq("is_active", true)
       .order("sort_order"),
+    // Active profiles for line manager combobox
+    supabase
+      .from("profiles")
+      .select("id, full_name, job_title")
+      .eq("status", "active")
+      .order("full_name"),
+    // Teams for team combobox
+    supabase
+      .from("teams")
+      .select("id, name")
+      .order("name"),
   ]);
 
   // Resolve line manager name
@@ -388,6 +401,17 @@ export default async function EmployeeDetailPage({
       }
     : null;
 
+  // Build combobox options for line manager / team pickers
+  const people = (activeProfiles ?? []).map((p) => ({
+    id: p.id as string,
+    full_name: p.full_name as string,
+    job_title: p.job_title as string | null,
+  }));
+  const teamOptions = (allTeams ?? []).map((t) => ({
+    id: t.id as string,
+    name: t.name as string,
+  }));
+
   // Check if current user is the employee's line manager
   const isCurrentUserManager = (profile.line_manager_id as string | null) === currentUserId;
 
@@ -425,6 +449,8 @@ export default async function EmployeeDetailPage({
         leavingForm={leavingForm}
         departments={(departmentRows ?? []).map((d) => ({ slug: d.slug as string, name: d.name as string }))}
         isManager={isCurrentUserManager}
+        people={people}
+        teams={teamOptions}
       />
     </div>
   );

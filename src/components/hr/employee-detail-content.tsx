@@ -19,7 +19,10 @@ import { ProfileLeavingTab } from "./profile-leaving-tab";
 import { ProfileKeyDatesSection } from "./profile-key-dates-section";
 import { EmploymentEditDialog } from "./employment-edit-dialog";
 import type { DepartmentOption } from "./user-edit-dialog";
+import { PermissionsEditDialog } from "./permissions-edit-dialog";
 import { PersonalDetailsEditDialog } from "./personal-details-edit-dialog";
+import type { PersonOption } from "./person-combobox";
+import type { TeamOption } from "./team-combobox";
 import {
   GENDER_CONFIG,
   formatHRDate,
@@ -102,6 +105,10 @@ interface EmployeeDetailContentProps {
   leavingForm?: StaffLeavingForm | null;
   isManager?: boolean;
   departments?: DepartmentOption[];
+  /** Active profiles for line manager combobox */
+  people?: PersonOption[];
+  /** Teams for team combobox */
+  teams?: TeamOption[];
 }
 
 const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets", "absence", "leaving"];
@@ -128,11 +135,14 @@ export function EmployeeDetailContent({
   leavingForm = null,
   isManager = false,
   departments = [],
+  people = [],
+  teams = [],
 }: EmployeeDetailContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "overview";
 
   const [employmentDialogOpen, setEmploymentDialogOpen] = useState(false);
   const [personalDialogOpen, setPersonalDialogOpen] = useState(false);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
 
   return (
     <>
@@ -154,7 +164,7 @@ export function EmployeeDetailContent({
         </TabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -162,6 +172,14 @@ export function EmployeeDetailContent({
             >
               <Pencil className="h-3.5 w-3.5 mr-1" />
               Edit Employment
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPermissionsDialogOpen(true)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              Edit Permissions
             </Button>
           </div>
           <ProfileOverviewTab
@@ -335,8 +353,23 @@ export function EmployeeDetailContent({
       <EmploymentEditDialog
         profile={profile}
         departments={departments}
+        people={people}
+        teams={teams}
+        isCurrentUserHRAdmin={isHRAdmin}
         open={employmentDialogOpen}
         onOpenChange={setEmploymentDialogOpen}
+      />
+      <PermissionsEditDialog
+        profileId={profile.id}
+        profileName={profile.full_name}
+        currentUserId={currentUserId}
+        isCurrentUserHRAdmin={isHRAdmin}
+        isHRAdmin={profile.is_hr_admin}
+        isLDAdmin={profile.is_ld_admin}
+        isSystemsAdmin={profile.is_systems_admin}
+        isLineManager={profile.is_line_manager}
+        open={permissionsDialogOpen}
+        onOpenChange={setPermissionsDialogOpen}
       />
       <PersonalDetailsEditDialog
         userId={profile.id}

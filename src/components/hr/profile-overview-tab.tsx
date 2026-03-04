@@ -26,6 +26,9 @@ import {
   CalendarDays,
   Timer,
   Users,
+  Shield,
+  Check,
+  X,
 } from "lucide-react";
 
 interface ProfileOverviewTabProps {
@@ -44,6 +47,7 @@ interface ProfileOverviewTabProps {
     is_external: boolean;
     is_hr_admin: boolean;
     is_ld_admin: boolean;
+    is_systems_admin: boolean;
     is_line_manager: boolean;
   };
   /** Optional: resolved line manager name for display */
@@ -117,8 +121,8 @@ export function ProfileOverviewTab({
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {profile.is_hr_admin && <Badge variant="default">HR Admin</Badge>}
                 {profile.is_ld_admin && <Badge variant="secondary">L&D Admin</Badge>}
+                {profile.is_systems_admin && <Badge variant="secondary">Systems Admin</Badge>}
                 {profile.is_line_manager && <Badge variant="outline">Line Manager</Badge>}
-                {profile.is_external && <Badge variant="muted">External</Badge>}
               </div>
             </div>
           </div>
@@ -160,6 +164,12 @@ export function ProfileOverviewTab({
               icon={Users}
               label="FTE"
               value={formatFTE(profile.fte)}
+            />
+            <Separator />
+            <DetailItem
+              icon={Briefcase}
+              label="Classification"
+              value={profile.is_external ? "External" : "Internal"}
             />
           </CardContent>
         </Card>
@@ -207,6 +217,37 @@ export function ProfileOverviewTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* System Permissions card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">System Permissions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PermissionItem label="HR Admin" granted={profile.is_hr_admin} />
+            <PermissionItem label="L&D Admin" granted={profile.is_ld_admin} />
+            <PermissionItem label="Systems Admin" granted={profile.is_systems_admin} />
+            <PermissionItem label="Line Manager" granted={profile.is_line_manager} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/** Permission indicator with check/cross icon. */
+function PermissionItem({ label, granted }: { label: string; granted: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      {granted ? (
+        <Check className="h-4 w-4 text-green-600" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground" />
+      )}
+      <span className={`text-sm ${granted ? "font-medium" : "text-muted-foreground"}`}>
+        {label}
+      </span>
     </div>
   );
 }

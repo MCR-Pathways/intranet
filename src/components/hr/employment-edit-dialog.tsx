@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { updateEmployeeEmployment } from "@/app/(protected)/hr/users/actions";
+import { useState, useTransition, useEffect } from "react";
+import { updateUserProfile } from "@/app/(protected)/hr/users/actions";
 import {
   Dialog,
   DialogContent,
@@ -22,17 +22,34 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CONTRACT_TYPE_CONFIG,
+  DEPARTMENT_CONFIG,
   REGION_CONFIG,
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
-import type { EmployeeProfile } from "@/types/hr";
+import { PersonCombobox } from "./person-combobox";
+import type { PersonOption } from "./person-combobox";
+import { TeamCombobox } from "./team-combobox";
+import type { TeamOption } from "./team-combobox";
 import type { DepartmentOption } from "./user-edit-dialog";
+import type { EmployeeProfile } from "@/types/hr";
 import { toast } from "sonner";
 
 interface EmploymentEditDialogProps {
   profile: EmployeeProfile;
+  /** Dynamic departments from DB — falls back to DEPARTMENT_CONFIG if empty */
   departments?: DepartmentOption[];
+  /** Active profiles for line manager combobox */
+  people?: PersonOption[];
+  /** Teams for team combobox */
+  teams?: TeamOption[];
+  /** Whether the current user is an HR admin (only HR admins can change department) */
+  isCurrentUserHRAdmin?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -40,6 +57,9 @@ interface EmploymentEditDialogProps {
 export function EmploymentEditDialog({
   profile,
   departments = [],
+  people = [],
+  teams = [],
+  isCurrentUserHRAdmin = false,
   open,
   onOpenChange,
 }: EmploymentEditDialogProps) {
@@ -55,8 +75,17 @@ export function EmploymentEditDialog({
   const [probationEndDate, setProbationEndDate] = useState(profile.probation_end_date ?? "");
   const [contractEndDate, setContractEndDate] = useState(profile.contract_end_date ?? "");
   const [isExternal, setIsExternal] = useState(profile.is_external ?? false);
-  const [lineManagerId, setLineManagerId] = useState(profile.line_manager_id ?? "");
-  const [teamId, setTeamId] = useState(profile.team_id ?? "");
+  const [lineManagerId, setLineManagerId] = useState<string | null>(profile.line_manager_id ?? null);
+  const [teamId, setTeamId] = useState<string | null>(profile.team_id ?? null);
+
+  // Auto-derive: pathways coordinators are always external
+  const isPathwaysCoordinator = profile.user_type === "pathways_coordinator";
+
+  useEffect(() => {
+    if (isPathwaysCoordinator) {
+      setIsExternal(true);
+    }
+  }, [isPathwaysCoordinator]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +98,7 @@ export function EmploymentEditDialog({
     }
 
     startTransition(async () => {
-      const result = await updateEmployeeEmployment(profile.id, {
+      const result = await updateUserProfile(profile.id, {
         fte: fteNum,
         contract_type: contractType,
         department: department === "__none__" ? null : department,
@@ -79,8 +108,8 @@ export function EmploymentEditDialog({
         probation_end_date: probationEndDate || null,
         contract_end_date: contractEndDate || null,
         is_external: isExternal,
-        line_manager_id: lineManagerId || null,
-        team_id: teamId || null,
+        line_manager_id: lineManagerId,
+        team_id: teamId,
       });
 
       if (result.success) {
@@ -92,6 +121,9 @@ export function EmploymentEditDialog({
       }
     });
   };
+
+  // Use dynamic departments if available, otherwise fall back to DEPARTMENT_CONFIG
+  const hasDynamicDepartments = departments.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,17 +170,23 @@ export function EmploymentEditDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="department">Department</Label>
-                <Select value={department} onValueChange={setDepartment}>
+                <Select value={department} onValueChange={setDepartment} disabled={!isCurrentUserHRAdmin}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">None</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.slug} value={dept.slug}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
+                    {hasDynamicDepartments
+                      ? departments.map((dept) => (
+                          <SelectItem key={dept.slug} value={dept.slug}>
+                            {dept.name}
+                          </SelectItem>
+                        ))
+                      : Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -221,33 +259,65 @@ export function EmploymentEditDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="line_manager_id">Line Manager ID</Label>
-                <Input
-                  id="line_manager_id"
-                  value={lineManagerId}
-                  onChange={(e) => setLineManagerId(e.target.value)}
-                  placeholder="UUID of line manager"
-                />
+                <Label>Line Manager</Label>
+                {people.length > 0 ? (
+                  <PersonCombobox
+                    people={people}
+                    value={lineManagerId}
+                    onChange={setLineManagerId}
+                    excludeId={profile.id}
+                    placeholder="Select line manager..."
+                  />
+                ) : (
+                  <Input
+                    value={lineManagerId ?? ""}
+                    onChange={(e) => setLineManagerId(e.target.value || null)}
+                    placeholder="UUID of line manager"
+                  />
+                )}
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="team_id">Team ID</Label>
-                <Input
-                  id="team_id"
-                  value={teamId}
-                  onChange={(e) => setTeamId(e.target.value)}
-                  placeholder="UUID of team"
-                />
+                <Label>Team</Label>
+                {teams.length > 0 ? (
+                  <TeamCombobox
+                    teams={teams}
+                    value={teamId}
+                    onChange={setTeamId}
+                    placeholder="Select team..."
+                  />
+                ) : (
+                  <Input
+                    value={teamId ?? ""}
+                    onChange={(e) => setTeamId(e.target.value || null)}
+                    placeholder="UUID of team"
+                  />
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <Label htmlFor="is_external">External Employee</Label>
-              <Switch
-                id="is_external"
-                checked={isExternal}
-                onCheckedChange={setIsExternal}
-              />
+              {isPathwaysCoordinator ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Switch
+                        id="is_external"
+                        checked={true}
+                        disabled
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Pathways Coordinators are always classified as external</TooltipContent>
+                </Tooltip>
+              ) : (
+                <Switch
+                  id="is_external"
+                  checked={isExternal}
+                  onCheckedChange={setIsExternal}
+                />
+              )}
             </div>
 
             {error && (
