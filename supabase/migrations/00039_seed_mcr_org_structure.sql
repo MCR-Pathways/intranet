@@ -55,17 +55,14 @@ BEGIN
     -- CENTRAL TEAM: Delivery Director reports (central)
     -- =========================================
 
-    -- Head of Systems (reports to Delivery Director)
+    -- NOTE: Head of Systems (Colin Adam) and Systems Coordinator (Abdulmuiz Adaranijo)
+    -- are real users — NOT seeded here. They must be assigned manually after seeding.
+    -- Systems team members (report to Colin Adam, the real Head of Systems)
+    -- line_manager_id must be updated post-seed to point to Colin's real profile ID.
     INSERT INTO public.profiles (id, full_name, email, job_title, department, region, line_manager_id, status, user_type, fte, is_line_manager, is_external, is_hr_admin, is_ld_admin, is_systems_admin)
     VALUES
-      ('a0000000-0000-4000-8000-000000000030', 'Andrew Ferguson', 'andrew.ferguson@mcrpathways.org', 'Head of Systems, Evidence & Impact', 'systems', 'west', 'a0000000-0000-4000-8000-000000000004', 'active', 'staff', 1.0, true, false, false, false, true);
-
-    -- Systems team (reports to Head of Systems)
-    INSERT INTO public.profiles (id, full_name, email, job_title, department, region, line_manager_id, status, user_type, fte, is_line_manager, is_external, is_hr_admin, is_ld_admin, is_systems_admin)
-    VALUES
-      ('a0000000-0000-4000-8000-000000000031', 'Ryan MacLeod', 'ryan.macleod@mcrpathways.org', 'Systems and Infrastructure Officer', 'systems', 'west', 'a0000000-0000-4000-8000-000000000030', 'active', 'staff', 1.0, false, false, false, false, true),
-      ('a0000000-0000-4000-8000-000000000032', 'Karen Stewart', 'karen.stewart@mcrpathways.org', 'Evidence & Impact Officer', 'systems', 'west', 'a0000000-0000-4000-8000-000000000030', 'active', 'staff', 1.0, false, false, false, false, false),
-      ('a0000000-0000-4000-8000-000000000033', 'Omar Hassan', 'omar.hassan@mcrpathways.org', 'Systems Coordinator', 'systems', 'west', 'a0000000-0000-4000-8000-000000000030', 'active', 'staff', 1.0, false, false, false, false, true);
+      ('a0000000-0000-4000-8000-000000000031', 'Ryan MacLeod', 'ryan.macleod@mcrpathways.org', 'Systems and Infrastructure Officer', 'systems', 'west', 'a0000000-0000-4000-8000-000000000004', 'active', 'staff', 1.0, false, false, false, false, true),
+      ('a0000000-0000-4000-8000-000000000032', 'Karen Stewart', 'karen.stewart@mcrpathways.org', 'Evidence & Impact Officer', 'systems', 'west', 'a0000000-0000-4000-8000-000000000004', 'active', 'staff', 1.0, false, false, false, false, false);
 
     -- =========================================
     -- CENTRAL TEAM: Development Director reports (central)

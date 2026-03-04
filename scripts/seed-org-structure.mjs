@@ -38,11 +38,10 @@ const orgData = [
   // Finance
   { email: "laura.paterson@mcrpathways.org", job_title: "Finance Manager", department: "finance", region: "west", mgr: "graham.nicholson@mcrpathways.org", lm: false, hr: false, ld: false, sys: false, fte: 0.8, ext: false, ut: "staff" },
 
-  // Systems
-  { email: "andrew.ferguson@mcrpathways.org", job_title: "Head of Systems, Evidence & Impact", department: "systems", region: "west", mgr: "rachel.donaldson@mcrpathways.org", lm: true, hr: false, ld: false, sys: true, fte: 1.0, ext: false, ut: "staff" },
-  { email: "ryan.macleod@mcrpathways.org", job_title: "Systems and Infrastructure Officer", department: "systems", region: "west", mgr: "andrew.ferguson@mcrpathways.org", lm: false, hr: false, ld: false, sys: true, fte: 1.0, ext: false, ut: "staff" },
-  { email: "karen.stewart@mcrpathways.org", job_title: "Evidence & Impact Officer", department: "systems", region: "west", mgr: "andrew.ferguson@mcrpathways.org", lm: false, hr: false, ld: false, sys: false, fte: 1.0, ext: false, ut: "staff" },
-  { email: "omar.hassan@mcrpathways.org", job_title: "Systems Coordinator", department: "systems", region: "west", mgr: "andrew.ferguson@mcrpathways.org", lm: false, hr: false, ld: false, sys: true, fte: 1.0, ext: false, ut: "staff" },
+  // Systems — NOTE: Head of Systems (Colin Adam) and Systems Coordinator (Abdulmuiz Adaranijo)
+  // are real users, not seeded. Their line_manager_id must be set manually post-seed.
+  { email: "ryan.macleod@mcrpathways.org", job_title: "Systems and Infrastructure Officer", department: "systems", region: "west", mgr: "colin.adam@mcrpathways.org", lm: false, hr: false, ld: false, sys: true, fte: 1.0, ext: false, ut: "staff" },
+  { email: "karen.stewart@mcrpathways.org", job_title: "Evidence & Impact Officer", department: "systems", region: "west", mgr: "colin.adam@mcrpathways.org", lm: false, hr: false, ld: false, sys: false, fte: 1.0, ext: false, ut: "staff" },
 
   // Engagement
   { email: "priya.sharma@mcrpathways.org", job_title: "Head of Engagement and Influencing", department: "engagement", region: "west", mgr: "margaret.campbell@mcrpathways.org", lm: true, hr: false, ld: false, sys: false, fte: 1.0, ext: false, ut: "staff" },
