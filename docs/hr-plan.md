@@ -165,7 +165,7 @@ Database tables created in migration `00024`, extended in `00030`.
 - **PR:** #63
 
 ### Decouple Permissions from Departments ✅ DONE
-- **Migration:** `supabase/migrations/00039_decouple_permissions_and_departments.sql` — backfills explicit admin flags, simplifies `_effective` RPCs (removes department checks), creates `departments` table, seeds 11 departments
+- **Migration:** `supabase/migrations/00040_decouple_permissions_and_departments.sql` — backfills explicit admin flags, simplifies `_effective` RPCs (removes department checks), creates `departments` table, seeds 11 departments
 - **Changes:** Admin roles are now explicitly granted (not auto-derived from department membership). Departments are purely organisational. Permission confirmation AlertDialogs for granting/revoking access. Dynamic department dropdowns from DB.
 - **New page:** `/hr/departments` — CRUD management for departments (colour, sort order, activate/deactivate)
 - **PR:** #68
@@ -198,13 +198,21 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Route:** `/hr/org-chart`
 - **Components:** `src/components/hr/org-chart-content.tsx` (main client component), `src/components/hr/org-chart-person-card.tsx` (foreignObject card)
 - **Library:** `react-d3-tree` (dynamic import, SSR-safe)
+- **Seed data:** `supabase/migrations/00039_seed_mcr_org_structure.sql` + `scripts/seed-org-structure.mjs` — ~70-80 profiles mirroring MCR's real org structure (real job titles, fake names)
 - **Capabilities:**
   - Interactive tree built from `line_manager_id` relationships
   - Virtual root "MCR Pathways" when multiple roots exist
-  - Search by name/title, department filter dropdown, "Find Me" button, expand/collapse all
-  - Person cards: avatar, name, job title, department colour border, on-leave amber dot, GCC badge, FTE badge
+  - Search by name/title with auto-focus on match's manager subtree + breadcrumb navigation
+  - Department filter (Shadcn Select) with ancestor chain (no virtual root), search + filter coordination (searching resets filter, filtering clears search)
+  - "Find Me" button, expand/collapse all, zoom controls (±/fit) with backdrop blur
+  - Focus mode: drill into any manager's subtree with breadcrumb trail, click-to-centre with smooth transitions
+  - Person cards: bigger (280×130), avatar with coloured fallback, `text-sm` name, `line-clamp-2` job title, department colour border, on-leave amber dot, GCC badge, FTE badge, "N reports" badge
+  - Click card → navigates to `/hr/users/{id}`
+  - Department legend strip showing active departments with colour dots
+  - Dynamic initial centering based on container width
+  - Keyboard hints overlay
   - Accessibility: `role="img"`, `aria-label`, `aria-roledescription` on container; `aria-label` on each card
-- **PRs:** #66, #67
+- **PRs:** #66, #67, #70 (UI/UX improvement)
 
 ### Onboarding Progress Tracker
 - **Table:** New — `onboarding_templates`, `onboarding_checklists`, `onboarding_checklist_items`
