@@ -222,7 +222,7 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 - Edit department (name, colour, sort order)
 - Activate/deactivate toggle with confirmation dialog
 - Deactivation blocked when department has active staff
-- Sort order drag/reorder or manual input
+- List renders correctly sorted by `sort_order`
 
 ### `src/components/hr/permissions-edit-dialog.test.tsx` (~10 tests)
 - Renders current permission states (HR Admin, L&D Admin, Systems Admin, Line Manager)
@@ -245,11 +245,10 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 - Clear selection
 - Empty state
 
-### `src/app/(protected)/hr/departments/actions.test.ts` (~12 tests)
+### `src/app/(protected)/hr/departments/actions.test.ts` (~10 tests)
 - `createDepartment` — valid input, duplicate slug, missing fields
 - `updateDepartment` — valid update, slug uniqueness
 - `toggleDepartmentActive` — deactivate blocked with active staff, activate succeeds
-- `reorderDepartments` — updates sort_order for all departments
 - Auth gating: all actions require HR admin
 
 ---
@@ -266,8 +265,8 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 | 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
 | 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
 | 8 | `test/org-chart-components` | ~30 | 0.5 | LOWER | |
-| 9 | `test/hr-admin-components` | ~51 | 1 | LOWER | |
-| **Total** | | **~650** | **~12** | | |
+| 9 | `test/hr-admin-components` | ~49 | 1 | LOWER | |
+| **Total** | | **~648** | **~12** | | |
 
 **Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
 
