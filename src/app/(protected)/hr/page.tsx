@@ -24,6 +24,7 @@ import {
   UserMinus,
   Network,
   Briefcase,
+  FolderTree,
 } from "lucide-react";
 
 // =============================================
@@ -392,6 +393,13 @@ export default async function HRPage() {
                   description="Manage staff leaving forms and offboarding"
                   href="/hr/leaving"
                   icon={UserMinus}
+                  isAdmin
+                />
+                <QuickActionCard
+                  title="Departments"
+                  description="Manage organisational departments"
+                  href="/hr/departments"
+                  icon={FolderTree}
                   isAdmin
                 />
               </>

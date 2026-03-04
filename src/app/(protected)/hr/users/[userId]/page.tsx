@@ -94,6 +94,7 @@ export default async function EmployeeDetailPage({
     { data: absenceRecords },
     { data: rtwForms },
     { data: rawLeavingForm },
+    { data: departmentRows },
   ] = await Promise.all([
     supabase
       .from("employee_details")
@@ -162,6 +163,11 @@ export default async function EmployeeDetailPage({
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("departments")
+      .select("slug, name")
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
 
   // Resolve line manager name
@@ -336,6 +342,7 @@ export default async function EmployeeDetailPage({
     is_line_manager: profile.is_line_manager as boolean,
     is_hr_admin: profile.is_hr_admin as boolean,
     is_ld_admin: profile.is_ld_admin as boolean,
+    is_systems_admin: (profile.is_systems_admin as boolean) ?? false,
     is_external: (profile.is_external as boolean) ?? false,
     phone: profile.phone as string | null,
     start_date: profile.start_date as string | null,
@@ -416,6 +423,7 @@ export default async function EmployeeDetailPage({
         absenceRecords={flatAbsenceRecords}
         rtwForms={rtwFormMap}
         leavingForm={leavingForm}
+        departments={(departmentRows ?? []).map((d) => ({ slug: d.slug as string, name: d.name as string }))}
         isManager={isCurrentUserManager}
       />
     </div>

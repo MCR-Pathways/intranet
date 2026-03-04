@@ -18,6 +18,7 @@ import { ProfileAbsenceTab } from "./profile-absence-tab";
 import { ProfileLeavingTab } from "./profile-leaving-tab";
 import { ProfileKeyDatesSection } from "./profile-key-dates-section";
 import { EmploymentEditDialog } from "./employment-edit-dialog";
+import type { DepartmentOption } from "./user-edit-dialog";
 import { PersonalDetailsEditDialog } from "./personal-details-edit-dialog";
 import {
   GENDER_CONFIG,
@@ -100,6 +101,7 @@ interface EmployeeDetailContentProps {
   rtwForms?: Record<string, ReturnToWorkForm>;
   leavingForm?: StaffLeavingForm | null;
   isManager?: boolean;
+  departments?: DepartmentOption[];
 }
 
 const VALID_TABS = ["overview", "personal", "employment", "documents", "leave", "assets", "absence", "leaving"];
@@ -125,6 +127,7 @@ export function EmployeeDetailContent({
   rtwForms = {},
   leavingForm = null,
   isManager = false,
+  departments = [],
 }: EmployeeDetailContentProps) {
   const tab = VALID_TABS.includes(activeTab) ? activeTab : "overview";
 
@@ -331,6 +334,7 @@ export function EmployeeDetailContent({
       {/* Edit Dialogs */}
       <EmploymentEditDialog
         profile={profile}
+        departments={departments}
         open={employmentDialogOpen}
         onOpenChange={setEmploymentDialogOpen}
       />
