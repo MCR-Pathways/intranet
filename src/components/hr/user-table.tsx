@@ -116,8 +116,6 @@ interface UserTableProps {
   isCurrentUserHRAdmin?: boolean;
   people?: PersonOption[];
   teams?: TeamOption[];
-  /** Whether the current user is an HR admin (controls permission toggle visibility) */
-  isCurrentUserHRAdmin?: boolean;
 }
 
 export function UserTable({
@@ -127,7 +125,6 @@ export function UserTable({
   isCurrentUserHRAdmin = false,
   people = [],
   teams = [],
-  isCurrentUserHRAdmin = false,
 }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
