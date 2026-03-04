@@ -87,6 +87,7 @@ export interface UserTableProfile {
   is_external: boolean | null;
   line_manager_id: string | null;
   team_id: string | null;
+  created_at: string;
 }
 
 const statusVariants: Record<string, "success" | "destructive" | "warning"> = {
@@ -207,7 +208,7 @@ export function UserTable({
     team_id: p.team_id,
     induction_completed_at: p.induction_completed_at,
     last_sign_in_date: null,
-    created_at: "",
+    created_at: p.created_at,
   });
 
   return (
