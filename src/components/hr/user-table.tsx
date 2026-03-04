@@ -7,6 +7,7 @@ import {
   resetUserInduction,
 } from "@/app/(protected)/hr/users/actions";
 import { UserEditDialog } from "./user-edit-dialog";
+import type { DepartmentOption } from "./user-edit-dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,9 +94,12 @@ const roleLabels: Record<string, string> = {
 interface UserTableProps {
   profiles: UserTableProfile[];
   currentUserId?: string;
+  departments?: DepartmentOption[];
+  /** Whether the current user is an HR admin (controls permission toggle visibility) */
+  isCurrentUserHRAdmin?: boolean;
 }
 
-export function UserTable({ profiles, currentUserId }: UserTableProps) {
+export function UserTable({ profiles, currentUserId, departments = [], isCurrentUserHRAdmin = false }: UserTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -346,6 +350,8 @@ export function UserTable({ profiles, currentUserId }: UserTableProps) {
         <UserEditDialog
           profile={editingProfile}
           currentUserId={currentUserId}
+          departments={departments}
+          isCurrentUserHRAdmin={isCurrentUserHRAdmin}
           open={!!editingProfile}
           onOpenChange={(open) => {
             if (!open) setEditingProfile(null);

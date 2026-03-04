@@ -39,6 +39,7 @@ export interface ProfileSummary {
   is_line_manager: boolean;
   is_hr_admin: boolean;
   is_ld_admin: boolean;
+  is_systems_admin: boolean;
   is_external: boolean;
 }
 

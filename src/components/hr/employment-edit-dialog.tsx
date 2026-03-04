@@ -23,21 +23,23 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   CONTRACT_TYPE_CONFIG,
-  DEPARTMENT_CONFIG,
   REGION_CONFIG,
   WORK_PATTERN_CONFIG,
 } from "@/lib/hr";
 import type { EmployeeProfile } from "@/types/hr";
+import type { DepartmentOption } from "./user-edit-dialog";
 import { toast } from "sonner";
 
 interface EmploymentEditDialogProps {
   profile: EmployeeProfile;
+  departments?: DepartmentOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function EmploymentEditDialog({
   profile,
+  departments = [],
   open,
   onOpenChange,
 }: EmploymentEditDialogProps) {
@@ -46,8 +48,8 @@ export function EmploymentEditDialog({
 
   const [fte, setFte] = useState(String(profile.fte ?? 1));
   const [contractType, setContractType] = useState<string>(profile.contract_type ?? "permanent");
-  const [department, setDepartment] = useState<string>(profile.department ?? "");
-  const [region, setRegion] = useState<string>(profile.region ?? "");
+  const [department, setDepartment] = useState<string>(profile.department || "__none__");
+  const [region, setRegion] = useState<string>(profile.region || "__none__");
   const [workPattern, setWorkPattern] = useState<string>(profile.work_pattern ?? "standard");
   const [startDate, setStartDate] = useState(profile.start_date ?? "");
   const [probationEndDate, setProbationEndDate] = useState(profile.probation_end_date ?? "");
@@ -70,8 +72,8 @@ export function EmploymentEditDialog({
       const result = await updateEmployeeEmployment(profile.id, {
         fte: fteNum,
         contract_type: contractType,
-        department: department || null,
-        region: region || null,
+        department: department === "__none__" ? null : department,
+        region: region === "__none__" ? null : region,
         work_pattern: workPattern,
         start_date: startDate || null,
         probation_end_date: probationEndDate || null,
@@ -141,10 +143,10 @@ export function EmploymentEditDialog({
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {Object.entries(DEPARTMENT_CONFIG).map(([key, { label }]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
+                    <SelectItem value="__none__">None</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.slug} value={dept.slug}>
+                        {dept.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -158,7 +160,7 @@ export function EmploymentEditDialog({
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {Object.entries(REGION_CONFIG).map(([key, { label }]) => (
                       <SelectItem key={key} value={key}>
                         {label}

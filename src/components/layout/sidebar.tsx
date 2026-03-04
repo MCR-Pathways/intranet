@@ -64,6 +64,7 @@ function getNavigation(
       { name: "Compliance", href: "/hr/compliance" },
       { name: "Key Dates", href: "/hr/key-dates" },
       { name: "Leaving", href: "/hr/leaving" },
+      { name: "Departments", href: "/hr/departments" },
     );
   }
 
