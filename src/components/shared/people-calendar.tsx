@@ -181,10 +181,11 @@ export function PeopleCalendar({
     "July", "August", "September", "October", "November", "December",
   ];
 
-  // Year dropdown: starts from 2026 (system launch, no historical data),
-  // extends to viewed/current year + 2 for forward planning.
+  // Year dropdown: starts from 2026 (system launch, no historical data).
+  // Google Calendar uses infinite chevron navigation; since we use a dropdown,
+  // extend to whichever is further: current year + 5 or the viewed year + 2.
   const thisYear = new Date().getFullYear();
-  const maxYear = Math.max(thisYear, currentYear) + 2;
+  const maxYear = Math.max(thisYear + 5, currentYear + 2);
   const yearOptions = Array.from({ length: maxYear - 2026 + 1 }, (_, i) => 2026 + i);
 
   function prevMonth() {
