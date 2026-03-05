@@ -272,7 +272,7 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 | 9 | `test/phase-7-hooks` | 53 | 0.5 | LOWER | DONE |
 | **Total** | | **707** | **~8** | | **ALL COMPLETE** |
 
-**All phases complete.** 1040 tests across 48 files.
+**All phases complete.** 1041 tests across 48 files.
 
 **Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → ~~7~~ DONE → ~~8~~ DONE → ~~9~~ DONE
 
