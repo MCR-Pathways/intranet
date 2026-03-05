@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-04
+> Last updated: 2026-03-05
 
 ---
 
@@ -74,6 +74,7 @@
 - Audit logging via DB triggers on 8+ tables
 - Middleware auth with module access control by user type
 - **Middleware JWT optimisation** (PR #49): zero DB queries per authenticated request via JWT custom claims
+- **Testing** (PRs #52-58, #61, #73): 1041 tests across 48 files covering server actions, hooks, components, and pure functions. See `docs/testing-plan.md` for full breakdown.
 
 ### UI/UX Polish ✅
 - **Collapsible sidebar** (YouTube-style): hamburger toggle always visible, collapses to 64px icon rail with tooltips, expands to 256px with labels. State persisted in `localStorage`.
