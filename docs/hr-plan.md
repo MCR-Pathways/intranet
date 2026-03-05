@@ -1,7 +1,7 @@
 # HR Module — Development Roadmap
 
 > **Living document** — updated as features are completed and priorities shift.
-> Last updated: 2026-03-04
+> Last updated: 2026-03-06
 
 ---
 

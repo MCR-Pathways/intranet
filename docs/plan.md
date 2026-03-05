@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-05
+> Last updated: 2026-03-06
 
 ---
 
@@ -19,13 +19,15 @@
 - **Admin features:** Course CRUD, admin reports (`/learning/admin/`)
 - Notification system for course publishing (RPC + UI)
 
-### Sign-In System ✅ (v1 — overhaul planned)
-- Daily location sign-in with DB persistence (`/sign-in`)
-- Today's sign-ins and monthly history
-- Team sign-in overview for line managers
-- Nudge bubble for unsigned-in users
-- Manager reports & analytics (charts, CSV export)
-- **Overhaul planned** — see "Sign-In v2" in Remaining Work
+### Sign-In / Working Location ✅ (v2 complete)
+- Schedule-based weekly working location planner (replaced daily sign-in)
+- Interactive month calendar with day detail panel (Google Calendar–inspired)
+- Recurring weekly patterns with one-click apply
+- Google Calendar sync (read + write-back) with domain-wide delegation
+- Team schedule grid + team calendar with member filtering (managers)
+- Kiosk check-in for office arrival confirmation
+- Daily reconciliation banners, reports with CSV export
+- Quality pass: colour overhaul, Gemini fixes, interactive calendar redesign
 
 ### Induction System ✅
 - 9-step induction checklist with DB persistence (`/intranet/induction`)
@@ -124,77 +126,17 @@
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
-### Sign-In v2 — Working Location (Schedule-Based + Google Calendar)
-Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
+### Sign-In v2 — Working Location (Schedule-Based + Google Calendar) ✅
+Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + quality pass complete.
 
-**Phase 1 — Data Model + Server Actions ✅**
-- [x] Migration `00041`: `working_locations` + `weekly_patterns` tables, drops `sign_ins` + `last_sign_in_date`
-- [x] V2 types: `WorkingLocationEntry`, `WeeklyPatternEntry`, `DaySchedule`, `TimeSlot`, `LocationSource`
-- [x] V2 config: `LOCATION_CONFIG` with `bgClass`/`textClass`/`hex` colours (colour-blind accessible)
-- [x] 10 server actions: `setWorkingLocation`, `clearWorkingLocation`, `getMySchedule`, `confirmArrival`, `getMyPatterns`, `saveWeeklyPattern`, `clearWeeklyPattern`, `applyPatternsToWeek`, `getTeamSchedule`, `getOfficeHeadcount`
-- [x] Knock-on cleanup: removed nudge bubble, `needsSignIn` prop chain, `dismissSignInReminders`, `last_sign_in_date` from 9 files
-- [x] V2 `LocationBadge` (colour-coded pill, no longer uses Badge variant)
-- [x] Sidebar renamed "Sign In" → "Working Location"
-- [x] 27 tests for V2 helpers + config
+**Phases 1–8 ✅** — Data model, week planner, people calendar, recurring patterns, kiosk, team grid, Google Calendar sync (read + write-back), daily banners, reports. See memory file `memory/sign-in-overhaul.md` for full phase breakdown.
 
-**Phase 2 — Week Planner UI ✅**
-- [x] `WeekStrip` (Mon-Fri grid with nav, ±2/+4 week range), `DayCell` (all visual states: empty, set, leave, split-day, today highlight, past dimmed), `LocationPickerDialog` (2×2 grid, split-day toggle, other text input)
-- [x] `WorkingLocationContent` tabbed wrapper (My Schedule + Team Schedule placeholder for managers)
-- [x] Split-day toggle, optimistic UI via `useTransition()`, sonner toasts, `key`-based dialog remount
-
-**Phase 2.5 — Unified People Calendar ✅**
-- [x] `PeopleCalendar` (`src/components/shared/people-calendar.tsx`) replaces `LeaveCalendar` — shows working locations + leave in one view
-- [x] Swapped into Leave page Team Calendar tab + Working Location page monthly view
-- [x] Dynamic legend (only shows types present in data), month navigation, today highlight, weekend shading
-- [x] Deleted `leave-calendar.tsx` (replaced)
-
-**Phase 3 — Recurring Patterns ✅**
-- [x] `DefaultWeekEditor` component — collapsible Card with compact pills (collapsed) and 5-day click-to-cycle grid (editing)
-- [x] Click-to-cycle: Home → Glasgow → Stevenage → Other → clear, with colour-coded cells
-- [x] "Other" text input per day, "Apply to this week"/"Apply to next week" buttons (fills gaps only)
-- [x] `WeekStrip` converted to `forwardRef` with `refresh()` imperative handle for post-apply data reload
-- [x] Integrated into `WorkingLocationContent` between WeekStrip and PeopleCalendar
-
-**Phase 4 — Kiosk + HR Dashboard ✅**
-- [x] Kiosk route (`/kiosk`) — full-screen tablet check-in, token-authenticated, MCR brand colours
-- [x] Two-step flow: search/tap name → confirm identity (photo + name) → success animation
-- [x] API route `POST /api/kiosk/confirm` — service role client, offline queue in localStorage
-- [x] Middleware updated to allow `/kiosk` as public route
-- [x] `OfficeAttendanceSection` on HR dashboard — Scheduled/Confirmed Today + Tomorrow stat cards
-- [x] Expandable week detail with below-target day alerts (amber when < 4 scheduled)
-- [x] `getOfficeHeadcount` updated to include staff names for detail view
-
-**Phase 5 — Team Schedule Grid ✅**
-- [x] `TeamScheduleGrid` component — HTML table with people × days grid, sticky header + left column
-- [x] Week navigation (±2/+4 weeks) with server-fetched data via `getTeamSchedule`
-- [x] Location pills with colour coding (V2 `LOCATION_CONFIG`), confirmed indicator (CheckCircle2)
-- [x] Summary footer row: "X/Y in office" per day, amber highlight when below target
-- [x] Empty state for managers with no direct reports, skeleton loading state
-- [x] Integrated into `WorkingLocationContent` "Team Schedule" tab (replaces placeholder)
-
-**Phase 6 — Google Calendar Read Sync ✅**
-- [x] `google-calendar.ts` — Calendar API client (service account + domain-wide delegation, working location event extraction, office label mapping)
-- [x] `calendar-sync.ts` — Sync logic (single user + batch sync, override hierarchy enforcement, incremental sync via syncToken)
-- [x] Webhook endpoint (`/api/calendar/webhook`) — push notification handler with channel token authentication
-- [x] Server actions: `getCalendarSyncStatus`, `triggerCalendarSync` (manual "Sync Now")
-- [x] `CalendarSyncStatus` UI component — sync indicator + manual sync button (hidden when not configured)
-- [x] Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_CALENDAR_WEBHOOK_SECRET`, `NEXT_PUBLIC_GOOGLE_CALENDAR_ENABLED`
-
-**Phase 7 — Google Calendar Write-Back + Leave Integration ✅**
-- [x] **Flow A — Location → Calendar**: `setWorkingLocation` writes working location events to Google Calendar via service account + domain-wide delegation; `clearWorkingLocation` deletes the Calendar event; stores `google_event_id` for updates
-- [x] **Flow B — Leave → Schedule + Calendar**: `approveLeave` creates `on_leave` working location entries for each working day + OOO Calendar event; `cancelLeave` deletes both; `recordLeave` (HR admin direct record) also hooks in
-- [x] Migration `00042`: adds `ooo_calendar_event_id` to `leave_requests` for OOO event tracking
-- [x] `leave-location-sync.ts` — helper for creating/deleting leave-sourced working location entries
-- [x] Extended `google-calendar.ts` with write functions: `writeWorkingLocationEvent`, `deleteCalendarEvent`, `createOOOEvent`, `deleteOOOEvent`
-- [x] All Calendar write-backs are non-blocking (try/catch, per lesson learned about non-critical follow-ups)
-
-**Phase 8 — Daily Banners + Reports + Nudge ✅**
-- [x] `DailyBanner` component — two variants: "office not confirmed" (blue, with "I'm Here" + "Working From Home" buttons) and "no schedule" (amber, one-click location buttons)
-- [x] Integrated into `AppLayout` — server-side `getDailyBannerState()` check, rendered above page content across all protected routes
-- [x] Time-gated: office banner after 9:30 AM UK, no-schedule banner before 2 PM UK; dismissible per day via localStorage
-- [x] `WeekPlanningBanner` — shown on "My Schedule" tab when next week has no entries, with "Apply My Defaults" (if patterns exist) and "Plan Manually" buttons
-- [x] `ReportsPanel` — date range picker, stat cards (Office Days, Home Days, Split Days, Confirmation Rate), team location breakdown table, CSV export with `sanitiseCSVCell()` for injection prevention
-- [x] Server actions: `getDailyBannerState`, `confirmRemoteArrival`, `quickSetTodayLocation`
+**Quality Pass ✅** (branch: `fix/gemini-review-fixes`)
+- [x] **Part A — Gemini PR Fixes**: ~35 fixes across 15 files (split-day headcount, timing-safe tokens, N+1 batching, PII masking, empty catches → logger.warn, 410 full sync, service account key guard)
+- [x] **Part B+C — Colour Scheme + HR Wording**: Soft muted palette (`sky-50`/`teal-50`/`slate-100`/`rose-50`), MCR brand to Tailwind config, "Office Planning" wording
+- [x] **Part D — Interactive Month Calendar**: Replaced WeekStrip with `InteractiveCalendar` (PeopleCalendar + DayDetailPanel), `QuickSetIcons` for 1-click location, `PendingLeaveList`, `LeaveRequestDialog` with `defaultStartDate`
+- [x] **Part E — Team Calendar + Filter**: `TeamCalendar` with member filter dropdown, Month/Week toggle, day sidebar
+- [x] **Part F — Google Calendar Setup Guide**: `docs/google-calendar-setup.md` for IT admins
 
 ### Intranet Phase 3 — Live Feed + Polls ✅
 - [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)
