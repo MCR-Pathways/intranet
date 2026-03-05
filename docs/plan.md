@@ -137,9 +137,10 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] Sidebar renamed "Sign In" → "Working Location"
 - [x] 27 tests for V2 helpers + config
 
-**Phase 2 — Week Planner UI** (next)
-- [ ] `WeekStrip` (Mon-Fri grid with nav), `DayCell` (all visual states), `LocationPickerDialog`
-- [ ] Split-day toggle, optimistic UI via `useTransition()`
+**Phase 2 — Week Planner UI ✅**
+- [x] `WeekStrip` (Mon-Fri grid with nav, ±2/+4 week range), `DayCell` (all visual states: empty, set, leave, split-day, today highlight, past dimmed), `LocationPickerDialog` (2×2 grid, split-day toggle, other text input)
+- [x] `WorkingLocationContent` tabbed wrapper (My Schedule + Team Schedule placeholder for managers)
+- [x] Split-day toggle, optimistic UI via `useTransition()`, sonner toasts, `key`-based dialog remount
 
 **Phase 2.5 — Unified People Calendar**
 - [ ] `PeopleCalendar` replaces `LeaveCalendar` — shows working locations + leave in one view
