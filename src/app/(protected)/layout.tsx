@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { getNotifications } from "@/app/(protected)/notifications/actions";
+import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Profile } from "@/types/database.types";
 
@@ -17,13 +18,18 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // Fetch notifications server-side so revalidatePath refreshes the bell.
+  // Fetch notifications + daily banner state in parallel
   let initialNotifications;
+  let bannerState: string | null = null;
   try {
-    const { notifications } = await getNotifications();
-    initialNotifications = notifications;
+    const [notifResult, bannerResult] = await Promise.all([
+      getNotifications(),
+      getDailyBannerState(),
+    ]);
+    initialNotifications = notifResult.notifications;
+    bannerState = bannerResult.type;
   } catch (e) {
-    logger.error("Failed to fetch notifications", { error: e });
+    logger.error("Failed to fetch layout data", { error: e });
   }
 
   return (
@@ -32,6 +38,7 @@ export default async function ProtectedLayout({
         user={user}
         profile={profile as unknown as Profile}
         initialNotifications={initialNotifications}
+        dailyBannerType={bannerState}
       >
         {children}
       </AppLayout>

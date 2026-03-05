@@ -551,6 +551,108 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
 }
 
 // =============================================
+// DAILY BANNER STATE
+// =============================================
+
+/**
+ * Get the daily banner state for the current user.
+ * Determines which reconciliation banner to show (if any).
+ *
+ * Returns:
+ * - 'office_not_confirmed': User is scheduled for office but hasn't confirmed
+ * - 'no_schedule': User has no working location entry for today
+ * - null: No banner needed
+ */
+export async function getDailyBannerState() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) return { type: null as string | null };
+
+  const today = getUKToday();
+
+  // Check if user has a working location entry for today
+  const { data } = await supabase
+    .from("working_locations")
+    .select("location, confirmed")
+    .eq("user_id", user.id)
+    .eq("date", today)
+    .eq("time_slot", "full_day")
+    .limit(1);
+
+  if (!data || data.length === 0) {
+    // No schedule set — check if it's before 2pm UK time
+    const ukHour = new Date().toLocaleString("en-GB", {
+      timeZone: "Europe/London",
+      hour: "numeric",
+      hour12: false,
+    });
+    if (parseInt(ukHour) < 14) {
+      return { type: "no_schedule" as string | null };
+    }
+    return { type: null as string | null };
+  }
+
+  const entry = data[0];
+
+  // If scheduled for office and not confirmed, check time (after 9:30am UK)
+  if (
+    (entry.location === "glasgow_office" || entry.location === "stevenage_office") &&
+    !entry.confirmed
+  ) {
+    const ukTime = new Date().toLocaleString("en-GB", {
+      timeZone: "Europe/London",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    });
+    const [hours, minutes] = ukTime.split(":").map(Number);
+    if (hours > 9 || (hours === 9 && minutes >= 30)) {
+      return { type: "office_not_confirmed" as string | null };
+    }
+  }
+
+  return { type: null as string | null };
+}
+
+/**
+ * Confirm remote arrival — sets confirmed=true for today's office entry.
+ * This is the "I'm Here" button in the daily banner (remote confirmation,
+ * as opposed to kiosk check-in).
+ */
+export async function confirmRemoteArrival() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const today = getUKToday();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("working_locations")
+    .update({ confirmed: true, confirmed_at: now })
+    .eq("user_id", user.id)
+    .eq("date", today)
+    .in("location", ["glasgow_office", "stevenage_office"])
+    .eq("confirmed", false);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/sign-in");
+  return { success: true, error: null };
+}
+
+/**
+ * Quick-set today's location from the daily banner.
+ * One-click action for "Home", "Glasgow", etc.
+ */
+export async function quickSetTodayLocation(location: WorkLocation) {
+  const today = getUKToday();
+  return setWorkingLocation(today, "full_day" as TimeSlot, location);
+}
+
+// =============================================
 // CALENDAR SYNC
 // =============================================
 

@@ -188,8 +188,13 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] Extended `google-calendar.ts` with write functions: `writeWorkingLocationEvent`, `deleteCalendarEvent`, `createOOOEvent`, `deleteOOOEvent`
 - [x] All Calendar write-backs are non-blocking (try/catch, per lesson learned about non-critical follow-ups)
 
-**Phase 8 — Daily Banners + Reports + Nudge**
-- [ ] Reconciliation banners, week planning nudge, reports rewrite
+**Phase 8 — Daily Banners + Reports + Nudge ✅**
+- [x] `DailyBanner` component — two variants: "office not confirmed" (blue, with "I'm Here" + "Working From Home" buttons) and "no schedule" (amber, one-click location buttons)
+- [x] Integrated into `AppLayout` — server-side `getDailyBannerState()` check, rendered above page content across all protected routes
+- [x] Time-gated: office banner after 9:30 AM UK, no-schedule banner before 2 PM UK; dismissible per day via localStorage
+- [x] `WeekPlanningBanner` — shown on "My Schedule" tab when next week has no entries, with "Apply My Defaults" (if patterns exist) and "Plan Manually" buttons
+- [x] `ReportsPanel` — date range picker, stat cards (Office Days, Home Days, Split Days, Confirmation Rate), team location breakdown table, CSV export with `sanitiseCSVCell()` for injection prevention
+- [x] Server actions: `getDailyBannerState`, `confirmRemoteArrival`, `quickSetTodayLocation`
 
 ### Intranet Phase 3 — Live Feed + Polls ✅
 - [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)

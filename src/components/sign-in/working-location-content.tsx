@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeekStrip } from "./week-strip";
 import { DefaultWeekEditor } from "./default-week-editor";
+import { WeekPlanningBanner } from "./week-planning-banner";
 import { TeamScheduleGrid } from "./team-schedule-grid";
+import { ReportsPanel } from "./reports-panel";
 import { CalendarSyncStatus } from "./calendar-sync-status";
 import { PeopleCalendar } from "@/components/shared/people-calendar";
+import { getWeekDates } from "@/lib/sign-in";
 import type { WorkingLocationEntry, WeeklyPatternEntry, TeamMemberSchedule } from "@/lib/sign-in";
 
 interface CalendarSyncStatusData {
@@ -40,7 +43,22 @@ export function WorkingLocationContent({
     weekStripRef.current?.refresh();
   }, []);
 
+  const handleNavigateToNextWeek = useCallback(() => {
+    // WeekStrip handles its own navigation via offset state
+    // We just need to trigger a refresh to show next week
+    weekStripRef.current?.refresh();
+  }, []);
+
   const calendarConfigured = !!process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ENABLED;
+
+  // Check if next week has no entries — show planning nudge
+  const nextWeekDates = useMemo(() => getWeekDates(1), []);
+  const nextWeekStart = nextWeekDates[0];
+  const nextWeekHasEntries = useMemo(() => {
+    const nextWeekSet = new Set(nextWeekDates);
+    return initialEntries.some((e) => nextWeekSet.has(e.date));
+  }, [initialEntries, nextWeekDates]);
+  const hasPatterns = initialPatterns.length > 0;
 
   return (
     <Tabs key={defaultTab} defaultValue={defaultTab}>
@@ -62,6 +80,16 @@ export function WorkingLocationContent({
       </div>
 
       <TabsContent value="my-schedule" className="mt-6 space-y-8">
+        {/* Week planning nudge — shown when next week is empty */}
+        {!nextWeekHasEntries && (
+          <WeekPlanningBanner
+            nextWeekStart={nextWeekStart}
+            hasPatterns={hasPatterns}
+            onPatternsApplied={handlePatternsApplied}
+            onNavigateToNextWeek={handleNavigateToNextWeek}
+          />
+        )}
+
         <WeekStrip ref={weekStripRef} initialEntries={initialEntries} />
 
         <DefaultWeekEditor
@@ -80,8 +108,14 @@ export function WorkingLocationContent({
       </TabsContent>
 
       {isManager && (
-        <TabsContent value="team-schedule" className="mt-6">
+        <TabsContent value="team-schedule" className="mt-6 space-y-8">
           <TeamScheduleGrid initialMembers={initialTeamMembers} />
+
+          {/* Reports section below team grid */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Reports</h3>
+            <ReportsPanel initialMembers={initialTeamMembers} />
+          </div>
         </TabsContent>
       )}
     </Tabs>
