@@ -177,8 +177,9 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
-## Phase 7: Hook Tests (branch: `test/hooks`)
-**Tests: ~22 | Effort: 0.5 sessions | Priority: LOWER**
+## Phase 7: Hook Tests ~~(branch: `test/hooks`)~~ DONE
+**Tests: 26 actual | Effort: 0.5 sessions | Priority: LOWER | Status: COMPLETE**
+**Combined with Phases 8+9 into branch: `test/phase-7-hooks`**
 
 - `use-auto-link-preview.test.ts` (~10) — debounce, fetch, clear, no re-fetch same URL
 - `use-new-posts-poll.test.ts` (~8) — interval, count reset, tab visibility
@@ -186,8 +187,9 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
-## Phase 8: Org Chart Component Tests (branch: `test/org-chart-components`)
-**Tests: ~30 | Effort: 0.5 sessions | Priority: LOWER**
+## Phase 8: Org Chart Component Tests ~~(branch: `test/org-chart-components`)~~ DONE
+**Tests: 45 actual | Effort: 0.5 sessions | Priority: LOWER | Status: COMPLETE**
+**Combined with Phases 7+9 into branch: `test/phase-7-hooks`**
 
 ### `src/components/hr/org-chart-content.test.tsx` (~20 tests)
 - Tree rendering with people data, correct root node
@@ -212,7 +214,9 @@ Largest untested action file (966 lines, 12 functions):
 
 ---
 
-## Phase 9: HR Admin Components (branch: `test/hr-admin-components`)
+## Phase 9: HR Admin Components ~~(branch: `test/hr-admin-components`)~~ DONE
+**Tests: 53 actual | Effort: 0.5 sessions | Priority: LOWER | Status: COMPLETE**
+**Combined with Phases 7+8 into branch: `test/phase-7-hooks`**
 
 New components from PRs #68 and #69 — department management, split dialogs, searchable comboboxes.
 
@@ -263,14 +267,14 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 | 4 | `test/phase-4-intranet-resources-notifications` | 51 | 1 | MEDIUM | DONE (PR #57) |
 | 5 | `test/phase-5-news-feed-components` | 76 | 1 | MEDIUM | DONE (PR #58) |
 | 6 | `test/phase-6-hr-learning-components` | 83 | 1 | LOWER | DONE (PR #61) |
-| 7 | `test/hooks` | ~22 | 0.5 | LOWER | |
-| 8 | `test/org-chart-components` | ~30 | 0.5 | LOWER | |
-| 9 | `test/hr-admin-components` | ~49 | 1 | LOWER | |
-| **Total** | | **~648** | **~12** | | |
+| 7 | `test/phase-7-hooks` | 26 | 0.5 | LOWER | DONE |
+| 8 | `test/phase-7-hooks` | 45 | 0.5 | LOWER | DONE |
+| 9 | `test/phase-7-hooks` | 53 | 0.5 | LOWER | DONE |
+| **Total** | | **707** | **~8** | | **ALL COMPLETE** |
 
-**Dependency graph**: Phases 2-5 require Phase 0+1. Phase 6 benefits from Phase 5 patterns. Phase 7 is independent.
+**All phases complete.** 1040 tests across 48 files.
 
-**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → 7 → 8 → 9
+**Recommended order**: ~~0 + 1 (parallel)~~ DONE → ~~2~~ DONE → ~~3~~ DONE → ~~4~~ DONE → ~~5~~ DONE → ~~6~~ DONE → ~~7~~ DONE → ~~8~~ DONE → ~~9~~ DONE
 
 ---
 
