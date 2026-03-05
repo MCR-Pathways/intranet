@@ -176,10 +176,14 @@ export function PeopleCalendar({
     return days;
   }, [currentYear, currentMonth, todayStr, holidayMap, leaveLookup, locationLookup]);
 
-  const monthName = new Date(currentYear, currentMonth).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  });
+  const MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+
+  // Year range: current year ± 5 (wide enough for historical and future planning)
+  const thisYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 11 }, (_, i) => thisYear - 5 + i);
 
   function prevMonth() {
     const newMonth = currentMonth === 0 ? 11 : currentMonth - 1;
@@ -231,7 +235,32 @@ export function PeopleCalendar({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{monthName}</h3>
+          <select
+            value={currentMonth}
+            onChange={(e) => {
+              const newMonth = Number(e.target.value);
+              setCurrentMonth(newMonth);
+              onMonthChange?.(currentYear, newMonth);
+            }}
+            className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={i} value={i}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={currentYear}
+            onChange={(e) => {
+              const newYear = Number(e.target.value);
+              setCurrentYear(newYear);
+              onMonthChange?.(newYear, currentMonth);
+            }}
+            className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
           {!isCurrentMonth && (
             <Button variant="ghost" size="sm" onClick={goToToday} type="button" className="text-xs">
               Today
