@@ -181,13 +181,11 @@ export function PeopleCalendar({
     "July", "August", "September", "October", "November", "December",
   ];
 
-  // Year dropdown: spans from the earlier of (real year, viewed year) - 2
-  // to the later of (real year, viewed year) + 5, so it always covers
-  // the current view and extends as users navigate with chevrons.
+  // Year dropdown: starts from 2026 (system launch, no historical data),
+  // extends to viewed/current year + 2 for forward planning.
   const thisYear = new Date().getFullYear();
-  const minYear = Math.min(thisYear, currentYear) - 2;
-  const maxYear = Math.max(thisYear, currentYear) + 5;
-  const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+  const maxYear = Math.max(thisYear, currentYear) + 2;
+  const yearOptions = Array.from({ length: maxYear - 2026 + 1 }, (_, i) => 2026 + i);
 
   function prevMonth() {
     const newMonth = currentMonth === 0 ? 11 : currentMonth - 1;
