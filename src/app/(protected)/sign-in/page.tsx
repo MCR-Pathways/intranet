@@ -15,9 +15,19 @@ export default async function WorkingLocationPage() {
 
   // Fetch this week's schedule
   const weekDates = getWeekDates(0);
-  const startDate = weekDates[0];
-  const endDate = weekDates[weekDates.length - 1];
-  const { entries } = await getMySchedule(startDate, endDate);
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[weekDates.length - 1];
+
+  // Fetch current month's schedule for the calendar view
+  const now = new Date();
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  const [weekData, monthData] = await Promise.all([
+    getMySchedule(weekStart, weekEnd),
+    getMySchedule(monthStart, monthEnd),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -27,7 +37,8 @@ export default async function WorkingLocationPage() {
       />
 
       <WorkingLocationContent
-        initialEntries={entries as WorkingLocationEntry[]}
+        initialEntries={weekData.entries as WorkingLocationEntry[]}
+        monthEntries={monthData.entries as WorkingLocationEntry[]}
         isManager={profile.is_line_manager ?? false}
       />
     </div>

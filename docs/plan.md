@@ -142,8 +142,11 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] `WorkingLocationContent` tabbed wrapper (My Schedule + Team Schedule placeholder for managers)
 - [x] Split-day toggle, optimistic UI via `useTransition()`, sonner toasts, `key`-based dialog remount
 
-**Phase 2.5 — Unified People Calendar**
-- [ ] `PeopleCalendar` replaces `LeaveCalendar` — shows working locations + leave in one view
+**Phase 2.5 — Unified People Calendar ✅**
+- [x] `PeopleCalendar` (`src/components/shared/people-calendar.tsx`) replaces `LeaveCalendar` — shows working locations + leave in one view
+- [x] Swapped into Leave page Team Calendar tab + Working Location page monthly view
+- [x] Dynamic legend (only shows types present in data), month navigation, today highlight, weekend shading
+- [x] Deleted `leave-calendar.tsx` (replaced)
 
 **Phase 3 — Recurring Patterns**
 - [ ] Default week editor (set once, auto-applies)
