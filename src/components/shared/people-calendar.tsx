@@ -303,12 +303,15 @@ export function PeopleCalendar({
             className={`bg-background min-h-[80px] p-1 ${
               !day.isCurrentMonth ? "opacity-40" : ""
             } ${day.isWeekend ? "bg-muted/30" : ""} ${
-              day.isToday ? "ring-2 ring-primary ring-inset" : ""
-            } ${day.isHoliday ? "bg-amber-50" : ""} ${
-              selectedDate === day.dateStr ? "bg-primary/5" : ""
+              day.isHoliday ? "bg-amber-50" : ""
+            } ${selectedDate === day.dateStr ? "bg-primary/5" : ""
             } ${onDayClick && day.isCurrentMonth ? "cursor-pointer hover:bg-accent/50 transition-colors" : ""}`}
           >
-            <div className="text-xs font-medium mb-1">
+            <div className={`text-xs font-medium mb-1 ${
+              day.isToday
+                ? "inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground"
+                : ""
+            }`}>
               {day.date.getDate()}
             </div>
             {day.isHoliday && (
