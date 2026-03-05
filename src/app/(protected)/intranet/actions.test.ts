@@ -47,7 +47,6 @@ const mockProfile = vi.hoisted(() => ({
   is_line_manager: false,
   job_title: "Staff",
   induction_completed_at: "2026-01-01",
-  last_sign_in_date: null,
   email: "staff@mcrpathways.org",
 }));
 

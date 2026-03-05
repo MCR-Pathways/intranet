@@ -152,7 +152,7 @@ function getNavigation(
       module: "learning",
       children: learningChildren,
     },
-    { name: "Sign In", href: "/sign-in", icon: MapPin, module: "sign-in" },
+    { name: "Working Location", href: "/sign-in", icon: MapPin, module: "sign-in" },
   ];
 }
 

@@ -23,7 +23,10 @@ export type WorkLocation =
   | "home"
   | "glasgow_office"
   | "stevenage_office"
-  | "other";
+  | "other"
+  | "on_leave";
+export type TimeSlot = "full_day" | "morning" | "afternoon";
+export type LocationSource = "manual" | "calendar" | "pattern" | "leave";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrolmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
 export type LessonType = "video" | "text" | "quiz";
@@ -66,7 +69,8 @@ export interface Database {
           google_refresh_token: string | null;
           induction_completed_at: string | null;
           last_sign_in_at: string | null;
-          last_sign_in_date: string | null;
+          calendar_sync_token: string | null;
+          calendar_last_synced_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -99,7 +103,8 @@ export interface Database {
           google_refresh_token?: string | null;
           induction_completed_at?: string | null;
           last_sign_in_at?: string | null;
-          last_sign_in_date?: string | null;
+          calendar_sync_token?: string | null;
+          calendar_last_synced_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -132,7 +137,8 @@ export interface Database {
           google_refresh_token?: string | null;
           induction_completed_at?: string | null;
           last_sign_in_at?: string | null;
-          last_sign_in_date?: string | null;
+          calendar_sync_token?: string | null;
+          calendar_last_synced_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -783,32 +789,79 @@ export interface Database {
           updated_at?: string;
         };
       };
-      sign_ins: {
+      working_locations: {
         Row: {
           id: string;
           user_id: string;
-          sign_in_date: string;
+          date: string;
+          time_slot: TimeSlot;
           location: WorkLocation;
           other_location: string | null;
-          signed_in_at: string;
+          source: LocationSource;
+          confirmed: boolean;
+          confirmed_at: string | null;
+          google_event_id: string | null;
+          leave_request_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          date: string;
+          time_slot: TimeSlot;
+          location: WorkLocation;
+          other_location?: string | null;
+          source?: LocationSource;
+          confirmed?: boolean;
+          confirmed_at?: string | null;
+          google_event_id?: string | null;
+          leave_request_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          date?: string;
+          time_slot?: TimeSlot;
+          location?: WorkLocation;
+          other_location?: string | null;
+          source?: LocationSource;
+          confirmed?: boolean;
+          confirmed_at?: string | null;
+          google_event_id?: string | null;
+          leave_request_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      weekly_patterns: {
+        Row: {
+          id: string;
+          user_id: string;
+          day_of_week: number;
+          time_slot: TimeSlot;
+          location: WorkLocation;
+          other_location: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          sign_in_date?: string;
+          day_of_week: number;
+          time_slot?: TimeSlot;
           location: WorkLocation;
           other_location?: string | null;
-          signed_in_at?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          sign_in_date?: string;
+          day_of_week?: number;
+          time_slot?: TimeSlot;
           location?: WorkLocation;
           other_location?: string | null;
-          signed_in_at?: string;
           created_at?: string;
         };
       };
@@ -1021,24 +1074,9 @@ export interface EnrolmentWithCourse extends CourseEnrolment {
   course: Course;
 }
 
-// Sign-in types
-export type SignIn = Database["public"]["Tables"]["sign_ins"]["Row"];
-
-export interface TeamMemberSignInEntry {
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-}
-
-export interface TeamMemberSignIn {
-  id: string;
-  full_name: string;
-  preferred_name: string | null;
-  avatar_url: string | null;
-  job_title: string | null;
-  sign_ins: TeamMemberSignInEntry[];
-}
+// Working location types
+export type WorkingLocation = Database["public"]["Tables"]["working_locations"]["Row"];
+export type WeeklyPattern = Database["public"]["Tables"]["weekly_patterns"]["Row"];
 
 // News feed types
 export type Post = Database["public"]["Tables"]["posts"]["Row"];

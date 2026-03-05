@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/service", () => ({
 
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 
-import { createNotification, dismissSignInReminders } from "./notifications";
+import { createNotification } from "./notifications";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -98,35 +98,4 @@ describe("Notification Helpers", () => {
     });
   });
 
-  // =============================================
-  // dismissSignInReminders
-  // =============================================
-
-  describe("dismissSignInReminders", () => {
-    it("deletes all sign_in_reminder notifications for user", async () => {
-      const secondEq = vi.fn().mockResolvedValue({ error: null });
-      const firstEq = vi.fn().mockReturnValue({ eq: secondEq });
-      const mockDelete = vi.fn().mockReturnValue({ eq: firstEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
-
-      const result = await dismissSignInReminders("user-1");
-
-      expect(result.error).toBeNull();
-      expect(mockFrom).toHaveBeenCalledWith("notifications");
-      expect(firstEq).toHaveBeenCalledWith("user_id", "user-1");
-      expect(secondEq).toHaveBeenCalledWith("type", "sign_in_reminder");
-    });
-
-    it("returns error on DB failure", async () => {
-      const secondEq = vi.fn().mockResolvedValue({ error: { message: "Delete failed" } });
-      const firstEq = vi.fn().mockReturnValue({ eq: secondEq });
-      const mockDelete = vi.fn().mockReturnValue({ eq: firstEq });
-      mockFrom.mockReturnValue({ delete: mockDelete });
-
-      const result = await dismissSignInReminders("user-1");
-
-      expect(result.error).toBeDefined();
-      expect(result.error?.message).toBe("Delete failed");
-    });
-  });
 });

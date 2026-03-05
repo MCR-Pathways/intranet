@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LeaveBalanceCards } from "@/components/hr/leave-balance-cards";
 import { LeaveRequestTable } from "@/components/hr/leave-request-table";
 import { LeaveRequestDialog } from "@/components/hr/leave-request-dialog";
-import { LeaveCalendar } from "@/components/hr/leave-calendar";
+import { PeopleCalendar } from "@/components/shared/people-calendar";
 import type { LeaveBalance, LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 import { Plus } from "lucide-react";
 
@@ -109,10 +109,11 @@ export function LeaveDashboardContent({
 
         {showApprovals && (
           <TabsContent value="calendar" className="mt-6">
-            <LeaveCalendar
-              requests={allRequests}
+            <PeopleCalendar
+              leaveRequests={allRequests}
               publicHolidays={publicHolidays}
               showEmployee
+              mode="team"
             />
           </TabsContent>
         )}

@@ -9,6 +9,7 @@ import {
 } from "@/lib/hr";
 import type { LeaveType, Region } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // SELECT CONSTANTS
@@ -205,10 +206,10 @@ export async function approveLeave(requestId: string, notes?: string) {
     return { success: false, error: "Not authenticated" };
   }
 
-  // Fetch the request to check ownership
+  // Fetch the request to check ownership and dates for leave integration
   const { data: request } = await supabase
     .from("leave_requests")
-    .select("id, profile_id, status")
+    .select("id, profile_id, status, start_date, end_date, start_half_day, end_half_day, leave_type")
     .eq("id", requestId)
     .single();
 
@@ -238,9 +239,27 @@ export async function approveLeave(requestId: string, notes?: string) {
     return { success: false, error: error.message };
   }
 
+  // Create "on_leave" working location entries + OOO Calendar event (non-blocking)
+  try {
+    const { createLeaveLocationEntries } = await import("@/lib/leave-location-sync");
+    await createLeaveLocationEntries({
+      id: request.id,
+      profileId: request.profile_id,
+      startDate: request.start_date,
+      endDate: request.end_date,
+      startHalfDay: request.start_half_day,
+      endHalfDay: request.end_half_day,
+      leaveType: request.leave_type,
+    });
+  } catch (err) {
+    // Non-critical — log but don't block the approval
+    logger.warn("Failed to create leave location entries", { requestId, error: err instanceof Error ? err.message : String(err) });
+  }
+
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
   revalidatePath("/hr");
+  revalidatePath("/sign-in");
   revalidatePath(`/hr/users/${request.profile_id}`);
   return { success: true, error: null };
 }
@@ -338,9 +357,18 @@ export async function cancelLeave(requestId: string) {
     return { success: false, error: error.message };
   }
 
+  // Delete "on_leave" working location entries + OOO Calendar event (non-blocking)
+  try {
+    const { deleteLeaveLocationEntries } = await import("@/lib/leave-location-sync");
+    await deleteLeaveLocationEntries(requestId, request.profile_id);
+  } catch (err) {
+    logger.warn("Failed to delete leave location entries", { requestId, error: err instanceof Error ? err.message : String(err) });
+  }
+
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
   revalidatePath("/hr");
+  revalidatePath("/sign-in");
   revalidatePath(`/hr/users/${request.profile_id}`);
   return { success: true, error: null };
 }
@@ -396,28 +424,51 @@ export async function recordLeave(data: {
     return { success: false, error: "No working days in the selected date range" };
   }
 
-  const { error } = await supabase.from("leave_requests").insert({
-    profile_id: data.profile_id,
-    leave_type: data.leave_type,
-    start_date: data.start_date,
-    end_date: data.end_date,
-    start_half_day: data.start_half_day ?? false,
-    end_half_day: data.end_half_day ?? false,
-    total_days: totalDays,
-    reason: data.reason?.trim() || null,
-    status: "approved",
-    decided_by: user.id,
-    decided_at: new Date().toISOString(),
-    decision_notes: data.notes?.trim() || "Recorded by HR admin",
-  });
+  const { data: insertedRequest, error } = await supabase
+    .from("leave_requests")
+    .insert({
+      profile_id: data.profile_id,
+      leave_type: data.leave_type,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      start_half_day: data.start_half_day ?? false,
+      end_half_day: data.end_half_day ?? false,
+      total_days: totalDays,
+      reason: data.reason?.trim() || null,
+      status: "approved",
+      decided_by: user.id,
+      decided_at: new Date().toISOString(),
+      decision_notes: data.notes?.trim() || "Recorded by HR admin",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { success: false, error: error.message };
   }
 
+  // Create "on_leave" working location entries + OOO Calendar event (non-blocking)
+  if (insertedRequest) {
+    try {
+      const { createLeaveLocationEntries } = await import("@/lib/leave-location-sync");
+      await createLeaveLocationEntries({
+        id: insertedRequest.id,
+        profileId: data.profile_id,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        startHalfDay: data.start_half_day ?? false,
+        endHalfDay: data.end_half_day ?? false,
+        leaveType: data.leave_type,
+      });
+    } catch (err) {
+      logger.warn("Failed to create leave location entries", { leaveId: insertedRequest.id, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
   revalidatePath("/hr");
+  revalidatePath("/sign-in");
   revalidatePath(`/hr/users/${data.profile_id}`);
   return { success: true, error: null };
 }
