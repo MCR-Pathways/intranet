@@ -160,7 +160,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
   // Success screen
   if (state === "success" && selectedPerson) {
     return (
-      <div className="min-h-screen bg-[#213350] flex items-center justify-center">
+      <div className="min-h-screen bg-mcr-dark-blue flex items-center justify-center">
         <div className="text-center animate-in zoom-in duration-300">
           <CheckCircle2 className="h-20 w-20 text-emerald-400 mx-auto mb-6" />
           <h1 className="text-3xl font-bold text-white mb-2">
@@ -175,7 +175,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
   // Confirmation screen
   if (state === "confirm" && selectedPerson) {
     return (
-      <div className="min-h-screen bg-[#213350] flex items-center justify-center p-8">
+      <div className="min-h-screen bg-mcr-dark-blue flex items-center justify-center p-8">
         <div className="text-center max-w-md">
           {/* Avatar */}
           <div className="mx-auto mb-6">
@@ -227,7 +227,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
 
   // Main list screen
   return (
-    <div className="min-h-screen bg-[#213350] p-6 md:p-8">
+    <div className="min-h-screen bg-mcr-dark-blue p-6 md:p-8">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -244,7 +244,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search your name..."
-            className="w-full h-16 text-xl px-6 pl-16 rounded-2xl bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-[#F09336]/50"
+            className="w-full h-16 text-xl px-6 pl-16 rounded-2xl bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-mcr-orange/50"
           />
         </div>
 
@@ -294,7 +294,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
                     Checked in
                   </p>
                 ) : person.scheduled ? (
-                  <p className="text-[#F09336] text-xs mt-0.5">
+                  <p className="text-mcr-orange text-xs mt-0.5">
                     Scheduled today
                   </p>
                 ) : null}

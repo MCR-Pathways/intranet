@@ -299,7 +299,7 @@ export function PeopleCalendar({
         })}
         {mode === "personal" && activeLeaveTypes.length > 0 && (
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-rose-100" />
+            <div className="w-3 h-3 rounded bg-rose-50" />
             On Leave
           </div>
         )}

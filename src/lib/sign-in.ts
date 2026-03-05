@@ -58,13 +58,13 @@ export interface TeamMemberSchedule {
 }
 
 // =============================================
-// LOCATION CONFIG (V2 — colour-blind accessible)
+// LOCATION CONFIG (soft muted palette)
 // =============================================
 
 /**
  * Location display configuration for badges, cells, and charts.
- * Colours use {colour}-100/{colour}-800 shade level to distinguish
- * from leave type colours which use {colour}-50/{colour}-600.
+ * Soft palette: -50 backgrounds, -700 text for readability
+ * without competing for visual attention.
  */
 export const LOCATION_CONFIG: Record<
   string,
@@ -81,41 +81,41 @@ export const LOCATION_CONFIG: Record<
     label: "Home",
     shortLabel: "Home",
     icon: Home,
-    bgClass: "bg-emerald-100",
-    textClass: "text-emerald-800",
-    hex: "#065f46",
+    bgClass: "bg-teal-50",
+    textClass: "text-teal-700",
+    hex: "#0f766e",
   },
   glasgow_office: {
     label: "Glasgow Office",
     shortLabel: "Glasgow",
     icon: Building2,
-    bgClass: "bg-blue-100",
-    textClass: "text-blue-800",
-    hex: "#1e40af",
+    bgClass: "bg-sky-50",
+    textClass: "text-sky-700",
+    hex: "#0369a1",
   },
   stevenage_office: {
     label: "Stevenage Office",
     shortLabel: "Stevenage",
     icon: Building2,
-    bgClass: "bg-blue-100",
-    textClass: "text-blue-800",
-    hex: "#1e40af",
+    bgClass: "bg-sky-50",
+    textClass: "text-sky-700",
+    hex: "#0369a1",
   },
   other: {
     label: "Other",
     shortLabel: "Other",
     icon: MapPin,
-    bgClass: "bg-violet-100",
-    textClass: "text-violet-800",
-    hex: "#5b21b6",
+    bgClass: "bg-slate-100",
+    textClass: "text-slate-600",
+    hex: "#475569",
   },
   on_leave: {
     label: "On Leave",
     shortLabel: "Leave",
     icon: CalendarOff,
-    bgClass: "bg-rose-100",
-    textClass: "text-rose-800",
-    hex: "#9f1239",
+    bgClass: "bg-rose-50",
+    textClass: "text-rose-600",
+    hex: "#e11d48",
   },
 };
 

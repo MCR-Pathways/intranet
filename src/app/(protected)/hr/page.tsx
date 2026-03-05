@@ -330,7 +330,7 @@ export default async function HRPage() {
         );
       })()}
 
-      {/* Glasgow Office Attendance (HR Admin only) */}
+      {/* Office Planning (HR Admin only) */}
       {isHRAdmin && officeData && (
         <OfficeAttendanceSection
           today={officeData.today}

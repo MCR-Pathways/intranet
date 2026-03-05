@@ -20,7 +20,7 @@ export default async function KioskPage({ searchParams }: KioskPageProps) {
   // Validate token (timing-safe comparison to prevent timing attacks)
   if (!kioskToken || !token || !timingSafeTokenCompare(token, kioskToken)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#213350]">
+      <div className="min-h-screen flex items-center justify-center bg-mcr-dark-blue">
         <p className="text-white/50 text-sm">Unauthorised</p>
       </div>
     );

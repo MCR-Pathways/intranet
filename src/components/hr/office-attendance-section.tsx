@@ -82,7 +82,7 @@ export function OfficeAttendanceSection({
   return (
     <section>
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-        Glasgow Office Attendance
+        Office Planning
       </h2>
 
       {/* Stat cards */}
@@ -90,16 +90,16 @@ export function OfficeAttendanceSection({
         <StatCard
           icon={Users}
           value={todayScheduled}
-          label="Scheduled Today"
-          sublabel="Glasgow office today"
+          label="In Today"
+          sublabel="Expected in the office"
           iconColour="text-blue-600"
           valueColour="text-blue-700"
         />
         <StatCard
           icon={CheckCircle2}
           value={todayConfirmed}
-          label="Confirmed Today"
-          sublabel="Checked in today"
+          label="Checked In"
+          sublabel="Confirmed at the office"
           iconColour="text-emerald-600"
           valueColour="text-emerald-700"
         />
@@ -110,7 +110,7 @@ export function OfficeAttendanceSection({
             label="Tomorrow"
             sublabel={
               tomorrowBelowTarget
-                ? `Below target (${OFFICE_HEADCOUNT_TARGET})`
+                ? `Fewer than usual — ${tomorrowScheduled} expected`
                 : `On track`
             }
             iconColour={tomorrowBelowTarget ? "text-amber-600" : "text-blue-600"}
@@ -125,7 +125,7 @@ export function OfficeAttendanceSection({
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">This Week Detail</CardTitle>
+              <CardTitle className="text-sm font-medium">This Week</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -205,7 +205,7 @@ export function OfficeAttendanceSection({
                         </p>
                       )}
                       <p className="mt-1 text-xs text-amber-500">
-                        {OFFICE_HEADCOUNT_TARGET - day.scheduled} more {OFFICE_HEADCOUNT_TARGET - day.scheduled === 1 ? "person" : "people"} needed
+                        Consider encouraging someone to come in
                       </p>
                     </div>
                   ))}
