@@ -461,8 +461,22 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
     return { days: [], error: null };
   }
 
+  // Get unique user IDs for name lookup
+  const userIds = [...new Set(data.map((e) => e.user_id))];
+  const { data: profiles } = userIds.length > 0
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds)
+    : { data: [] };
+
+  const nameMap = new Map<string, string>();
+  for (const p of profiles ?? []) {
+    nameMap.set(p.id, p.full_name ?? "Unknown");
+  }
+
   // Group by date
-  const dayMap = new Map<string, { scheduled: number; confirmed: number; members: { userId: string; source: string; confirmed: boolean }[] }>();
+  const dayMap = new Map<string, { scheduled: number; confirmed: number; members: { userId: string; fullName: string; source: string; confirmed: boolean }[] }>();
 
   for (const entry of data) {
     const day = dayMap.get(entry.date) ?? { scheduled: 0, confirmed: 0, members: [] };
@@ -470,6 +484,7 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
     if (entry.confirmed) day.confirmed++;
     day.members.push({
       userId: entry.user_id,
+      fullName: nameMap.get(entry.user_id) ?? "Unknown",
       source: entry.source,
       confirmed: entry.confirmed,
     });

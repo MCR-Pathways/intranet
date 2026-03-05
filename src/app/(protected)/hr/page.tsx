@@ -26,6 +26,9 @@ import {
   Briefcase,
   FolderTree,
 } from "lucide-react";
+import { getOfficeHeadcount } from "@/app/(protected)/sign-in/actions";
+import { getWeekDates, getUKToday } from "@/lib/sign-in";
+import { OfficeAttendanceSection } from "@/components/hr/office-attendance-section";
 
 // =============================================
 // HELPERS
@@ -202,6 +205,31 @@ export default async function HRPage() {
 
   const stats = isHRAdmin ? await fetchDashboardStats(supabase) : null;
 
+  // Office attendance data (HR admin only)
+  let officeData: { today: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"][number] | null; tomorrow: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"][number] | null; weekDays: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"] } | null = null;
+  if (isHRAdmin) {
+    const weekDates = getWeekDates(0);
+    const weekStart = weekDates[0];
+    const weekEnd = weekDates[weekDates.length - 1];
+    const { days } = await getOfficeHeadcount(weekStart, weekEnd);
+
+    const todayStr = getUKToday();
+    // Find tomorrow (next weekday)
+    const todayDate = new Date(todayStr + "T12:00:00");
+    const tomorrowDate = new Date(todayDate);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    // Skip weekends
+    if (tomorrowDate.getDay() === 6) tomorrowDate.setDate(tomorrowDate.getDate() + 2);
+    if (tomorrowDate.getDay() === 0) tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+
+    officeData = {
+      today: days.find((d) => d.date === todayStr) ?? null,
+      tomorrow: days.find((d) => d.date === tomorrowStr) ?? null,
+      weekDays: days,
+    };
+  }
+
   const greeting = getGreeting();
   const firstName = getFirstName(profile?.full_name ?? null);
 
@@ -299,6 +327,15 @@ export default async function HRPage() {
           </div>
         );
       })()}
+
+      {/* Glasgow Office Attendance (HR Admin only) */}
+      {isHRAdmin && officeData && (
+        <OfficeAttendanceSection
+          today={officeData.today}
+          tomorrow={officeData.tomorrow}
+          weekDays={officeData.weekDays}
+        />
+      )}
 
       {/* My HR — self-service items for all staff */}
       <section>

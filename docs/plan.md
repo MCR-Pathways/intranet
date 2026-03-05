@@ -155,9 +155,14 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] `WeekStrip` converted to `forwardRef` with `refresh()` imperative handle for post-apply data reload
 - [x] Integrated into `WorkingLocationContent` between WeekStrip and PeopleCalendar
 
-**Phase 4 — Kiosk + HR Dashboard**
-- [ ] Tablet check-in at Glasgow office entrance (token-authenticated)
-- [ ] Glasgow office headcount stat cards + expandable detail on HR dashboard
+**Phase 4 — Kiosk + HR Dashboard ✅**
+- [x] Kiosk route (`/kiosk`) — full-screen tablet check-in, token-authenticated, MCR brand colours
+- [x] Two-step flow: search/tap name → confirm identity (photo + name) → success animation
+- [x] API route `POST /api/kiosk/confirm` — service role client, offline queue in localStorage
+- [x] Middleware updated to allow `/kiosk` as public route
+- [x] `OfficeAttendanceSection` on HR dashboard — Scheduled/Confirmed Today + Tomorrow stat cards
+- [x] Expandable week detail with below-target day alerts (amber when < 4 scheduled)
+- [x] `getOfficeHeadcount` updated to include staff names for detail view
 
 **Phase 5 — Team Schedule Grid**
 - [ ] People × days grid for managers (who's in?)
