@@ -69,6 +69,18 @@ export async function setWorkingLocation(
     return { success: false, error: "Cannot override a leave entry. Cancel the leave request first." };
   }
 
+  // Get existing entry's google_event_id for Calendar write-back update
+  const existingEventId = existing?.[0]
+    ? (await supabase
+        .from("working_locations")
+        .select("google_event_id")
+        .eq("user_id", user.id)
+        .eq("date", date)
+        .eq("time_slot", timeSlot)
+        .single()
+      ).data?.google_event_id
+    : null;
+
   // Upsert — ON CONFLICT (user_id, date, time_slot) UPDATE
   const { error } = await supabase
     .from("working_locations")
@@ -82,7 +94,7 @@ export async function setWorkingLocation(
         source: "manual" as const,
         confirmed: false,
         confirmed_at: null,
-        google_event_id: null,
+        google_event_id: existingEventId,
         leave_request_id: null,
       },
       { onConflict: "user_id,date,time_slot" }
@@ -90,6 +102,32 @@ export async function setWorkingLocation(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Write-back to Google Calendar (non-blocking, full_day only)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY && timeSlot === "full_day") {
+    try {
+      const { writeWorkingLocationEvent } = await import("@/lib/google-calendar");
+      const eventId = await writeWorkingLocationEvent(
+        user.email!,
+        date,
+        location as "home" | "glasgow_office" | "stevenage_office" | "other",
+        sanitisedOtherLocation,
+        existingEventId,
+      );
+
+      // Store the Calendar event ID if we got one
+      if (eventId && eventId !== existingEventId) {
+        await supabase
+          .from("working_locations")
+          .update({ google_event_id: eventId })
+          .eq("user_id", user.id)
+          .eq("date", date)
+          .eq("time_slot", timeSlot);
+      }
+    } catch {
+      // Non-critical — don't block the user action
+    }
   }
 
   revalidatePath("/sign-in");
@@ -113,7 +151,7 @@ export async function clearWorkingLocation(
   // Check source before deleting (don't delete leave entries)
   const { data: existing } = await supabase
     .from("working_locations")
-    .select("id, source")
+    .select("id, source, google_event_id")
     .eq("user_id", user.id)
     .eq("date", date)
     .eq("time_slot", timeSlot)
@@ -127,6 +165,8 @@ export async function clearWorkingLocation(
     return { success: false, error: "Cannot remove a leave entry. Cancel the leave request first." };
   }
 
+  const googleEventId = existing[0].google_event_id;
+
   const { error } = await supabase
     .from("working_locations")
     .delete()
@@ -135,6 +175,16 @@ export async function clearWorkingLocation(
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Delete the Google Calendar event if one exists (non-blocking)
+  if (googleEventId && process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    try {
+      const { deleteCalendarEvent } = await import("@/lib/google-calendar");
+      await deleteCalendarEvent(user.email!, googleEventId);
+    } catch {
+      // Non-critical
+    }
   }
 
   revalidatePath("/sign-in");

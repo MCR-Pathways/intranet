@@ -27,19 +27,39 @@ export interface CalendarWorkingLocation {
  *
  * Requires GOOGLE_SERVICE_ACCOUNT_KEY env var (base64-encoded JSON key).
  */
-function getCalendarClient(userEmail: string): calendar_v3.Calendar {
+function getServiceAccountKey(): { client_email: string; private_key: string } {
   const keyBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!keyBase64) {
     throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable");
   }
+  return JSON.parse(Buffer.from(keyBase64, "base64").toString("utf-8"));
+}
 
-  const keyJson = JSON.parse(Buffer.from(keyBase64, "base64").toString("utf-8"));
+function getCalendarClient(userEmail: string): calendar_v3.Calendar {
+  const keyJson = getServiceAccountKey();
 
   const auth = new google.auth.JWT({
     email: keyJson.client_email,
     key: keyJson.private_key,
     scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
     subject: userEmail, // Domain-wide delegation impersonation
+  });
+
+  return google.calendar({ version: "v3", auth });
+}
+
+/**
+ * Create a Calendar client with write access (calendar.events scope).
+ * Used for writing working location events and OOO events back to Calendar.
+ */
+function getWritableCalendarClient(userEmail: string): calendar_v3.Calendar {
+  const keyJson = getServiceAccountKey();
+
+  const auth = new google.auth.JWT({
+    email: keyJson.client_email,
+    key: keyJson.private_key,
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
+    subject: userEmail,
   });
 
   return google.calendar({ version: "v3", auth });
@@ -269,4 +289,185 @@ export async function fetchWorkingLocations(
 
     throw error;
   }
+}
+
+// =============================================
+// WRITE-BACK: WORKING LOCATION EVENTS
+// =============================================
+
+/** Map our internal location to Google Calendar working location properties */
+function toGoogleWorkingLocationProperties(
+  location: "home" | "glasgow_office" | "stevenage_office" | "other",
+  otherLocation?: string | null,
+): calendar_v3.Schema$EventWorkingLocationProperties {
+  switch (location) {
+    case "home":
+      return { type: "homeOffice", homeOffice: {} };
+    case "glasgow_office":
+      return {
+        type: "officeLocation",
+        officeLocation: { label: "Glasgow Office" },
+      };
+    case "stevenage_office":
+      return {
+        type: "officeLocation",
+        officeLocation: { label: "Stevenage Office" },
+      };
+    case "other":
+      return {
+        type: "customLocation",
+        customLocation: { label: otherLocation ?? "Other" },
+      };
+  }
+}
+
+/**
+ * Create or update a working location event in the user's Google Calendar.
+ *
+ * @returns The created/updated event ID, or null on failure.
+ */
+export async function writeWorkingLocationEvent(
+  userEmail: string,
+  date: string,
+  location: "home" | "glasgow_office" | "stevenage_office" | "other",
+  otherLocation?: string | null,
+  existingEventId?: string | null,
+): Promise<string | null> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) return null;
+
+  try {
+    const calendar = getWritableCalendarClient(userEmail);
+    const nextDate = getNextDate(date);
+
+    const eventBody: calendar_v3.Schema$Event = {
+      eventType: "workingLocation",
+      summary: "Working Location",
+      visibility: "public",
+      transparency: "transparent",
+      start: { date },
+      end: { date: nextDate },
+      workingLocationProperties: toGoogleWorkingLocationProperties(location, otherLocation),
+    };
+
+    if (existingEventId) {
+      // Update existing event
+      const response = await calendar.events.update({
+        calendarId: "primary",
+        eventId: existingEventId,
+        requestBody: eventBody,
+      });
+      return response.data.id ?? null;
+    } else {
+      // Create new event
+      const response = await calendar.events.insert({
+        calendarId: "primary",
+        requestBody: eventBody,
+      });
+      return response.data.id ?? null;
+    }
+  } catch (error) {
+    logger.warn("Failed to write working location to Calendar", {
+      userEmail,
+      date,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Delete a working location event from the user's Google Calendar.
+ */
+export async function deleteCalendarEvent(
+  userEmail: string,
+  eventId: string,
+): Promise<boolean> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) return false;
+
+  try {
+    const calendar = getWritableCalendarClient(userEmail);
+    await calendar.events.delete({
+      calendarId: "primary",
+      eventId,
+    });
+    return true;
+  } catch (error) {
+    logger.warn("Failed to delete Calendar event", {
+      userEmail,
+      eventId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+// =============================================
+// WRITE-BACK: OOO EVENTS (LEAVE INTEGRATION)
+// =============================================
+
+/**
+ * Create an Out of Office event in the user's Google Calendar.
+ * Called when leave is approved.
+ *
+ * @returns The created event ID, or null on failure.
+ */
+export async function createOOOEvent(
+  userEmail: string,
+  startDate: string,
+  endDate: string,
+  leaveSummary?: string,
+): Promise<string | null> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) return null;
+
+  try {
+    const calendar = getWritableCalendarClient(userEmail);
+    const nextDate = getNextDate(endDate); // Google uses exclusive end date
+
+    const response = await calendar.events.insert({
+      calendarId: "primary",
+      requestBody: {
+        eventType: "outOfOffice",
+        summary: leaveSummary ?? "Out of Office",
+        start: { date: startDate },
+        end: { date: nextDate },
+        outOfOfficeProperties: {
+          autoDeclineMode: "declineNone",
+        },
+        visibility: "public",
+        transparency: "opaque",
+      },
+    });
+
+    return response.data.id ?? null;
+  } catch (error) {
+    logger.warn("Failed to create OOO event in Calendar", {
+      userEmail,
+      startDate,
+      endDate,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Delete an Out of Office event from the user's Google Calendar.
+ * Called when approved leave is cancelled.
+ */
+export async function deleteOOOEvent(
+  userEmail: string,
+  eventId: string,
+): Promise<boolean> {
+  return deleteCalendarEvent(userEmail, eventId);
+}
+
+// =============================================
+// HELPERS
+// =============================================
+
+/** Get the next day (YYYY-MM-DD) — Google Calendar uses exclusive end dates */
+function getNextDate(date: string): string {
+  const d = new Date(date + "T12:00:00Z");
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
 }

@@ -180,8 +180,13 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] `CalendarSyncStatus` UI component — sync indicator + manual sync button (hidden when not configured)
 - [x] Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_CALENDAR_WEBHOOK_SECRET`, `NEXT_PUBLIC_GOOGLE_CALENDAR_ENABLED`
 
-**Phase 7 — Google Calendar Write-Back**
-- [ ] Write-back: intranet → Calendar + leave approval → OOO events
+**Phase 7 — Google Calendar Write-Back + Leave Integration ✅**
+- [x] **Flow A — Location → Calendar**: `setWorkingLocation` writes working location events to Google Calendar via service account + domain-wide delegation; `clearWorkingLocation` deletes the Calendar event; stores `google_event_id` for updates
+- [x] **Flow B — Leave → Schedule + Calendar**: `approveLeave` creates `on_leave` working location entries for each working day + OOO Calendar event; `cancelLeave` deletes both; `recordLeave` (HR admin direct record) also hooks in
+- [x] Migration `00042`: adds `ooo_calendar_event_id` to `leave_requests` for OOO event tracking
+- [x] `leave-location-sync.ts` — helper for creating/deleting leave-sourced working location entries
+- [x] Extended `google-calendar.ts` with write functions: `writeWorkingLocationEvent`, `deleteCalendarEvent`, `createOOOEvent`, `deleteOOOEvent`
+- [x] All Calendar write-backs are non-blocking (try/catch, per lesson learned about non-critical follow-ups)
 
 **Phase 8 — Daily Banners + Reports + Nudge**
 - [ ] Reconciliation banners, week planning nudge, reports rewrite

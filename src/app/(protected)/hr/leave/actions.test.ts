@@ -684,7 +684,11 @@ describe("HR Leave Actions", () => {
         } else if (table === "public_holidays") {
           c.order.mockResolvedValue({ data: [], error: null });
         } else if (table === "leave_requests") {
-          c.insert.mockResolvedValue({ error: null });
+          c.insert.mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: { id: "new-leave-1" }, error: null }),
+            }),
+          });
         }
         return c;
       });
@@ -714,7 +718,11 @@ describe("HR Leave Actions", () => {
           } else if (table === "public_holidays") {
             c.order.mockResolvedValue({ data: [], error: null });
           } else {
-            c.insert.mockResolvedValue({ error: null });
+            c.insert.mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: { id: "new-leave-1" }, error: null }),
+              }),
+            });
           }
           return c;
         });
