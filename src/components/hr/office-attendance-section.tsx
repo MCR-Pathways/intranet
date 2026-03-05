@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Users, CheckCircle2, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { OFFICE_HEADCOUNT_TARGET } from "@/lib/sign-in";
 
 interface DayHeadcount {
   date: string;
@@ -73,6 +74,11 @@ export function OfficeAttendanceSection({
   const tomorrowScheduled = tomorrow?.scheduled ?? 0;
   const tomorrowBelowTarget = tomorrow?.belowTarget ?? false;
 
+  const belowTargetDays = useMemo(
+    () => weekDays.filter((day) => day.belowTarget),
+    [weekDays]
+  );
+
   return (
     <section>
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -104,7 +110,7 @@ export function OfficeAttendanceSection({
             label="Tomorrow"
             sublabel={
               tomorrowBelowTarget
-                ? `Below target (4)`
+                ? `Below target (${OFFICE_HEADCOUNT_TARGET})`
                 : `On track`
             }
             iconColour={tomorrowBelowTarget ? "text-amber-600" : "text-blue-600"}
@@ -177,15 +183,13 @@ export function OfficeAttendanceSection({
             {/* Expanded detail: show below-target days */}
             {expanded && (
               <div className="mt-4 space-y-3">
-                {weekDays
-                  .filter((day) => day.belowTarget)
-                  .map((day) => (
+                {belowTargetDays.map((day) => (
                     <div
                       key={day.date}
                       className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3"
                     >
                       <p className="text-sm font-medium text-amber-800">
-                        {formatDayLabel(day.date)} ({day.scheduled} scheduled — target: 4)
+                        {formatDayLabel(day.date)} ({day.scheduled} scheduled — target: {OFFICE_HEADCOUNT_TARGET})
                       </p>
                       {day.members.length > 0 ? (
                         <ul className="mt-1 text-sm text-amber-700">
@@ -201,13 +205,13 @@ export function OfficeAttendanceSection({
                         </p>
                       )}
                       <p className="mt-1 text-xs text-amber-500">
-                        {4 - day.scheduled} more {4 - day.scheduled === 1 ? "person" : "people"} needed
+                        {OFFICE_HEADCOUNT_TARGET - day.scheduled} more {OFFICE_HEADCOUNT_TARGET - day.scheduled === 1 ? "person" : "people"} needed
                       </p>
                     </div>
                   ))}
-                {weekDays.filter((day) => day.belowTarget).length === 0 && (
+                {belowTargetDays.length === 0 && (
                   <p className="text-sm text-emerald-600">
-                    All days are at or above the target of 4.
+                    All days are at or above the target of {OFFICE_HEADCOUNT_TARGET}.
                   </p>
                 )}
               </div>

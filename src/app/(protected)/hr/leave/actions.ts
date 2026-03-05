@@ -9,6 +9,7 @@ import {
 } from "@/lib/hr";
 import type { LeaveType, Region } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // SELECT CONSTANTS
@@ -252,7 +253,7 @@ export async function approveLeave(requestId: string, notes?: string) {
     });
   } catch (err) {
     // Non-critical — log but don't block the approval
-    console.warn("Failed to create leave location entries:", err);
+    logger.warn("Failed to create leave location entries", { requestId, error: err instanceof Error ? err.message : String(err) });
   }
 
   revalidatePath("/hr/leave");
@@ -361,7 +362,7 @@ export async function cancelLeave(requestId: string) {
     const { deleteLeaveLocationEntries } = await import("@/lib/leave-location-sync");
     await deleteLeaveLocationEntries(requestId, request.profile_id);
   } catch (err) {
-    console.warn("Failed to delete leave location entries:", err);
+    logger.warn("Failed to delete leave location entries", { requestId, error: err instanceof Error ? err.message : String(err) });
   }
 
   revalidatePath("/hr/leave");
@@ -460,7 +461,7 @@ export async function recordLeave(data: {
         leaveType: data.leave_type,
       });
     } catch (err) {
-      console.warn("Failed to create leave location entries:", err);
+      logger.warn("Failed to create leave location entries", { leaveId: insertedRequest.id, error: err instanceof Error ? err.message : String(err) });
     }
   }
 

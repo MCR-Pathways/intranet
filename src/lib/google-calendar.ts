@@ -32,7 +32,20 @@ function getServiceAccountKey(): { client_email: string; private_key: string } {
   if (!keyBase64) {
     throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable");
   }
-  return JSON.parse(Buffer.from(keyBase64, "base64").toString("utf-8"));
+  try {
+    return JSON.parse(Buffer.from(keyBase64, "base64").toString("utf-8"));
+  } catch (err) {
+    throw new Error(
+      `Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY: ${err instanceof Error ? err.message : "invalid base64 or JSON"}`
+    );
+  }
+}
+
+/** Mask an email address for safe logging (e.g. "a***@mcrpathways.org"). */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "***";
+  return `${local[0]}***@${domain}`;
 }
 
 function getCalendarClient(userEmail: string): calendar_v3.Calendar {
@@ -277,13 +290,13 @@ export async function fetchWorkingLocations(
 
     // 410 Gone = sync token expired, need full sync
     if (apiError.code === 410) {
-      logger.warn("Calendar sync token expired, need full sync", { userEmail });
+      logger.warn("Calendar sync token expired, need full sync", { userEmail: maskEmail(userEmail) });
       return { locations: [], nextSyncToken: null };
     }
 
     // 403 = delegation not set up or user not in domain
     if (apiError.code === 403) {
-      logger.warn("Calendar access denied for user", { userEmail, error: apiError.message });
+      logger.warn("Calendar access denied for user", { userEmail: maskEmail(userEmail), error: apiError.message });
       return { locations: [], nextSyncToken: null };
     }
 
@@ -367,7 +380,7 @@ export async function writeWorkingLocationEvent(
     }
   } catch (error) {
     logger.warn("Failed to write working location to Calendar", {
-      userEmail,
+      userEmail: maskEmail(userEmail),
       date,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -392,8 +405,13 @@ export async function deleteCalendarEvent(
     });
     return true;
   } catch (error) {
+    const apiError = error as { code?: number; message?: string };
+    // 404/410 = event already deleted — treat as success
+    if (apiError.code === 404 || apiError.code === 410) {
+      return true;
+    }
     logger.warn("Failed to delete Calendar event", {
-      userEmail,
+      userEmail: maskEmail(userEmail),
       eventId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -441,7 +459,7 @@ export async function createOOOEvent(
     return response.data.id ?? null;
   } catch (error) {
     logger.warn("Failed to create OOO event in Calendar", {
-      userEmail,
+      userEmail: maskEmail(userEmail),
       startDate,
       endDate,
       error: error instanceof Error ? error.message : String(error),

@@ -64,14 +64,14 @@ export async function createLeaveLocationEntries(leave: LeaveDetails): Promise<v
     });
 
     // Upsert entries — leave overrides calendar and pattern sources
-    // First, delete existing calendar/pattern entries for these dates
-    for (const entry of entries) {
+    // Batch-delete existing calendar/pattern entries for these dates
+    const datesToClear = entries.map((e) => e.date);
+    if (datesToClear.length > 0) {
       await supabase
         .from("working_locations")
         .delete()
         .eq("user_id", leave.profileId)
-        .eq("date", entry.date)
-        .eq("time_slot", entry.time_slot)
+        .in("date", datesToClear)
         .in("source", ["calendar", "pattern"]);
     }
 
@@ -156,22 +156,17 @@ export async function deleteLeaveLocationEntries(
       });
     }
 
-    // Delete the OOO Calendar event if one exists
+    // Delete the OOO Calendar event if one exists (joined query)
     const { data: request } = await supabase
       .from("leave_requests")
-      .select("ooo_calendar_event_id")
+      .select("ooo_calendar_event_id, profiles!leave_requests_profile_id_fkey(email)")
       .eq("id", leaveRequestId)
       .single();
 
     if (request?.ooo_calendar_event_id) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("id", profileId)
-        .single();
-
-      if (profile?.email) {
-        await deleteOOOEvent(profile.email, request.ooo_calendar_event_id);
+      const profileData = request.profiles as unknown as { email: string | null } | null;
+      if (profileData?.email) {
+        await deleteOOOEvent(profileData.email, request.ooo_calendar_event_id);
 
         // Clear the stored event ID
         await supabase

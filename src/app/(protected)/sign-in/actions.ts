@@ -3,7 +3,8 @@
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { WorkLocation, TimeSlot } from "@/types/database.types";
-import { getUKToday } from "@/lib/sign-in";
+import { getUKToday, OFFICE_LOCATIONS, OFFICE_HEADCOUNT_TARGET } from "@/lib/sign-in";
+import { logger } from "@/lib/logger";
 
 const VALID_LOCATIONS: WorkLocation[] = [
   "home",
@@ -59,7 +60,7 @@ export async function setWorkingLocation(
   // Check if there's a leave-sourced entry for this date/slot
   const { data: existing } = await supabase
     .from("working_locations")
-    .select("id, source")
+    .select("id, source, google_event_id")
     .eq("user_id", user.id)
     .eq("date", date)
     .eq("time_slot", timeSlot)
@@ -69,17 +70,7 @@ export async function setWorkingLocation(
     return { success: false, error: "Cannot override a leave entry. Cancel the leave request first." };
   }
 
-  // Get existing entry's google_event_id for Calendar write-back update
-  const existingEventId = existing?.[0]
-    ? (await supabase
-        .from("working_locations")
-        .select("google_event_id")
-        .eq("user_id", user.id)
-        .eq("date", date)
-        .eq("time_slot", timeSlot)
-        .single()
-      ).data?.google_event_id
-    : null;
+  const existingEventId = existing?.[0]?.google_event_id ?? null;
 
   // Upsert — ON CONFLICT (user_id, date, time_slot) UPDATE
   const { error } = await supabase
@@ -125,8 +116,11 @@ export async function setWorkingLocation(
           .eq("date", date)
           .eq("time_slot", timeSlot);
       }
-    } catch {
-      // Non-critical — don't block the user action
+    } catch (err) {
+      logger.warn("Calendar write-back failed", {
+        date,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -182,8 +176,11 @@ export async function clearWorkingLocation(
     try {
       const { deleteCalendarEvent } = await import("@/lib/google-calendar");
       await deleteCalendarEvent(user.email!, googleEventId);
-    } catch {
-      // Non-critical
+    } catch (err) {
+      logger.warn("Calendar event deletion failed", {
+        date,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -290,6 +287,25 @@ export async function saveWeeklyPattern(
 
   const sanitisedOtherLocation =
     location === "other" ? (otherLocation?.trim().slice(0, 200) || null) : null;
+
+  // Enforce mutual exclusivity: full_day and split-day entries can't coexist
+  if (timeSlot === "full_day") {
+    // Setting full_day → remove any morning/afternoon entries
+    await supabase
+      .from("weekly_patterns")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("day_of_week", dayOfWeek)
+      .in("time_slot", ["morning", "afternoon"]);
+  } else {
+    // Setting morning/afternoon → remove any full_day entry
+    await supabase
+      .from("weekly_patterns")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("day_of_week", dayOfWeek)
+      .eq("time_slot", "full_day");
+  }
 
   const { error } = await supabase
     .from("weekly_patterns")
@@ -500,11 +516,10 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
 
   const { data } = await supabase
     .from("working_locations")
-    .select("date, location, confirmed, user_id, source")
-    .in("location", ["glasgow_office", "stevenage_office"])
+    .select("date, location, confirmed, user_id, source, time_slot")
+    .in("location", [...OFFICE_LOCATIONS])
     .gte("date", startDate)
     .lte("date", endDate)
-    .eq("time_slot", "full_day")
     .order("date", { ascending: true });
 
   if (!data) {
@@ -525,26 +540,34 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
     nameMap.set(p.id, p.full_name ?? "Unknown");
   }
 
-  // Group by date
-  const dayMap = new Map<string, { scheduled: number; confirmed: number; members: { userId: string; fullName: string; source: string; confirmed: boolean }[] }>();
+  // Group by date — aggregate by unique user (half-day entries count once per user)
+  const dayMap = new Map<string, {
+    userSet: Set<string>;
+    confirmedSet: Set<string>;
+    members: { userId: string; fullName: string; source: string; confirmed: boolean }[];
+  }>();
 
   for (const entry of data) {
-    const day = dayMap.get(entry.date) ?? { scheduled: 0, confirmed: 0, members: [] };
-    day.scheduled++;
-    if (entry.confirmed) day.confirmed++;
-    day.members.push({
-      userId: entry.user_id,
-      fullName: nameMap.get(entry.user_id) ?? "Unknown",
-      source: entry.source,
-      confirmed: entry.confirmed,
-    });
+    const day = dayMap.get(entry.date) ?? { userSet: new Set(), confirmedSet: new Set(), members: [] };
+    if (!day.userSet.has(entry.user_id)) {
+      day.userSet.add(entry.user_id);
+      day.members.push({
+        userId: entry.user_id,
+        fullName: nameMap.get(entry.user_id) ?? "Unknown",
+        source: entry.source,
+        confirmed: entry.confirmed,
+      });
+    }
+    if (entry.confirmed) day.confirmedSet.add(entry.user_id);
     dayMap.set(entry.date, day);
   }
 
-  const days = Array.from(dayMap.entries()).map(([date, counts]) => ({
+  const days = Array.from(dayMap.entries()).map(([date, day]) => ({
     date,
-    ...counts,
-    belowTarget: counts.scheduled < 4,
+    scheduled: day.userSet.size,
+    confirmed: day.confirmedSet.size,
+    members: day.members,
+    belowTarget: day.userSet.size < OFFICE_HEADCOUNT_TARGET,
   }));
 
   return { days, error: null };
@@ -570,42 +593,30 @@ export async function getDailyBannerState() {
 
   const today = getUKToday();
 
-  // Check if user has a working location entry for today
+  // Check if user has any working location entries for today (all time slots)
   const { data } = await supabase
     .from("working_locations")
-    .select("location, confirmed")
+    .select("location, confirmed, time_slot")
     .eq("user_id", user.id)
-    .eq("date", today)
-    .eq("time_slot", "full_day")
-    .limit(1);
+    .eq("date", today);
 
   if (!data || data.length === 0) {
     // No schedule set — check if it's before 2pm UK time
-    const ukHour = new Date().toLocaleString("en-GB", {
-      timeZone: "Europe/London",
-      hour: "numeric",
-      hour12: false,
-    });
-    if (parseInt(ukHour) < 14) {
+    const ukHour = getUKHour();
+    if (ukHour < 14) {
       return { type: "no_schedule" as string | null };
     }
     return { type: null as string | null };
   }
 
-  const entry = data[0];
+  // Check if any entry is for an office location and not confirmed
+  const officeLocations = new Set<string>(OFFICE_LOCATIONS);
+  const hasUnconfirmedOffice = data.some(
+    (entry) => officeLocations.has(entry.location) && !entry.confirmed
+  );
 
-  // If scheduled for office and not confirmed, check time (after 9:30am UK)
-  if (
-    (entry.location === "glasgow_office" || entry.location === "stevenage_office") &&
-    !entry.confirmed
-  ) {
-    const ukTime = new Date().toLocaleString("en-GB", {
-      timeZone: "Europe/London",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: false,
-    });
-    const [hours, minutes] = ukTime.split(":").map(Number);
+  if (hasUnconfirmedOffice) {
+    const { hours, minutes } = getUKTime();
     if (hours > 9 || (hours === 9 && minutes >= 30)) {
       return { type: "office_not_confirmed" as string | null };
     }
@@ -650,6 +661,34 @@ export async function confirmRemoteArrival() {
 export async function quickSetTodayLocation(location: WorkLocation) {
   const today = getUKToday();
   return setWorkingLocation(today, "full_day" as TimeSlot, location);
+}
+
+// =============================================
+// UK TIME HELPERS (robust Intl.DateTimeFormat)
+// =============================================
+
+/** Get the current hour (0-23) in the Europe/London timezone. */
+function getUKHour(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hourPart = parts.find((p) => p.type === "hour");
+  return parseInt(hourPart?.value ?? "0", 10);
+}
+
+/** Get the current hours and minutes in the Europe/London timezone. */
+function getUKTime(): { hours: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hours = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const minutes = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  return { hours, minutes };
 }
 
 // =============================================

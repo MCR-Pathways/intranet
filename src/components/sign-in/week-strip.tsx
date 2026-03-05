@@ -97,12 +97,26 @@ export const WeekStrip = forwardRef<WeekStripHandle, WeekStripProps>(function We
           );
         }
 
+        // Clean up conflicting entries: full_day and split-day can't coexist
+        let cleaned = prev;
+        if (timeSlot === "full_day") {
+          // Setting full_day → remove morning/afternoon for this date
+          cleaned = prev.filter(
+            (e) => !(e.date === date && (e.time_slot === "morning" || e.time_slot === "afternoon"))
+          );
+        } else {
+          // Setting morning/afternoon → remove full_day for this date
+          cleaned = prev.filter(
+            (e) => !(e.date === date && e.time_slot === "full_day")
+          );
+        }
+
         // Upsert: replace or add
-        const existing = prev.find(
+        const existing = cleaned.find(
           (e) => e.date === date && e.time_slot === timeSlot
         );
         if (existing) {
-          return prev.map((e) =>
+          return cleaned.map((e) =>
             e.date === date && e.time_slot === timeSlot
               ? { ...e, location, other_location: otherLocation ?? null, source: "manual" as const }
               : e
@@ -110,7 +124,7 @@ export const WeekStrip = forwardRef<WeekStripHandle, WeekStripProps>(function We
         }
 
         return [
-          ...prev,
+          ...cleaned,
           {
             id: `optimistic-${date}-${timeSlot}`,
             user_id: "",

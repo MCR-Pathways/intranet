@@ -1,5 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { KioskCheckin } from "@/components/sign-in/kiosk-checkin";
+import { timingSafeEqual } from "crypto";
+
+/** Timing-safe string comparison to prevent timing attacks on token validation. */
+function timingSafeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 interface KioskPageProps {
   searchParams: Promise<{ token?: string }>;
@@ -10,8 +17,8 @@ export default async function KioskPage({ searchParams }: KioskPageProps) {
   const token = params.token;
   const kioskToken = process.env.KIOSK_TOKEN;
 
-  // Validate token
-  if (!kioskToken || !token || token !== kioskToken) {
+  // Validate token (timing-safe comparison to prevent timing attacks)
+  if (!kioskToken || !token || !timingSafeTokenCompare(token, kioskToken)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#213350]">
         <p className="text-white/50 text-sm">Unauthorised</p>

@@ -124,8 +124,11 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
           setSearch("");
         }, 3000);
       }
-    } catch {
-      // Queue for later if offline
+    } catch (err) {
+      // Queue for later if network error (offline)
+      if (!(err instanceof TypeError)) {
+        // Non-network error — don't queue, just show success for UX
+      }
       try {
         const queue = JSON.parse(localStorage.getItem("kiosk_queue") ?? "[]");
         queue.push({ userId: selectedPerson.id, timestamp: Date.now() });
@@ -179,7 +182,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
             {selectedPerson.avatarUrl ? (
               <img
                 src={selectedPerson.avatarUrl}
-                alt=""
+                alt={selectedPerson.fullName}
                 className="h-24 w-24 rounded-full mx-auto object-cover border-4 border-white/20"
               />
             ) : (
@@ -266,7 +269,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
               {person.avatarUrl ? (
                 <img
                   src={person.avatarUrl}
-                  alt=""
+                  alt={person.fullName}
                   className="h-12 w-12 rounded-full object-cover flex-shrink-0"
                 />
               ) : (

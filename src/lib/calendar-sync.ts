@@ -48,12 +48,20 @@ export async function syncUserCalendar(user: SyncableUser): Promise<{
   const timeMin = rangeStart.toISOString();
   const timeMax = rangeEnd.toISOString();
 
-  const { locations, nextSyncToken } = await fetchWorkingLocations(
+  let syncResult = await fetchWorkingLocations(
     user.email,
     user.calendarSyncToken,
     timeMin,
     timeMax,
   );
+
+  // 410 Gone returns empty locations + null syncToken — retry with full sync
+  if (user.calendarSyncToken && syncResult.locations.length === 0 && !syncResult.nextSyncToken) {
+    logger.info("Re-syncing with full fetch after 410 Gone", { userId: user.id });
+    syncResult = await fetchWorkingLocations(user.email, null, timeMin, timeMax);
+  }
+
+  const { locations, nextSyncToken } = syncResult;
 
   if (locations.length === 0 && nextSyncToken) {
     // No changes but got a new sync token — just update it
@@ -96,23 +104,14 @@ export async function syncUserCalendar(user: SyncableUser): Promise<{
     if (wasUpserted) upserted++;
   }
 
-  // Update sync token and last synced timestamp
+  // Update sync token and last synced timestamp (single update)
+  const profileUpdate: Record<string, string> = {
+    calendar_last_synced_at: new Date().toISOString(),
+  };
   if (nextSyncToken) {
-    await supabase
-      .from("profiles")
-      .update({
-        calendar_sync_token: nextSyncToken,
-        calendar_last_synced_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
-  } else {
-    await supabase
-      .from("profiles")
-      .update({
-        calendar_last_synced_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    profileUpdate.calendar_sync_token = nextSyncToken;
   }
+  await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
 
   return { upserted, deleted, newSyncToken: nextSyncToken };
 }

@@ -75,10 +75,7 @@ export function DefaultWeekEditor({
   const cycleLocation = (day: number) => {
     const current = editPatterns.get(day);
     const locationOrder: (WorkLocation | null)[] = [
-      "home",
-      "glasgow_office",
-      "stevenage_office",
-      "other",
+      ...LOCATIONS.map((l) => l.id),
       null,
     ];
 
@@ -116,30 +113,21 @@ export function DefaultWeekEditor({
       const existingDays = new Set(patternMap.keys());
       const newDays = new Set(editPatterns.keys());
 
-      // Clear days that were removed
-      for (const day of existingDays) {
-        if (!newDays.has(day)) {
-          const result = await clearWeeklyPattern(day, "full_day" as TimeSlot);
-          if (!result.success) {
-            toast.error(result.error ?? "Failed to clear pattern");
-            return;
-          }
-        }
-      }
+      // Build all operations and run in parallel
+      const clearOps = [...existingDays]
+        .filter((day) => !newDays.has(day))
+        .map((day) => clearWeeklyPattern(day, "full_day" as TimeSlot));
 
-      // Save new/updated days
-      for (const [day, entry] of editPatterns) {
+      const saveOps = [...editPatterns.entries()].map(([day, entry]) => {
         const otherLocation = entry.location === "other" ? otherTexts.get(day)?.trim() : undefined;
-        const result = await saveWeeklyPattern(
-          day,
-          "full_day" as TimeSlot,
-          entry.location,
-          otherLocation
-        );
-        if (!result.success) {
-          toast.error(result.error ?? "Failed to save pattern");
-          return;
-        }
+        return saveWeeklyPattern(day, "full_day" as TimeSlot, entry.location, otherLocation);
+      });
+
+      const results = await Promise.all([...clearOps, ...saveOps]);
+      const failed = results.find((r) => !r.success);
+      if (failed) {
+        toast.error(failed.error ?? "Failed to save patterns");
+        return;
       }
 
       // Update local state

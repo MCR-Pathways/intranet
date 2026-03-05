@@ -13,6 +13,8 @@ import {
   isToday,
   LOCATION_CONFIG,
   NOT_SET_CONFIG,
+  OFFICE_LOCATIONS,
+  OFFICE_HEADCOUNT_TARGET,
 } from "@/lib/sign-in";
 import type { TeamMemberSchedule, WorkingLocationEntry } from "@/lib/sign-in";
 import { getTeamSchedule } from "@/app/(protected)/sign-in/actions";
@@ -24,6 +26,9 @@ interface TeamScheduleGridProps {
 }
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const MIN_WEEK_OFFSET = -2;
+const MAX_WEEK_OFFSET = 4;
+const OFFICE_LOCATION_SET = new Set<string>(OFFICE_LOCATIONS);
 
 export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
   const [weekOffset, setWeekOffset] = useState(0);
@@ -42,7 +47,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
   const navigateWeek = useCallback(
     (direction: -1 | 1) => {
       const newOffset = weekOffset + direction;
-      if (newOffset < -2 || newOffset > 4) return;
+      if (newOffset < MIN_WEEK_OFFSET || newOffset > MAX_WEEK_OFFSET) return;
       setWeekOffset(newOffset);
 
       const newDates = getWeekDates(newOffset);
@@ -67,18 +72,19 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
     }));
   }, [members, weekDates]);
 
-  // Compute office count per day (summary row)
+  // Compute office count per day (summary row) — checks all time slots
   const officeCounts = useMemo(() => {
     return weekDates.map((date) => {
       let office = 0;
       for (const member of memberSchedules) {
         const schedule = member.daySchedules.find((s) => s.date === date);
-        if (
-          schedule?.fullDay?.location === "glasgow_office" ||
-          schedule?.fullDay?.location === "stevenage_office"
-        ) {
-          office++;
-        }
+        if (!schedule) continue;
+        // Count if any slot (fullDay, morning, or afternoon) is an office location
+        const isInOffice =
+          (schedule.fullDay && OFFICE_LOCATION_SET.has(schedule.fullDay.location)) ||
+          (schedule.morning && OFFICE_LOCATION_SET.has(schedule.morning.location)) ||
+          (schedule.afternoon && OFFICE_LOCATION_SET.has(schedule.afternoon.location));
+        if (isInOffice) office++;
       }
       return office;
     });
@@ -102,7 +108,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           variant="outline"
           size="icon"
           onClick={() => navigateWeek(-1)}
-          disabled={weekOffset <= -2}
+          disabled={weekOffset <= MIN_WEEK_OFFSET}
           type="button"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -112,7 +118,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           variant="outline"
           size="icon"
           onClick={() => navigateWeek(1)}
-          disabled={weekOffset >= 4}
+          disabled={weekOffset >= MAX_WEEK_OFFSET}
           type="button"
         >
           <ChevronRight className="h-4 w-4" />
@@ -124,7 +130,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
         <table className="w-full text-sm border-collapse">
           <thead className="sticky top-0 z-10 bg-background">
             <tr>
-              <th className="text-left px-3 py-2 border-b min-w-[180px]">
+              <th className="text-left px-3 py-2 border-b min-w-[180px] sticky left-0 z-20 bg-background">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Team Member
                 </span>
@@ -172,7 +178,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                     {member.avatar_url ? (
                       <img
                         src={member.avatar_url}
-                        alt=""
+                        alt={member.preferred_name || member.full_name}
                         className="h-8 w-8 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
@@ -195,11 +201,12 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
 
                 {/* Day cells */}
                 {member.daySchedules.map((schedule) => {
+                  const hasSplitDay = !schedule.fullDay && (schedule.morning || schedule.afternoon);
                   const entry = schedule.fullDay;
                   const config = entry
                     ? LOCATION_CONFIG[entry.location] ?? NOT_SET_CONFIG
                     : NOT_SET_CONFIG;
-                  const isEmpty = !entry;
+                  const isEmpty = !entry && !hasSplitDay;
 
                   return (
                     <td
@@ -213,6 +220,25 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                         <span className="inline-flex items-center justify-center border border-dashed border-gray-200 rounded-md px-2 py-1 text-xs text-gray-300">
                           —
                         </span>
+                      ) : hasSplitDay ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          {schedule.morning && (() => {
+                            const mc = LOCATION_CONFIG[schedule.morning!.location] ?? NOT_SET_CONFIG;
+                            return (
+                              <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium", mc.bgClass, mc.textClass)}>
+                                AM <mc.icon className="h-2.5 w-2.5" />
+                              </span>
+                            );
+                          })()}
+                          {schedule.afternoon && (() => {
+                            const ac = LOCATION_CONFIG[schedule.afternoon!.location] ?? NOT_SET_CONFIG;
+                            return (
+                              <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium", ac.bgClass, ac.textClass)}>
+                                PM <ac.icon className="h-2.5 w-2.5" />
+                              </span>
+                            );
+                          })()}
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center gap-0.5">
                           <span
@@ -251,7 +277,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                   className={cn(
                     "text-center px-2 py-2 text-xs font-medium",
                     isToday(weekDates[i]) && "bg-primary/5",
-                    count < 4
+                    count < OFFICE_HEADCOUNT_TARGET
                       ? "text-amber-600 font-semibold"
                       : "text-muted-foreground"
                   )}

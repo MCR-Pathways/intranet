@@ -206,7 +206,9 @@ export default async function HRPage() {
   const stats = isHRAdmin ? await fetchDashboardStats(supabase) : null;
 
   // Office attendance data (HR admin only)
-  let officeData: { today: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"][number] | null; tomorrow: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"][number] | null; weekDays: Awaited<ReturnType<typeof getOfficeHeadcount>>["days"] } | null = null;
+  type OfficeDay = Awaited<ReturnType<typeof getOfficeHeadcount>>["days"][number];
+  type OfficeAttendanceData = { today: OfficeDay | null; tomorrow: OfficeDay | null; weekDays: OfficeDay[] };
+  let officeData: OfficeAttendanceData | null = null;
   if (isHRAdmin) {
     const weekDates = getWeekDates(0);
     const weekStart = weekDates[0];

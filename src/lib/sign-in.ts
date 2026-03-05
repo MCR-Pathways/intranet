@@ -2,6 +2,16 @@ import { Home, Building2, MapPin, CalendarOff, CircleDashed } from "lucide-react
 import type { WorkLocation, TimeSlot, LocationSource } from "@/types/database.types";
 
 // =============================================
+// SHARED CONSTANTS
+// =============================================
+
+/** Office locations for headcount and attendance queries. */
+export const OFFICE_LOCATIONS = ["glasgow_office", "stevenage_office"] as const;
+
+/** Minimum number of staff expected in the office per day. */
+export const OFFICE_HEADCOUNT_TARGET = 4;
+
+// =============================================
 // SHARED TYPES
 // =============================================
 

@@ -22,9 +22,11 @@ export default async function WorkingLocationPage() {
 
   // Fetch current month's schedule for the calendar view
   const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+  const monthStart = `${year}-${month}-01`;
+  const monthEnd = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
 
   const [weekData, monthData, patternData, teamData, syncStatus] = await Promise.all([
     getMySchedule(weekStart, weekEnd),

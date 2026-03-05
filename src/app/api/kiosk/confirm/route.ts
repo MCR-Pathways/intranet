@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { timingSafeEqual } from "crypto";
+
+/** Timing-safe string comparison to prevent timing attacks on token validation. */
+function timingSafeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /**
  * Kiosk check-in confirmation endpoint.
@@ -11,9 +18,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, token } = body;
 
-    // Validate token
+    // Validate token (timing-safe comparison)
     const kioskToken = process.env.KIOSK_TOKEN;
-    if (!kioskToken || token !== kioskToken) {
+    if (!kioskToken || typeof token !== "string" || !timingSafeTokenCompare(token, kioskToken)) {
       return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
     }
 
@@ -76,7 +83,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, alreadyConfirmed: false });
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  } catch (err) {
+    // Distinguish client errors (bad JSON) from server errors
+    if (err instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

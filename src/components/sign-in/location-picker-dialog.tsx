@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { LOCATIONS, LOCATION_CONFIG, formatScheduleDate } from "@/lib/sign-in";
+import { LOCATIONS, LOCATION_CONFIG, formatScheduleDate, formatDayName } from "@/lib/sign-in";
 import type { DaySchedule } from "@/lib/sign-in";
 import type { WorkLocation, TimeSlot } from "@/types/database.types";
 import { setWorkingLocation, clearWorkingLocation } from "@/app/(protected)/sign-in/actions";
@@ -88,21 +88,24 @@ export function LocationPickerDialog({
         // Revert optimistic update by clearing
         onOptimisticUpdate(date, effectiveTimeSlot, null);
       } else {
-        const dayName = formatScheduleDate(date).split(" ")[0]?.replace(",", "");
-        toast.success(`Location set for ${dayName}`);
+        toast.success(`Location set for ${formatDayName(date)}`);
       }
     });
   };
 
   const handleClear = () => {
-    onOptimisticUpdate(date, timeSlot === "full_day" ? "full_day" : timeSlot, null);
+    const effectiveTimeSlot = splitDay ? timeSlot : "full_day";
+    onOptimisticUpdate(date, effectiveTimeSlot, null);
     onOpenChange(false);
 
     startTransition(async () => {
-      const effectiveTimeSlot = splitDay ? timeSlot : "full_day";
       const result = await clearWorkingLocation(date, effectiveTimeSlot);
       if (!result.success) {
         toast.error(result.error ?? "Failed to clear location");
+        // Revert: restore the original entry
+        if (existingEntry) {
+          onOptimisticUpdate(date, effectiveTimeSlot, existingEntry.location, existingEntry.other_location ?? undefined);
+        }
       }
     });
   };
