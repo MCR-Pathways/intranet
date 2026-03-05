@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { getMySchedule, getMyPatterns, getTeamSchedule } from "./actions";
+import { getMySchedule, getMyPatterns, getTeamSchedule, getCalendarSyncStatus } from "./actions";
 import { getWeekDates } from "@/lib/sign-in";
 import type { WorkingLocationEntry, WeeklyPatternEntry, TeamMemberSchedule } from "@/lib/sign-in";
 import { WorkingLocationContent } from "@/components/sign-in/working-location-content";
@@ -26,11 +26,12 @@ export default async function WorkingLocationPage() {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [weekData, monthData, patternData, teamData] = await Promise.all([
+  const [weekData, monthData, patternData, teamData, syncStatus] = await Promise.all([
     getMySchedule(weekStart, weekEnd),
     getMySchedule(monthStart, monthEnd),
     getMyPatterns(),
     isManager ? getTeamSchedule(weekStart, weekEnd) : Promise.resolve({ members: [] }),
+    getCalendarSyncStatus(),
   ]);
 
   return (
@@ -46,6 +47,7 @@ export default async function WorkingLocationPage() {
         initialPatterns={patternData.patterns as WeeklyPatternEntry[]}
         isManager={isManager}
         initialTeamMembers={teamData.members as TeamMemberSchedule[]}
+        calendarSyncStatus={syncStatus}
       />
     </div>
   );

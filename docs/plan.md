@@ -172,8 +172,15 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] Empty state for managers with no direct reports, skeleton loading state
 - [x] Integrated into `WorkingLocationContent` "Team Schedule" tab (replaces placeholder)
 
-**Phase 6-7 — Google Calendar Sync**
-- [ ] Read sync: service account + domain-wide delegation
+**Phase 6 — Google Calendar Read Sync ✅**
+- [x] `google-calendar.ts` — Calendar API client (service account + domain-wide delegation, working location event extraction, office label mapping)
+- [x] `calendar-sync.ts` — Sync logic (single user + batch sync, override hierarchy enforcement, incremental sync via syncToken)
+- [x] Webhook endpoint (`/api/calendar/webhook`) — push notification handler with channel token authentication
+- [x] Server actions: `getCalendarSyncStatus`, `triggerCalendarSync` (manual "Sync Now")
+- [x] `CalendarSyncStatus` UI component — sync indicator + manual sync button (hidden when not configured)
+- [x] Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_CALENDAR_WEBHOOK_SECRET`, `NEXT_PUBLIC_GOOGLE_CALENDAR_ENABLED`
+
+**Phase 7 — Google Calendar Write-Back**
 - [ ] Write-back: intranet → Calendar + leave approval → OOO events
 
 **Phase 8 — Daily Banners + Reports + Nudge**

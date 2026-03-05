@@ -499,3 +499,81 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
 
   return { days, error: null };
 }
+
+// =============================================
+// CALENDAR SYNC
+// =============================================
+
+/**
+ * Get the current user's calendar sync status.
+ */
+export async function getCalendarSyncStatus() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { connected: false, lastSynced: null };
+  }
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("calendar_sync_token, calendar_last_synced_at")
+    .eq("id", user.id)
+    .single();
+
+  if (!data) {
+    return { connected: false, lastSynced: null };
+  }
+
+  return {
+    connected: !!data.calendar_sync_token,
+    lastSynced: data.calendar_last_synced_at,
+  };
+}
+
+/**
+ * Manually trigger a calendar sync for the current user.
+ * Requires GOOGLE_SERVICE_ACCOUNT_KEY to be configured.
+ */
+export async function triggerCalendarSync() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    return { success: false, error: "Calendar sync not configured" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, email, calendar_sync_token")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.email) {
+    return { success: false, error: "No email address found" };
+  }
+
+  try {
+    const { syncUserCalendar } = await import("@/lib/calendar-sync");
+    const result = await syncUserCalendar({
+      id: profile.id,
+      email: profile.email,
+      calendarSyncToken: profile.calendar_sync_token,
+    });
+
+    revalidatePath("/sign-in");
+
+    return {
+      success: true,
+      upserted: result.upserted,
+      deleted: result.deleted,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Sync failed",
+    };
+  }
+}
