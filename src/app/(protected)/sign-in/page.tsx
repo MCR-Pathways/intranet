@@ -1,9 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { getMySchedule } from "./actions";
+import { getMySchedule, getMyPatterns } from "./actions";
 import { getWeekDates } from "@/lib/sign-in";
-import type { WorkingLocationEntry } from "@/lib/sign-in";
+import type { WorkingLocationEntry, WeeklyPatternEntry } from "@/lib/sign-in";
 import { WorkingLocationContent } from "@/components/sign-in/working-location-content";
 
 export default async function WorkingLocationPage() {
@@ -24,9 +24,10 @@ export default async function WorkingLocationPage() {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [weekData, monthData] = await Promise.all([
+  const [weekData, monthData, patternData] = await Promise.all([
     getMySchedule(weekStart, weekEnd),
     getMySchedule(monthStart, monthEnd),
+    getMyPatterns(),
   ]);
 
   return (
@@ -39,6 +40,7 @@ export default async function WorkingLocationPage() {
       <WorkingLocationContent
         initialEntries={weekData.entries as WorkingLocationEntry[]}
         monthEntries={monthData.entries as WorkingLocationEntry[]}
+        initialPatterns={patternData.patterns as WeeklyPatternEntry[]}
         isManager={profile.is_line_manager ?? false}
       />
     </div>

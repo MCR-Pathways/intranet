@@ -1,13 +1,16 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeekStrip } from "./week-strip";
+import { DefaultWeekEditor } from "./default-week-editor";
 import { PeopleCalendar } from "@/components/shared/people-calendar";
-import type { WorkingLocationEntry } from "@/lib/sign-in";
+import type { WorkingLocationEntry, WeeklyPatternEntry } from "@/lib/sign-in";
 
 interface WorkingLocationContentProps {
   initialEntries: WorkingLocationEntry[];
   monthEntries: WorkingLocationEntry[];
+  initialPatterns: WeeklyPatternEntry[];
   isManager: boolean;
   defaultTab?: string;
 }
@@ -15,9 +18,17 @@ interface WorkingLocationContentProps {
 export function WorkingLocationContent({
   initialEntries,
   monthEntries,
+  initialPatterns,
   isManager,
   defaultTab = "my-schedule",
 }: WorkingLocationContentProps) {
+  // Ref to trigger WeekStrip refresh when patterns are applied
+  const weekStripRef = useRef<{ refresh: () => void }>(null);
+
+  const handlePatternsApplied = useCallback(() => {
+    weekStripRef.current?.refresh();
+  }, []);
+
   return (
     <Tabs key={defaultTab} defaultValue={defaultTab}>
       <TabsList>
@@ -28,7 +39,12 @@ export function WorkingLocationContent({
       </TabsList>
 
       <TabsContent value="my-schedule" className="mt-6 space-y-8">
-        <WeekStrip initialEntries={initialEntries} />
+        <WeekStrip ref={weekStripRef} initialEntries={initialEntries} />
+
+        <DefaultWeekEditor
+          initialPatterns={initialPatterns}
+          onPatternsApplied={handlePatternsApplied}
+        />
 
         {/* Monthly history calendar */}
         <div>

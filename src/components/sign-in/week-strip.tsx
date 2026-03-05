@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useTransition } from "react";
+import { useState, useMemo, useCallback, useTransition, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -11,14 +11,35 @@ import { getMySchedule } from "@/app/(protected)/sign-in/actions";
 import { DayCell } from "./day-cell";
 import { LocationPickerDialog } from "./location-picker-dialog";
 
+export interface WeekStripHandle {
+  refresh: () => void;
+}
+
 interface WeekStripProps {
   initialEntries: WorkingLocationEntry[];
 }
 
-export function WeekStrip({ initialEntries }: WeekStripProps) {
+export const WeekStrip = forwardRef<WeekStripHandle, WeekStripProps>(function WeekStrip(
+  { initialEntries },
+  ref
+) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [entries, setEntries] = useState<WorkingLocationEntry[]>(initialEntries);
   const [, startTransition] = useTransition();
+
+  // Expose refresh method for parent to re-fetch current week data
+  useImperativeHandle(ref, () => ({
+    refresh: () => {
+      const dates = getWeekDates(weekOffset);
+      startTransition(async () => {
+        const { entries: newEntries } = await getMySchedule(
+          dates[0],
+          dates[dates.length - 1]
+        );
+        setEntries(newEntries as WorkingLocationEntry[]);
+      });
+    },
+  }), [weekOffset]);
 
   // Picker dialog state
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -163,7 +184,7 @@ export function WeekStrip({ initialEntries }: WeekStripProps) {
       )}
     </div>
   );
-}
+});
 
 export function WeekStripSkeleton() {
   return (

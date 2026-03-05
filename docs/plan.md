@@ -148,8 +148,12 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] Dynamic legend (only shows types present in data), month navigation, today highlight, weekend shading
 - [x] Deleted `leave-calendar.tsx` (replaced)
 
-**Phase 3 — Recurring Patterns**
-- [ ] Default week editor (set once, auto-applies)
+**Phase 3 — Recurring Patterns ✅**
+- [x] `DefaultWeekEditor` component — collapsible Card with compact pills (collapsed) and 5-day click-to-cycle grid (editing)
+- [x] Click-to-cycle: Home → Glasgow → Stevenage → Other → clear, with colour-coded cells
+- [x] "Other" text input per day, "Apply to this week"/"Apply to next week" buttons (fills gaps only)
+- [x] `WeekStrip` converted to `forwardRef` with `refresh()` imperative handle for post-apply data reload
+- [x] Integrated into `WorkingLocationContent` between WeekStrip and PeopleCalendar
 
 **Phase 4 — Kiosk + HR Dashboard**
 - [ ] Tablet check-in at Glasgow office entrance (token-authenticated)
