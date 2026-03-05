@@ -131,8 +131,8 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 
 **Phases 1–8 ✅** — Data model, week planner, people calendar, recurring patterns, kiosk, team grid, Google Calendar sync (read + write-back), daily banners, reports. See memory file `memory/sign-in-overhaul.md` for full phase breakdown.
 
-**Quality Pass ✅** (branch: `fix/gemini-review-fixes`)
-- [x] **Part A — Gemini PR Fixes**: ~35 fixes across 15 files (split-day headcount, timing-safe tokens, N+1 batching, PII masking, empty catches → logger.warn, 410 full sync, service account key guard)
+**Quality Pass ✅** (branch: `fix/gemini-review-fixes`, PR #86)
+- [x] **Part A — Gemini PR Fixes**: ~35 fixes across 15 files (split-day headcount, timing-safe tokens, N+1 batching, PII masking, empty catches → logger.warn, 410 full sync, service account key guard) + PR #86 review fixes (configurable kiosk office, `getUKToday` dedup, CSV `\n` sanitisation, unified `calendar.events` scope, offline queue retry, shared `timingSafeTokenCompare`)
 - [x] **Part B+C — Colour Scheme + HR Wording**: Soft muted palette (`sky-50`/`teal-50`/`slate-100`/`rose-50`), MCR brand to Tailwind config, "Office Planning" wording
 - [x] **Part D — Interactive Month Calendar**: Replaced WeekStrip with `InteractiveCalendar` (PeopleCalendar + DayDetailPanel), `QuickSetIcons` for 1-click location, `PendingLeaveList`, `LeaveRequestDialog` with `defaultStartDate`
 - [x] **Part E — Team Calendar + Filter**: `TeamCalendar` with member filter dropdown, Month/Week toggle, day sidebar
