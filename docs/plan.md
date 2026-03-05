@@ -124,35 +124,42 @@
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
-### Sign-In v2 — Schedule-Based + Google Calendar Integration
-Current sign-in is a daily manual check-in modelled after a physical sign-in app. Industry research (Kadence, Officely, Google Calendar, Microsoft Teams) shows weekly schedule + auto-sync is the standard. MCR Pathways is on Google Workspace for Education (Working Location API supported).
+### Sign-In v2 — Working Location (Schedule-Based + Google Calendar)
+Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 
-**Architecture:**
-- [ ] Google Calendar sync: service account + domain-wide delegation reads all staff working locations
-- [ ] Unified `working_locations` cache table (user_id, date, location, source) replaces `sign_ins`
-- [ ] Webhook-triggered incremental sync (`syncToken`) + fallback periodic full sync (6h)
-- [ ] Write-back: intranet check-ins create Google Calendar working location events
-- [ ] Intranet entries override Calendar data for the same day
+**Phase 1 — Data Model + Server Actions ✅**
+- [x] Migration `00041`: `working_locations` + `weekly_patterns` tables, drops `sign_ins` + `last_sign_in_date`
+- [x] V2 types: `WorkingLocationEntry`, `WeeklyPatternEntry`, `DaySchedule`, `TimeSlot`, `LocationSource`
+- [x] V2 config: `LOCATION_CONFIG` with `bgClass`/`textClass`/`hex` colours (colour-blind accessible)
+- [x] 10 server actions: `setWorkingLocation`, `clearWorkingLocation`, `getMySchedule`, `confirmArrival`, `getMyPatterns`, `saveWeeklyPattern`, `clearWeeklyPattern`, `applyPatternsToWeek`, `getTeamSchedule`, `getOfficeHeadcount`
+- [x] Knock-on cleanup: removed nudge bubble, `needsSignIn` prop chain, `dismissSignInReminders`, `last_sign_in_date` from 9 files
+- [x] V2 `LocationBadge` (colour-coded pill, no longer uses Badge variant)
+- [x] Sidebar renamed "Sign In" → "Working Location"
+- [x] 27 tests for V2 helpers + config
 
-**UX:**
-- [ ] Dashboard week strip: compact 5-day view with 1-tap location setting (segmented buttons)
-- [ ] Recurring weekly patterns ("always home Mon/Wed/Fri") to reduce interaction to ~1x/week
-- [ ] `/sign-in` becomes "My Schedule" (recurring patterns) + manager team×week grid + reports
-- [ ] Month calendar with coloured dots for personal history (replacing badge list)
-- [ ] Nudge fires only if no Calendar location AND no intranet check-in (weekly, not daily)
+**Phase 2 — Week Planner UI** (next)
+- [ ] `WeekStrip` (Mon-Fri grid with nav), `DayCell` (all visual states), `LocationPickerDialog`
+- [ ] Split-day toggle, optimistic UI via `useTransition()`
 
-**Open decisions:**
-- [ ] Write-back to Calendar: should intranet check-ins create Calendar events? (Recommended: yes)
-- [ ] Migration path: migrate `sign_ins` history to `working_locations`, keep as archive, or drop?
-- [ ] Split-day support: keep multiple locations per day or simplify to one per day?
-- [ ] Kiosk/entrance replacement: simplified "tap your name" view for office entrance, or future phase?
-- [ ] Workspace admin: confirm domain-wide delegation is enabled (Security → API Controls)
+**Phase 2.5 — Unified People Calendar**
+- [ ] `PeopleCalendar` replaces `LeaveCalendar` — shows working locations + leave in one view
 
-**Quick fixes (independent of overhaul):** ✅
-- [x] Fix `member-detail.tsx` over-fetch → new `getTeamMemberHistory()` server action queries single user
-- [x] Extract shared `SignInEntry` + `TeamSignInEntry` types to `src/lib/sign-in.ts` (was duplicated 7×)
-- [x] Extract `<LocationBadge>` component to `src/components/sign-in/location-badge.tsx` (was duplicated 5×)
-- [x] Merge `getTodaySignIns()` + `getMonthlyHistory()` → single `getSignInHistory()` query
+**Phase 3 — Recurring Patterns**
+- [ ] Default week editor (set once, auto-applies)
+
+**Phase 4 — Kiosk + HR Dashboard**
+- [ ] Tablet check-in at Glasgow office entrance (token-authenticated)
+- [ ] Glasgow office headcount stat cards + expandable detail on HR dashboard
+
+**Phase 5 — Team Schedule Grid**
+- [ ] People × days grid for managers (who's in?)
+
+**Phase 6-7 — Google Calendar Sync**
+- [ ] Read sync: service account + domain-wide delegation
+- [ ] Write-back: intranet → Calendar + leave approval → OOO events
+
+**Phase 8 — Daily Banners + Reports + Nudge**
+- [ ] Reconciliation banners, week planning nudge, reports rewrite
 
 ### Intranet Phase 3 — Live Feed + Polls ✅
 - [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)

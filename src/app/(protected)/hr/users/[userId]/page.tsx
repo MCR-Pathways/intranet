@@ -366,7 +366,6 @@ export default async function EmployeeDetailPage({
     line_manager_id: profile.line_manager_id as string | null,
     team_id: profile.team_id as string | null,
     induction_completed_at: profile.induction_completed_at as string | null,
-    last_sign_in_date: profile.last_sign_in_date as string | null,
     created_at: profile.created_at as string,
   };
 

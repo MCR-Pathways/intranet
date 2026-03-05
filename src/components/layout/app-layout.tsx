@@ -60,11 +60,10 @@ interface AppLayoutProps {
   children: React.ReactNode;
   user: User;
   profile: Profile | null;
-  needsSignIn?: boolean;
   initialNotifications?: NotificationData[];
 }
 
-export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
+export function AppLayout({ children, user, profile, initialNotifications }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
@@ -87,7 +86,6 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
       <Header
         user={user}
         profile={profile}
-        needsSignIn={needsSignIn}
         initialNotifications={initialNotifications}
         onMenuToggle={toggleMobileMenu}
         onSidebarToggle={toggleSidebar}
