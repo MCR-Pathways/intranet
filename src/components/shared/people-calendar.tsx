@@ -17,6 +17,12 @@ interface PeopleCalendarProps {
   workingLocations?: WorkingLocationEntry[];
   showEmployee?: boolean;
   mode: "personal" | "team";
+  /** Callback when a day cell is clicked (optional — makes calendar interactive). */
+  onDayClick?: (dateStr: string) => void;
+  /** Currently selected date for visual highlight (optional). */
+  selectedDate?: string | null;
+  /** Callback when the displayed month changes (optional — for data fetching). */
+  onMonthChange?: (year: number, monthIndex: number) => void;
 }
 
 interface CalendarEntry {
@@ -47,6 +53,9 @@ export function PeopleCalendar({
   workingLocations = [],
   showEmployee = false,
   mode,
+  onDayClick,
+  selectedDate,
+  onMonthChange,
 }: PeopleCalendarProps) {
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -173,21 +182,28 @@ export function PeopleCalendar({
   });
 
   function prevMonth() {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    const newMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const newYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+    onMonthChange?.(newYear, newMonth);
   }
 
   function nextMonth() {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    const newMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const newYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+    onMonthChange?.(newYear, newMonth);
+  }
+
+  const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+
+  function goToToday() {
+    const now = new Date();
+    setCurrentMonth(now.getMonth());
+    setCurrentYear(now.getFullYear());
+    onMonthChange?.(now.getFullYear(), now.getMonth());
   }
 
   // Build legend — only show types that appear in data
@@ -214,7 +230,14 @@ export function PeopleCalendar({
         <Button variant="outline" size="sm" onClick={prevMonth} type="button">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h3 className="text-lg font-semibold">{monthName}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">{monthName}</h3>
+          {!isCurrentMonth && (
+            <Button variant="ghost" size="sm" onClick={goToToday} type="button" className="text-xs">
+              Today
+            </Button>
+          )}
+        </div>
         <Button variant="outline" size="sm" onClick={nextMonth} type="button">
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -236,11 +259,22 @@ export function PeopleCalendar({
         {calendarDays.map((day) => (
           <div
             key={day.dateStr}
+            role={onDayClick ? "button" : undefined}
+            tabIndex={onDayClick && day.isCurrentMonth ? 0 : undefined}
+            onClick={onDayClick && day.isCurrentMonth ? () => onDayClick(day.dateStr) : undefined}
+            onKeyDown={onDayClick && day.isCurrentMonth ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onDayClick(day.dateStr);
+              }
+            } : undefined}
             className={`bg-background min-h-[80px] p-1 ${
               !day.isCurrentMonth ? "opacity-40" : ""
             } ${day.isWeekend ? "bg-muted/30" : ""} ${
               day.isToday ? "ring-2 ring-primary ring-inset" : ""
-            } ${day.isHoliday ? "bg-amber-50" : ""}`}
+            } ${day.isHoliday ? "bg-amber-50" : ""} ${
+              selectedDate === day.dateStr ? "bg-primary/5" : ""
+            } ${onDayClick && day.isCurrentMonth ? "cursor-pointer hover:bg-accent/50 transition-colors" : ""}`}
           >
             <div className="text-xs font-medium mb-1">
               {day.date.getDate()}
@@ -308,7 +342,7 @@ export function PeopleCalendar({
   );
 }
 
-function formatDateStr(date: Date): string {
+export function formatDateStr(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");

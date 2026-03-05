@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,17 +33,28 @@ interface LeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   publicHolidays: string[];
+  /** Pre-fill start date when opening from calendar day detail panel. */
+  defaultStartDate?: string;
 }
 
 export function LeaveRequestDialog({
   open,
   onOpenChange,
   publicHolidays,
+  defaultStartDate,
 }: LeaveRequestDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [leaveType, setLeaveType] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Pre-fill dates when dialog opens with a defaultStartDate
+  useEffect(() => {
+    if (open && defaultStartDate) {
+      setStartDate(defaultStartDate);
+      setEndDate(defaultStartDate);
+    }
+  }, [open, defaultStartDate]);
   const [startDayType, setStartDayType] = useState<"full" | "pm">("full");
   const [endDayType, setEndDayType] = useState<"full" | "am">("full");
   // For single-day leave, a combined selector

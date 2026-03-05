@@ -692,6 +692,106 @@ function getUKTime(): { hours: number; minutes: number } {
 }
 
 // =============================================
+// LEAVE DATA FOR CALENDAR
+// =============================================
+
+/**
+ * Get the current user's pending leave requests.
+ * Returns requests with status='pending' for display below the calendar.
+ */
+export async function getMyPendingLeave() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) return { requests: [] };
+
+  const { data } = await supabase
+    .from("leave_requests")
+    .select("id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, status, created_at")
+    .eq("profile_id", user.id)
+    .eq("status", "pending")
+    .order("start_date", { ascending: true });
+
+  return { requests: data ?? [] };
+}
+
+/**
+ * Get the current user's approved + pending leave for a date range.
+ * Used to show leave entries on the calendar grid.
+ */
+export async function getMyLeaveForRange(startDate: string, endDate: string) {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) return { requests: [] };
+
+  const { data } = await supabase
+    .from("leave_requests")
+    .select("id, leave_type, start_date, end_date, start_half_day, end_half_day, total_days, status, created_at")
+    .eq("profile_id", user.id)
+    .in("status", ["approved", "pending"])
+    .or(`start_date.lte.${endDate},end_date.gte.${startDate}`)
+    .order("start_date", { ascending: true });
+
+  return { requests: data ?? [] };
+}
+
+/**
+ * Get team members' schedule for a specific date.
+ * Returns who's where for the day detail panel context.
+ */
+export async function getTeamContextForDate(date: string) {
+  const { supabase, user, profile } = await getCurrentUser();
+
+  if (!user || !profile?.is_line_manager) {
+    return { members: [] };
+  }
+
+  const { data: directReports } = await supabase
+    .from("profiles")
+    .select("id, full_name, preferred_name, avatar_url")
+    .eq("line_manager_id", user.id)
+    .eq("status", "active")
+    .order("full_name");
+
+  if (!directReports || directReports.length === 0) {
+    return { members: [] };
+  }
+
+  const memberIds = directReports.map((m) => m.id);
+
+  const { data: entries } = await supabase
+    .from("working_locations")
+    .select("user_id, location, other_location, time_slot, confirmed")
+    .in("user_id", memberIds)
+    .eq("date", date);
+
+  const entryMap = new Map<string, { location: string; other_location: string | null; confirmed: boolean }>();
+  for (const entry of entries ?? []) {
+    const existing = entryMap.get(entry.user_id);
+    if (!existing || entry.time_slot === "full_day") {
+      entryMap.set(entry.user_id, {
+        location: entry.location,
+        other_location: entry.other_location,
+        confirmed: entry.confirmed,
+      });
+    }
+  }
+
+  const members = directReports.map((m) => {
+    const entry = entryMap.get(m.id);
+    return {
+      id: m.id,
+      name: m.preferred_name || m.full_name,
+      avatarUrl: m.avatar_url,
+      location: entry?.location ?? null,
+      otherLocation: entry?.other_location ?? null,
+      confirmed: entry?.confirmed ?? false,
+    };
+  });
+
+  return { members };
+}
+
+// =============================================
 // CALENDAR SYNC
 // =============================================
 
