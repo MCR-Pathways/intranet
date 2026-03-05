@@ -9,6 +9,11 @@ import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 import type { WorkingLocationEntry } from "@/lib/sign-in";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
 interface PeopleCalendarProps {
@@ -176,11 +181,6 @@ export function PeopleCalendar({
     return days;
   }, [currentYear, currentMonth, todayStr, holidayMap, leaveLookup, locationLookup]);
 
-  const MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-
   // Year dropdown: starts from 2026 (system launch, no historical data).
   // Google Calendar uses infinite chevron navigation; since we use a dropdown,
   // extend to whichever is further: current year + 5 or the viewed year + 2.
@@ -205,6 +205,18 @@ export function PeopleCalendar({
   }
 
   const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+
+  function handleMonthSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newMonth = Number(e.target.value);
+    setCurrentMonth(newMonth);
+    onMonthChange?.(currentYear, newMonth);
+  }
+
+  function handleYearSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newYear = Number(e.target.value);
+    setCurrentYear(newYear);
+    onMonthChange?.(newYear, currentMonth);
+  }
 
   function goToToday() {
     const now = new Date();
@@ -240,11 +252,7 @@ export function PeopleCalendar({
         <div className="flex items-center gap-2">
           <select
             value={currentMonth}
-            onChange={(e) => {
-              const newMonth = Number(e.target.value);
-              setCurrentMonth(newMonth);
-              onMonthChange?.(currentYear, newMonth);
-            }}
+            onChange={handleMonthSelect}
             className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
           >
             {MONTH_NAMES.map((name, i) => (
@@ -253,11 +261,7 @@ export function PeopleCalendar({
           </select>
           <select
             value={currentYear}
-            onChange={(e) => {
-              const newYear = Number(e.target.value);
-              setCurrentYear(newYear);
-              onMonthChange?.(newYear, currentMonth);
-            }}
+            onChange={handleYearSelect}
             className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
           >
             {yearOptions.map((year) => (
