@@ -1,13 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { KioskCheckin } from "@/components/sign-in/kiosk-checkin";
-import { timingSafeEqual } from "crypto";
 import { getUKToday } from "@/lib/sign-in";
-
-/** Timing-safe string comparison to prevent timing attacks on token validation. */
-function timingSafeTokenCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
+import { timingSafeTokenCompare } from "@/lib/auth";
 
 interface KioskPageProps {
   searchParams: Promise<{ token?: string }>;

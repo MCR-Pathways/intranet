@@ -62,6 +62,47 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
     searchRef.current?.focus();
   }, []);
 
+  // Process offline queue when connectivity returns
+  useEffect(() => {
+    const processQueue = async () => {
+      try {
+        const raw = localStorage.getItem("kiosk_queue");
+        if (!raw) return;
+        const queue = JSON.parse(raw) as { userId: string; timestamp: number }[];
+        if (queue.length === 0) return;
+
+        const remaining: typeof queue = [];
+        for (const item of queue) {
+          try {
+            const res = await fetch("/api/kiosk/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: item.userId, token }),
+            });
+            if (!res.ok) remaining.push(item);
+          } catch {
+            remaining.push(item);
+          }
+        }
+
+        if (remaining.length === 0) {
+          localStorage.removeItem("kiosk_queue");
+        } else {
+          localStorage.setItem("kiosk_queue", JSON.stringify(remaining));
+        }
+      } catch {
+        // Storage unavailable
+      }
+    };
+
+    // Process on mount (in case we reloaded while online)
+    processQueue();
+
+    // Process when connectivity returns
+    window.addEventListener("online", processQueue);
+    return () => window.removeEventListener("online", processQueue);
+  }, [token]);
+
   // Filtered and sorted staff
   const filteredStaff = useMemo(() => {
     let result = staff;

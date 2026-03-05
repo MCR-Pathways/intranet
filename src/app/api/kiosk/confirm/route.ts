@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { timingSafeEqual } from "crypto";
 import { getUKToday } from "@/lib/sign-in";
+import { timingSafeTokenCompare } from "@/lib/auth";
 import type { WorkLocation } from "@/types/database.types";
-
-/** Timing-safe string comparison to prevent timing attacks on token validation. */
-function timingSafeTokenCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
 
 /**
  * Kiosk check-in confirmation endpoint.

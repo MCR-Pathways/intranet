@@ -1,8 +1,15 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { timingSafeEqual } from "crypto";
 
 // Re-export client-safe helpers so server components can import everything from @/lib/auth
 export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
+
+/** Timing-safe string comparison to prevent timing attacks on token validation. */
+export function timingSafeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =

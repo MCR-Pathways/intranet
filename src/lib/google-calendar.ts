@@ -54,7 +54,7 @@ function getCalendarClient(userEmail: string): calendar_v3.Calendar {
   const auth = new google.auth.JWT({
     email: keyJson.client_email,
     key: keyJson.private_key,
-    scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
     subject: userEmail, // Domain-wide delegation impersonation
   });
 
