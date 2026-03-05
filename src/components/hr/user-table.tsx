@@ -207,7 +207,6 @@ export function UserTable({
     line_manager_id: p.line_manager_id,
     team_id: p.team_id,
     induction_completed_at: p.induction_completed_at,
-    last_sign_in_date: null,
     created_at: p.created_at,
   });
 

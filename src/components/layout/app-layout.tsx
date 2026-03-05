@@ -3,6 +3,7 @@
 import { useState, useCallback, useSyncExternalStore } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
+import { DailyBanner } from "@/components/sign-in/daily-banner";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
@@ -60,11 +61,11 @@ interface AppLayoutProps {
   children: React.ReactNode;
   user: User;
   profile: Profile | null;
-  needsSignIn?: boolean;
   initialNotifications?: NotificationData[];
+  dailyBannerType?: string | null;
 }
 
-export function AppLayout({ children, user, profile, needsSignIn, initialNotifications }: AppLayoutProps) {
+export function AppLayout({ children, user, profile, initialNotifications, dailyBannerType }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
@@ -87,7 +88,6 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
       <Header
         user={user}
         profile={profile}
-        needsSignIn={needsSignIn}
         initialNotifications={initialNotifications}
         onMenuToggle={toggleMobileMenu}
         onSidebarToggle={toggleSidebar}
@@ -124,6 +124,9 @@ export function AppLayout({ children, user, profile, needsSignIn, initialNotific
           )}
         >
           <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+            {dailyBannerType && (
+              <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
+            )}
             {children}
           </div>
         </main>

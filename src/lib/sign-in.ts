@@ -1,74 +1,195 @@
-import { Home, Building2, Globe } from "lucide-react";
-import type { WorkLocation } from "@/types/database.types";
+import { Home, Building2, MapPin, CalendarOff, CircleDashed } from "lucide-react";
+import type { WorkLocation, TimeSlot, LocationSource } from "@/types/database.types";
+
+// =============================================
+// SHARED CONSTANTS
+// =============================================
+
+/** Office locations for headcount and attendance queries. */
+export const OFFICE_LOCATIONS = ["glasgow_office", "stevenage_office"] as const;
+
+/** Minimum number of staff expected in the office per day. */
+export const OFFICE_HEADCOUNT_TARGET = 4;
 
 // =============================================
 // SHARED TYPES
 // =============================================
 
-/**
- * A single sign-in entry for the current user (no user_id needed).
- * Used in today-timeline, monthly-history, sign-in-page-content.
- */
-export interface SignInEntry {
+/** A working location entry for display purposes. */
+export interface WorkingLocationEntry {
   id: string;
-  sign_in_date: string;
-  location: string;
-  other_location: string | null;
-  signed_in_at: string;
-  created_at?: string;
-}
-
-/**
- * A sign-in entry that includes user_id — used in team/reports context
- * where entries from multiple users are displayed together.
- */
-export interface TeamSignInEntry extends SignInEntry {
   user_id: string;
+  date: string;
+  time_slot: TimeSlot;
+  location: WorkLocation;
+  other_location: string | null;
+  source: LocationSource;
+  confirmed: boolean;
+  confirmed_at: string | null;
+  leave_request_id: string | null;
+}
+
+/** A weekly pattern entry. */
+export interface WeeklyPatternEntry {
+  id: string;
+  user_id: string;
+  day_of_week: number;
+  time_slot: TimeSlot;
+  location: WorkLocation;
+  other_location: string | null;
+}
+
+/** Composite day schedule — combines full_day or morning+afternoon entries. */
+export interface DaySchedule {
+  date: string;
+  fullDay: WorkingLocationEntry | null;
+  morning: WorkingLocationEntry | null;
+  afternoon: WorkingLocationEntry | null;
+}
+
+/** Team member with their schedule entries. */
+export interface TeamMemberSchedule {
+  id: string;
+  full_name: string;
+  preferred_name: string | null;
+  avatar_url: string | null;
+  job_title: string | null;
+  entries: WorkingLocationEntry[];
 }
 
 // =============================================
-// LOCATION CONFIG
+// LOCATION CONFIG (soft muted palette)
 // =============================================
 
 /**
- * Location display configuration for badges and labels.
- * Used across timeline, history, team overview, member detail, and reports.
+ * Location display configuration for badges, cells, and charts.
+ * Soft palette: -50 backgrounds, -700 text for readability
+ * without competing for visual attention.
  */
 export const LOCATION_CONFIG: Record<
   string,
-  { label: string; icon: typeof Home; variant: "default" | "secondary" | "outline" }
+  {
+    label: string;
+    shortLabel: string;
+    icon: typeof Home;
+    bgClass: string;
+    textClass: string;
+    hex: string;
+  }
 > = {
-  home: { label: "Home", icon: Home, variant: "secondary" },
-  glasgow_office: { label: "Glasgow Office", icon: Building2, variant: "default" },
-  stevenage_office: { label: "Stevenage Office", icon: Building2, variant: "default" },
-  other: { label: "Other", icon: Globe, variant: "outline" },
+  home: {
+    label: "Home",
+    shortLabel: "Home",
+    icon: Home,
+    bgClass: "bg-teal-50",
+    textClass: "text-teal-700",
+    hex: "#0f766e",
+  },
+  glasgow_office: {
+    label: "Glasgow Office",
+    shortLabel: "Glasgow",
+    icon: Building2,
+    bgClass: "bg-sky-50",
+    textClass: "text-sky-700",
+    hex: "#0369a1",
+  },
+  stevenage_office: {
+    label: "Stevenage Office",
+    shortLabel: "Stevenage",
+    icon: Building2,
+    bgClass: "bg-sky-50",
+    textClass: "text-sky-700",
+    hex: "#0369a1",
+  },
+  other: {
+    label: "Other",
+    shortLabel: "Other",
+    icon: MapPin,
+    bgClass: "bg-slate-100",
+    textClass: "text-slate-600",
+    hex: "#475569",
+  },
+  on_leave: {
+    label: "On Leave",
+    shortLabel: "Leave",
+    icon: CalendarOff,
+    bgClass: "bg-rose-50",
+    textClass: "text-rose-600",
+    hex: "#e11d48",
+  },
+};
+
+/** Config for "not set" state (used in DayCell). */
+export const NOT_SET_CONFIG = {
+  label: "Not set",
+  shortLabel: "—",
+  icon: CircleDashed,
+  bgClass: "bg-gray-50",
+  textClass: "text-gray-400",
+  hex: "#9ca3af",
 };
 
 /**
- * Location options for the sign-in form and nudge bubble.
- * Includes short names for compact display contexts.
+ * Location options for the location picker dialog.
+ * Excludes 'on_leave' (auto-created from leave requests, not manually set).
  */
 export const LOCATIONS: { id: WorkLocation; name: string; icon: typeof Home; description: string }[] = [
   { id: "home", name: "Home", icon: Home, description: "Working from home" },
   { id: "glasgow_office", name: "Glasgow Office", icon: Building2, description: "Glasgow HQ" },
   { id: "stevenage_office", name: "Stevenage Office", icon: Building2, description: "Stevenage office" },
-  { id: "other", name: "Other", icon: Globe, description: "Another location" },
+  { id: "other", name: "Other", icon: MapPin, description: "Another location" },
 ];
 
+// =============================================
+// DATE HELPERS
+// =============================================
+
 /**
- * Format an ISO timestamp to a short time string (e.g. "09:30").
+ * Get today's date in YYYY-MM-DD format using the UK timezone.
+ * Critical: all date comparisons must use UK timezone, not UTC.
  */
-export function formatSignInTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export function getUKToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 }
 
 /**
- * Format a YYYY-MM-DD date string to a short display format (e.g. "Mon, 3 Feb").
+ * Get the Monday–Friday dates for a given week offset from the current week.
+ * offset=0 → this week, offset=1 → next week, offset=-1 → last week.
  */
-export function formatSignInDate(dateString: string): string {
+export function getWeekDates(offset: number = 0): string[] {
+  const today = new Date(getUKToday() + "T12:00:00");
+  const dayOfWeek = today.getDay();
+  // Monday = day 1, so subtract (dayOfWeek - 1) to get Monday. Sunday (0) → subtract 6.
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset + offset * 7);
+
+  const dates: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+  return dates;
+}
+
+/**
+ * Build a DaySchedule from a list of entries for a single date.
+ */
+export function buildDaySchedule(date: string, entries: WorkingLocationEntry[]): DaySchedule {
+  const dayEntries = entries.filter((e) => e.date === date);
+  return {
+    date,
+    fullDay: dayEntries.find((e) => e.time_slot === "full_day") ?? null,
+    morning: dayEntries.find((e) => e.time_slot === "morning") ?? null,
+    afternoon: dayEntries.find((e) => e.time_slot === "afternoon") ?? null,
+  };
+}
+
+/**
+ * Format a YYYY-MM-DD date string to a short display format (e.g. "Mon, 3 Mar").
+ */
+export function formatScheduleDate(dateString: string): string {
   const date = new Date(dateString + "T00:00:00");
   return date.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -78,7 +199,23 @@ export function formatSignInDate(dateString: string): string {
 }
 
 /**
- * Resolve the display label for a sign-in entry's location.
+ * Format a YYYY-MM-DD date string to just the day name (e.g. "Mon").
+ */
+export function formatDayName(dateString: string): string {
+  const date = new Date(dateString + "T00:00:00");
+  return date.toLocaleDateString("en-GB", { weekday: "short" });
+}
+
+/**
+ * Format a YYYY-MM-DD date string to day + month (e.g. "3 Mar").
+ */
+export function formatDayMonth(dateString: string): string {
+  const date = new Date(dateString + "T00:00:00");
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+/**
+ * Resolve the display label for a location.
  * Returns the custom location text for "other" entries, or the config label.
  */
 export function getLocationLabel(location: string, otherLocation: string | null): string {
@@ -86,3 +223,16 @@ export function getLocationLabel(location: string, otherLocation: string | null)
   return LOCATION_CONFIG[location]?.label ?? "Other";
 }
 
+/**
+ * Check if a date is today (UK timezone).
+ */
+export function isToday(dateString: string): boolean {
+  return dateString === getUKToday();
+}
+
+/**
+ * Check if a date is in the past (UK timezone).
+ */
+export function isPastDate(dateString: string): boolean {
+  return dateString < getUKToday();
+}

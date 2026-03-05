@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-05
+> Last updated: 2026-03-06
 
 ---
 
@@ -19,13 +19,15 @@
 - **Admin features:** Course CRUD, admin reports (`/learning/admin/`)
 - Notification system for course publishing (RPC + UI)
 
-### Sign-In System ✅ (v1 — overhaul planned)
-- Daily location sign-in with DB persistence (`/sign-in`)
-- Today's sign-ins and monthly history
-- Team sign-in overview for line managers
-- Nudge bubble for unsigned-in users
-- Manager reports & analytics (charts, CSV export)
-- **Overhaul planned** — see "Sign-In v2" in Remaining Work
+### Sign-In / Working Location ✅ (v2 complete)
+- Schedule-based weekly working location planner (replaced daily sign-in)
+- Interactive month calendar with day detail panel (Google Calendar–inspired)
+- Recurring weekly patterns with one-click apply
+- Google Calendar sync (read + write-back) with domain-wide delegation
+- Team schedule grid + team calendar with member filtering (managers)
+- Kiosk check-in for office arrival confirmation
+- Daily reconciliation banners, reports with CSV export
+- Quality pass: colour overhaul, Gemini fixes, interactive calendar redesign
 
 ### Induction System ✅
 - 9-step induction checklist with DB persistence (`/intranet/induction`)
@@ -124,35 +126,17 @@
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
-### Sign-In v2 — Schedule-Based + Google Calendar Integration
-Current sign-in is a daily manual check-in modelled after a physical sign-in app. Industry research (Kadence, Officely, Google Calendar, Microsoft Teams) shows weekly schedule + auto-sync is the standard. MCR Pathways is on Google Workspace for Education (Working Location API supported).
+### Sign-In v2 — Working Location (Schedule-Based + Google Calendar) ✅
+Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + quality pass complete.
 
-**Architecture:**
-- [ ] Google Calendar sync: service account + domain-wide delegation reads all staff working locations
-- [ ] Unified `working_locations` cache table (user_id, date, location, source) replaces `sign_ins`
-- [ ] Webhook-triggered incremental sync (`syncToken`) + fallback periodic full sync (6h)
-- [ ] Write-back: intranet check-ins create Google Calendar working location events
-- [ ] Intranet entries override Calendar data for the same day
+**Phases 1–8 ✅** — Data model, week planner, people calendar, recurring patterns, kiosk, team grid, Google Calendar sync (read + write-back), daily banners, reports. See memory file `memory/sign-in-overhaul.md` for full phase breakdown.
 
-**UX:**
-- [ ] Dashboard week strip: compact 5-day view with 1-tap location setting (segmented buttons)
-- [ ] Recurring weekly patterns ("always home Mon/Wed/Fri") to reduce interaction to ~1x/week
-- [ ] `/sign-in` becomes "My Schedule" (recurring patterns) + manager team×week grid + reports
-- [ ] Month calendar with coloured dots for personal history (replacing badge list)
-- [ ] Nudge fires only if no Calendar location AND no intranet check-in (weekly, not daily)
-
-**Open decisions:**
-- [ ] Write-back to Calendar: should intranet check-ins create Calendar events? (Recommended: yes)
-- [ ] Migration path: migrate `sign_ins` history to `working_locations`, keep as archive, or drop?
-- [ ] Split-day support: keep multiple locations per day or simplify to one per day?
-- [ ] Kiosk/entrance replacement: simplified "tap your name" view for office entrance, or future phase?
-- [ ] Workspace admin: confirm domain-wide delegation is enabled (Security → API Controls)
-
-**Quick fixes (independent of overhaul):** ✅
-- [x] Fix `member-detail.tsx` over-fetch → new `getTeamMemberHistory()` server action queries single user
-- [x] Extract shared `SignInEntry` + `TeamSignInEntry` types to `src/lib/sign-in.ts` (was duplicated 7×)
-- [x] Extract `<LocationBadge>` component to `src/components/sign-in/location-badge.tsx` (was duplicated 5×)
-- [x] Merge `getTodaySignIns()` + `getMonthlyHistory()` → single `getSignInHistory()` query
+**Quality Pass ✅** (branch: `fix/gemini-review-fixes`, PR #86)
+- [x] **Part A — Gemini PR Fixes**: ~35 fixes across 15 files (split-day headcount, timing-safe tokens, N+1 batching, PII masking, empty catches → logger.warn, 410 full sync, service account key guard) + PR #86 review fixes (configurable kiosk office, `getUKToday` dedup, CSV `\n` sanitisation, unified `calendar.events` scope, offline queue retry, shared `timingSafeTokenCompare`)
+- [x] **Part B+C — Colour Scheme + HR Wording**: Soft muted palette (`sky-50`/`teal-50`/`slate-100`/`rose-50`), MCR brand to Tailwind config, "Office Planning" wording
+- [x] **Part D — Interactive Month Calendar**: Replaced WeekStrip with `InteractiveCalendar` (PeopleCalendar + DayDetailPanel), `QuickSetIcons` for 1-click location, `PendingLeaveList`, `LeaveRequestDialog` with `defaultStartDate`
+- [x] **Part E — Team Calendar + Filter**: `TeamCalendar` with member filter dropdown, Month/Week toggle, day sidebar
+- [x] **Part F — Google Calendar Setup Guide**: `docs/google-calendar-setup.md` for IT admins
 
 ### Intranet Phase 3 — Live Feed + Polls ✅
 - [x] "X new posts available" polling banner (30s count-only query, tab visibility-aware)

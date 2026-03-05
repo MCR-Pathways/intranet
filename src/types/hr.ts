@@ -54,7 +54,6 @@ export interface EmployeeProfile extends ProfileSummary {
   line_manager_id: string | null;
   team_id: string | null;
   induction_completed_at: string | null;
-  last_sign_in_date: string | null;
   created_at: string;
 }
 

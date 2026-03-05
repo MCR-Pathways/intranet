@@ -1,19 +1,26 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { timingSafeEqual } from "crypto";
 
 // Re-export client-safe helpers so server components can import everything from @/lib/auth
 export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
 
+/** Timing-safe string comparison to prevent timing attacks on token validation. */
+export function timingSafeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, induction_completed_at, last_sign_in_date, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, induction_completed_at, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
 
 /**
  * Extended profile select for HR admin views — includes employment details
  * but still excludes google_refresh_token and other auth-sensitive fields.
  */
 export const HR_EMPLOYEE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, last_sign_in_date, created_at";
+  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, created_at";
 
 // =============================================
 // SERVER-SIDE AUTH FUNCTIONS

@@ -2,8 +2,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
-import { checkAndCreateSignInNudge } from "@/app/(protected)/sign-in/actions";
 import { getNotifications } from "@/app/(protected)/notifications/actions";
+import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Profile } from "@/types/database.types";
 
@@ -18,25 +18,18 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // Check if staff user needs sign-in nudge (also creates notification if needed).
-  // Idempotent: checks for existing unread reminder before creating a new one.
-  // Wrapped in try/catch so notification failures never break layout rendering.
-  let needsSignIn = false;
-  try {
-    needsSignIn = await checkAndCreateSignInNudge();
-  } catch (e) {
-    logger.error("Sign-in nudge check failed", { error: e });
-  }
-
-  // Fetch notifications server-side so revalidatePath refreshes the bell.
-  // After recordSignIn() dismisses reminders and calls revalidatePath("/", "layout"),
-  // this re-runs and passes fresh data down to NotificationBell.
+  // Fetch notifications + daily banner state in parallel
   let initialNotifications;
+  let bannerState: string | null = null;
   try {
-    const { notifications } = await getNotifications();
-    initialNotifications = notifications;
+    const [notifResult, bannerResult] = await Promise.all([
+      getNotifications(),
+      getDailyBannerState(),
+    ]);
+    initialNotifications = notifResult.notifications;
+    bannerState = bannerResult.type;
   } catch (e) {
-    logger.error("Failed to fetch notifications", { error: e });
+    logger.error("Failed to fetch layout data", { error: e });
   }
 
   return (
@@ -44,8 +37,8 @@ export default async function ProtectedLayout({
       <AppLayout
         user={user}
         profile={profile as unknown as Profile}
-        needsSignIn={needsSignIn}
         initialNotifications={initialNotifications}
+        dailyBannerType={bannerState}
       >
         {children}
       </AppLayout>
