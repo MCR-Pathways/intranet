@@ -1,9 +1,9 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { getMySchedule, getMyPatterns } from "./actions";
+import { getMySchedule, getMyPatterns, getTeamSchedule } from "./actions";
 import { getWeekDates } from "@/lib/sign-in";
-import type { WorkingLocationEntry, WeeklyPatternEntry } from "@/lib/sign-in";
+import type { WorkingLocationEntry, WeeklyPatternEntry, TeamMemberSchedule } from "@/lib/sign-in";
 import { WorkingLocationContent } from "@/components/sign-in/working-location-content";
 
 export default async function WorkingLocationPage() {
@@ -12,6 +12,8 @@ export default async function WorkingLocationPage() {
   if (!user || !profile) {
     redirect("/login");
   }
+
+  const isManager = profile.is_line_manager ?? false;
 
   // Fetch this week's schedule
   const weekDates = getWeekDates(0);
@@ -24,10 +26,11 @@ export default async function WorkingLocationPage() {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [weekData, monthData, patternData] = await Promise.all([
+  const [weekData, monthData, patternData, teamData] = await Promise.all([
     getMySchedule(weekStart, weekEnd),
     getMySchedule(monthStart, monthEnd),
     getMyPatterns(),
+    isManager ? getTeamSchedule(weekStart, weekEnd) : Promise.resolve({ members: [] }),
   ]);
 
   return (
@@ -41,7 +44,8 @@ export default async function WorkingLocationPage() {
         initialEntries={weekData.entries as WorkingLocationEntry[]}
         monthEntries={monthData.entries as WorkingLocationEntry[]}
         initialPatterns={patternData.patterns as WeeklyPatternEntry[]}
-        isManager={profile.is_line_manager ?? false}
+        isManager={isManager}
+        initialTeamMembers={teamData.members as TeamMemberSchedule[]}
       />
     </div>
   );

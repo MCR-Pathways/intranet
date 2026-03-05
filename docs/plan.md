@@ -164,8 +164,13 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`.
 - [x] Expandable week detail with below-target day alerts (amber when < 4 scheduled)
 - [x] `getOfficeHeadcount` updated to include staff names for detail view
 
-**Phase 5 — Team Schedule Grid**
-- [ ] People × days grid for managers (who's in?)
+**Phase 5 — Team Schedule Grid ✅**
+- [x] `TeamScheduleGrid` component — HTML table with people × days grid, sticky header + left column
+- [x] Week navigation (±2/+4 weeks) with server-fetched data via `getTeamSchedule`
+- [x] Location pills with colour coding (V2 `LOCATION_CONFIG`), confirmed indicator (CheckCircle2)
+- [x] Summary footer row: "X/Y in office" per day, amber highlight when below target
+- [x] Empty state for managers with no direct reports, skeleton loading state
+- [x] Integrated into `WorkingLocationContent` "Team Schedule" tab (replaces placeholder)
 
 **Phase 6-7 — Google Calendar Sync**
 - [ ] Read sync: service account + domain-wide delegation

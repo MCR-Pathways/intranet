@@ -4,14 +4,16 @@ import { useCallback, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeekStrip } from "./week-strip";
 import { DefaultWeekEditor } from "./default-week-editor";
+import { TeamScheduleGrid } from "./team-schedule-grid";
 import { PeopleCalendar } from "@/components/shared/people-calendar";
-import type { WorkingLocationEntry, WeeklyPatternEntry } from "@/lib/sign-in";
+import type { WorkingLocationEntry, WeeklyPatternEntry, TeamMemberSchedule } from "@/lib/sign-in";
 
 interface WorkingLocationContentProps {
   initialEntries: WorkingLocationEntry[];
   monthEntries: WorkingLocationEntry[];
   initialPatterns: WeeklyPatternEntry[];
   isManager: boolean;
+  initialTeamMembers?: TeamMemberSchedule[];
   defaultTab?: string;
 }
 
@@ -20,6 +22,7 @@ export function WorkingLocationContent({
   monthEntries,
   initialPatterns,
   isManager,
+  initialTeamMembers = [],
   defaultTab = "my-schedule",
 }: WorkingLocationContentProps) {
   // Ref to trigger WeekStrip refresh when patterns are applied
@@ -58,11 +61,7 @@ export function WorkingLocationContent({
 
       {isManager && (
         <TabsContent value="team-schedule" className="mt-6">
-          <div className="rounded-lg border p-6">
-            <p className="text-sm text-muted-foreground">
-              Team schedule grid coming in Phase 5.
-            </p>
-          </div>
+          <TeamScheduleGrid initialMembers={initialTeamMembers} />
         </TabsContent>
       )}
     </Tabs>
