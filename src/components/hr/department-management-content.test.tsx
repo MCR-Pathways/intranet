@@ -198,9 +198,7 @@ describe("DepartmentManagementContent", () => {
     render(<DepartmentManagementContent departments={testDepartments} />);
 
     // Find the actions button for the first department (sr-only text "Actions")
-    const actionButtons = screen.getAllByRole("button").filter(
-      (b) => b.querySelector("svg.lucide-more-horizontal") || b.textContent?.trim() === "Actions"
-    );
+    const actionButtons = screen.getAllByRole("button", { name: "Actions" });
     fireEvent.pointerDown(actionButtons[0], { button: 0, pointerType: "mouse" });
 
     // Click Edit in the dropdown
@@ -221,9 +219,7 @@ describe("DepartmentManagementContent", () => {
     render(<DepartmentManagementContent departments={testDepartments} />);
 
     // Open dropdown for first department (active, 3 staff)
-    const actionButtons = screen.getAllByRole("button").filter(
-      (b) => b.querySelector("svg.lucide-more-horizontal") || b.textContent?.trim() === "Actions"
-    );
+    const actionButtons = screen.getAllByRole("button", { name: "Actions" });
     fireEvent.pointerDown(actionButtons[0], { button: 0, pointerType: "mouse" });
 
     const deactivateItem = await screen.findByRole("menuitem", { name: /Deactivate/i });
@@ -239,9 +235,7 @@ describe("DepartmentManagementContent", () => {
     render(<DepartmentManagementContent departments={testDepartments} />);
 
     // Open dropdown for Finance (inactive) — 3rd action button
-    const actionButtons = screen.getAllByRole("button").filter(
-      (b) => b.querySelector("svg.lucide-more-horizontal") || b.textContent?.trim() === "Actions"
-    );
+    const actionButtons = screen.getAllByRole("button", { name: "Actions" });
     fireEvent.pointerDown(actionButtons[2], { button: 0, pointerType: "mouse" });
 
     const reactivateItem = await screen.findByRole("menuitem", { name: /Reactivate/i });

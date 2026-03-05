@@ -74,8 +74,11 @@ describe("PermissionsEditDialog", () => {
 
     // Check that switches reflect the current state
     const switches = screen.getAllByRole("switch");
-    // HR Admin, L&D Admin, Systems Admin, Line Manager
     expect(switches).toHaveLength(4);
+    expect(screen.getByRole("switch", { name: "HR Admin" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "L&D Admin" })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Systems Admin" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Line Manager" })).toBeChecked();
   });
 
   it("disables admin toggles when current user is not HR admin", () => {
