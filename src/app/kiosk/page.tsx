@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { KioskCheckin } from "@/components/sign-in/kiosk-checkin";
 import { timingSafeEqual } from "crypto";
+import { getUKToday } from "@/lib/sign-in";
 
 /** Timing-safe string comparison to prevent timing attacks on token validation. */
 function timingSafeTokenCompare(a: string, b: string): boolean {
@@ -27,7 +28,7 @@ export default async function KioskPage({ searchParams }: KioskPageProps) {
   }
 
   const supabase = createServiceClient();
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const today = getUKToday();
 
   // Fetch all active staff with their today's working location
   const [staffResult, locationsResult] = await Promise.all([

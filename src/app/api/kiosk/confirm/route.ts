@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { timingSafeEqual } from "crypto";
+import { getUKToday } from "@/lib/sign-in";
+import type { WorkLocation } from "@/types/database.types";
 
 /** Timing-safe string comparison to prevent timing attacks on token validation. */
 function timingSafeTokenCompare(a: string, b: string): boolean {
@@ -30,8 +32,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Get today's date in UK timezone
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+    const today = getUKToday();
+    const kioskOffice = (process.env.KIOSK_OFFICE_LOCATION as WorkLocation) ?? "glasgow_office";
 
     // Check if already confirmed today
     const { data: existing } = await supabase
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
       .select("id, confirmed")
       .eq("user_id", userId)
       .eq("date", today)
-      .in("location", ["glasgow_office", "stevenage_office"])
+      .eq("location", kioskOffice)
       .limit(1);
 
     if (existing && existing.length > 0 && existing[0].confirmed) {
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
         .update({ confirmed: true, confirmed_at: now })
         .eq("user_id", userId)
         .eq("date", today)
-        .in("location", ["glasgow_office", "stevenage_office"]);
+        .eq("location", kioskOffice);
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             date: today,
             time_slot: "full_day",
-            location: "glasgow_office",
+            location: kioskOffice,
             source: "manual",
             confirmed: true,
             confirmed_at: now,

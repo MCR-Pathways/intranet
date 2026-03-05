@@ -56,7 +56,7 @@ This guide covers setting up domain-wide delegation for the MCR Pathways intrane
 4. Click **Add new**
 5. Enter:
    - **Client ID**: The numeric ID from the service account
-   - **OAuth scopes**: `https://www.googleapis.com/auth/calendar`
+   - **OAuth scopes**: `https://www.googleapis.com/auth/calendar.events`
 6. Click **Authorise**
 
 ## 5. Configure Environment Variables
@@ -162,5 +162,5 @@ The sync uses these tables:
 | `src/lib/google-calendar.ts` | Google Calendar API wrapper (read, write, delete events) |
 | `src/lib/calendar-sync.ts` | Sync logic (single user + batch) |
 | `src/lib/leave-location-sync.ts` | Leave approval → working location entries + OOO events |
-| `src/app/(protected)/sign-in/actions.ts` | Server actions for manual sync trigger |
+| `src/app/(protected)/sign-in/actions.ts` | Core server actions for the Working Location feature |
 | `src/app/api/calendar/webhook/route.ts` | Webhook endpoint for push notifications (if configured) |

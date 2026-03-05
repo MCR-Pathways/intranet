@@ -21,7 +21,7 @@ import { toast } from "sonner";
 function sanitiseCSVCell(value: string | null | undefined): string {
   if (!value) return "";
   const trimmed = value.trim();
-  if (/^[=+\-@\t\r]/.test(trimmed)) {
+  if (/^[=+\-@\t\r\n]/.test(trimmed)) {
     return `'${trimmed}`;
   }
   return trimmed;
