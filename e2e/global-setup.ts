@@ -1,7 +1,11 @@
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+
+// Load .env.test (playwright.config.ts also loads it, but globalSetup runs in its own worker)
+dotenv.config({ path: path.resolve(__dirname, "..", ".env.test") });
 
 /**
  * Global setup for E2E tests.
@@ -13,10 +17,11 @@ import path from "path";
  * 3. Save the storageState to a JSON file
  */
 
-const SUPABASE_URL = "http://127.0.0.1:54321";
-const SUPABASE_SERVICE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
-const APP_URL = "http://127.0.0.1:3000";
+// These are standard Supabase local dev keys (same for every `supabase start` instance).
+// Loaded from .env.test via playwright.config.ts dotenv setup.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
 // Test user accounts (from seed migration 00043)
 export const TEST_USERS = {
