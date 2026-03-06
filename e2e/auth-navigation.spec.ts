@@ -108,6 +108,7 @@ test.describe("Sidebar navigation", () => {
     // Admin section should appear
     await expect(sidebar.getByText("Admin")).toBeVisible();
     await expect(sidebar.getByText("User Management")).toBeVisible();
+    await expect(sidebar.getByText("Onboarding")).toBeVisible();
     await expect(sidebar.getByText("Absence & Sickness")).toBeVisible();
   });
 
@@ -121,6 +122,7 @@ test.describe("Sidebar navigation", () => {
     await expect(sidebar.getByText("Leave")).toBeVisible();
     // Admin section should NOT be visible
     await expect(sidebar.getByText("User Management")).not.toBeVisible();
+    await expect(sidebar.getByText("Onboarding")).not.toBeVisible();
   });
 
   test("clicking sidebar nav link navigates to module", async ({
