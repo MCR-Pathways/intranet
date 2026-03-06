@@ -75,9 +75,10 @@
 - Error and loading boundaries for all protected routes
 - Structured logger (`src/lib/logger.ts`) ready for Sentry/Datadog swap
 - Audit logging via DB triggers on 8+ tables
-- Middleware auth with module access control by user type
-- **Middleware JWT optimisation** (PR #49): zero DB queries per authenticated request via JWT custom claims
-- **Testing** (PRs #52-58, #61, #73): 1041 tests across 48 files covering server actions, hooks, components, and pure functions. See `docs/testing-plan.md` for full breakdown.
+- Proxy auth with module access control by user type (renamed from middleware for Next.js 16)
+- **Proxy JWT optimisation** (PR #49): zero DB queries per authenticated request via JWT custom claims
+- **Unit Testing** (PRs #52-58, #61, #73): 1041 tests across 48 files covering server actions, hooks, components, and pure functions. See `docs/testing-plan.md` for full breakdown.
+- **E2E Testing** (PR #90): Playwright + local Supabase (Docker). 18 E2E tests: auth redirects, module access control (staff vs coordinator), sidebar navigation, HR admin sub-items. Role-based fixtures (hrAdmin, lineManager, staff, coordinator). See `memory/e2e-testing.md` for phases.
 
 ### UI/UX Polish ✅
 - **Collapsible sidebar** (YouTube-style): hamburger toggle always visible, collapses to 64px icon rail with tooltips, expands to 256px with labels. State persisted in `localStorage`.
