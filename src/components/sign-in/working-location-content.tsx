@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DefaultWeekEditor } from "./default-week-editor";
 import { WeekPlanningBanner } from "./week-planning-banner";
 import { InteractiveCalendar } from "./interactive-calendar";
 import { PendingLeaveList } from "./pending-leave-list";
@@ -126,12 +125,6 @@ export function WorkingLocationContent({
 
           {/* Pending leave requests */}
           <PendingLeaveList requests={pendingLeave} />
-
-          {/* Default week patterns */}
-          <DefaultWeekEditor
-            initialPatterns={initialPatterns}
-            onPatternsApplied={handlePatternsApplied}
-          />
         </TabsContent>
 
         {isManager && (

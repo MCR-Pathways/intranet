@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User, Mail, Briefcase, Building2, Shield, Bell } from "lucide-react";
+import { getMyPatterns } from "@/app/(protected)/sign-in/actions";
+import { DefaultWeekEditor } from "@/components/sign-in/default-week-editor";
+import type { WeeklyPatternEntry } from "@/lib/sign-in";
 
 const USER_TYPE_LABELS: Record<string, string> = {
   staff: "Staff",
@@ -25,13 +28,16 @@ export default async function SettingsPage() {
   }
 
   // Fetch user profile with team info — explicit columns, never select("*")
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "id, full_name, preferred_name, email, phone, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, start_date, induction_completed_at, team_id, teams(name)"
-    )
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, patternData] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, full_name, preferred_name, email, phone, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, start_date, induction_completed_at, team_id, teams(name)"
+      )
+      .eq("id", user.id)
+      .single(),
+    getMyPatterns(),
+  ]);
 
   const statusVariant =
     profile?.status === "active"
@@ -195,6 +201,11 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Default working week pattern */}
+      <DefaultWeekEditor
+        initialPatterns={patternData.patterns as WeeklyPatternEntry[]}
+      />
 
       {/* Preferences - Placeholder */}
       <Card>
