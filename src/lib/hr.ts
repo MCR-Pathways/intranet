@@ -864,6 +864,58 @@ export const FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT =
 export const FWR_APPEAL_SELECT =
   "id, request_id, appeal_reason, appealed_at, meeting_date, meeting_notes, outcome, outcome_notes, decided_by, decided_at, created_at, updated_at";
 
+// =============================================
+// ONBOARDING TRACKER
+// =============================================
+
+export type OnboardingSection = "before_start" | "day_one" | "first_week" | "first_month" | "general";
+export type OnboardingAssigneeRole = "hr_admin" | "line_manager" | "employee" | "other";
+
+export const ONBOARDING_SECTION_CONFIG: Record<OnboardingSection, { label: string; order: number }> = {
+  before_start: { label: "Before Start", order: 0 },
+  day_one: { label: "Day One", order: 1 },
+  first_week: { label: "First Week", order: 2 },
+  first_month: { label: "First Month", order: 3 },
+  general: { label: "General", order: 4 },
+};
+
+export const ONBOARDING_ASSIGNEE_CONFIG: Record<OnboardingAssigneeRole, { label: string; colour: string; bgColour: string }> = {
+  hr_admin: { label: "HR Admin", colour: "text-purple-700", bgColour: "bg-purple-50" },
+  line_manager: { label: "Line Manager", colour: "text-blue-700", bgColour: "bg-blue-50" },
+  employee: { label: "Employee", colour: "text-green-700", bgColour: "bg-green-50" },
+  other: { label: "Other", colour: "text-slate-700", bgColour: "bg-slate-50" },
+};
+
+export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; colour: string; bgColour: string }> = {
+  active: { label: "Active", colour: "text-blue-700", bgColour: "bg-blue-50" },
+  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50" },
+  cancelled: { label: "Cancelled", colour: "text-slate-700", bgColour: "bg-slate-50" },
+};
+
+export const ONBOARDING_SECTIONS: OnboardingSection[] = [
+  "before_start", "day_one", "first_week", "first_month", "general",
+];
+
+/** Explicit column list for onboarding_checklists queries. */
+export const ONBOARDING_CHECKLIST_SELECT =
+  "id, profile_id, template_id, initiated_by, status, start_date, notes, completed_at, completed_by, created_at, updated_at";
+
+/** Explicit column list for onboarding_checklist_items queries. */
+export const ONBOARDING_CHECKLIST_ITEM_SELECT =
+  "id, checklist_id, title, description, section, assignee_role, assignee_id, due_date, sort_order, is_completed, completed_at, completed_by, created_at";
+
+/** Explicit column list for onboarding_templates queries. */
+export const ONBOARDING_TEMPLATE_SELECT =
+  "id, name, description, is_active, created_by, created_at, updated_at";
+
+/** Explicit column list for onboarding_template_items queries. */
+export const ONBOARDING_TEMPLATE_ITEM_SELECT =
+  "id, template_id, title, description, section, assignee_role, due_day_offset, sort_order, created_at";
+
+// =============================================
+// LEAVE QUERY HELPERS
+// =============================================
+
 /** Map raw Supabase leave request + profile join data to LeaveRequestWithEmployee. */
 export function mapToLeaveRequestWithEmployee(
   data: Record<string, unknown>[],

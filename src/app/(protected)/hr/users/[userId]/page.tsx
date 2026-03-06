@@ -8,6 +8,7 @@ import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FOR
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
 import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm } from "@/types/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
+import { fetchEmployeeOnboarding, fetchActiveTemplates } from "@/app/(protected)/hr/onboarding/actions";
 
 /** Select columns for employee_details. */
 const EMPLOYEE_DETAILS_SELECT =
@@ -411,6 +412,12 @@ export default async function EmployeeDetailPage({
     name: t.name as string,
   }));
 
+  // Fetch onboarding data
+  const [onboardingData, onboardingTemplates] = await Promise.all([
+    fetchEmployeeOnboarding(userId),
+    fetchActiveTemplates(),
+  ]);
+
   // Check if current user is the employee's line manager
   const isCurrentUserManager = (profile.line_manager_id as string | null) === currentUserId;
 
@@ -446,6 +453,9 @@ export default async function EmployeeDetailPage({
         absenceRecords={flatAbsenceRecords}
         rtwForms={rtwFormMap}
         leavingForm={leavingForm}
+        onboardingActive={onboardingData.active}
+        onboardingHistory={onboardingData.history}
+        onboardingTemplates={onboardingTemplates}
         departments={(departmentRows ?? []).map((d) => ({ slug: d.slug as string, name: d.name as string }))}
         isManager={isCurrentUserManager}
         people={people}
