@@ -288,6 +288,38 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 6. **`app-layout.tsx`** — `useSyncExternalStore` for SSR-safe localStorage (reference implementation worth testing)
 7. **Proxy JWT fallback path** — existing `proxy.test.ts` should verify both fast-path (JWT claims) and slow-path (DB fallback) are covered
 
+---
+
+## E2E Testing (Playwright)
+
+**Infrastructure complete (PR #90).** 18 tests passing.
+
+### Stack
+- Playwright + Chromium, local Supabase (Docker), seeded test DB
+- Auth via magic link generation + `/auth/confirm` visit (sets cookies on app domain)
+- Role-based fixtures: `hrAdminPage`, `lineManagerPage`, `staffPage`, `coordinatorPage`
+- Config: `playwright.config.ts`, env: `.env.test`, tests: `e2e/`
+
+### Phase 0: Infrastructure — COMPLETE
+- Local Supabase with 47 migrations + auth seeding (auth.users, identities, JWT claim sync)
+- Playwright config, global setup/teardown, fixtures, npm scripts
+
+### Phase 1: Auth & Navigation — COMPLETE (16 tests)
+- Auth redirects (unauthenticated → login, root → intranet)
+- Module access control (staff all modules, coordinator intranet+learning only)
+- Sidebar navigation (module visibility per role, HR admin sub-items, click nav)
+
+### Phase 2: Core Module E2E Tests — TODO
+- News feed (create post, comment, poll)
+- Learning (course catalogue, enrolment, progress)
+- Working Location (set location, view history)
+- Notifications (mark read, dismiss)
+
+### Phase 3: HR Module E2E Tests — TODO
+- User management, absence, leave, compliance, assets, org chart
+
+---
+
 ## Verification
 
 After each phase:
