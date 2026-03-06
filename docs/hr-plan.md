@@ -300,7 +300,7 @@ Database tables already created in migration `00024`. Larger features for later.
 | Components | `src/components/hr/*.tsx` |
 | DB types | `src/types/database.types.ts` |
 | Migrations | `supabase/migrations/00024–00032`, `00047` (onboarding) |
-| Middleware | `src/middleware.ts` (HR access: staff only) |
+| Proxy | `src/proxy.ts` (HR access: staff only) |
 | Tests | `src/app/(protected)/hr/users/actions.test.ts` |
 
 ---
