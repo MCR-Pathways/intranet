@@ -27,10 +27,10 @@ import { vi } from "vitest";
  *   complexity where `mockEq` is shared between select and update chains.
  *   See `actions.test.ts` for the pattern.
  *
- * For MIDDLEWARE (middleware.ts):
+ * For PROXY (proxy.ts):
  *   Mock `@/lib/supabase/middleware` (updateSession) to control auth state,
  *   then mock the simple `.from().select().eq().single()` chain for profile
- *   fetching. See `middleware.test.ts` for the pattern.
+ *   fetching. See `proxy.test.ts` for the pattern.
  *
  * This factory is useful for cases where you need a full mock Supabase
  * client (e.g., testing `getCurrentUser` or `requireHRAdmin` themselves).
