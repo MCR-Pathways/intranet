@@ -104,7 +104,7 @@
 - [x] Bradford Factor → replaced with wellbeing prompts approach (part of Phase 2)
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
-### HR Phase 2
+### HR Phase 2 ✅
 - [x] Absence records & sickness tracking
 - [x] Return-to-work forms (digital replacement for paper RTW Discussion Form)
 - [x] Staff leaving forms (offboarding) — dashboard + full form page + employee detail tab + auto-calculated data
@@ -115,7 +115,7 @@
 - [x] Leave calendar tab (PR #64) — calendar moved into `/hr/leave` as manager/HR admin tab
 - [x] My Team (PR #65, #67) — manager + peer views, on-leave indicators, work anniversaries
 - [x] Org Chart (PRs #66, #67, #70) — interactive react-d3-tree, search with auto-focus on match subtree, department filter with ancestor chain, focus mode with breadcrumbs, zoom controls, click-to-navigate, bigger cards with `line-clamp-2` titles, MCR org structure seed data (~70-80 profiles)
-- [ ] Onboarding progress tracker
+- [x] Onboarding progress tracker — configurable template-based checklists for new starters, dashboard with progress bars, template management, employee detail tab integration
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### HR Phase 3

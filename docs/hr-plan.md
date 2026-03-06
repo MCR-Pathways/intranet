@@ -97,7 +97,7 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 
 ---
 
-## Phase 2 — IN PROGRESS
+## Phase 2 — COMPLETE
 
 Database tables created in migration `00024`, extended in `00030`.
 
@@ -214,12 +214,23 @@ Database tables created in migration `00024`, extended in `00030`.
   - Accessibility: `role="img"`, `aria-label`, `aria-roledescription` on container; `aria-label` on each card
 - **PRs:** #66, #67, #70 (UI/UX improvement)
 
-### Onboarding Progress Tracker
-- **Table:** New — `onboarding_templates`, `onboarding_checklists`, `onboarding_checklist_items`
-- **What:** Configurable checklist for new starters (Right to Work, Contract Signed, IT Equipment Assigned, DBS/PVG Submitted, Bank Details Received, etc.)
-- **UI needed:** Progress bar per new starter, checklist view, dashboard widget showing new starters in pipeline, template management
-- **Ties into:** Existing compliance documents (auto-check PVG/DBS), asset assignments (auto-check equipment)
-- **Mirrors:** `staff_leaving_forms` for offboarding
+### Onboarding Progress Tracker ✅ DONE
+- **Routes:** `/hr/onboarding` (dashboard), `/hr/onboarding/[checklistId]` (detail), `/hr/onboarding/templates` (template management)
+- **Components:** `src/components/hr/onboarding-dashboard-content.tsx`, `src/components/hr/onboarding-checklist-content.tsx`, `src/components/hr/onboarding-template-management.tsx`, `src/components/hr/onboarding-progress-bar.tsx`, `src/components/hr/create-onboarding-dialog.tsx`, `src/components/hr/profile-onboarding-tab.tsx`
+- **Actions:** `src/app/(protected)/hr/onboarding/actions.ts` (16 server actions)
+- **Migration:** `supabase/migrations/00047_onboarding_tracker.sql` — 4 tables (`onboarding_templates`, `onboarding_template_items`, `onboarding_checklists`, `onboarding_checklist_items`), indexes, RLS policies, updated_at trigger
+- **Capabilities:**
+  - Configurable templates with sections (Before Start, Day One, First Week, First Month, General) and assignee roles (HR Admin, Line Manager, Employee, Other)
+  - Relative due dates (day offset from start date), resolved to concrete dates on checklist creation
+  - Dashboard with search, progress bars, overdue indicators, "Show completed" toggle
+  - Detail page with grouped items, checkbox toggling, add ad-hoc items, complete/cancel actions
+  - Template management: create/edit/delete templates, inline item management with section grouping
+  - Employee detail "Onboarding" tab with active checklist summary + history
+  - HR dashboard stat card ("Active Onboardings") + quick action card
+  - Authority: HR admin full access, line managers can toggle items for their reports
+  - Partial unique index: one active checklist per employee
+  - Notifications on checklist creation (employee + line manager) and completion (initiator)
+- **Mirrors:** `staff_leaving_forms` offboarding pattern
 
 ---
 
@@ -288,7 +299,7 @@ Database tables already created in migration `00024`. Larger features for later.
 | Server actions | `src/app/(protected)/hr/*/actions.ts` |
 | Components | `src/components/hr/*.tsx` |
 | DB types | `src/types/database.types.ts` |
-| Migrations | `supabase/migrations/00024–00032` |
+| Migrations | `supabase/migrations/00024–00032`, `00047` (onboarding) |
 | Middleware | `src/middleware.ts` (HR access: staff only) |
 | Tests | `src/app/(protected)/hr/users/actions.test.ts` |
 
@@ -301,6 +312,6 @@ Database tables already created in migration `00024`. Larger features for later.
 - [ ] Bank information: Currently on Google Forms/Sheets (Lynne, Jacqueline, HR Manager access). Decision needed on whether to store in-app with encryption or keep on Google. Security review required.
 - [ ] Document signing: No DocuSign access for HR. Options: Google Docs e-signature (post-start only) vs built-in acknowledgement system. Needs investigation.
 - [ ] Compressed hours: 4-day week supported. 9-day fortnight mentioned by HR — decide if it needs a new `work_pattern` entry when building flexible working feature.
-- [ ] Onboarding checklist: What items should be configurable vs fixed?
+- [x] Onboarding checklist: Fully configurable via templates — HR admins create templates with items, sections, assignee roles, and day offsets. No fixed items.
 - [ ] Reports priority: Which reports are needed first for board/funding?
 - [ ] Profile photos: Investigate `avatar_url` from Supabase Auth Google OAuth
