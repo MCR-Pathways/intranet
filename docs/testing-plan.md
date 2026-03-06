@@ -286,7 +286,7 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 4. **`calculateDocumentStatus`** in compliance — pure date logic exported from a `"use server"` file
 5. **`mapToLeaveRequestWithEmployee`** in `src/lib/hr.ts` — data transformation with null-safe fallbacks
 6. **`app-layout.tsx`** — `useSyncExternalStore` for SSR-safe localStorage (reference implementation worth testing)
-7. **Middleware JWT fallback path** — existing `middleware.test.ts` should verify both fast-path (JWT claims) and slow-path (DB fallback) are covered
+7. **Proxy JWT fallback path** — existing `proxy.test.ts` should verify both fast-path (JWT claims) and slow-path (DB fallback) are covered
 
 ## Verification
 

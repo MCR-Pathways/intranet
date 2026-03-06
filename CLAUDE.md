@@ -43,7 +43,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 - **Supabase Auth** with Google OAuth and email OTP (magic links)
 - **Domain restriction**: Only `@mcrpathways.org` emails allowed
-- **Middleware** (`src/middleware.ts`): Checks auth, fetches profile, enforces module access by `user_type`, redirects users needing induction
+- **Proxy** (`src/proxy.ts`): Checks auth, fetches profile, enforces module access by `user_type`, redirects users needing induction
 - **User types**: `staff` (full access), `pathways_coordinator` (learning + intranet), `new_user` (induction only)
 - **Module access map**: `/hr` and `/sign-in` → staff only; `/learning` and `/intranet` → staff + pathways_coordinator
 
@@ -51,7 +51,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 - **Server**: `createClient()` from `src/lib/supabase/server.ts` — use in Server Components and Server Actions
 - **Browser**: `createClient()` from `src/lib/supabase/client.ts` — use in Client Components
-- **Middleware**: `updateSession()` from `src/lib/supabase/middleware.ts` — refreshes session cookies
+- **Supabase Middleware**: `updateSession()` from `src/lib/supabase/middleware.ts` — refreshes session cookies
 
 ### Auth Helpers (`src/lib/auth.ts`)
 
@@ -112,11 +112,11 @@ Test files are co-located with source files using `.test.ts` / `.test.tsx` suffi
 
 **For server actions** — mock `@/lib/auth` (`requireHRAdmin` / `getCurrentUser`) instead of the low-level Supabase client. Then mock only the simple `.from().update().eq()` chain the action itself uses. This avoids the shared `mockEq` problem where select and update chains both need different return types from the same mock.
 
-**For middleware** — mock `@/lib/supabase/middleware` (`updateSession`) to control auth state, then mock the `.from().select().eq().single()` chain for profile fetching.
+**For proxy** — mock `@/lib/supabase/middleware` (`updateSession`) to control auth state, then mock the `.from().select().eq().single()` chain for profile fetching.
 
 **Use `vi.hoisted()`** when mock variables need to be available inside `vi.mock()` factory functions (which are hoisted above all imports).
 
-See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` for reference patterns. The mock factory in `src/__mocks__/supabase.ts` documents the full strategy.
+See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for reference patterns. The mock factory in `src/__mocks__/supabase.ts` documents the full strategy.
 
 ## Lessons Learned
 
@@ -160,7 +160,7 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/middleware.test.ts` 
 
 **Always set `search_path = ''` on SECURITY DEFINER functions.** Without a fixed search path, an attacker can hijack execution by creating objects in a schema they control. All SECURITY DEFINER functions in this project use `SET search_path = ''` and fully qualify table references (e.g. `public.profiles`, `auth.users`).
 
-**Use `raw_app_meta_data` for middleware JWT claims, not session storage.** Store frequently-checked profile fields (`user_type`, `status`, `induction_completed_at`) in `auth.users.raw_app_meta_data` via a DB trigger on profiles. The middleware reads these from `user.app_metadata` (zero DB queries). Always include a DB fallback for sessions issued before the migration.
+**Use `raw_app_meta_data` for proxy JWT claims, not session storage.** Store frequently-checked profile fields (`user_type`, `status`, `induction_completed_at`) in `auth.users.raw_app_meta_data` via a DB trigger on profiles. The proxy reads these from `user.app_metadata` (zero DB queries). Always include a DB fallback for sessions issued before the migration.
 
 **Sanitise user-controlled fields in CSV exports (CSV injection).** When exporting data to CSV, user-controlled text fields (e.g. `other_location`, names, comments) can contain formula-triggering characters (`=`, `+`, `-`, `@`, `\t`, `\r`) that Excel/Sheets interprets as formulas. Prefix these with a single quote (`'`) to force plain-text rendering. See `sanitiseCSVCell()` in `reports-panel.tsx`.
 

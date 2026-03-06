@@ -168,7 +168,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Security review (headers, `select("*")` audit, SSRF hardening)
 - [x] Dead code removal (`useUser()` hook deleted)
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
-- [x] Middleware JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, middleware reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
+- [x] Proxy JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, proxy reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
 - [x] CSP tightened to enforcing mode (Mar 2026): switched from Report-Only to enforcing. `unsafe-eval` omitted entirely. Static string CSP (IIFEs crash Vercel Fluid Compute). `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [x] Expand test coverage (~20% — 48 test files, 1040 tests / ~236 source files). All 9 phases complete (PRs #52, #53, #56, #57, #58, #61, #73). See [docs/testing-plan.md](./testing-plan.md).

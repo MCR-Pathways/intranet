@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Mock strategy for middleware:
+ * Mock strategy for proxy (Next.js request handler):
  * We mock `@/lib/supabase/middleware` → `updateSession` to control:
  *   - Whether a user is authenticated (user object or null)
  *   - The user's app_metadata (JWT claims) for permission checks
  *
- * The middleware reads claims from user.app_metadata. When claims are
+ * The proxy reads claims from user.app_metadata. When claims are
  * missing (pre-migration session), it falls back to a DB query via the
  * Supabase client returned from updateSession.
  */
@@ -30,7 +30,7 @@ vi.mock("@/lib/supabase/middleware", () => ({
   }),
 }));
 
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 /** Helper: create a NextRequest for a given pathname */
 function createRequest(pathname: string): NextRequest {
@@ -61,41 +61,41 @@ function expectRedirectTo(response: NextResponse, expectedPath: string) {
   expect(new URL(location!).pathname).toBe(expectedPath);
 }
 
-describe("middleware", () => {
+describe("proxy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("public routes", () => {
     it("allows /login without authentication", async () => {
-      const response = await middleware(createRequest("/login"));
+      const response = await proxy(createRequest("/login"));
       expect(response.status).toBe(200);
     });
 
     it("allows /auth/callback without authentication", async () => {
-      const response = await middleware(createRequest("/auth/callback"));
+      const response = await proxy(createRequest("/auth/callback"));
       expect(response.status).toBe(200);
     });
 
     it("allows /auth/confirm without authentication", async () => {
-      const response = await middleware(createRequest("/auth/confirm"));
+      const response = await proxy(createRequest("/auth/confirm"));
       expect(response.status).toBe(200);
     });
   });
 
   describe("static files and API routes", () => {
     it("allows /_next paths", async () => {
-      const response = await middleware(createRequest("/_next/static/chunk.js"));
+      const response = await proxy(createRequest("/_next/static/chunk.js"));
       expect(response.status).toBe(200);
     });
 
     it("allows paths with file extensions", async () => {
-      const response = await middleware(createRequest("/favicon.ico"));
+      const response = await proxy(createRequest("/favicon.ico"));
       expect(response.status).toBe(200);
     });
 
     it("allows /api routes", async () => {
-      const response = await middleware(createRequest("/api/health"));
+      const response = await proxy(createRequest("/api/health"));
       expect(response.status).toBe(200);
     });
   });
@@ -104,7 +104,7 @@ describe("middleware", () => {
     it("redirects to /login when not authenticated", async () => {
       mockGetUser.mockReturnValue(null);
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
 
       expectRedirectTo(response, "/login");
       const location = new URL(response.headers.get("location")!);
@@ -114,7 +114,7 @@ describe("middleware", () => {
     it("preserves the intended destination in the redirect URL", async () => {
       mockGetUser.mockReturnValue(null);
 
-      const response = await middleware(createRequest("/learning/courses"));
+      const response = await proxy(createRequest("/learning/courses"));
 
       expectRedirectTo(response, "/login");
       const location = new URL(response.headers.get("location")!);
@@ -130,7 +130,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/hr/users"));
+      const response = await proxy(createRequest("/hr/users"));
       expect(response.status).toBe(200);
     });
 
@@ -141,7 +141,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/hr/users"));
+      const response = await proxy(createRequest("/hr/users"));
       expectRedirectTo(response, "/intranet");
     });
 
@@ -152,7 +152,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/sign-in"));
+      const response = await proxy(createRequest("/sign-in"));
       expectRedirectTo(response, "/intranet");
     });
 
@@ -163,7 +163,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/learning/courses"));
+      const response = await proxy(createRequest("/learning/courses"));
       expect(response.status).toBe(200);
     });
 
@@ -174,7 +174,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
       expect(response.status).toBe(200);
     });
 
@@ -185,7 +185,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/learning"));
+      const response = await proxy(createRequest("/learning"));
       expect(response.status).toBe(200);
     });
   });
@@ -198,7 +198,7 @@ describe("middleware", () => {
         status: "pending_induction",
       });
 
-      const response = await middleware(createRequest("/learning"));
+      const response = await proxy(createRequest("/learning"));
       expectRedirectTo(response, "/intranet/induction");
     });
 
@@ -209,7 +209,7 @@ describe("middleware", () => {
         status: "pending_induction",
       });
 
-      const response = await middleware(createRequest("/intranet/induction"));
+      const response = await proxy(createRequest("/intranet/induction"));
       expect(response.status).toBe(200);
     });
 
@@ -220,7 +220,7 @@ describe("middleware", () => {
         status: "pending_induction",
       });
 
-      const response = await middleware(
+      const response = await proxy(
         createRequest("/intranet/induction/welcome")
       );
       expect(response.status).toBe(200);
@@ -233,7 +233,7 @@ describe("middleware", () => {
         status: "pending_induction",
       });
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
       expectRedirectTo(response, "/intranet/induction");
     });
 
@@ -244,7 +244,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(
+      const response = await proxy(
         createRequest("/intranet/induction/gdpr")
       );
       expectRedirectTo(response, "/intranet");
@@ -257,7 +257,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(
+      const response = await proxy(
         createRequest("/intranet/induction")
       );
       expectRedirectTo(response, "/intranet");
@@ -272,7 +272,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/sign-in"));
+      const response = await proxy(createRequest("/sign-in"));
       expect(response.status).toBe(200);
     });
 
@@ -283,7 +283,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
       expect(response.status).toBe(200);
     });
   });
@@ -296,7 +296,7 @@ describe("middleware", () => {
         status: "active",
       });
 
-      const response = await middleware(createRequest("/"));
+      const response = await proxy(createRequest("/"));
       expectRedirectTo(response, "/intranet");
     });
 
@@ -307,7 +307,7 @@ describe("middleware", () => {
         status: "pending_induction",
       });
 
-      const response = await middleware(createRequest("/"));
+      const response = await proxy(createRequest("/"));
       expectRedirectTo(response, "/intranet/induction");
     });
   });
@@ -327,7 +327,7 @@ describe("middleware", () => {
       mockSelect.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
       expect(response.status).toBe(200);
       expect(mockFrom).toHaveBeenCalledWith("profiles");
     });
@@ -339,7 +339,7 @@ describe("middleware", () => {
       mockSelect.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      const response = await middleware(createRequest("/intranet"));
+      const response = await proxy(createRequest("/intranet"));
       expect(response.status).toBe(200);
     });
 
@@ -357,7 +357,7 @@ describe("middleware", () => {
       mockSelect.mockReturnValue({ eq: mockEq });
       mockFrom.mockReturnValue({ select: mockSelect });
 
-      const response = await middleware(createRequest("/hr/users"));
+      const response = await proxy(createRequest("/hr/users"));
       expectRedirectTo(response, "/intranet");
     });
   });
