@@ -62,12 +62,13 @@ export function PeopleCalendar({
   selectedDate,
   onMonthChange,
 }: PeopleCalendarProps) {
+  // Single Date reference for all "now" calculations within this render
+  const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
-  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }, [today]);
+  const [currentMonth, setCurrentMonth] = useState(() => today.getMonth());
+  const [currentYear, setCurrentYear] = useState(() => today.getFullYear());
 
   const holidayMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -184,7 +185,7 @@ export function PeopleCalendar({
   // Year dropdown: starts from 2026 (system launch, no historical data).
   // Google Calendar uses infinite chevron navigation; since we use a dropdown,
   // extend to whichever is further: current year + 5 or the viewed year + 2.
-  const thisYear = new Date().getFullYear();
+  const thisYear = today.getFullYear();
   const maxYear = Math.max(thisYear + 5, currentYear + 2);
   const yearOptions = Array.from({ length: maxYear - 2026 + 1 }, (_, i) => 2026 + i);
 
@@ -204,7 +205,7 @@ export function PeopleCalendar({
     onMonthChange?.(newYear, newMonth);
   }
 
-  const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+  const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
 
   function handleMonthSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const newMonth = Number(e.target.value);
