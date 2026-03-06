@@ -7,6 +7,120 @@ BEGIN
   IF (SELECT count(*) FROM public.profiles) < 10 THEN
 
     -- =========================================
+    -- Create stub auth.users rows for local dev
+    -- (production already has real users; guard above prevents re-running)
+    -- =========================================
+    INSERT INTO auth.users (id, email, aud, role, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, instance_id, email_change, email_change_token_new, email_change_token_current, email_change_confirm_status, phone_change, phone_change_token, reauthentication_token, recovery_token)
+    VALUES
+      ('a0000000-0000-4000-8000-000000000001', 'eleanor.macgregor@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000002', 'fiona.henderson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000003', 'graham.nicholson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000004', 'rachel.donaldson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000005', 'margaret.campbell@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000010', 'sarah.mitchell@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000011', 'isla.robertson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000012', 'david.murray@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000013', 'heather.wallace@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000014', 'claire.thomson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000020', 'laura.paterson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000031', 'ryan.macleod@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000032', 'karen.stewart@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000040', 'priya.sharma@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000041', 'callum.reid@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000042', 'hannah.douglas@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000043', 'neil.crawford@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000044', 'megan.scott@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000045', 'aisha.begum@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000046', 'lucy.brennan@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000050', 'victoria.grant@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000051', 'jennifer.kerr@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000052', 'robyn.anderson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000053', 'aileen.fraser@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000060', 'james.crawford@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000061', 'gemma.taylor@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000062', 'scott.wilson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000063', 'amy.macdonald@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000064', 'emma.clark@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000065', 'kirsty.hamilton@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000066', 'nicola.johnstone@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000067', 'diane.morrison@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000068', 'brian.kelly@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000070', 'zara.ahmed@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000071', 'craig.menzies@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000072', 'rebecca.fleming@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000073', 'louise.baxter@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000074', 'mark.davidson@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000075', 'julie.connolly@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000076', 'thomas.rankin@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000077', 'patricia.renfrew@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000080', 'wendy.sutherland@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000081', 'ruth.mackenzie@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000082', 'susan.boyd@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000083', 'liam.obrien@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000084', 'ewan.douglas@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000085', 'chloe.picken@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000086', 'mary.buglass@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000087', 'daniel.morris@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000088', 'helen.goodey@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000090', 'alison.whitelaw@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000091', 'jenna.dempsey@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000092', 'nathan.kelly@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000093', 'andrea.ellis@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000094', 'gordon.hutton@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000095', 'priti.desilva@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000096', 'keith.dougall@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000097', 'tanya.reid@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000100', 'duncan.jardine@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000101', 'hazel.lucas@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000102', 'eilidh.fraser@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000103', 'morag.finnie@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000104', 'sophie.turnbull@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000105', 'mairi.brennan@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000106', 'faye.mcneill@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000107', 'diane.sinclair@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000108', 'beth.skinner@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000109', 'ross.taylor@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000110', 'fatima.cunningham@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000111', 'ian.fraser@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000112', 'cameron.ross@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000113', 'kevin.fowler@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000120', 'angela.fellowes@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000121', 'charlotte.parkes@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000122', 'ben.pentland@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000123', 'anya.masood@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000124', 'raj.hundal@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000125', 'peter.moses@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000126', 'samantha.grace@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000127', 'nadia.chalret@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000128', 'yasmin.aljeffri@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000130', 'natasha.middleton@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000131', 'amy.wenderling@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', ''),
+      ('a0000000-0000-4000-8000-000000000132', 'tamanna.uddin@mcrpathways.org', 'authenticated', 'authenticated', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '00000000-0000-0000-0000-000000000000', '', '', '', 0, '', '', '', '')
+    ON CONFLICT (id) DO NOTHING;
+
+    -- =========================================
+    -- Create auth.identities for GoTrue magic link support
+    -- =========================================
+    INSERT INTO auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+    SELECT gen_random_uuid(), u.id, u.id::text, 'email',
+      jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true, 'phone_verified', false),
+      now(), now(), now()
+    FROM auth.users u
+    WHERE u.id::text LIKE 'a0000000-0000-4000-8000-%'
+      AND NOT EXISTS (
+        SELECT 1 FROM auth.identities i WHERE i.user_id = u.id AND i.provider = 'email'
+      );
+
+    -- =========================================
+    -- Delete trigger-created profiles (handle_new_user creates bare-bones ones)
+    -- We need to replace them with our full org structure below
+    -- =========================================
+    DELETE FROM public.profiles WHERE id IN (
+      SELECT id FROM auth.users WHERE id::text LIKE 'a0000000-0000-4000-8000-%'
+    );
+
+
+    -- =========================================
     -- LEVEL 1: Chief Executive
     -- =========================================
     INSERT INTO public.profiles (id, full_name, email, job_title, department, region, line_manager_id, status, user_type, fte, is_line_manager, is_external, is_hr_admin, is_ld_admin, is_systems_admin)
@@ -291,6 +405,30 @@ BEGIN
       ('a0000000-0000-4000-8000-000000000130', 'Natasha Middleton', 'natasha.middleton@mcrpathways.org', 'MS Coordinator', 'delivery', 'england', 'a0000000-0000-4000-8000-000000000121', 'active', 'staff', 1.0, false, false, false, false, false),
       ('a0000000-0000-4000-8000-000000000131', 'Amy Wenderling', 'amy.wenderling@mcrpathways.org', 'MS Coordinator', 'delivery', 'england', 'a0000000-0000-4000-8000-000000000121', 'active', 'staff', 1.0, false, false, false, false, false),
       ('a0000000-0000-4000-8000-000000000132', 'Tamanna Uddin', 'tamanna.uddin@mcrpathways.org', 'MS Coordinator', 'delivery', 'england', 'a0000000-0000-4000-8000-000000000121', 'active', 'staff', 1.0, false, false, false, false, false);
+
+
+    -- =========================================
+    -- Sync JWT claims in raw_app_meta_data
+    -- (The handle_new_user trigger sets defaults when auth.users are created,
+    --  but we replaced those profiles with full org data above.
+    --  sync_profile_claims trigger only fires on UPDATE, not on INSERT-after-DELETE,
+    --  so we must manually sync the claims here.)
+    -- =========================================
+    UPDATE auth.users u
+    SET raw_app_meta_data = jsonb_build_object(
+      'provider', 'email',
+      'providers', '["email"]'::jsonb,
+      'user_type', p.user_type,
+      'status', p.status,
+      'department', p.department,
+      'is_hr_admin', p.is_hr_admin,
+      'is_ld_admin', p.is_ld_admin,
+      'is_systems_admin', p.is_systems_admin,
+      'induction_completed_at', p.induction_completed_at
+    )
+    FROM public.profiles p
+    WHERE u.id = p.id
+      AND u.id::text LIKE 'a0000000-0000-4000-8000-%';
 
   END IF;
 END $$;
