@@ -50,13 +50,19 @@ function revalidateOnboardingPaths(profileId?: string) {
 
 /**
  * Verify the current user can view/manage an employee's onboarding checklist.
- * Must be an HR admin or the employee's line manager.
+ * Must be an HR admin, the employee themselves, or the employee's line manager.
+ * Matches RLS policy: HR admin OR employee OR line manager.
  */
 async function verifyOnboardingAuthority(
   supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
   currentUserId: string,
   employeeId: string,
 ): Promise<{ authorised: boolean; isHRAdmin: boolean; error?: string }> {
+  // Employee viewing their own onboarding
+  if (currentUserId === employeeId) {
+    return { authorised: true, isHRAdmin: false };
+  }
+
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, is_hr_admin, line_manager_id")
@@ -73,7 +79,7 @@ async function verifyOnboardingAuthority(
     return {
       authorised: false,
       isHRAdmin: false,
-      error: "You are not authorised to manage this employee's onboarding",
+      error: "You are not authorised to view this employee's onboarding",
     };
   }
 
@@ -450,6 +456,12 @@ export async function createOnboardingChecklist(data: {
     return { success: false, error: "Employee, template, and start date are required" };
   }
 
+  // Validate start_date before any DB operations to prevent orphaned records
+  const startDate = new Date(data.start_date + "T12:00:00");
+  if (isNaN(startDate.getTime())) {
+    return { success: false, error: "Invalid start date" };
+  }
+
   // Fetch template items
   const { data: templateItems } = await supabase
     .from("onboarding_template_items")
@@ -499,7 +511,7 @@ export async function createOnboardingChecklist(data: {
   }
 
   // Create checklist items from template — resolve due dates and assignees
-  const startDate = new Date(data.start_date + "T12:00:00");
+  // startDate already validated above
   const lineManagerId = employee.line_manager_id as string | null;
 
   const checklistItems = templateItems.map((item) => {
