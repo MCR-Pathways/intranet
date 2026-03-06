@@ -580,4 +580,74 @@ export type HRNotificationType =
   | "fwr_trial_reminder"
   | "fwr_appeal_submitted"
   | "fwr_appeal_decided"
-  | "fwr_deadline_approaching";
+  | "fwr_deadline_approaching"
+  | "onboarding_started"
+  | "onboarding_completed";
+
+// =============================================
+// ONBOARDING TRACKER
+// =============================================
+
+export type OnboardingSection = "before_start" | "day_one" | "first_week" | "first_month" | "general";
+export type OnboardingAssigneeRole = "hr_admin" | "line_manager" | "employee" | "other";
+export type OnboardingChecklistStatus = "active" | "completed" | "cancelled";
+
+export interface OnboardingTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  item_count?: number;
+}
+
+export interface OnboardingTemplateItem {
+  id: string;
+  template_id: string;
+  title: string;
+  description: string | null;
+  section: OnboardingSection;
+  assignee_role: OnboardingAssigneeRole;
+  due_day_offset: number;
+  sort_order: number;
+}
+
+export interface OnboardingChecklist {
+  id: string;
+  profile_id: string;
+  template_id: string | null;
+  initiated_by: string;
+  status: OnboardingChecklistStatus;
+  start_date: string;
+  notes: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
+  created_at: string;
+}
+
+export interface OnboardingChecklistWithProgress extends OnboardingChecklist {
+  employee_name: string;
+  employee_avatar: string | null;
+  employee_job_title: string | null;
+  employee_department: string | null;
+  template_name: string | null;
+  total_items: number;
+  completed_items: number;
+  overdue_items: number;
+}
+
+export interface OnboardingChecklistItem {
+  id: string;
+  checklist_id: string;
+  title: string;
+  description: string | null;
+  section: OnboardingSection;
+  assignee_role: OnboardingAssigneeRole;
+  assignee_id: string | null;
+  due_date: string | null;
+  sort_order: number;
+  is_completed: boolean;
+  completed_at: string | null;
+  completed_by: string | null;
+}

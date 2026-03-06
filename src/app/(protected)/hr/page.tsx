@@ -25,6 +25,7 @@ import {
   Network,
   Briefcase,
   FolderTree,
+  UserPlus,
 } from "lucide-react";
 import { getOfficeHeadcount } from "@/app/(protected)/sign-in/actions";
 import { getWeekDates, getUKToday } from "@/lib/sign-in";
@@ -142,6 +143,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     pendingRTWResult,
     activeLeaversResult,
     pendingFWRResult,
+    activeOnboardingResult,
   ] = await Promise.all([
     supabase
       .from("leave_requests")
@@ -179,6 +181,10 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
       .from("flexible_working_requests")
       .select("id", { count: "exact", head: true })
       .in("status", ["submitted", "under_review"]),
+    supabase
+      .from("onboarding_checklists")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
   ]);
 
   return {
@@ -190,6 +196,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
     pendingRTW: pendingRTWResult.count ?? 0,
     activeLeavers: activeLeaversResult.count ?? 0,
     pendingFWR: pendingFWRResult.count ?? 0,
+    activeOnboardings: activeOnboardingResult.count ?? 0,
   };
 }
 
@@ -310,6 +317,15 @@ export default async function HRPage() {
             iconColour: "text-teal-600",
             valueColour: "text-teal-700",
           },
+          stats.activeOnboardings > 0 && {
+            title: "Active Onboardings",
+            value: stats.activeOnboardings,
+            subtitle: "in progress",
+            href: "/hr/onboarding",
+            icon: UserPlus,
+            iconColour: "text-emerald-600",
+            valueColour: "text-emerald-700",
+          },
         ];
         const actionCards = allCards.filter((c): c is StatCardProps => c !== false);
 
@@ -406,6 +422,13 @@ export default async function HRPage() {
             {/* HR-only admin items */}
             {isHRAdmin && (
               <>
+                <QuickActionCard
+                  title="Onboarding"
+                  description="Track new starter onboarding progress"
+                  href="/hr/onboarding"
+                  icon={UserPlus}
+                  isAdmin
+                />
                 <QuickActionCard
                   title="Absence & Sickness"
                   description="Record absences, manage return-to-work forms"

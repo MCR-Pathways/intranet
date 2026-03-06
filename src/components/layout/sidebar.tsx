@@ -52,7 +52,7 @@ function getNavigation(
   // HR admin items — filtered per role
   const hrAdminItems: NavChild[] = [];
 
-  // User Management + Onboarding: HR admin OR systems admin
+  // User Management: HR admin OR systems admin
   if (isHRAdmin || isSystemsAdmin) {
     hrAdminItems.push({ name: "User Management", href: "/hr/users" });
   }
@@ -60,6 +60,7 @@ function getNavigation(
   // HR-only admin items
   if (isHRAdmin) {
     hrAdminItems.push(
+      { name: "Onboarding", href: "/hr/onboarding" },
       { name: "Absence & Sickness", href: "/hr/absence" },
       { name: "Compliance", href: "/hr/compliance" },
       { name: "Key Dates", href: "/hr/key-dates" },
