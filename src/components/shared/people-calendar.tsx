@@ -9,6 +9,11 @@ import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 import type { WorkingLocationEntry } from "@/lib/sign-in";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
 interface PeopleCalendarProps {
@@ -57,12 +62,13 @@ export function PeopleCalendar({
   selectedDate,
   onMonthChange,
 }: PeopleCalendarProps) {
+  // Single Date reference for all "now" calculations within this render
+  const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
-  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }, [today]);
+  const [currentMonth, setCurrentMonth] = useState(() => today.getMonth());
+  const [currentYear, setCurrentYear] = useState(() => today.getFullYear());
 
   const holidayMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -176,10 +182,12 @@ export function PeopleCalendar({
     return days;
   }, [currentYear, currentMonth, todayStr, holidayMap, leaveLookup, locationLookup]);
 
-  const monthName = new Date(currentYear, currentMonth).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  });
+  // Year dropdown: starts from 2026 (system launch, no historical data).
+  // Google Calendar uses infinite chevron navigation; since we use a dropdown,
+  // extend to whichever is further: current year + 5 or the viewed year + 2.
+  const thisYear = today.getFullYear();
+  const maxYear = Math.max(thisYear + 5, currentYear + 2);
+  const yearOptions = Array.from({ length: maxYear - 2026 + 1 }, (_, i) => 2026 + i);
 
   function prevMonth() {
     const newMonth = currentMonth === 0 ? 11 : currentMonth - 1;
@@ -197,7 +205,19 @@ export function PeopleCalendar({
     onMonthChange?.(newYear, newMonth);
   }
 
-  const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+  const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
+
+  function handleMonthSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newMonth = Number(e.target.value);
+    setCurrentMonth(newMonth);
+    onMonthChange?.(currentYear, newMonth);
+  }
+
+  function handleYearSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newYear = Number(e.target.value);
+    setCurrentYear(newYear);
+    onMonthChange?.(newYear, currentMonth);
+  }
 
   function goToToday() {
     const now = new Date();
@@ -231,7 +251,24 @@ export function PeopleCalendar({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{monthName}</h3>
+          <select
+            value={currentMonth}
+            onChange={handleMonthSelect}
+            className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={i} value={i}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={currentYear}
+            onChange={handleYearSelect}
+            className="text-lg font-semibold bg-transparent border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
           {!isCurrentMonth && (
             <Button variant="ghost" size="sm" onClick={goToToday} type="button" className="text-xs">
               Today
@@ -271,12 +308,15 @@ export function PeopleCalendar({
             className={`bg-background min-h-[80px] p-1 ${
               !day.isCurrentMonth ? "opacity-40" : ""
             } ${day.isWeekend ? "bg-muted/30" : ""} ${
-              day.isToday ? "ring-2 ring-primary ring-inset" : ""
-            } ${day.isHoliday ? "bg-amber-50" : ""} ${
-              selectedDate === day.dateStr ? "bg-primary/5" : ""
+              day.isHoliday ? "bg-amber-50" : ""
+            } ${selectedDate === day.dateStr ? "bg-primary/5" : ""
             } ${onDayClick && day.isCurrentMonth ? "cursor-pointer hover:bg-accent/50 transition-colors" : ""}`}
           >
-            <div className="text-xs font-medium mb-1">
+            <div className={`text-xs font-medium mb-1 ${
+              day.isToday
+                ? "inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground"
+                : ""
+            }`}>
               {day.date.getDate()}
             </div>
             {day.isHoliday && (

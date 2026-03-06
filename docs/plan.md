@@ -28,6 +28,7 @@
 - Kiosk check-in for office arrival confirmation
 - Daily reconciliation banners, reports with CSV export
 - Quality pass: colour overhaul, Gemini fixes, interactive calendar redesign
+- UX polish: Default Week Editor moved to Settings page, Google Calendar-style dropdowns, calendar month/year navigation
 
 ### Induction System ✅
 - 9-step induction checklist with DB persistence (`/intranet/induction`)

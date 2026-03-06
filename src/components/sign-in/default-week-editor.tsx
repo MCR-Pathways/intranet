@@ -14,10 +14,18 @@ import {
   applyPatternsToWeek,
 } from "@/app/(protected)/sign-in/actions";
 import { getWeekDates } from "@/lib/sign-in";
-import { Repeat, Pencil, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Repeat, Pencil, X, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAYS = [1, 2, 3, 4, 5]; // Mon–Fri
 
 interface DefaultWeekEditorProps {
@@ -72,38 +80,43 @@ export function DefaultWeekEditor({
     setOtherTexts(new Map());
   };
 
-  const cycleLocation = (day: number) => {
-    const current = editPatterns.get(day);
-    const locationOrder: (WorkLocation | null)[] = [
-      ...LOCATIONS.map((l) => l.id),
-      null,
-    ];
-
-    const currentIndex = current
-      ? locationOrder.indexOf(current.location)
-      : -1;
-    const nextIndex = (currentIndex + 1) % locationOrder.length;
-    const nextLocation = locationOrder[nextIndex];
-
-    if (nextLocation === null) {
-      const newMap = new Map(editPatterns);
+  const setLocationForDay = (day: number, value: string) => {
+    const newMap = new Map(editPatterns);
+    if (value === "__none__") {
       newMap.delete(day);
-      setEditPatterns(newMap);
     } else {
-      const newMap = new Map(editPatterns);
+      const location = value as WorkLocation;
       newMap.set(day, {
-        location: nextLocation,
-        other_location: nextLocation === "other" ? (otherTexts.get(day) ?? null) : null,
+        location,
+        other_location: location === "other" ? (otherTexts.get(day) ?? null) : null,
       });
-      setEditPatterns(newMap);
     }
+    setEditPatterns(newMap);
+  };
+
+  const copyToAll = (sourceDay: number) => {
+    const source = editPatterns.get(sourceDay);
+    if (!source) return;
+    const newMap = new Map(editPatterns);
+    const newOtherTexts = new Map(otherTexts);
+    for (const day of WEEKDAYS) {
+      if (day === sourceDay) continue;
+      newMap.set(day, { ...source });
+      if (source.location === "other") {
+        newOtherTexts.set(day, otherTexts.get(sourceDay) ?? "");
+      } else {
+        newOtherTexts.delete(day);
+      }
+    }
+    setEditPatterns(newMap);
+    setOtherTexts(newOtherTexts);
   };
 
   const handleSave = () => {
     // Validate "other" locations have text
     for (const [day, entry] of editPatterns) {
       if (entry.location === "other" && !(otherTexts.get(day)?.trim())) {
-        toast.error(`Please specify the "Other" location for ${DAY_NAMES[day]}`);
+        toast.error(`Please specify the "Other" location for ${DAY_NAMES_SHORT[day]}`);
         return;
       }
     }
@@ -224,7 +237,7 @@ export function DefaultWeekEditor({
                     )}
                   >
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {DAY_NAMES[day]}
+                      {DAY_NAMES_SHORT[day]}
                     </span>
                     <config.icon className="h-3 w-3" />
                     <span>
@@ -244,11 +257,11 @@ export function DefaultWeekEditor({
             </p>
           )
         ) : (
-          /* Expanded/edit view */
+          /* Expanded/edit view — Google Calendar-style vertical rows */
           <div className="space-y-4">
-            {/* Day grid */}
-            <div className="grid grid-cols-5 gap-2">
-              {WEEKDAYS.map((day) => {
+            {/* Day rows */}
+            <div className="space-y-2">
+              {WEEKDAYS.map((day, index) => {
                 const entry = editPatterns.get(day);
                 const config = entry
                   ? LOCATION_CONFIG[entry.location] ?? NOT_SET_CONFIG
@@ -256,48 +269,72 @@ export function DefaultWeekEditor({
                 const isEmpty = !entry;
 
                 return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => cycleLocation(day)}
-                    className={cn(
-                      "rounded-lg p-3 text-center transition-all duration-150 min-h-[80px] flex flex-col items-center justify-center gap-1",
-                      isEmpty
-                        ? "bg-gray-50 text-gray-400 border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-100/50"
-                        : `${config.bgClass} ${config.textClass} hover:ring-2 hover:ring-primary/30`
+                  <div key={day} className="flex items-center gap-3">
+                    {/* Day label */}
+                    <span className="text-sm font-medium text-muted-foreground w-24 shrink-0">
+                      {DAY_NAMES_FULL[day]}
+                    </span>
+
+                    {/* Location dropdown */}
+                    <Select
+                      value={isEmpty ? "__none__" : entry.location}
+                      onValueChange={(value) => setLocationForDay(day, value)}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          "h-9 w-48 text-xs",
+                          isEmpty
+                            ? "border-dashed border-gray-300 text-gray-400"
+                            : `${config.bgClass} ${config.textClass} border-transparent`
+                        )}
+                      >
+                        <SelectValue placeholder="Not set" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Not set</SelectItem>
+                        {LOCATIONS.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.id}>
+                            <span className="flex items-center gap-2">
+                              <loc.icon className="h-3.5 w-3.5" />
+                              {loc.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* "Other" inline text input */}
+                    {entry?.location === "other" && (
+                      <Input
+                        placeholder="Where are you working?"
+                        value={otherTexts.get(day) ?? ""}
+                        onChange={(e) => {
+                          const newMap = new Map(otherTexts);
+                          newMap.set(day, e.target.value);
+                          setOtherTexts(newMap);
+                        }}
+                        maxLength={200}
+                        className="h-9 flex-1 text-xs"
+                      />
                     )}
-                  >
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {DAY_NAMES[day]}
-                    </span>
-                    <config.icon className={cn("h-5 w-5", isEmpty && "text-gray-300")} />
-                    <span className="text-xs font-medium">
-                      {isEmpty ? "Tap" : config.shortLabel}
-                    </span>
-                  </button>
+
+                    {/* Copy to all — shown on first row only */}
+                    {index === 0 && !isEmpty && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => copyToAll(day)}
+                        className="text-xs text-muted-foreground shrink-0"
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Copy to all
+                      </Button>
+                    )}
+                  </div>
                 );
               })}
             </div>
-
-            {/* "Other" text inputs for any day set to "other" */}
-            {WEEKDAYS.filter((day) => editPatterns.get(day)?.location === "other").map((day) => (
-              <div key={day} className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground w-10">
-                  {DAY_NAMES[day]}:
-                </span>
-                <Input
-                  placeholder="Where are you working?"
-                  value={otherTexts.get(day) ?? ""}
-                  onChange={(e) => {
-                    const newMap = new Map(otherTexts);
-                    newMap.set(day, e.target.value);
-                    setOtherTexts(newMap);
-                  }}
-                  maxLength={200}
-                  className="flex-1"
-                />
-              </div>
-            ))}
 
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
