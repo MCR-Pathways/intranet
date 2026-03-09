@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -116,6 +119,125 @@ export function ProfileDocumentsTab({
     });
   };
 
+  // Columns depend on isHRAdmin + handlers, so memoised inside the component
+  const columns = useMemo<ColumnDef<ComplianceDocumentRow>[]>(() => {
+    const base: ColumnDef<ComplianceDocumentRow>[] = [
+      {
+        accessorKey: "document_type_name",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Document" />
+        ),
+        cell: ({ row }) => {
+          const doc = row.original;
+          return (
+            <div>
+              <p className="font-medium">{doc.document_type_name}</p>
+              {doc.file_name && (
+                <p className="text-xs text-muted-foreground">{doc.file_name}</p>
+              )}
+              {doc.reference_number && (
+                <p className="text-xs text-muted-foreground">
+                  Ref: {doc.reference_number}
+                </p>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        enableSorting: false,
+      },
+      {
+        accessorKey: "expiry_date",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Expiry Date" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground whitespace-nowrap">
+            {formatHRDate(row.original.expiry_date)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "verified_at",
+        header: "Verified",
+        cell: ({ row }) =>
+          row.original.verified_at ? (
+            <Badge variant="success" className="text-xs">
+              Verified
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          ),
+        enableSorting: false,
+      },
+    ];
+
+    if (isHRAdmin) {
+      base.push({
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const doc = row.original;
+          return (
+            <div className="flex items-center gap-1">
+              {doc.file_path && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={() => handleDownload(doc.file_path!)}
+                  disabled={isPending}
+                  title="Download"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {!doc.verified_at && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-green-600 hover:text-green-700"
+                  onClick={() => handleVerify(doc.id)}
+                  disabled={isPending}
+                  title="Verify"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={() => setEditingDoc(doc)}
+                disabled={isPending}
+                title="Edit"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-destructive hover:text-destructive"
+                onClick={() => setDeleteTarget(doc)}
+                disabled={isPending}
+                title="Delete"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          );
+        },
+        enableSorting: false,
+      });
+    }
+
+    return base;
+  }, [isHRAdmin, isPending]);
+
   if (complianceDocuments.length === 0 && !isHRAdmin) {
     return (
       <Card>
@@ -155,111 +277,11 @@ export function ProfileDocumentsTab({
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="pb-2 font-medium text-muted-foreground">Document</th>
-                      <th className="pb-2 font-medium text-muted-foreground">Status</th>
-                      <th className="pb-2 font-medium text-muted-foreground">Issue Date</th>
-                      <th className="pb-2 font-medium text-muted-foreground">Expiry Date</th>
-                      <th className="pb-2 font-medium text-muted-foreground">Reference</th>
-                      <th className="pb-2 font-medium text-muted-foreground">Verified</th>
-                      {isHRAdmin && (
-                        <th className="pb-2 font-medium text-muted-foreground">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {complianceDocuments.map((doc) => (
-                      <tr
-                        key={doc.id}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="py-3 pr-4">
-                          <div>
-                            <p className="font-medium">{doc.document_type_name}</p>
-                            {doc.file_name && (
-                              <p className="text-xs text-muted-foreground">{doc.file_name}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={doc.status} />
-                        </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {formatHRDate(doc.issue_date)}
-                        </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {formatHRDate(doc.expiry_date)}
-                        </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {doc.reference_number || "—"}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {doc.verified_at ? (
-                            <Badge variant="success" className="text-xs">
-                              Verified
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        {isHRAdmin && (
-                          <td className="py-3">
-                            <div className="flex items-center gap-1">
-                              {doc.file_path && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2"
-                                  onClick={() => handleDownload(doc.file_path!)}
-                                  disabled={isPending}
-                                  title="Download"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              {!doc.verified_at && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-green-600 hover:text-green-700"
-                                  onClick={() => handleVerify(doc.id)}
-                                  disabled={isPending}
-                                  title="Verify"
-                                >
-                                  <CheckCircle className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2"
-                                onClick={() => setEditingDoc(doc)}
-                                disabled={isPending}
-                                title="Edit"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-destructive hover:text-destructive"
-                                onClick={() => setDeleteTarget(doc)}
-                                disabled={isPending}
-                                title="Delete"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={columns}
+                data={complianceDocuments}
+                emptyMessage="No compliance documents recorded yet."
+              />
               <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
