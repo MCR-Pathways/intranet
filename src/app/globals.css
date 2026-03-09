@@ -16,7 +16,7 @@
   --mcr-ivory: #FDF9EA;
 
   /* Semantic Colors - Light Mode */
-  --background: var(--mcr-ivory);
+  --background: #ffffff;
   --foreground: var(--mcr-dark-blue);
   --card: #ffffff;
   --card-foreground: var(--mcr-dark-blue);
@@ -24,13 +24,13 @@
   --popover-foreground: var(--mcr-dark-blue);
   --primary: var(--mcr-dark-blue);
   --primary-foreground: #ffffff;
-  --secondary: var(--mcr-orange);
-  --secondary-foreground: #ffffff;
-  --accent: var(--mcr-light-blue);
+  --secondary: #F1F5F9;
+  --secondary-foreground: var(--mcr-dark-blue);
+  --accent: #F1F5F9;
   --accent-foreground: var(--mcr-dark-blue);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
-  --muted: #f5f3eb;
+  --muted: #F6F8FA;
   --muted-foreground: #6b7280;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -56,13 +56,13 @@
   --popover-foreground: hsl(210, 20%, 95%);
   --primary: var(--mcr-dark-blue);
   --primary-foreground: #ffffff;
-  --secondary: var(--mcr-orange);
-  --secondary-foreground: #ffffff;
-  --accent: var(--mcr-light-blue);
-  --accent-foreground: var(--mcr-dark-blue);
+  --secondary: hsl(210, 20%, 18%);
+  --secondary-foreground: hsl(210, 20%, 95%);
+  --accent: hsl(210, 20%, 18%);
+  --accent-foreground: hsl(210, 20%, 95%);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
-  --muted: hsl(210, 50%, 15%);
+  --muted: hsl(210, 30%, 15%);
   --muted-foreground: hsl(210, 20%, 60%);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
