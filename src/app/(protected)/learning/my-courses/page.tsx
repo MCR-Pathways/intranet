@@ -265,10 +265,10 @@ export default async function MyCoursesPage() {
 
       {/* Alert for due soon courses */}
       {dueSoonCourses.length > 0 && overdueCourses.length === 0 && (
-        <Card className="border-secondary bg-secondary/5">
+        <Card className="border-mcr-orange bg-mcr-orange/5">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-secondary" />
+              <Clock className="h-5 w-5 text-mcr-orange" />
               <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
             </div>
             <CardDescription>

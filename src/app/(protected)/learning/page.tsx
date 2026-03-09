@@ -135,10 +135,10 @@ export default async function LearningPage() {
           </CardContent>
         </Card>
       ) : hasComplianceDue ? (
-        <Card className="border-secondary bg-secondary/5">
+        <Card className="border-mcr-orange bg-mcr-orange/5">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-secondary" />
+              <Shield className="h-5 w-5 text-mcr-orange" />
               <CardTitle className="text-lg">Compliance Training Due</CardTitle>
             </div>
             <CardDescription>
