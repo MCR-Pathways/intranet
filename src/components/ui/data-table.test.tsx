@@ -151,6 +151,33 @@ describe("DataTable", () => {
     expect(within(firstDataRowAfter).getByText("Edward")).toBeInTheDocument();
   });
 
+  it("returns to unsorted state on third click (three-state cycling)", async () => {
+    const user = userEvent.setup();
+
+    render(<DataTable columns={columns} data={testData} />);
+
+    const amountHeader = screen.getByRole("button", { name: /amount/i });
+
+    // Original order: 100, 200, 50, 300, 150
+    const getFirstRowText = () => {
+      const rows = screen.getAllByRole("row");
+      return rows[1].textContent;
+    };
+
+    // TanStack sorts numeric columns descending first by default
+    // Click 1: unsorted → descending (300 first)
+    await user.click(amountHeader);
+    expect(getFirstRowText()).toContain("300");
+
+    // Click 2: descending → ascending (50 first)
+    await user.click(amountHeader);
+    expect(getFirstRowText()).toContain("50");
+
+    // Click 3: ascending → unsorted (back to original order, Alice/100 first)
+    await user.click(amountHeader);
+    expect(getFirstRowText()).toContain("Alice");
+  });
+
   it("shows result count in footer", () => {
     render(<DataTable columns={columns} data={testData} />);
 

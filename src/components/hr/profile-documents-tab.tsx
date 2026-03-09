@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useCallback } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function ProfileDocumentsTab({
   const [editingDoc, setEditingDoc] = useState<ComplianceDocumentRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ComplianceDocumentRow | null>(null);
 
-  const handleVerify = (docId: string) => {
+  const handleVerify = useCallback((docId: string) => {
     startTransition(async () => {
       const result = await verifyComplianceDocument(docId);
       if (result.success) {
@@ -93,7 +93,7 @@ export function ProfileDocumentsTab({
         toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
-  };
+  }, [startTransition]);
 
   const handleDelete = () => {
     if (!deleteTarget) return;
@@ -108,7 +108,7 @@ export function ProfileDocumentsTab({
     });
   };
 
-  const handleDownload = (filePath: string) => {
+  const handleDownload = useCallback((filePath: string) => {
     startTransition(async () => {
       const result = await getComplianceDocumentUrl(filePath);
       if (result.success && result.url) {
@@ -117,7 +117,7 @@ export function ProfileDocumentsTab({
         toast.error(result.error || "Failed to download document");
       }
     });
-  };
+  }, [startTransition]);
 
   // Columns depend on isHRAdmin + handlers, so memoised inside the component
   const columns = useMemo<ColumnDef<ComplianceDocumentRow>[]>(() => {
@@ -236,7 +236,7 @@ export function ProfileDocumentsTab({
     }
 
     return base;
-  }, [isHRAdmin, isPending]);
+  }, [isHRAdmin, isPending, handleVerify, handleDownload]);
 
   if (complianceDocuments.length === 0 && !isHRAdmin) {
     return (
