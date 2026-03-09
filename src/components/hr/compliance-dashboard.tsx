@@ -2,9 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Select,
   SelectContent,
@@ -112,6 +116,83 @@ export function ComplianceDashboard({
       return matchesSearch && matchesStatus && matchesType && matchesDepartment;
     });
   }, [documents, searchQuery, statusFilter, typeFilter, departmentFilter]);
+
+  const columns = useMemo<ColumnDef<ComplianceDocumentRow>[]>(() => [
+    createRowNumberColumn<ComplianceDocumentRow>(),
+    {
+      accessorKey: "employee_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Employee" />
+      ),
+      cell: ({ row }) => {
+        const doc = row.original;
+        return (
+          <div>
+            <Link
+              href={`/hr/users/${doc.profile_id}?tab=documents`}
+              className="font-medium hover:underline"
+            >
+              {doc.employee_name}
+            </Link>
+            {doc.department && (
+              <p className="text-xs text-muted-foreground">
+                {DEPARTMENT_CONFIG[doc.department as Department]?.label ?? doc.department}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "document_type_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Document" />
+      ),
+      cell: ({ row }) => {
+        const doc = row.original;
+        return (
+          <div>
+            <p>{doc.document_type_name}</p>
+            {doc.reference_number && (
+              <p className="text-xs text-muted-foreground">
+                Ref: {doc.reference_number}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      enableSorting: false,
+    },
+    {
+      accessorKey: "expiry_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Expiry Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {formatHRDate(row.original.expiry_date)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "verified_at",
+      header: "Verified",
+      cell: ({ row }) =>
+        row.original.verified_at ? (
+          <Badge variant="success" className="text-xs">
+            Verified
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+      enableSorting: false,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -223,80 +304,11 @@ export function ComplianceDashboard({
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Employee</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Document</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Issue Date</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Expiry Date</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Reference</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Verified</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDocuments.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      No documents found
-                    </td>
-                  </tr>
-                ) : (
-                  filteredDocuments.map((doc) => (
-                    <tr
-                      key={doc.id}
-                      className="border-b border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/hr/users/${doc.profile_id}?tab=documents`}
-                          className="font-medium hover:underline"
-                        >
-                          {doc.employee_name}
-                        </Link>
-                        {doc.department && (
-                          <p className="text-xs text-muted-foreground">
-                            {DEPARTMENT_CONFIG[doc.department as Department]?.label ?? doc.department}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">{doc.document_type_name}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={doc.status} />
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatHRDate(doc.issue_date)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatHRDate(doc.expiry_date)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {doc.reference_number || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {doc.verified_at ? (
-                          <Badge variant="success" className="text-xs">
-                            Verified
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-            {filteredDocuments.length} of {documents.length} documents
-          </div>
+          <DataTable
+            columns={columns}
+            data={filteredDocuments}
+            emptyMessage="No documents found"
+          />
         </CardContent>
       </Card>
     </div>

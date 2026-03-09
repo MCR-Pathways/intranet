@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useCallback } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -93,7 +97,7 @@ export function AssetPageContent({
     });
   }, [assets, statusFilter, typeFilter, search]);
 
-  function handleRetire(assetId: string) {
+  const handleRetire = useCallback((assetId: string) => {
     startTransition(async () => {
       const result = await retireAsset(assetId);
       if (result.success) {
@@ -102,7 +106,110 @@ export function AssetPageContent({
         toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
-  }
+  }, [startTransition]);
+
+  const columns = useMemo<ColumnDef<AssetRow>[]>(() => {
+    const cols: ColumnDef<AssetRow>[] = [
+      createRowNumberColumn<AssetRow>(),
+      {
+        accessorKey: "asset_tag",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Tag" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.asset_tag}</span>
+        ),
+      },
+      {
+        accessorKey: "asset_type_name",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Type" />
+        ),
+      },
+      {
+        id: "make_model",
+        accessorFn: (row) => [row.make, row.model].filter(Boolean).join(" ") || null,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Make / Model" />
+        ),
+        cell: ({ getValue }) => (
+          <span>{getValue<string>() || "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge variant={STATUS_BADGE[row.original.status] ?? "outline"}>
+            {row.original.status === "in_repair"
+              ? "In Repair"
+              : row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
+          </Badge>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "current_assignee",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Assigned To" />
+        ),
+        cell: ({ row }) => (
+          <span>{row.original.current_assignee ?? "—"}</span>
+        ),
+      },
+    ];
+
+    if (isHRAdmin) {
+      cols.push({
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditAsset(asset)} title="Edit">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              {asset.status === "available" && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignTarget(asset)} title="Assign">
+                  <UserPlus className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {asset.status === "assigned" && asset.current_assignment_id && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReturnTarget(asset)} title="Return">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {(asset.status === "available" || asset.status === "in_repair") && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Retire">
+                      <Archive className="h-3.5 w-3.5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Retire asset {asset.asset_tag}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will mark the asset as retired. It will no longer be available for assignment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleRetire(asset.id)}>Retire</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+          );
+        },
+        enableSorting: false,
+      });
+    }
+
+    return cols;
+  }, [isHRAdmin, handleRetire]);
 
   return (
     <div className="space-y-6">
@@ -163,83 +270,7 @@ export function AssetPageContent({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tag</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Make / Model</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Assigned To</th>
-              {isHRAdmin && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={isHRAdmin ? 6 : 5} className="px-4 py-8 text-center text-muted-foreground">No assets found</td></tr>
-            ) : (
-              filtered.map((asset) => (
-                <tr key={asset.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs">{asset.asset_tag}</td>
-                  <td className="px-4 py-3">{asset.asset_type_name}</td>
-                  <td className="px-4 py-3">
-                    {[asset.make, asset.model].filter(Boolean).join(" ") || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={STATUS_BADGE[asset.status] ?? "outline"}>
-                      {asset.status === "in_repair" ? "In Repair" : asset.status.charAt(0).toUpperCase() + asset.status.slice(1)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">{asset.current_assignee ?? "—"}</td>
-                  {isHRAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditAsset(asset)} title="Edit">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        {asset.status === "available" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignTarget(asset)} title="Assign">
-                            <UserPlus className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {asset.status === "assigned" && asset.current_assignment_id && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReturnTarget(asset)} title="Return">
-                            <RotateCcw className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {(asset.status === "available" || asset.status === "in_repair") && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" title="Retire">
-                                <Archive className="h-3.5 w-3.5" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Retire asset {asset.asset_tag}?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will mark the asset as retired. It will no longer be available for assignment.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRetire(asset.id)}>Retire</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-xs text-muted-foreground">Showing {filtered.length} of {assets.length} assets</p>
+      <DataTable columns={columns} data={filtered} emptyMessage="No assets found" />
 
       {/* Dialogs */}
       <AssetDialog assetTypes={assetTypes} open={createOpen} onOpenChange={setCreateOpen} />

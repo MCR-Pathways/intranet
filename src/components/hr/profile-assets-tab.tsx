@@ -66,7 +66,7 @@ const historyColumns: ColumnDef<AssetAssignmentRow>[] = [
     ),
     cell: ({ row }) => (
       <span className="whitespace-nowrap">
-        {formatHRDate(row.getValue("assigned_date"))}
+        {formatHRDate(row.original.assigned_date)}
       </span>
     ),
   },
@@ -77,15 +77,14 @@ const historyColumns: ColumnDef<AssetAssignmentRow>[] = [
     ),
     cell: ({ row }) => (
       <span className="whitespace-nowrap">
-        {formatHRDate(row.getValue("returned_date"))}
+        {formatHRDate(row.original.returned_date)}
       </span>
     ),
   },
   {
     accessorKey: "condition_on_return",
     header: "Condition",
-    cell: ({ row }) =>
-      (row.getValue("condition_on_return") as string) ?? "—",
+    cell: ({ row }) => row.original.condition_on_return ?? "—",
     enableSorting: false,
   },
 ];
