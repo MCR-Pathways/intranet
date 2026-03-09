@@ -26,19 +26,16 @@ export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 30, 50],
 }: DataTablePaginationProps<TData>) {
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const rowCount = table.getFilteredRowModel().rows.length;
+  const startRow = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
+  const endRow = Math.min((pageIndex + 1) * pageSize, rowCount);
+
   return (
     <div className="flex items-center justify-between px-2 py-3">
       <div className="flex-1 text-xs text-muted-foreground">
-        Showing{" "}
-        {table.getFilteredRowModel().rows.length === 0
-          ? "0"
-          : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}–${Math.min(
-              (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length
-            )}`}{" "}
-        of {table.getFilteredRowModel().rows.length} result
-        {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
+        Showing {rowCount === 0 ? "0" : `${startRow}–${endRow}`} of{" "}
+        {rowCount} result{rowCount !== 1 ? "s" : ""}
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">

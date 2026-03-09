@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Tooltip,
   TooltipContent,
@@ -79,6 +81,47 @@ export function ComplianceStatusGrid({
     );
   }, [employees, searchQuery]);
 
+  /** Dynamic columns: Employee + one per document type. */
+  const columns = useMemo<ColumnDef<EmployeeComplianceRow>[]>(() => {
+    const cols: ColumnDef<EmployeeComplianceRow>[] = [
+      {
+        accessorKey: "full_name",
+        header: "Employee",
+        cell: ({ row }) => (
+          <Link
+            href={`/hr/users/${row.original.profile_id}?tab=documents`}
+            className="font-medium hover:underline whitespace-nowrap"
+          >
+            {row.original.full_name}
+          </Link>
+        ),
+        enableSorting: false,
+      },
+    ];
+
+    for (const dt of documentTypes) {
+      cols.push({
+        id: `doc_${dt.id}`,
+        header: () => (
+          <span className="text-xs whitespace-nowrap" title={dt.name}>
+            {dt.name.length > 12 ? dt.name.slice(0, 10) + "…" : dt.name}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const status = row.original.statuses[dt.id] ?? "missing";
+          return (
+            <div className="text-center">
+              <StatusDot status={status} typeName={dt.name} />
+            </div>
+          );
+        },
+        enableSorting: false,
+      });
+    }
+
+    return cols;
+  }, [documentTypes]);
+
   if (documentTypes.length === 0) {
     return null;
   }
@@ -102,67 +145,11 @@ export function ComplianceStatusGrid({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-2 pr-4 font-medium text-muted-foreground whitespace-nowrap">
-                  Employee
-                </th>
-                {documentTypes.map((dt) => (
-                  <th
-                    key={dt.id}
-                    className="pb-2 px-2 font-medium text-muted-foreground text-center"
-                    title={dt.name}
-                  >
-                    <span className="text-xs whitespace-nowrap">
-                      {/* Abbreviate long names */}
-                      {dt.name.length > 12
-                        ? dt.name.slice(0, 10) + "…"
-                        : dt.name}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEmployees.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={documentTypes.length + 1}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No employees found
-                  </td>
-                </tr>
-              ) : (
-                filteredEmployees.map((emp) => (
-                  <tr
-                    key={emp.profile_id}
-                    className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
-                  >
-                    <td className="py-2.5 pr-4">
-                      <Link
-                        href={`/hr/users/${emp.profile_id}?tab=documents`}
-                        className="font-medium hover:underline whitespace-nowrap"
-                      >
-                        {emp.full_name}
-                      </Link>
-                    </td>
-                    {documentTypes.map((dt) => {
-                      const status = emp.statuses[dt.id] ?? "missing";
-                      return (
-                        <td key={dt.id} className="py-2.5 px-2 text-center">
-                          <StatusDot status={status} typeName={dt.name} />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={filteredEmployees}
+          emptyMessage="No employees found"
+        />
 
         {/* Legend */}
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">

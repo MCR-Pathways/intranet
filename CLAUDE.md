@@ -176,6 +176,12 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders only to bottom edges.
 
+**Use `accessorFn` for computed sortable columns.** To create sortable computed columns (e.g. Priority = overdue/upcoming/completed), use `accessorFn` returning a numeric sort value while the `cell` renderer shows the visual display (badges/text). TanStack sorts by the accessor value, not the rendered output.
+
+**Keep multi-field search external to DataTable.** DataTable's `searchKey` filters one column. When search spans multiple fields (e.g. asset_tag + make + model + serial_number + assignee), keep the manual `useMemo` filter and pass pre-filtered data to DataTable.
+
+**Generate dynamic TanStack columns from data arrays.** When table columns depend on data (e.g. document types in a compliance grid), generate `ColumnDef[]` inside `useMemo` with the data array as a dependency. Use `for...of` to push dynamic columns onto a base array.
+
 **Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
 
 **Evaluate each table column's value before migrating.** Don't blindly migrate every column — fold sparse/secondary data into related cells (e.g. Reference → Document subtitle, Category → Type subtitle). Reduces visual noise and column count without losing information.
