@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useCallback } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -69,11 +73,7 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
     });
   }, [keyDates, showCompleted, typeFilter, search]);
 
-  const overdue = filtered.filter((kd) => !kd.is_completed && kd.due_date < today);
-  const upcoming = filtered.filter((kd) => !kd.is_completed && kd.due_date >= today);
-  const completed = filtered.filter((kd) => kd.is_completed);
-
-  function handleComplete(id: string) {
+  const handleComplete = useCallback((id: string) => {
     startTransition(async () => {
       const result = await completeKeyDate(id);
       if (result.success) {
@@ -82,9 +82,9 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
         toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
-  }
+  }, [startTransition]);
 
-  function handleDelete(id: string) {
+  const handleDelete = useCallback((id: string) => {
     startTransition(async () => {
       const result = await deleteKeyDate(id);
       if (result.success) {
@@ -93,80 +93,104 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
         toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
       }
     });
-  }
+  }, [startTransition]);
 
-  function renderTable(items: KeyDateRow[], label: string, highlight?: boolean) {
-    if (items.length === 0) return null;
-    return (
-      <div>
-        <h3 className={`text-sm font-semibold mb-2 ${highlight ? "text-destructive" : "text-muted-foreground"}`}>
-          {label} ({items.length})
-        </h3>
-        <div className="rounded-md border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Employee</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Type</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Title</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Due Date</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((kd) => (
-                <tr key={kd.id} className={`border-b last:border-0 hover:bg-muted/50 ${highlight ? "bg-red-50/50" : ""}`}>
-                  <td className="px-4 py-2">
-                    <Link href={`/hr/users/${kd.profile_id}?tab=overview`} className="hover:underline text-primary">
-                      {kd.employee_name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge variant="outline">{TYPE_LABELS[kd.date_type] ?? kd.date_type}</Badge>
-                  </td>
-                  <td className="px-4 py-2">{kd.title}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <span className={highlight ? "text-destructive font-medium" : ""}>
-                      {formatHRDate(kd.due_date)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-1">
-                      {!kd.is_completed && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleComplete(kd.id)} title="Mark complete" disabled={isPending}>
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(kd)} title="Edit">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Delete">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete key date?</AlertDialogTitle>
-                            <AlertDialogDescription>This will permanently remove this key date.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(kd.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
+  const columns = useMemo<ColumnDef<KeyDateRow>[]>(() => [
+    createRowNumberColumn<KeyDateRow>(),
+    {
+      accessorKey: "employee_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Employee" />
+      ),
+      cell: ({ row }) => (
+        <Link href={`/hr/users/${row.original.profile_id}?tab=overview`} className="hover:underline text-primary">
+          {row.original.employee_name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "date_type",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge variant="outline">{TYPE_LABELS[row.original.date_type] ?? row.original.date_type}</Badge>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "title",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Title" />
+      ),
+    },
+    {
+      accessorKey: "due_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Due Date" />
+      ),
+      cell: ({ row }) => (
+        <span className={`whitespace-nowrap ${!row.original.is_completed && row.original.due_date < today ? "text-destructive font-medium" : ""}`}>
+          {formatHRDate(row.original.due_date)}
+        </span>
+      ),
+    },
+    {
+      id: "priority",
+      accessorFn: (row) => {
+        if (row.is_completed) return 2;
+        return row.due_date < today ? 0 : 1;
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Priority" />
+      ),
+      cell: ({ row }) => {
+        const item = row.original;
+        if (item.is_completed) {
+          return <Badge variant="outline" className="text-xs">Completed</Badge>;
+        }
+        if (item.due_date < today) {
+          return <Badge variant="destructive" className="text-xs">Overdue</Badge>;
+        }
+        return <Badge className="text-xs">Upcoming</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => {
+        const kd = row.original;
+        return (
+          <div className="flex gap-1">
+            {!kd.is_completed && (
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleComplete(kd.id)} title="Mark complete" disabled={isPending}>
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(kd)} title="Edit">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Delete">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete key date?</AlertDialogTitle>
+                  <AlertDialogDescription>This will permanently remove this key date.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(kd.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+  ], [today, isPending, handleComplete, handleDelete]);
 
   return (
     <div className="space-y-6">
@@ -191,14 +215,13 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
         </Button>
       </div>
 
-      {/* Sections */}
-      {renderTable(overdue, "Overdue", true)}
-      {renderTable(upcoming, "Upcoming")}
-      {showCompleted && renderTable(completed, "Completed")}
-
-      {overdue.length === 0 && upcoming.length === 0 && (
-        <p className="text-center text-muted-foreground py-8">No key dates found</p>
-      )}
+      {/* Table */}
+      <DataTable
+        columns={columns}
+        data={filtered}
+        emptyMessage="No key dates found"
+        initialSorting={[{ id: "priority", desc: false }]}
+      />
 
       {/* Dialogs */}
       <KeyDateDialog
