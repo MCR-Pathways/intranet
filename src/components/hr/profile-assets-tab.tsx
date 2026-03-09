@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { AssetReturnDialog } from "@/components/hr/asset-return-dialog";
 import { formatHRDate } from "@/lib/hr";
 import { RotateCcw, Package } from "lucide-react";
@@ -40,6 +43,52 @@ interface ProfileAssetsTabProps {
   assetTypes?: AssetType[];
   isHRAdmin?: boolean;
 }
+
+const historyColumns: ColumnDef<AssetAssignmentRow>[] = [
+  {
+    accessorKey: "asset_tag",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Asset" />
+    ),
+    cell: ({ row }) => (
+      <div>
+        <span className="font-mono text-xs">{row.original.asset_tag}</span>
+        <span className="text-muted-foreground ml-2">
+          {[row.original.make, row.original.model].filter(Boolean).join(" ")}
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "assigned_date",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Assigned" />
+    ),
+    cell: ({ row }) => (
+      <span className="whitespace-nowrap">
+        {formatHRDate(row.getValue("assigned_date"))}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "returned_date",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Returned" />
+    ),
+    cell: ({ row }) => (
+      <span className="whitespace-nowrap">
+        {formatHRDate(row.getValue("returned_date"))}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "condition_on_return",
+    header: "Condition",
+    cell: ({ row }) =>
+      (row.getValue("condition_on_return") as string) ?? "—",
+    enableSorting: false,
+  },
+];
 
 export function ProfileAssetsTab({
   profileName,
@@ -98,35 +147,11 @@ export function ProfileAssetsTab({
       {history.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4">Assignment History</h3>
-          <div className="rounded-md border overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Asset</th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Assigned</th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Returned</th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Condition</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((a) => (
-                  <tr key={a.id} className="border-b last:border-0">
-                    <td className="px-4 py-2">
-                      <span className="font-mono text-xs">{a.asset_tag}</span>
-                      <span className="text-muted-foreground ml-2">
-                        {[a.make, a.model].filter(Boolean).join(" ")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">{formatHRDate(a.assigned_date)}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{formatHRDate(a.returned_date)}</td>
-                    <td className="px-4 py-2">
-                      {a.condition_on_return ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={historyColumns}
+            data={history}
+            emptyMessage="No assignment history"
+          />
         </div>
       )}
 

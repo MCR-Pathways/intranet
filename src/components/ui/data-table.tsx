@@ -27,9 +27,9 @@ import {
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 interface DataTableProps<TData, TValue> {
-  /** Column definitions for the table */
+  /** Column definitions for the table. Memoise with useMemo in parent to avoid re-initialisation. */
   columns: ColumnDef<TData, TValue>[];
-  /** Data array to display */
+  /** Data array to display. Memoise with useMemo if derived from a transformation. */
   data: TData[];
   /** Key in the data to use for the global search filter */
   searchKey?: string;
