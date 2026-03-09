@@ -132,8 +132,8 @@ export function AssetPageContent({
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Make / Model" />
         ),
-        cell: ({ row }) => (
-          <span>{[row.original.make, row.original.model].filter(Boolean).join(" ") || "—"}</span>
+        cell: ({ getValue }) => (
+          <span>{getValue<string>() || "—"}</span>
         ),
       },
       {
