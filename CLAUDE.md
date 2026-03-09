@@ -171,3 +171,9 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Use `bg-card` not `bg-background` for dialogs, sheets, and modals.** When `--background` is a visible grey (e.g. #F2F4F7), form inputs (which also use `bg-background`) become invisible inside modals — zero contrast. Facebook, GitHub, and Vercel all use white for modal surfaces. Shadcn's default Dialog uses `bg-background` because their default background is white, but when customising to a grey page background, modals must switch to `bg-card`.
 
 **Turbopack aggressively caches CSS custom properties.** After editing `globals.css`, clearing `.next/` and restarting the dev server is required — `touch` and hot reload alone won't invalidate cached CSS variable values. Always hard-refresh (Cmd+Shift+R) after restarting.
+
+**Use TanStack Table + Shadcn primitives for data tables.** `@tanstack/react-table` provides headless data management (sorting, filtering, pagination) while Shadcn `<Table>` primitives handle styling. Extract row actions into separate `<RowActions>` components for `ColumnDef.cell` renderers — keeps column definitions clean and action state isolated.
+
+**Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders only to bottom edges.
+
+**Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
