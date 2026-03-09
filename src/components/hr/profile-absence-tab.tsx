@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +50,6 @@ import {
   Info,
   Stethoscope,
 } from "lucide-react";
-import { useTransition } from "react";
 
 // =============================================
 // TYPES
@@ -90,12 +92,6 @@ export function ProfileAbsenceTab({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Sort by start_date descending (most recent first)
-  const sorted = useMemo(
-    () => [...absenceRecords].sort((a, b) => b.start_date.localeCompare(a.start_date)),
-    [absenceRecords],
-  );
-
   // Wellbeing prompt — HR admin only, computed from sick absences in last 12 months
   const wellbeingPrompt = useMemo(() => {
     if (!isHRAdmin || absenceRecords.length === 0) return null;
@@ -117,6 +113,143 @@ export function ProfileAbsenceTab({
       }
     });
   }
+
+  // Columns depend on isManager/isHRAdmin + state setters
+  const columns = useMemo<ColumnDef<AbsenceRecordRow>[]>(() => [
+    {
+      accessorKey: "start_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Dates" />
+      ),
+      cell: ({ row }) => {
+        const record = row.original;
+        return (
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <span>
+              {formatHRDate(record.start_date)} – {formatHRDate(record.end_date)}
+            </span>
+            {record.is_long_term && (
+              <Badge variant="outline" className="text-amber-700 border-amber-300 text-xs">
+                Long-term
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "absence_type",
+      header: "Type",
+      cell: ({ row }) => {
+        const record = row.original;
+        const typeConfig = ABSENCE_TYPE_CONFIG[record.absence_type as keyof typeof ABSENCE_TYPE_CONFIG];
+        const categoryConfig = record.sickness_category
+          ? SICKNESS_CATEGORY_CONFIG[record.sickness_category as keyof typeof SICKNESS_CATEGORY_CONFIG]
+          : null;
+        return (
+          <div>
+            {typeConfig ? (
+              <Badge className={`${typeConfig.bgColour} ${typeConfig.colour} border-0`}>
+                {typeConfig.label}
+              </Badge>
+            ) : (
+              <span>{record.absence_type}</span>
+            )}
+            {categoryConfig && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {categoryConfig.label}
+              </p>
+            )}
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "total_days",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Days" />
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {formatLeaveDays(row.original.total_days)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "rtw_status",
+      header: "RTW",
+      cell: ({ row }) => {
+        const rtwStatus = row.original.rtw_status;
+        const rtwConfig = rtwStatus ? RTW_STATUS_CONFIG[rtwStatus] : null;
+        return rtwConfig ? (
+          <Badge className={`${rtwConfig.bgColour} ${rtwConfig.colour} border-0`}>
+            {rtwConfig.label}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => {
+        const record = row.original;
+        const rtwStatus = record.rtw_status;
+        return (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* View/Complete RTW — managers and HR */}
+                {(isManager || isHRAdmin) && (
+                  <DropdownMenuItem onSelect={() => setRtwTarget(record)}>
+                    {record.rtw_form_id ? (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View RTW Form
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Complete RTW
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                )}
+
+                {/* Employee can view RTW if submitted/locked */}
+                {!isManager && !isHRAdmin && rtwStatus && rtwStatus !== "draft" && (
+                  <DropdownMenuItem onSelect={() => setRtwTarget(record)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View RTW Form
+                  </DropdownMenuItem>
+                )}
+
+                {/* Delete — HR admin only */}
+                {isHRAdmin && (
+                  <DropdownMenuItem
+                    onSelect={() => setDeleteTarget(record)}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+  ], [isManager, isHRAdmin]);
 
   return (
     <div className="space-y-6">
@@ -172,125 +305,13 @@ export function ProfileAbsenceTab({
         </div>
       )}
 
-      {/* Absence records list */}
-      {sorted.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <Stethoscope className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">No absence records</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Dates</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Type</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Days</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Category</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">RTW</th>
-                <th className="text-right px-4 py-2 font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((record) => {
-                const typeConfig = ABSENCE_TYPE_CONFIG[record.absence_type as keyof typeof ABSENCE_TYPE_CONFIG];
-                const rtwStatus = record.rtw_status;
-                const rtwConfig = rtwStatus ? RTW_STATUS_CONFIG[rtwStatus] : null;
-                const categoryConfig = record.sickness_category
-                  ? SICKNESS_CATEGORY_CONFIG[record.sickness_category as keyof typeof SICKNESS_CATEGORY_CONFIG]
-                  : null;
-
-                return (
-                  <tr key={record.id} className="border-b last:border-0">
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span>{formatHRDate(record.start_date)} – {formatHRDate(record.end_date)}</span>
-                        {record.is_long_term && (
-                          <Badge variant="outline" className="text-amber-700 border-amber-300 text-xs">
-                            Long-term
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      {typeConfig ? (
-                        <Badge className={`${typeConfig.bgColour} ${typeConfig.colour} border-0`}>
-                          {typeConfig.label}
-                        </Badge>
-                      ) : (
-                        record.absence_type
-                      )}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {formatLeaveDays(record.total_days)}
-                    </td>
-                    <td className="px-4 py-2">
-                      {categoryConfig?.label ?? "—"}
-                    </td>
-                    <td className="px-4 py-2">
-                      {rtwConfig ? (
-                        <Badge className={`${rtwConfig.bgColour} ${rtwConfig.colour} border-0`}>
-                          {rtwConfig.label}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {/* View/Complete RTW — managers and HR */}
-                          {(isManager || isHRAdmin) && (
-                            <DropdownMenuItem onSelect={() => setRtwTarget(record)}>
-                              {record.rtw_form_id ? (
-                                <>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View RTW Form
-                                </>
-                              ) : (
-                                <>
-                                  <ClipboardCheck className="h-4 w-4 mr-2" />
-                                  Complete RTW
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                          )}
-
-                          {/* Employee can view RTW if submitted/locked */}
-                          {!isManager && !isHRAdmin && rtwStatus && rtwStatus !== "draft" && (
-                            <DropdownMenuItem onSelect={() => setRtwTarget(record)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View RTW Form
-                            </DropdownMenuItem>
-                          )}
-
-                          {/* Delete — HR admin only */}
-                          {isHRAdmin && (
-                            <DropdownMenuItem
-                              onSelect={() => setDeleteTarget(record)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Absence records table */}
+      <DataTable
+        columns={columns}
+        data={absenceRecords}
+        emptyMessage="No absence records"
+        initialSorting={[{ id: "start_date", desc: true }]}
+      />
 
       {/* Record Absence Dialog */}
       <RecordAbsenceDialog
