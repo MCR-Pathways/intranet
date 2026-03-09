@@ -233,7 +233,7 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
             <Link
               href="/intranet/induction"
               onClick={onNavClick}
-              className="mb-4 flex items-center gap-3 rounded-lg bg-secondary/10 px-3 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/20"
+              className="mb-4 flex items-center gap-3 rounded-lg bg-mcr-orange/10 px-3 py-3 text-sm font-medium text-mcr-orange transition-colors hover:bg-mcr-orange/20"
             >
               <ClipboardList className="h-5 w-5 shrink-0" />
               <div>
@@ -249,7 +249,7 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
                 <Link
                   href="/intranet/induction"
                   onClick={onNavClick}
-                  className="mb-4 flex items-center justify-center rounded-lg bg-secondary/10 p-2 text-secondary transition-colors hover:bg-secondary/20"
+                  className="mb-4 flex items-center justify-center rounded-lg bg-mcr-orange/10 p-2 text-mcr-orange transition-colors hover:bg-mcr-orange/20"
                 >
                   <ClipboardList className="h-5 w-5 shrink-0" />
                 </Link>

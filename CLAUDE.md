@@ -167,3 +167,7 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Sign-in module key files**: Shared types (`SignInEntry`, `TeamSignInEntry`) and config (`LOCATION_CONFIG`, formatters) in `src/lib/sign-in.ts`. `LocationBadge` component in `src/components/sign-in/location-badge.tsx`. Server actions in `src/app/(protected)/sign-in/actions.ts` — `getSignInHistory()` (single query, splits today/history), `getTeamMemberHistory()` (single member with line-manager verification), `getTeamSignInsToday()`, `getTeamSignInHistory()` (date-range report).
 
 **Don't block user actions on non-critical follow-up failures.** When `refreshSession()` fails after induction completion, log a warning but don't return an error — the core action (profile update) succeeded. The stale JWT resolves on the next natural token refresh.
+
+**Use `bg-card` not `bg-background` for dialogs, sheets, and modals.** When `--background` is a visible grey (e.g. #F2F4F7), form inputs (which also use `bg-background`) become invisible inside modals — zero contrast. Facebook, GitHub, and Vercel all use white for modal surfaces. Shadcn's default Dialog uses `bg-background` because their default background is white, but when customising to a grey page background, modals must switch to `bg-card`.
+
+**Turbopack aggressively caches CSS custom properties.** After editing `globals.css`, clearing `.next/` and restarting the dev server is required — `touch` and hot reload alone won't invalidate cached CSS variable values. Always hard-refresh (Cmd+Shift+R) after restarting.

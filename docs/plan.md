@@ -174,6 +174,8 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [x] Expand test coverage (~20% — 48 test files, 1040 tests / ~236 source files). All 9 phases complete (PRs #52, #53, #56, #57, #58, #61, #73). See [docs/testing-plan.md](./testing-plan.md).
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
+- [x] Colour/UX overhaul: Realigned Shadcn semantic tokens (`--secondary`, `--accent`, `--muted`) from brand colours to neutral greys (#F1F5F9). Background from ivory (#FDF9EA) to cool grey (#F2F4F7, Facebook's --web-wash). Muted from warm (#f5f3eb) to cool (#F0F2F5, Facebook's --comment-background). 4 components migrated to direct `--mcr-*` brand references. Dialogs/sheets fixed to `bg-card` (white) for proper form input contrast. ~100+ components auto-updated via CSS cascade. Industry-validated against GitHub Primer, Vercel Geist, Stripe, Facebook.
+- [ ] Table standardisation: Create shared `table.tsx` component, migrate 17 hand-built tables (separate PRs per module)
 - [ ] Mobile responsiveness (currently desktop/laptop only)
 
 ---
