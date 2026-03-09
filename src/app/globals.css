@@ -16,7 +16,7 @@
   --mcr-ivory: #FDF9EA;
 
   /* Semantic Colors - Light Mode */
-  --background: #ffffff;
+  --background: #F2F4F7;
   --foreground: var(--mcr-dark-blue);
   --card: #ffffff;
   --card-foreground: var(--mcr-dark-blue);
@@ -30,7 +30,7 @@
   --accent-foreground: var(--mcr-dark-blue);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
-  --muted: #F6F8FA;
+  --muted: #F0F2F5;
   --muted-foreground: #6b7280;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;

@@ -217,7 +217,7 @@ Database tables created in migration `00024`, extended in `00030`.
 ### Onboarding Progress Tracker ✅ DONE
 - **Routes:** `/hr/onboarding` (dashboard), `/hr/onboarding/[checklistId]` (detail), `/hr/onboarding/templates` (template management)
 - **Components:** `src/components/hr/onboarding-dashboard-content.tsx`, `src/components/hr/onboarding-checklist-content.tsx`, `src/components/hr/onboarding-template-management.tsx`, `src/components/hr/onboarding-progress-bar.tsx`, `src/components/hr/create-onboarding-dialog.tsx`, `src/components/hr/profile-onboarding-tab.tsx`
-- **Actions:** `src/app/(protected)/hr/onboarding/actions.ts` (16 server actions)
+- **Actions:** `src/app/(protected)/hr/onboarding/actions.ts` (18 server actions)
 - **Migration:** `supabase/migrations/00047_onboarding_tracker.sql` — 4 tables (`onboarding_templates`, `onboarding_template_items`, `onboarding_checklists`, `onboarding_checklist_items`), indexes, RLS policies, updated_at trigger
 - **Capabilities:**
   - Configurable templates with sections (Before Start, Day One, First Week, First Month, General) and assignee roles (HR Admin, Line Manager, Employee, Other)
@@ -299,9 +299,10 @@ Database tables already created in migration `00024`. Larger features for later.
 | Server actions | `src/app/(protected)/hr/*/actions.ts` |
 | Components | `src/components/hr/*.tsx` |
 | DB types | `src/types/database.types.ts` |
-| Migrations | `supabase/migrations/00024–00032`, `00047` (onboarding) |
+| Migrations | `supabase/migrations/00024–00032`, `00037` (FWR), `00038–00040` (permissions/departments), `00044` (decouple permissions), `00047` (onboarding) |
 | Proxy | `src/proxy.ts` (HR access: staff only) |
-| Tests | `src/app/(protected)/hr/users/actions.test.ts` |
+| Tests | `src/app/(protected)/hr/{absence,assets,compliance,departments,key-dates,leave,leaving,profile,users}/actions.test.ts` (9 files). **Missing:** flexible-working, onboarding |
+| Component tests | `src/components/hr/{department-management-content,leave-request-table,org-chart-content,org-chart-person-card,permissions-edit-dialog,person-combobox,return-to-work-form,team-combobox}.test.tsx` (8 files) |
 
 ---
 
