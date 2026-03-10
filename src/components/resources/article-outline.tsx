@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { extractHeadings, type HeadingItem } from "@/lib/tiptap";
 import type { TiptapDocument } from "@/lib/tiptap";
@@ -15,7 +15,7 @@ interface ArticleOutlineProps {
  * Hidden on smaller screens and when fewer than 2 headings exist.
  */
 export function ArticleOutline({ contentJson }: ArticleOutlineProps) {
-  const headings = extractHeadings(contentJson);
+  const headings = useMemo(() => extractHeadings(contentJson), [contentJson]);
   const [activeId, setActiveId] = useState<string>("");
   const observerRef = useRef<IntersectionObserver | null>(null);
 
