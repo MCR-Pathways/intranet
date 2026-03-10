@@ -69,11 +69,11 @@ export function ArticleEditorPage({
           toast.success(
             status === "published" ? "Article published" : "Draft saved"
           );
-          // Navigate to reading view — use window.location to avoid Radix conflicts
+          // Navigate to reading view — full reload ensures fresh server data
+          const article =
+            "article" in result ? (result.article as Record<string, unknown>) : null;
           const slug =
-            "article" in result && result.article
-              ? (result.article as { slug: string }).slug
-              : null;
+            article && typeof article.slug === "string" ? article.slug : null;
           if (slug) {
             window.location.href = `/intranet/resources/${category.slug}/${slug}`;
           } else {
