@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import { isValidHttpUrl, linkifyText } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { CALLOUT_CONFIG } from "@/lib/tiptap-callout";
+import { extractHeadings } from "@/lib/tiptap";
 import type { TiptapDocument, TiptapNode } from "@/lib/tiptap";
 
 interface ArticleRendererProps {
@@ -30,16 +31,37 @@ export function ArticleRenderer({ json, fallback }: ArticleRendererProps) {
 
   const doc = json as TiptapDocument;
 
+  // Build heading ID list for anchor links (consistent with ArticleOutline)
+  const headings = extractHeadings(doc);
+  let headingIndex = 0;
+
   return (
     <div className="prose prose-sm max-w-none break-words">
-      {doc.content?.map((node, i) => (
-        <RenderNode key={i} node={node} />
-      ))}
+      {doc.content?.map((node, i) => {
+        // Track heading index to assign matching IDs
+        if (node.type === "heading") {
+          const level = (node.attrs?.level as number) ?? 2;
+          if ((level === 2 || level === 3) && headingIndex < headings.length) {
+            const heading = headings[headingIndex];
+            headingIndex++;
+            return (
+              <RenderNode key={i} node={node} headingId={heading.id} />
+            );
+          }
+        }
+        return <RenderNode key={i} node={node} />;
+      })}
     </div>
   );
 }
 
-function RenderNode({ node }: { node: TiptapNode }) {
+function RenderNode({
+  node,
+  headingId,
+}: {
+  node: TiptapNode;
+  headingId?: string;
+}) {
   switch (node.type) {
     case "paragraph":
       return (
@@ -56,8 +78,22 @@ function RenderNode({ node }: { node: TiptapNode }) {
         <RenderInline key={i} node={child} />
       ));
       if (level === 2)
-        return <h2 className="text-xl font-bold mt-6 mb-2">{children}</h2>;
-      return <h3 className="text-lg font-semibold mt-4 mb-1">{children}</h3>;
+        return (
+          <h2
+            id={headingId}
+            className="text-xl font-bold mt-6 mb-2 scroll-mt-20"
+          >
+            {children}
+          </h2>
+        );
+      return (
+        <h3
+          id={headingId}
+          className="text-lg font-semibold mt-4 mb-1 scroll-mt-20"
+        >
+          {children}
+        </h3>
+      );
     }
 
     case "blockquote":
