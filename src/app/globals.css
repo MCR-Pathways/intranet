@@ -37,6 +37,7 @@
   --border: #e5e7eb;
   --input: #e5e7eb;
   --ring: var(--mcr-dark-blue);
+  --table-header: #E4E7EC;
 
   /* Status Colors */
   --status-active: #22c55e;
@@ -69,6 +70,7 @@
   --border: hsl(210, 50%, 20%);
   --input: hsl(210, 50%, 20%);
   --ring: var(--mcr-light-blue);
+  --table-header: hsl(210, 30%, 18%);
 }
 
 @theme inline {
@@ -94,6 +96,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-table-header: var(--table-header);
 
   /* MCR Brand Colors */
   --color-mcr-dark-blue: var(--mcr-dark-blue);

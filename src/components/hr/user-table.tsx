@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { type ColumnDef } from "@tanstack/react-table";
 import {
   completeUserInduction,
   resetUserInduction,
@@ -13,11 +14,13 @@ import { PermissionsEditDialog } from "./permissions-edit-dialog";
 import type { PersonOption } from "./person-combobox";
 import type { TeamOption } from "./team-combobox";
 import type { EmployeeProfile } from "@/types/hr";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Select,
   SelectContent,
@@ -60,6 +63,10 @@ import {
   type Region,
 } from "@/lib/hr";
 import { toast } from "sonner";
+
+// =============================================
+// TYPES
+// =============================================
 
 /** Profile shape returned by the user management query. */
 export interface UserTableProfile {
@@ -118,6 +125,82 @@ interface UserTableProps {
   teams?: TeamOption[];
 }
 
+// =============================================
+// ROW ACTIONS
+// =============================================
+
+function UserRowActions({
+  profile,
+  isCurrentUserHRAdmin,
+  onEditProfile,
+  onEditEmployment,
+  onEditPermissions,
+  onCompleteInduction,
+  onResetInduction,
+}: {
+  profile: UserTableProfile;
+  isCurrentUserHRAdmin: boolean;
+  onEditProfile: (p: UserTableProfile) => void;
+  onEditEmployment: (p: UserTableProfile) => void;
+  onEditPermissions: (p: UserTableProfile) => void;
+  onCompleteInduction: (p: UserTableProfile) => void;
+  onResetInduction: (p: UserTableProfile) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <MoreHorizontal className="h-4 w-4" />
+          <span className="sr-only">Actions for {profile.full_name}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild>
+          <Link href={`/hr/users/${profile.id}`}>
+            <Eye className="h-4 w-4" />
+            View Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => onEditProfile(profile)}>
+          <Pencil className="h-4 w-4" />
+          Edit Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEditEmployment(profile)}>
+          <Briefcase className="h-4 w-4" />
+          Edit Employment
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEditPermissions(profile)}>
+          <Shield className="h-4 w-4" />
+          Edit Permissions
+        </DropdownMenuItem>
+        {isCurrentUserHRAdmin && !profile.induction_completed_at && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onCompleteInduction(profile)}>
+              <CheckCircle className="h-4 w-4" />
+              Complete Induction
+            </DropdownMenuItem>
+          </>
+        )}
+        {isCurrentUserHRAdmin && profile.induction_completed_at && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onResetInduction(profile)}>
+              <RotateCcw className="h-4 w-4" />
+              Reset Induction
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// =============================================
+// COMPONENT
+// =============================================
+
 export function UserTable({
   profiles,
   currentUserId,
@@ -139,6 +222,7 @@ export function UserTable({
   const [completeTarget, setCompleteTarget] = useState<UserTableProfile | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // External multi-field search + filters
   const filteredProfiles = useMemo(() => {
     return profiles.filter((profile) => {
       const matchesSearch =
@@ -210,6 +294,105 @@ export function UserTable({
     created_at: p.created_at,
   });
 
+  // Column definitions
+  const columns = useMemo<ColumnDef<UserTableProfile>[]>(() => [
+    createRowNumberColumn<UserTableProfile>(),
+    {
+      accessorKey: "full_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Person" />
+      ),
+      cell: ({ row }) => {
+        const profile = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.full_name} />
+              <AvatarFallback className="text-xs">
+                {getInitials(profile.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href={`/hr/users/${profile.id}`}
+                  className="font-medium hover:underline truncate"
+                >
+                  {profile.full_name}
+                </Link>
+                {profile.is_hr_admin && (
+                  <Shield className="h-3.5 w-3.5 text-primary shrink-0" />
+                )}
+                {profile.is_ld_admin && (
+                  <GraduationCap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
+                {profile.email}
+              </p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const profile = row.original;
+        return (
+          <div className="space-y-0.5">
+            <Badge variant={statusVariants[profile.status] || "default"}>
+              {statusLabels[profile.status] || profile.status}
+            </Badge>
+            <p className="text-xs text-muted-foreground">
+              {roleLabels[profile.user_type] || profile.user_type}
+            </p>
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "department",
+      header: "Organisation",
+      cell: ({ row }) => {
+        const profile = row.original;
+        return (
+          <div className="space-y-0.5">
+            <p className="text-sm">
+              {profile.department
+                ? DEPARTMENT_CONFIG[profile.department as Department]?.label ?? profile.department
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {profile.region
+                ? REGION_CONFIG[profile.region as Region]?.label ?? profile.region
+                : "—"}
+            </p>
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <UserRowActions
+          profile={row.original}
+          isCurrentUserHRAdmin={isCurrentUserHRAdmin}
+          onEditProfile={setEditingProfile}
+          onEditEmployment={setEmploymentProfile}
+          onEditPermissions={setPermissionsProfile}
+          onCompleteInduction={setCompleteTarget}
+          onResetInduction={setResetTarget}
+        />
+      ),
+      enableSorting: false,
+    },
+  ], [isCurrentUserHRAdmin]);
+
   return (
     <>
       {/* Filters */}
@@ -261,169 +444,13 @@ export function UserTable({
       </div>
 
       {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 font-medium text-muted-foreground">Person</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Organisation</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProfiles.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-8 text-center text-muted-foreground"
-                  >
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                filteredProfiles.map((profile) => (
-                  <tr
-                    key={profile.id}
-                    className="group border-b border-border hover:bg-muted/50 transition-colors"
-                  >
-                    {/* Person column — two lines */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.full_name} />
-                          <AvatarFallback className="text-xs">
-                            {getInitials(profile.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <Link
-                              href={`/hr/users/${profile.id}`}
-                              className="font-medium hover:underline truncate"
-                            >
-                              {profile.full_name}
-                            </Link>
-                            {profile.is_hr_admin && (
-                              <Shield className="h-3.5 w-3.5 text-primary shrink-0" />
-                            )}
-                            {profile.is_ld_admin && (
-                              <GraduationCap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {profile.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Status column — two lines */}
-                    <td className="px-4 py-3">
-                      <div className="space-y-0.5">
-                        <Badge variant={statusVariants[profile.status] || "default"}>
-                          {statusLabels[profile.status] || profile.status}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          {roleLabels[profile.user_type] || profile.user_type}
-                        </p>
-                      </div>
-                    </td>
-
-                    {/* Organisation column — two lines */}
-                    <td className="px-4 py-3">
-                      <div className="space-y-0.5">
-                        <p className="text-sm">
-                          {profile.department
-                            ? DEPARTMENT_CONFIG[profile.department as Department]?.label ?? profile.department
-                            : "—"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {profile.region
-                            ? REGION_CONFIG[profile.region as Region]?.label ?? profile.region
-                            : "—"}
-                        </p>
-                      </div>
-                    </td>
-
-                    {/* Actions column — three-dot menu */}
-                    <td className="px-4 py-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions for {profile.full_name}</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              window.location.href = `/hr/users/${profile.id}`;
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                            View Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onSelect={() => setEditingProfile(profile)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            Edit Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => setEmploymentProfile(profile)}
-                          >
-                            <Briefcase className="h-4 w-4" />
-                            Edit Employment
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => setPermissionsProfile(profile)}
-                          >
-                            <Shield className="h-4 w-4" />
-                            Edit Permissions
-                          </DropdownMenuItem>
-                          {/* Induction actions — HR admins only */}
-                          {isCurrentUserHRAdmin && !profile.induction_completed_at && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => setCompleteTarget(profile)}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                Complete Induction
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {isCurrentUserHRAdmin && profile.induction_completed_at && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => setResetTarget(profile)}
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                                Reset Induction
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-          {filteredProfiles.length} of {profiles.length} users
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={filteredProfiles}
+        totalCount={profiles.length}
+        emptyMessage="No users found"
+        initialSorting={[{ id: "full_name", desc: false }]}
+      />
 
       {/* Edit Profile Dialog */}
       {editingProfile && (

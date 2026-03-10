@@ -174,7 +174,11 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Use TanStack Table + Shadcn primitives for data tables.** `@tanstack/react-table` provides headless data management (sorting, filtering, pagination) while Shadcn `<Table>` primitives handle styling. Extract row actions into separate `<RowActions>` components for `ColumnDef.cell` renderers — keeps column definitions clean and action state isolated.
 
-**Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders only to bottom edges.
+**Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders to `<th>` cells (not `<tr>` rows — `<tr>` borders are invisible in `border-separate` mode).
+
+**Use card-style table wrappers, not thin borders.** DataTable uses `bg-card shadow-md rounded-xl overflow-clip` instead of `rounded-md border`. Gives tables visual weight on grey page background. Footer (result count / pagination) sits inside the card with `border-t`. Use `overflow-clip` (not `overflow-hidden`) to clip rounded corners without breaking sticky headers or child scroll containers.
+
+**Use `bg-card` for input/select backgrounds, not `bg-background`.** On grey page backgrounds (`bg-background`), form controls with `bg-background` are nearly invisible. `bg-card` (white) provides contrast on grey pages; on white dialogs (`bg-card`), the border provides sufficient contrast.
 
 **Use `accessorFn` for computed sortable columns.** To create sortable computed columns (e.g. Priority = overdue/upcoming/completed), use `accessorFn` returning a numeric sort value while the `cell` renderer shows the visual display (badges/text). TanStack sorts by the accessor value, not the rendered output.
 
@@ -185,3 +189,13 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
 
 **Evaluate each table column's value before migrating.** Don't blindly migrate every column — fold sparse/secondary data into related cells (e.g. Reference → Document subtitle, Category → Type subtitle). Reduces visual noise and column count without losing information.
+
+**Use a dedicated `--table-header` design token for table header backgrounds.** `--muted` (#F0F2F5) and `--background` (#F2F4F7) are nearly identical — headers using `bg-muted` blend into the page. The `--table-header` token (#E4E7EC light / hsl(210, 30%, 18%) dark) provides clear contrast against both the page and card backgrounds. Registered as `--color-table-header` in `@theme inline`.
+
+**Add `font-semibold` to `DataTableColumnHeader` for consistent header text.** The ghost Button uses `font-medium` by default, making sortable column headers lighter than non-sortable ones (which inherit `font-semibold` from `<th>`). Override with `font-semibold` on the Button className.
+
+**Don't use `mr-2` on icons inside Shadcn `DropdownMenuItem`.** `DropdownMenuItem` already applies `gap-2` via its className (`items-center gap-2`), so `mr-2` creates double spacing. Use just `h-4 w-4` on icons. This applies to all Radix components with built-in `gap-2`: `DropdownMenuItem`, `DropdownMenuSubTrigger`, etc. `Button` does NOT have `gap-2`, so `mr-2` is still needed for icons inside buttons.
+
+**Use `<Link>` with `asChild` on `DropdownMenuItem` for navigation, not `window.location.href`.** The CLAUDE.md lesson about avoiding `router.push()` in Radix components applies specifically to Dialog `onOpenChange` handlers. `DropdownMenuItem asChild` + `<Link>` is the standard Shadcn pattern and works correctly for client-side navigation.
+
+**Pass `totalCount` to DataTable when using external filtering.** When data is filtered outside DataTable (e.g. multi-field search), the footer only shows the filtered count. Pass `totalCount={allData.length}` so the footer shows "Showing X of Y results" for context.

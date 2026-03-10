@@ -240,7 +240,7 @@ export function PostCard({
                       <DropdownMenuItem
                         onSelect={() => setShowEditDialog(true)}
                       >
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                         Edit Post
                       </DropdownMenuItem>
                     )}
@@ -259,11 +259,11 @@ export function PostCard({
                         disabled={isPinPending}
                       >
                         {isPinPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : post.is_pinned ? (
-                          <PinOff className="mr-2 h-4 w-4" />
+                          <PinOff className="h-4 w-4" />
                         ) : (
-                          <Pin className="mr-2 h-4 w-4" />
+                          <Pin className="h-4 w-4" />
                         )}
                         {post.is_pinned ? "Unpin Post" : "Pin Post"}
                       </DropdownMenuItem>
@@ -272,7 +272,7 @@ export function PostCard({
                       className="text-destructive focus:text-destructive"
                       onSelect={() => setShowDeleteDialog(true)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       Delete Post
                     </DropdownMenuItem>
                   </DropdownMenuContent>
