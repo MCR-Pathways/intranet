@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { Plus, Search, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArticleListItem } from "./article-list-item";
-import { ArticleFormDialog } from "./article-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import { deleteArticle } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
@@ -14,21 +14,16 @@ import type { ArticleWithAuthor } from "@/types/database.types";
 
 interface ArticlesListProps {
   articles: ArticleWithAuthor[];
-  categoryId: string;
   categorySlug: string;
   isHRAdmin: boolean;
 }
 
 export function ArticlesList({
   articles,
-  categoryId,
   categorySlug,
   isHRAdmin,
 }: ArticlesListProps) {
   const [search, setSearch] = useState("");
-  const [editArticle, setEditArticle] = useState<ArticleWithAuthor | null>(
-    null
-  );
   const [deleteTarget, setDeleteTarget] = useState<ArticleWithAuthor | null>(
     null
   );
@@ -68,15 +63,12 @@ export function ArticlesList({
           </div>
         )}
         {isHRAdmin && (
-          <ArticleFormDialog
-            trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                New Article
-              </Button>
-            }
-            categoryId={categoryId}
-          />
+          <Button size="sm" asChild>
+            <Link href={`/intranet/resources/${categorySlug}/new`}>
+              <Plus className="h-4 w-4 mr-1" />
+              New Article
+            </Link>
+          </Button>
         )}
       </div>
 
@@ -98,24 +90,10 @@ export function ArticlesList({
               article={article}
               categorySlug={categorySlug}
               isHRAdmin={isHRAdmin}
-              onEdit={() => setEditArticle(article)}
               onDelete={() => setDeleteTarget(article)}
             />
           ))}
         </div>
-      )}
-
-      {/* Edit dialog — controlled, keyed to remount */}
-      {editArticle && (
-        <ArticleFormDialog
-          key={editArticle.id}
-          categoryId={categoryId}
-          article={editArticle}
-          open={!!editArticle}
-          onOpenChange={(open) => {
-            if (!open) setEditArticle(null);
-          }}
-        />
       )}
 
       {/* Delete confirmation — controlled */}
