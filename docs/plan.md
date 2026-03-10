@@ -178,6 +178,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Table standardisation (COMPLETE — 15 of 17 tables migrated, 2 skipped, 7 PRs #92-97): Shadcn Table + TanStack Table. Interactive sorting, pagination, sticky headers, row numbering. 2 skipped: team-schedule-grid (calendar grid), reports-panel (simple report).
 - [x] Accent hover contrast fix (PR #98): Decoupled `--accent` (#E2E8F0) from `--secondary` (#E8ECF0). Previous ~1.007:1 ratio vs background made hover states invisible.
 - [x] Tab bar redesign (PR #99): Adopted Shadcn v4 `variant="line"` pattern. Replaced heavy navy `bg-primary` container with underline-style tabs. 9 consumer files migrated. Nested tabs (working-location) use default (pill) for visual hierarchy.
+- [x] Date formatting consolidation (PR #100): Extracted `formatDate()` and consolidated `formatShortDate()` usage across 7 files. Eliminated inline `toLocaleDateString` duplication.
 - [ ] Mobile responsiveness (currently desktop/laptop only)
 
 ---

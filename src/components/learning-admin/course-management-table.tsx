@@ -22,7 +22,7 @@ import {
   Pencil,
   Plus,
 } from "lucide-react";
-import { formatDuration } from "@/lib/utils";
+import { formatDate, formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
 import type { Course } from "@/types/database.types";
 
@@ -134,11 +134,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       ),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-xs">
-          {new Date(row.original.updated_at).toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          {formatDate(new Date(row.original.updated_at))}
         </span>
       ),
     },

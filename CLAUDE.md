@@ -186,7 +186,7 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Generate dynamic TanStack columns from data arrays.** When table columns depend on data (e.g. document types in a compliance grid), generate `ColumnDef[]` inside `useMemo` with the data array as a dependency. Use `for...of` to push dynamic columns onto a base array.
 
-**Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
+**Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `docs/PROJECT.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
 
 **Evaluate each table column's value before migrating.** Don't blindly migrate every column — fold sparse/secondary data into related cells (e.g. Reference → Document subtitle, Category → Type subtitle). Reduces visual noise and column count without losing information.
 
@@ -207,3 +207,5 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Use Shadcn v4's `variant="line"` pattern for underline tabs.** Add `cva` with `default` (pill on `bg-muted`) and `line` (border-b, bg-transparent) variants to `TabsList`. Propagate variant via `data-variant` attribute. `TabsTrigger` uses `group-data-[variant=...]` to respond to parent's variant. Line variant uses `after:` pseudo-element for active underline indicator. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs for visual hierarchy.
 
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` utility targets the nearest ancestor with `class="group"`. Without it, the data attribute selectors won't match. Always include `group` in the parent's `cva` base classes.
+
+**Consolidate repeated `toLocaleDateString` calls into shared utilities.** `formatDate()` for "3 Feb 2026" style, `formatShortDate()` for "3 Feb" style — both in `src/lib/utils.ts`. Domain wrappers (e.g. `formatHRDate` in `hr.ts`, `formatDayMonth` in `sign-in.ts`) should delegate to these rather than inlining `toLocaleDateString`. Check for duplicates before adding new inline date formatting.
