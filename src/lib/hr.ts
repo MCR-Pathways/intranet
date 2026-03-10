@@ -7,6 +7,7 @@
  */
 
 import type { LeaveRequest, LeaveRequestWithEmployee, RTWStatus } from "@/types/hr";
+import { formatDate } from "@/lib/utils";
 import {
   Calendar,
   Clock,
@@ -641,11 +642,7 @@ export function formatLeaveDays(days: number): string {
 export function formatHRDate(dateString: string | null): string {
   if (!dateString) return "—";
   const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(date);
 }
 
 /**

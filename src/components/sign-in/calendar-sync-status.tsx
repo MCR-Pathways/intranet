@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Calendar, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatShortDate } from "@/lib/utils";
 import { triggerCalendarSync } from "@/app/(protected)/sign-in/actions";
 import { toast } from "sonner";
 
@@ -54,7 +54,7 @@ export function CalendarSyncStatus({
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return formatShortDate(date);
   };
 
   return (

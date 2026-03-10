@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDate } from "@/lib/utils";
 import { deleteExternalCourse } from "@/app/(protected)/learning/my-courses/actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,11 +52,7 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
     });
   }
 
-  const formattedDate = new Date(course.completed_at).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const formattedDate = formatDate(new Date(course.completed_at));
 
   return (
     <Card>
