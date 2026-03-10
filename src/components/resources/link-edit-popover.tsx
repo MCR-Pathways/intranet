@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
+import { isValidHttpUrl } from "@/lib/url";
 import type { Editor } from "@tiptap/react";
 
 interface LinkEditPopoverProps {
@@ -46,7 +47,7 @@ export function LinkEditPopover({ editor }: LinkEditPopoverProps) {
     }
 
     // Sanitise: only allow http:// and https:// (case-insensitive)
-    if (!/^https?:\/\//i.test(trimmed)) {
+    if (!isValidHttpUrl(trimmed)) {
       return;
     }
 
@@ -99,7 +100,7 @@ export function LinkEditPopover({ editor }: LinkEditPopoverProps) {
               type="button"
               size="sm"
               onClick={handleApply}
-              disabled={!url.trim() || !/^https?:\/\//i.test(url.trim())}
+              disabled={!isValidHttpUrl(url)}
             >
               Apply
             </Button>

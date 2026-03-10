@@ -11,6 +11,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Underline from "@tiptap/extension-underline";
 import { common, createLowlight } from "lowlight";
 import { cn } from "@/lib/utils";
+import { isValidHttpUrl } from "@/lib/url";
 import {
   Bold,
   Code,
@@ -26,9 +27,6 @@ import {
   TableIcon,
   Underline as UnderlineIcon,
   Info,
-  AlertTriangle,
-  Lightbulb,
-  AlertCircle,
   SquareCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,17 +37,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LinkEditPopover } from "./link-edit-popover";
-import { Callout, type CalloutType } from "@/lib/tiptap-callout";
+import { Callout, CALLOUT_CONFIG, type CalloutType } from "@/lib/tiptap-callout";
 import type { TiptapDocument } from "@/lib/tiptap";
 
 // Import only common languages to keep bundle small (~50KB vs ~500KB for all)
 const lowlight = createLowlight(common);
-
-/** Validate that a URL uses http(s) protocol (case-insensitive per RFC 3986). */
-function isValidHttpUrl(url: string): boolean {
-  const trimmed = url.trim();
-  return !!trimmed && /^https?:\/\//i.test(trimmed);
-}
 
 interface ArticleComposerProps {
   /** Called whenever the editor content changes */
@@ -61,13 +53,6 @@ interface ArticleComposerProps {
   /** Additional CSS classes for the editor wrapper */
   className?: string;
 }
-
-const CALLOUT_OPTIONS: { type: CalloutType; label: string; icon: React.ElementType }[] = [
-  { type: "info", label: "Info", icon: Info },
-  { type: "tip", label: "Tip", icon: Lightbulb },
-  { type: "warning", label: "Warning", icon: AlertTriangle },
-  { type: "danger", label: "Danger", icon: AlertCircle },
-];
 
 /**
  * Rich text editor for long-form articles / resources.
@@ -454,7 +439,7 @@ function CalloutDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {CALLOUT_OPTIONS.map(({ type, label, icon: Icon }) => (
+        {(Object.entries(CALLOUT_CONFIG) as [CalloutType, (typeof CALLOUT_CONFIG)[CalloutType]][]).map(([type, { label, icon: Icon }]) => (
           <DropdownMenuItem
             key={type}
             onSelect={() => editor.chain().focus().toggleCallout(type).run()}

@@ -1,6 +1,31 @@
 import { Node } from "@tiptap/core";
+import type { ComponentType } from "react";
+import {
+  Info,
+  Lightbulb,
+  AlertTriangle,
+  AlertCircle,
+} from "lucide-react";
 
 export type CalloutType = "info" | "warning" | "tip" | "danger";
+
+export interface CalloutStyleConfig {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  bg: string;
+  border: string;
+}
+
+/**
+ * Shared callout UI config — single source of truth for both the
+ * article composer toolbar and the article renderer.
+ */
+export const CALLOUT_CONFIG: Record<CalloutType, CalloutStyleConfig> = {
+  info: { label: "Info", icon: Info, bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-400" },
+  tip: { label: "Tip", icon: Lightbulb, bg: "bg-green-50 dark:bg-green-950/30", border: "border-green-400" },
+  warning: { label: "Warning", icon: AlertTriangle, bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-400" },
+  danger: { label: "Danger", icon: AlertCircle, bg: "bg-red-50 dark:bg-red-950/30", border: "border-red-400" },
+};
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {

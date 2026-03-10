@@ -1,14 +1,9 @@
 "use client";
 
 import { Fragment } from "react";
-import {
-  Info,
-  Lightbulb,
-  AlertTriangle,
-  AlertCircle,
-} from "lucide-react";
-import { linkifyText } from "@/lib/url";
+import { isValidHttpUrl, linkifyText } from "@/lib/url";
 import { cn } from "@/lib/utils";
+import { CALLOUT_CONFIG } from "@/lib/tiptap-callout";
 import type { TiptapDocument, TiptapNode } from "@/lib/tiptap";
 
 interface ArticleRendererProps {
@@ -17,16 +12,6 @@ interface ArticleRendererProps {
   /** Plain text fallback */
   fallback?: string;
 }
-
-const CALLOUT_STYLES: Record<
-  string,
-  { bg: string; border: string; icon: React.ElementType }
-> = {
-  info: { bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-400", icon: Info },
-  tip: { bg: "bg-green-50 dark:bg-green-950/30", border: "border-green-400", icon: Lightbulb },
-  warning: { bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-400", icon: AlertTriangle },
-  danger: { bg: "bg-red-50 dark:bg-red-950/30", border: "border-red-400", icon: AlertCircle },
-};
 
 /**
  * Renders article Tiptap JSON with full prose typography.
@@ -169,7 +154,7 @@ function RenderNode({ node }: { node: TiptapNode }) {
       // Sanitise: only allow http(s) and relative paths (not protocol-relative)
       if (
         src &&
-        (/^https?:\/\//i.test(src) || (src.startsWith("/") && !src.startsWith("//")))
+        (isValidHttpUrl(src) || (src.startsWith("/") && !src.startsWith("//")))
       ) {
         return (
           <img
@@ -184,9 +169,9 @@ function RenderNode({ node }: { node: TiptapNode }) {
 
     case "callout": {
       const calloutType = (node.attrs?.type as string) ?? "info";
-      const style = Object.hasOwn(CALLOUT_STYLES, calloutType)
-        ? CALLOUT_STYLES[calloutType]
-        : CALLOUT_STYLES.info;
+      const style = Object.hasOwn(CALLOUT_CONFIG, calloutType)
+        ? CALLOUT_CONFIG[calloutType as keyof typeof CALLOUT_CONFIG]
+        : CALLOUT_CONFIG.info;
       const Icon = style.icon;
       return (
         <div
@@ -252,10 +237,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
             break;
           case "link": {
             const href = mark.attrs?.href as string;
-            if (
-              href &&
-              (/^https?:\/\//i.test(href))
-            ) {
+            if (href && isValidHttpUrl(href)) {
               element = (
                 <a
                   href={href}
