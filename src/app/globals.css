@@ -24,10 +24,10 @@
   --popover-foreground: var(--mcr-dark-blue);
   --primary: var(--mcr-dark-blue);
   --primary-foreground: #ffffff;
-  --secondary: #F1F5F9;
+  --secondary: #E8ECF0;
   --secondary-foreground: var(--mcr-dark-blue);
-  --accent: var(--secondary);
-  --accent-foreground: var(--secondary-foreground);
+  --accent: #E2E8F0;
+  --accent-foreground: var(--mcr-dark-blue);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
   --muted: #F0F2F5;
