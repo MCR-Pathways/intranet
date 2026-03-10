@@ -63,12 +63,16 @@ export function ArticleComposer({
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm max-w-none focus:outline-none min-h-[300px]",
+          "prose prose-sm max-w-none min-h-[300px]",
           "[&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-2",
           "[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1",
           "[&_blockquote]:border-l-4 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
           "[&_hr]:my-4 [&_hr]:border-muted"
         ),
+        // Tailwind v4's outline-none compiles to outline: 2px solid transparent,
+        // which doesn't remove the outline on contenteditable elements.
+        // Use inline style instead (same pattern as tiptap-composer.tsx).
+        style: "outline: none",
       },
     },
     onUpdate: ({ editor: e }) => {
@@ -92,9 +96,15 @@ export function ArticleComposer({
   if (!editor) return null;
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div
+      className={cn(
+        "rounded-lg border border-input overflow-hidden focus-within:ring-2 focus-within:ring-ring",
+        disabled && "opacity-50 cursor-not-allowed",
+        className
+      )}
+    >
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1 rounded-lg border border-input bg-muted/50 p-1">
+      <div className="flex flex-wrap items-center gap-1 border-b border-input bg-muted/50 p-1">
         <ToolbarButton
           active={editor.isActive("heading", { level: 2 })}
           onClick={() =>
@@ -169,9 +179,7 @@ export function ArticleComposer({
       {/* Editor */}
       <div
         className={cn(
-          "rounded-lg border border-input bg-background px-4 py-3 text-sm",
-          "focus-within:ring-2 focus-within:ring-ring",
-          disabled && "opacity-50 cursor-not-allowed",
+          "bg-card px-4 py-3 text-sm",
           "[&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground",
           "[&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
           "[&_.tiptap_p.is-editor-empty:first-child::before]:float-left",
