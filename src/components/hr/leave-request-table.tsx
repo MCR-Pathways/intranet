@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
   Select,
   SelectContent,
@@ -44,6 +47,10 @@ import {
 import { Search, Undo2, Users } from "lucide-react";
 import { toast } from "sonner";
 
+// =============================================
+// TYPES
+// =============================================
+
 type AnyLeaveRequest = LeaveRequest | LeaveRequestWithEmployee;
 
 interface LeaveRequestTableProps {
@@ -82,6 +89,115 @@ const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructiv
   cancelled: "outline",
   withdrawn: "outline",
 };
+
+// =============================================
+// ROW ACTIONS
+// =============================================
+
+function LeaveRowActions({
+  request,
+  currentUserId,
+  isHRAdmin,
+  isManager,
+  isPending,
+  onWithdraw,
+  onApprove,
+  onReject,
+  onCancel,
+}: {
+  request: AnyLeaveRequest;
+  currentUserId: string;
+  isHRAdmin: boolean;
+  isManager: boolean;
+  isPending: boolean;
+  onWithdraw: (id: string) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onCancel: (id: string) => void;
+}) {
+  const isOwn = request.profile_id === currentUserId;
+  const canWithdraw = isOwn && request.status === "pending";
+  const canDecide = request.status === "pending" && (isManager || isHRAdmin) && !isOwn;
+  const canCancel = isHRAdmin && request.status === "approved";
+
+  if (!canWithdraw && !canDecide && !canCancel) return null;
+
+  return (
+    <div className="flex gap-2">
+      {canWithdraw && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={isPending}>
+              <Undo2 className="h-3.5 w-3.5 mr-1" />
+              Withdraw
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Withdraw leave request?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will withdraw your pending leave request. You can submit a new one if needed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep Request</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onWithdraw(request.id)}>
+                Withdraw
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {canDecide && (
+        <>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={isPending}
+            onClick={() => onApprove(request.id)}
+          >
+            Approve
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isPending}
+            onClick={() => onReject(request.id)}
+          >
+            Reject
+          </Button>
+        </>
+      )}
+      {canCancel && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="sm" disabled={isPending}>
+              Cancel
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel approved leave?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will cancel the approved leave request. The days will be returned to the employee&apos;s balance.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onCancel(request.id)}>
+                Cancel Leave
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
+  );
+}
+
+// =============================================
+// COMPONENT
+// =============================================
 
 export function LeaveRequestTable({
   requests,
@@ -174,6 +290,125 @@ export function LeaveRequestTable({
     });
   }
 
+  const columns = useMemo<ColumnDef<AnyLeaveRequest>[]>(() => [
+    {
+      accessorKey: "employee_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Employee" />
+      ),
+      cell: ({ row }) => (
+        <span>{(row.original as LeaveRequestWithEmployee).employee_name ?? "—"}</span>
+      ),
+    },
+    {
+      accessorKey: "leave_type",
+      header: "Type",
+      cell: ({ row }) => {
+        const config = LEAVE_TYPE_CONFIG[row.original.leave_type as LeaveType];
+        return (
+          <Badge variant={config?.badgeVariant ?? "outline"}>
+            {config?.label ?? row.original.leave_type}
+          </Badge>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "start_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Dates" />
+      ),
+      cell: ({ row }) => {
+        const request = row.original;
+        const overlapping = overlapMap.get(request.id) ?? [];
+        const teammateIds = teamMemberMap?.[request.profile_id] ?? [];
+        const teamSize = teammateIds.length + 1;
+        const availableCount = teamSize - overlapping.length - 1;
+
+        return (
+          <div>
+            <div className="whitespace-nowrap">
+              {formatHRDate(request.start_date)}
+              {request.start_date !== request.end_date && (
+                <> – {formatHRDate(request.end_date)}</>
+              )}
+              {request.start_half_day && (
+                <span className="text-xs text-muted-foreground ml-1">(PM)</span>
+              )}
+              {request.end_half_day && (
+                <span className="text-xs text-muted-foreground ml-1">(AM)</span>
+              )}
+            </div>
+            {overlapping.length > 0 && (
+              <div className="mt-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                <Users className="inline h-3 w-3 mr-1 -mt-0.5" />
+                {overlapping.map((r) => r.employee_name).join(", ")}
+                {overlapping.length === 1 ? " is" : " are"} also on leave during this period.
+                {teamSize > 1 && (
+                  <span className="ml-1">
+                    Team: {availableCount}/{teamSize} available.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "total_days",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Days" />
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {formatLeaveDays(row.original.total_days)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const request = row.original;
+        return (
+          <div>
+            <Badge variant={STATUS_BADGE_VARIANT[request.status] ?? "outline"}>
+              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+            </Badge>
+            {request.rejection_reason && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {request.rejection_reason}
+              </p>
+            )}
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <LeaveRowActions
+          request={row.original}
+          currentUserId={currentUserId}
+          isHRAdmin={isHRAdmin}
+          isManager={isManager}
+          isPending={isPending}
+          onWithdraw={handleWithdraw}
+          onApprove={(id) => setApproveTarget(id)}
+          onReject={(id) => {
+            setRejectTarget(id);
+            setRejectDialogOpen(true);
+          }}
+          onCancel={handleCancel}
+        />
+      ),
+      enableSorting: false,
+    },
+  ], [overlapMap, teamMemberMap, currentUserId, isHRAdmin, isManager, isPending]);
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -218,181 +453,13 @@ export function LeaveRequestTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              {showEmployee && (
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Employee
-                </th>
-              )}
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Dates</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Days</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRequests.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={showEmployee ? 6 : 5}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
-                  No leave requests found
-                </td>
-              </tr>
-            ) : (
-              filteredRequests.map((request) => {
-                const config = LEAVE_TYPE_CONFIG[request.leave_type as LeaveType];
-                const isOwn = request.profile_id === currentUserId;
-                const canWithdraw = isOwn && request.status === "pending";
-                const canDecide =
-                  request.status === "pending" && (isManager || isHRAdmin) && !isOwn;
-                const canCancel = isHRAdmin && request.status === "approved";
-
-                // Team overlap detection (approver view only)
-                const overlapping = overlapMap.get(request.id) ?? [];
-                const teammateIds = teamMemberMap?.[request.profile_id] ?? [];
-                const teamSize = teammateIds.length + 1; // teammates + the requester
-                const availableCount = teamSize - overlapping.length - 1; // minus overlapping and the requester
-
-                return (
-                  <tr key={request.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                    {showEmployee && (
-                      <td className="px-4 py-3">
-                        {(request as LeaveRequestWithEmployee).employee_name ?? "—"}
-                      </td>
-                    )}
-                    <td className="px-4 py-3">
-                      <Badge variant={config?.badgeVariant ?? "outline"}>
-                        {config?.label ?? request.leave_type}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="whitespace-nowrap">
-                        {formatHRDate(request.start_date)}
-                        {request.start_date !== request.end_date && (
-                          <> – {formatHRDate(request.end_date)}</>
-                        )}
-                        {request.start_half_day && (
-                          <span className="text-xs text-muted-foreground ml-1">(PM)</span>
-                        )}
-                        {request.end_half_day && (
-                          <span className="text-xs text-muted-foreground ml-1">(AM)</span>
-                        )}
-                      </div>
-                      {overlapping.length > 0 && (
-                        <div className="mt-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
-                          <Users className="inline h-3 w-3 mr-1 -mt-0.5" />
-                          {overlapping.map((r) => r.employee_name).join(", ")}
-                          {overlapping.length === 1 ? " is" : " are"} also on leave during this period.
-                          {teamSize > 1 && (
-                            <span className="ml-1">
-                              Team: {availableCount}/{teamSize} available.
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{formatLeaveDays(request.total_days)}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={STATUS_BADGE_VARIANT[request.status] ?? "outline"}>
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      </Badge>
-                      {request.rejection_reason && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {request.rejection_reason}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {canWithdraw && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" disabled={isPending}>
-                                <Undo2 className="h-3.5 w-3.5 mr-1" />
-                                Withdraw
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Withdraw leave request?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will withdraw your pending leave request. You can submit a new one if needed.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Keep Request</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleWithdraw(request.id)}>
-                                  Withdraw
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                        {canDecide && (
-                          <>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              disabled={isPending}
-                              onClick={() => setApproveTarget(request.id)}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              disabled={isPending}
-                              onClick={() => {
-                                setRejectTarget(request.id);
-                                setRejectDialogOpen(true);
-                              }}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {canCancel && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" disabled={isPending}>
-                                Cancel
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Cancel approved leave?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will cancel the approved leave request. The days will be returned to the employee&apos;s balance.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Keep</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleCancel(request.id)}>
-                                  Cancel Leave
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Showing {filteredRequests.length} of {requests.length} requests
-      </p>
+      <DataTable
+        columns={columns}
+        data={filteredRequests}
+        emptyMessage="No leave requests found"
+        initialSorting={[{ id: "start_date", desc: true }]}
+        initialColumnVisibility={{ employee_name: showEmployee }}
+      />
 
       {/* Approve confirmation dialog */}
       <AlertDialog
