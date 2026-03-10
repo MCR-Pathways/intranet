@@ -183,7 +183,9 @@ function RenderNode({ node }: { node: TiptapNode }) {
 
     case "callout": {
       const calloutType = (node.attrs?.type as string) ?? "info";
-      const style = CALLOUT_STYLES[calloutType] ?? CALLOUT_STYLES.info;
+      const style = Object.hasOwn(CALLOUT_STYLES, calloutType)
+        ? CALLOUT_STYLES[calloutType]
+        : CALLOUT_STYLES.info;
       const Icon = style.icon;
       return (
         <div

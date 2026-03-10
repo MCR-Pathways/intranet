@@ -45,6 +45,12 @@ import type { TiptapDocument } from "@/lib/tiptap";
 // Import only common languages to keep bundle small (~50KB vs ~500KB for all)
 const lowlight = createLowlight(common);
 
+/** Validate that a URL uses http(s) protocol (case-insensitive per RFC 3986). */
+function isValidHttpUrl(url: string): boolean {
+  const trimmed = url.trim();
+  return !!trimmed && /^https?:\/\//i.test(trimmed);
+}
+
 interface ArticleComposerProps {
   /** Called whenever the editor content changes */
   onChange?: (json: TiptapDocument, text: string) => void;
@@ -180,8 +186,7 @@ export function ArticleComposer({
     const trimmed = imageUrl.trim();
     if (!trimmed || !editor) return;
 
-    // Sanitise: only allow http:// and https://
-    if (!/^https?:\/\//i.test(trimmed)) return;
+    if (!isValidHttpUrl(trimmed)) return;
 
     editor.chain().focus().setImage({ src: trimmed }).run();
     setImageUrl("");
@@ -359,7 +364,7 @@ export function ArticleComposer({
             type="button"
             size="sm"
             onClick={handleInsertImage}
-            disabled={!imageUrl.trim() || !/^https?:\/\//i.test(imageUrl.trim())}
+            disabled={!isValidHttpUrl(imageUrl)}
           >
             Insert
           </Button>
@@ -429,7 +434,7 @@ function CalloutDropdown({
   editor,
   isActive,
 }: {
-  editor: ReturnType<typeof useEditor> & NonNullable<ReturnType<typeof useEditor>>;
+  editor: NonNullable<ReturnType<typeof useEditor>>;
   isActive: boolean;
 }) {
   return (

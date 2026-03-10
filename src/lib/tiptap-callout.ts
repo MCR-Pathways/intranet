@@ -1,4 +1,4 @@
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Node } from "@tiptap/core";
 
 export type CalloutType = "info" | "warning" | "tip" | "danger";
 
@@ -51,11 +51,7 @@ export const Callout = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      "div",
-      mergeAttributes(HTMLAttributes, { "data-callout-type": HTMLAttributes["data-callout-type"] }),
-      0,
-    ];
+    return ["div", HTMLAttributes, 0];
   },
 
   addCommands() {
