@@ -37,7 +37,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       <ArticleView
         article={article}
-        categoryId={category.id}
         categorySlug={category.slug}
         isHRAdmin={isHRAdmin}
       />

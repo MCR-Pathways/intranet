@@ -51,6 +51,9 @@ async function ensureUniqueCategorySlug(
   }
 }
 
+/** Slugs reserved for Next.js routes — articles cannot use these. */
+const RESERVED_ARTICLE_SLUGS = new Set(["new", "edit"]);
+
 async function ensureUniqueArticleSlug(
   supabase: SupabaseClient,
   categoryId: string,
@@ -59,6 +62,13 @@ async function ensureUniqueArticleSlug(
 ): Promise<string> {
   let slug = baseSlug;
   let suffix = 2;
+
+  // Never use reserved slugs (would collide with /new and /edit routes)
+  if (RESERVED_ARTICLE_SLUGS.has(slug)) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+
   while (true) {
     const query = supabase
       .from("resource_articles")
@@ -100,6 +110,20 @@ export async function fetchCategoriesWithClient(
     const { resource_articles: _, ...category } = cat;
     return { ...category, article_count: articleCount } as CategoryWithCount;
   });
+}
+
+export async function fetchCategoryBySlugWithClient(
+  supabase: SupabaseClient,
+  categorySlug: string
+): Promise<ResourceCategory | null> {
+  const { data, error } = await supabase
+    .from("resource_categories")
+    .select(CATEGORY_SELECT)
+    .eq("slug", categorySlug)
+    .single();
+
+  if (error || !data) return null;
+  return data as ResourceCategory;
 }
 
 export async function fetchCategoryArticlesWithClient(

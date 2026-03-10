@@ -36,7 +36,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       <ArticlesList
         articles={articles}
-        categoryId={category.id}
         categorySlug={category.slug}
         isHRAdmin={isHRAdmin}
       />
