@@ -198,6 +198,8 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Use `<Link>` with `asChild` on `DropdownMenuItem` for navigation, not `window.location.href`.** The CLAUDE.md lesson about avoiding `router.push()` in Radix components applies specifically to Dialog `onOpenChange` handlers. `DropdownMenuItem asChild` + `<Link>` is the standard Shadcn pattern and works correctly for client-side navigation.
 
+**Use specific sr-only text on row action buttons, not generic "Actions".** Screen reader users can't distinguish between multiple "Actions" buttons on a table page. Include the entity name: `Actions for {dept.name}`, `Actions for {profile.full_name}`. Column headers can remain generic "Actions" since they describe the column. Update tests to query `{ name: /^Actions for/ }` or the specific name.
+
 **Pass `totalCount` to DataTable when using external filtering.** When data is filtered outside DataTable (e.g. multi-field search), the footer only shows the filtered count. Pass `totalCount={allData.length}` so the footer shows "Showing X of Y results" for context.
 
 **Decouple `--accent` from `--secondary` in design tokens.** `--accent` (hover/focus states) and `--secondary` (badges/buttons) serve different purposes. Aliasing them (`--accent: var(--secondary)`) makes independent tuning impossible. Give each its own hex value.
