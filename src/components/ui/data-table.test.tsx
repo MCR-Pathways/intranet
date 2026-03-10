@@ -357,6 +357,6 @@ describe("Table primitives", () => {
 
     const rows = screen.getAllByRole("row");
     // Data rows have hover class
-    expect(rows[1].className).toContain("hover:bg-muted/50");
+    expect(rows[1].className).toContain("hover:bg-muted");
   });
 });

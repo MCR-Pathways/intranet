@@ -174,7 +174,11 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Use TanStack Table + Shadcn primitives for data tables.** `@tanstack/react-table` provides headless data management (sorting, filtering, pagination) while Shadcn `<Table>` primitives handle styling. Extract row actions into separate `<RowActions>` components for `ColumnDef.cell` renderers — keeps column definitions clean and action state isolated.
 
-**Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders only to bottom edges.
+**Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes visual glitches when combined with `position: sticky` on `<th>` elements. Use `border-separate` with `border-spacing: 0` and apply borders to `<th>` cells (not `<tr>` rows — `<tr>` borders are invisible in `border-separate` mode).
+
+**Use card-style table wrappers, not thin borders.** DataTable uses `bg-card shadow-md rounded-xl overflow-clip` instead of `rounded-md border`. Gives tables visual weight on grey page background. Footer (result count / pagination) sits inside the card with `border-t`. Use `overflow-clip` (not `overflow-hidden`) to clip rounded corners without breaking sticky headers or child scroll containers.
+
+**Use `bg-card` for input/select backgrounds, not `bg-background`.** On grey page backgrounds (`bg-background`), form controls with `bg-background` are nearly invisible. `bg-card` (white) provides contrast on grey pages; on white dialogs (`bg-card`), the border provides sufficient contrast.
 
 **Use `accessorFn` for computed sortable columns.** To create sortable computed columns (e.g. Priority = overdue/upcoming/completed), use `accessorFn` returning a numeric sort value while the `cell` renderer shows the visual display (badges/text). TanStack sorts by the accessor value, not the rendered output.
 
