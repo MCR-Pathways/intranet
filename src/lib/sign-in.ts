@@ -1,5 +1,6 @@
 import { Home, Building2, MapPin, CalendarOff, CircleDashed } from "lucide-react";
 import type { WorkLocation, TimeSlot, LocationSource } from "@/types/database.types";
+import { formatShortDate } from "@/lib/utils";
 
 // =============================================
 // SHARED CONSTANTS
@@ -211,7 +212,7 @@ export function formatDayName(dateString: string): string {
  */
 export function formatDayMonth(dateString: string): string {
   const date = new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return formatShortDate(date);
 }
 
 /**

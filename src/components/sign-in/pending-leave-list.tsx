@@ -3,6 +3,7 @@
 import { Clock } from "lucide-react";
 import { LEAVE_TYPE_CONFIG } from "@/lib/hr";
 import type { LeaveType } from "@/lib/hr";
+import { formatShortDate } from "@/lib/utils";
 
 interface PendingLeaveRequest {
   id: string;
@@ -33,8 +34,8 @@ export function PendingLeaveList({ requests }: PendingLeaveListProps) {
           const isSingleDay = req.start_date === req.end_date;
 
           const dateRange = isSingleDay
-            ? startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-            : `${startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${endDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+            ? formatShortDate(startDate)
+            : `${formatShortDate(startDate)} – ${formatShortDate(endDate)}`;
 
           return (
             <div

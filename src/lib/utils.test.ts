@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cn, timeAgo, formatFileSize, formatDuration, getInitials } from "@/lib/utils";
+import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials } from "@/lib/utils";
 
 describe("cn utility", () => {
   it("merges class names", () => {
@@ -64,6 +64,30 @@ describe("timeAgo", () => {
     // Should contain day and month at minimum
     expect(result).toMatch(/10/);
     expect(result).toMatch(/Apr/);
+  });
+});
+
+describe("formatDate", () => {
+  it('formats a date as "3 Feb 2026" style', () => {
+    const date = new Date("2026-02-03T00:00:00");
+    expect(formatDate(date)).toBe("3 Feb 2026");
+  });
+
+  it("handles dates in different months", () => {
+    const date = new Date("2025-12-25T00:00:00");
+    expect(formatDate(date)).toBe("25 Dec 2025");
+  });
+});
+
+describe("formatShortDate", () => {
+  it('formats a date as "3 Feb" style (no year)', () => {
+    const date = new Date("2026-02-03T00:00:00");
+    expect(formatShortDate(date)).toBe("3 Feb");
+  });
+
+  it("handles single-digit days", () => {
+    const date = new Date("2026-01-05T00:00:00");
+    expect(formatShortDate(date)).toBe("5 Jan");
   });
 });
 

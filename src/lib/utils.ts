@@ -58,6 +58,13 @@ export function timeAgo(dateString: string): string {
   if (days < 7) return `${days}d ago`;
   const weeks = Math.floor(days / 7);
   if (weeks < 4) return `${weeks}w ago`;
+  return formatDate(date);
+}
+
+/**
+ * Formats a Date into "3 Feb 2026" style (day, short month, year).
+ */
+export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -67,7 +74,6 @@ export function timeAgo(dateString: string): string {
 
 /**
  * Formats a Date into a short "day month" string (e.g. "5 Feb").
- * Named formatShortDate to avoid collision with other formatDate helpers.
  */
 export function formatShortDate(date: Date): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
