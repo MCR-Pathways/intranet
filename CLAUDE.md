@@ -199,3 +199,9 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Use `<Link>` with `asChild` on `DropdownMenuItem` for navigation, not `window.location.href`.** The CLAUDE.md lesson about avoiding `router.push()` in Radix components applies specifically to Dialog `onOpenChange` handlers. `DropdownMenuItem asChild` + `<Link>` is the standard Shadcn pattern and works correctly for client-side navigation.
 
 **Pass `totalCount` to DataTable when using external filtering.** When data is filtered outside DataTable (e.g. multi-field search), the footer only shows the filtered count. Pass `totalCount={allData.length}` so the footer shows "Showing X of Y results" for context.
+
+**Decouple `--accent` from `--secondary` in design tokens.** `--accent` (hover/focus states) and `--secondary` (badges/buttons) serve different purposes. Aliasing them (`--accent: var(--secondary)`) makes independent tuning impossible. Give each its own hex value.
+
+**Use Shadcn v4's `variant="line"` pattern for underline tabs.** Add `cva` with `default` (pill on `bg-muted`) and `line` (border-b, bg-transparent) variants to `TabsList`. Propagate variant via `data-variant` attribute. `TabsTrigger` uses `group-data-[variant=...]` to respond to parent's variant. Line variant uses `after:` pseudo-element for active underline indicator. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs for visual hierarchy.
+
+**Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` utility targets the nearest ancestor with `class="group"`. Without it, the data attribute selectors won't match. Always include `group` in the parent's `cva` base classes.
