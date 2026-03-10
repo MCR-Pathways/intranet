@@ -8,6 +8,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { linkifyText } from "@/lib/url";
+import { cn } from "@/lib/utils";
 import type { TiptapDocument, TiptapNode } from "@/lib/tiptap";
 
 interface ArticleRendererProps {
@@ -189,7 +190,7 @@ function RenderNode({ node }: { node: TiptapNode }) {
       const Icon = style.icon;
       return (
         <div
-          className={`my-4 rounded-lg border-l-4 p-4 ${style.bg} ${style.border}`}
+          className={cn("my-4 rounded-lg border-l-4 p-4", style.bg, style.border)}
         >
           <div className="flex gap-3">
             <Icon className="h-5 w-5 shrink-0 mt-0.5" />
