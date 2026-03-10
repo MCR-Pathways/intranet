@@ -3,10 +3,14 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Select,
   SelectContent,
@@ -21,6 +25,10 @@ import type { FlexibleWorkingRequestWithEmployee } from "@/types/hr";
 import { FlexibleWorkingRequestDialog } from "./flexible-working-request-dialog";
 import { cn } from "@/lib/utils";
 
+// =============================================
+// TYPES
+// =============================================
+
 interface FlexibleWorkingDashboardProps {
   requests: FlexibleWorkingRequestWithEmployee[];
   currentUserId: string;
@@ -31,6 +39,137 @@ interface FlexibleWorkingDashboardProps {
   requestsInLast12Months: number;
   hasLiveRequest: boolean;
 }
+
+// =============================================
+// COLUMN FACTORY
+// =============================================
+
+function deadlineWarning(deadline: string): "overdue" | "warning" | "ok" {
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const daysLeft = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysLeft < 0) return "overdue";
+  if (daysLeft <= 14) return "warning";
+  return "ok";
+}
+
+function getColumns(showEmployee: boolean): ColumnDef<FlexibleWorkingRequestWithEmployee>[] {
+  return [
+    createRowNumberColumn<FlexibleWorkingRequestWithEmployee>(),
+    ...(showEmployee ? [{
+      accessorKey: "employee_name",
+      header: ({ column }: { column: import("@tanstack/react-table").Column<FlexibleWorkingRequestWithEmployee> }) => (
+        <DataTableColumnHeader column={column} title="Employee" />
+      ),
+      cell: ({ row }: { row: import("@tanstack/react-table").Row<FlexibleWorkingRequestWithEmployee> }) => {
+        const request = row.original;
+        return (
+          <div>
+            <Link
+              href={`/hr/flexible-working/${request.id}`}
+              className="font-medium text-foreground hover:underline"
+            >
+              {request.employee_name}
+            </Link>
+            {request.employee_job_title && (
+              <p className="text-xs text-muted-foreground">{request.employee_job_title}</p>
+            )}
+          </div>
+        );
+      },
+    } satisfies ColumnDef<FlexibleWorkingRequestWithEmployee>] : []),
+    {
+      accessorKey: "request_type",
+      header: "Type",
+      cell: ({ row }) => {
+        const request = row.original;
+        const typeConfig = FWR_REQUEST_TYPE_CONFIG[request.request_type as FWRRequestType];
+        const label = typeConfig?.label ?? request.request_type;
+        if (!showEmployee) {
+          return (
+            <Link
+              href={`/hr/flexible-working/${request.id}`}
+              className="font-medium text-foreground hover:underline"
+            >
+              {label}
+            </Link>
+          );
+        }
+        return <span>{label}</span>;
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const statusConfig = FWR_STATUS_CONFIG[row.original.status as FWRStatus];
+        if (!statusConfig) return null;
+        return (
+          <Badge
+            variant="outline"
+            className={cn(statusConfig.colour, statusConfig.bgColour, "border-0")}
+          >
+            {statusConfig.label}
+          </Badge>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Submitted" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {formatHRDate(row.original.created_at)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "response_deadline",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Deadline" />
+      ),
+      cell: ({ row }) => {
+        const request = row.original;
+        const warning = deadlineWarning(request.response_deadline);
+        const isActive = ["submitted", "under_review"].includes(request.status);
+        return (
+          <span
+            className={cn(
+              "whitespace-nowrap",
+              isActive && warning === "overdue" && "font-semibold text-red-600",
+              isActive && warning === "warning" && "font-medium text-amber-600",
+              !isActive && "text-muted-foreground",
+            )}
+          >
+            {formatHRDate(request.response_deadline)}
+            {isActive && warning === "overdue" && (
+              <Clock className="ml-1 inline h-3.5 w-3.5" />
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "proposed_start_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Start Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground whitespace-nowrap">
+          {formatHRDate(row.original.proposed_start_date)}
+        </span>
+      ),
+    },
+  ];
+}
+
+// =============================================
+// COMPONENT
+// =============================================
 
 export function FlexibleWorkingDashboard({
   requests,
@@ -71,14 +210,9 @@ export function FlexibleWorkingDashboard({
     router.push(`/hr/flexible-working?tab=${tab}`, { scroll: false });
   };
 
-  const deadlineWarning = (deadline: string) => {
-    const deadlineDate = new Date(deadline);
-    const now = new Date();
-    const daysLeft = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) return "overdue";
-    if (daysLeft <= 14) return "warning";
-    return "ok";
-  };
+  // Memoised columns per showEmployee value
+  const myColumns = useMemo(() => getColumns(false), []);
+  const teamColumns = useMemo(() => getColumns(true), []);
 
   return (
     <>
@@ -163,29 +297,32 @@ export function FlexibleWorkingDashboard({
         </TabsList>
 
         <TabsContent value="my-requests">
-          <RequestTable
-            requests={filterRequests(myRequests)}
-            showEmployee={false}
-            deadlineWarning={deadlineWarning}
+          <DataTable
+            columns={myColumns}
+            data={filterRequests(myRequests)}
+            emptyMessage="No flexible working requests found"
+            initialSorting={[{ id: "response_deadline", desc: false }]}
           />
         </TabsContent>
 
         {(isManager || isHRAdmin) && (
           <TabsContent value="team-requests">
-            <RequestTable
-              requests={filterRequests(teamRequests)}
-              showEmployee
-              deadlineWarning={deadlineWarning}
+            <DataTable
+              columns={teamColumns}
+              data={filterRequests(teamRequests)}
+              emptyMessage="No flexible working requests found"
+              initialSorting={[{ id: "response_deadline", desc: false }]}
             />
           </TabsContent>
         )}
 
         {isHRAdmin && (
           <TabsContent value="all-requests">
-            <RequestTable
-              requests={filterRequests(requests)}
-              showEmployee
-              deadlineWarning={deadlineWarning}
+            <DataTable
+              columns={teamColumns}
+              data={filterRequests(requests)}
+              emptyMessage="No flexible working requests found"
+              initialSorting={[{ id: "response_deadline", desc: false }]}
             />
           </TabsContent>
         )}
@@ -197,116 +334,5 @@ export function FlexibleWorkingDashboard({
         requestsInLast12Months={requestsInLast12Months}
       />
     </>
-  );
-}
-
-// =============================================
-// REQUEST TABLE
-// =============================================
-
-function RequestTable({
-  requests,
-  showEmployee,
-  deadlineWarning,
-}: {
-  requests: FlexibleWorkingRequestWithEmployee[];
-  showEmployee: boolean;
-  deadlineWarning: (deadline: string) => "overdue" | "warning" | "ok";
-}) {
-  if (requests.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          No flexible working requests found.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b bg-muted/50">
-            {showEmployee && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>}
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Submitted</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Deadline</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Start Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map((request) => {
-            const statusConfig = FWR_STATUS_CONFIG[request.status as FWRStatus];
-            const typeConfig = FWR_REQUEST_TYPE_CONFIG[request.request_type as FWRRequestType];
-            const warning = deadlineWarning(request.response_deadline);
-            const isActive = ["submitted", "under_review"].includes(request.status);
-
-            return (
-              <tr key={request.id} className="border-b last:border-0">
-                {showEmployee && (
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/hr/flexible-working/${request.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {request.employee_name}
-                    </Link>
-                    {request.employee_job_title && (
-                      <div className="text-xs text-muted-foreground">
-                        {request.employee_job_title}
-                      </div>
-                    )}
-                  </td>
-                )}
-                <td className="px-4 py-3">
-                  {!showEmployee ? (
-                    <Link
-                      href={`/hr/flexible-working/${request.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {typeConfig?.label ?? request.request_type}
-                    </Link>
-                  ) : (
-                    <span>{typeConfig?.label ?? request.request_type}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {statusConfig && (
-                    <Badge
-                      variant="outline"
-                      className={cn(statusConfig.colour, statusConfig.bgColour, "border-0")}
-                    >
-                      {statusConfig.label}
-                    </Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatHRDate(request.created_at)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      isActive && warning === "overdue" && "font-semibold text-red-600",
-                      isActive && warning === "warning" && "font-medium text-amber-600",
-                      !isActive && "text-muted-foreground",
-                    )}
-                  >
-                    {formatHRDate(request.response_deadline)}
-                    {isActive && warning === "overdue" && (
-                      <Clock className="ml-1 inline h-3.5 w-3.5" />
-                    )}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {formatHRDate(request.proposed_start_date)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </Card>
   );
 }

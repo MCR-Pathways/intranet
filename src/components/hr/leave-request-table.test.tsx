@@ -80,7 +80,7 @@ describe("LeaveRequestTable", () => {
 
   it("shows request count", () => {
     render(<LeaveRequestTable {...defaultProps} />);
-    expect(screen.getByText("Showing 1 of 1 requests")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 result")).toBeInTheDocument();
   });
 
   it("hides employee column by default", () => {
@@ -156,7 +156,7 @@ describe("LeaveRequestTable", () => {
 
     expect(screen.getByText("Alice Smith")).toBeInTheDocument();
     expect(screen.queryByText("Bob Jones")).not.toBeInTheDocument();
-    expect(screen.getByText("Showing 1 of 2 requests")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 result")).toBeInTheDocument();
   });
 
   // =============================================

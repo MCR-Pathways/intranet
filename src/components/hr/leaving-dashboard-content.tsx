@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import {
   Tabs,
   TabsContent,
@@ -9,8 +10,10 @@ import {
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   LEAVING_STATUS_CONFIG,
   LEAVING_REASON_CONFIG,
@@ -18,8 +21,12 @@ import {
 } from "@/lib/hr";
 import type { StaffLeavingFormWithEmployee } from "@/types/hr";
 import { CreateLeavingFormDialog } from "./create-leaving-form-dialog";
-import { Plus, UserX, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+
+// =============================================
+// TYPES
+// =============================================
 
 interface LeavingFormRow extends StaffLeavingFormWithEmployee {
   initiator_name: string | null;
@@ -36,6 +43,10 @@ interface LeavingDashboardContentProps {
   activeEmployees: Employee[];
   activeTab: string;
 }
+
+// =============================================
+// COMPONENT
+// =============================================
 
 export function LeavingDashboardContent({
   leavingForms,
@@ -61,6 +72,7 @@ export function LeavingDashboardContent({
     [leavingForms],
   );
 
+  // Multi-field search — kept external per lesson: "keep multi-field search external to DataTable"
   function filterBySearch<T extends { employee_name: string; reason_for_leaving: string }>(
     forms: T[],
   ): T[] {
@@ -74,6 +86,79 @@ export function LeavingDashboardContent({
           .includes(term),
     );
   }
+
+  const columns = useMemo<ColumnDef<LeavingFormRow>[]>(() => [
+    createRowNumberColumn<LeavingFormRow>(),
+    {
+      accessorKey: "employee_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Employee" />
+      ),
+      cell: ({ row }) => {
+        const form = row.original;
+        return (
+          <div>
+            <p className="font-medium">{form.employee_name}</p>
+            {form.employee_job_title && (
+              <p className="text-xs text-muted-foreground">{form.employee_job_title}</p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "leaving_date",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Leaving Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">{formatHRDate(row.original.leaving_date)}</span>
+      ),
+    },
+    {
+      accessorKey: "reason_for_leaving",
+      header: "Reason",
+      cell: ({ row }) => {
+        const reasonConfig = LEAVING_REASON_CONFIG[row.original.reason_for_leaving as keyof typeof LEAVING_REASON_CONFIG];
+        return <span>{reasonConfig?.label ?? row.original.reason_for_leaving}</span>;
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const statusConfig = LEAVING_STATUS_CONFIG[row.original.status];
+        return (
+          <Badge variant="outline" className={`${statusConfig.colour} ${statusConfig.bgColour} border-0`}>
+            {statusConfig.label}
+          </Badge>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "initiator_name",
+      header: "Initiated By",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.initiator_name ?? "—"}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/hr/leaving/${row.original.id}`}>View</Link>
+          </Button>
+        </div>
+      ),
+      enableSorting: false,
+    },
+  ], []);
 
   return (
     <>
@@ -107,15 +192,30 @@ export function LeavingDashboardContent({
         </TabsList>
 
         <TabsContent value="active" className="mt-6">
-          <FormTable forms={filterBySearch(activeForms)} emptyMessage="No active leaving forms." />
+          <DataTable
+            columns={columns}
+            data={filterBySearch(activeForms)}
+            emptyMessage="No active leaving forms"
+            initialSorting={[{ id: "leaving_date", desc: false }]}
+          />
         </TabsContent>
 
         <TabsContent value="completed" className="mt-6">
-          <FormTable forms={filterBySearch(completedForms)} emptyMessage="No completed leaving forms." />
+          <DataTable
+            columns={columns}
+            data={filterBySearch(completedForms)}
+            emptyMessage="No completed leaving forms"
+            initialSorting={[{ id: "leaving_date", desc: false }]}
+          />
         </TabsContent>
 
         <TabsContent value="all" className="mt-6">
-          <FormTable forms={filterBySearch(allForms)} emptyMessage="No leaving forms." />
+          <DataTable
+            columns={columns}
+            data={filterBySearch(allForms)}
+            emptyMessage="No leaving forms"
+            initialSorting={[{ id: "leaving_date", desc: false }]}
+          />
         </TabsContent>
       </Tabs>
 
@@ -125,79 +225,5 @@ export function LeavingDashboardContent({
         onOpenChange={setCreateDialogOpen}
       />
     </>
-  );
-}
-
-// =============================================
-// Table component
-// =============================================
-
-function FormTable({
-  forms,
-  emptyMessage,
-}: {
-  forms: LeavingFormRow[];
-  emptyMessage: string;
-}) {
-  if (forms.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <UserX className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <p className="text-muted-foreground">{emptyMessage}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="rounded-md border">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="px-4 py-3 text-left font-medium">Employee</th>
-            <th className="px-4 py-3 text-left font-medium">Leaving Date</th>
-            <th className="px-4 py-3 text-left font-medium">Reason</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-left font-medium">Initiated By</th>
-            <th className="px-4 py-3 text-right font-medium">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {forms.map((form) => {
-            const statusConfig = LEAVING_STATUS_CONFIG[form.status];
-            const reasonConfig = LEAVING_REASON_CONFIG[form.reason_for_leaving];
-
-            return (
-              <tr key={form.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="font-medium">{form.employee_name}</p>
-                    {form.employee_job_title && (
-                      <p className="text-xs text-muted-foreground">{form.employee_job_title}</p>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">{formatHRDate(form.leaving_date)}</td>
-                <td className="px-4 py-3">{reasonConfig?.label ?? form.reason_for_leaving}</td>
-                <td className="px-4 py-3">
-                  <Badge variant="outline" className={`${statusConfig.colour} ${statusConfig.bgColour} border-0`}>
-                    {statusConfig.label}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {form.initiator_name ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/hr/leaving/${form.id}`}>View</Link>
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
   );
 }
