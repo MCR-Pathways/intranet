@@ -189,3 +189,7 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Update documentation BEFORE implementing features, not after.** The colour overhaul lost context because docs were done post-implementation. Always update `docs/plan.md`, `memory/MEMORY.md`, and `CLAUDE.md` in a Phase 0 before writing any code.
 
 **Evaluate each table column's value before migrating.** Don't blindly migrate every column — fold sparse/secondary data into related cells (e.g. Reference → Document subtitle, Category → Type subtitle). Reduces visual noise and column count without losing information.
+
+**Use a dedicated `--table-header` design token for table header backgrounds.** `--muted` (#F0F2F5) and `--background` (#F2F4F7) are nearly identical — headers using `bg-muted` blend into the page. The `--table-header` token (#E4E7EC light / hsl(210, 30%, 18%) dark) provides clear contrast against both the page and card backgrounds. Registered as `--color-table-header` in `@theme inline`.
+
+**Add `font-semibold` to `DataTableColumnHeader` for consistent header text.** The ghost Button uses `font-medium` by default, making sortable column headers lighter than non-sortable ones (which inherit `font-semibold` from `<th>`). Override with `font-semibold` on the Button className.

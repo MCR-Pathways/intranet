@@ -341,6 +341,7 @@ describe("Table primitives", () => {
     thElements.forEach((th) => {
       expect(th.className).toContain("sticky");
       expect(th.className).toContain("top-0");
+      expect(th.className).toContain("bg-table-header");
     });
   });
 
