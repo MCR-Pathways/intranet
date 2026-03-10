@@ -2,21 +2,36 @@
 
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
+const tabsListVariants = cva(
+  "group inline-flex items-center justify-center text-muted-foreground",
+  {
+    variants: {
+      variant: {
+        default: "h-10 rounded-lg bg-muted p-1",
+        line: "h-auto gap-1 rounded-none border-b bg-transparent p-0",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);
+
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> &
+    VariantProps<typeof tabsListVariants>
+>(({ className, variant = "default", ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn(
-      "inline-flex h-10 items-center justify-center rounded-lg bg-primary p-1 text-primary-foreground",
-      className
-    )}
+    data-variant={variant}
+    className={cn(tabsListVariants({ variant }), className)}
     {...props}
   />
 ));
@@ -29,7 +44,14 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm text-white/80 hover:text-white",
+      // Base styles (both variants)
+      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      // Default variant (pill on muted bg)
+      "group-data-[variant=default]:rounded-md group-data-[variant=default]:ring-offset-background group-data-[variant=default]:data-[state=active]:bg-background group-data-[variant=default]:data-[state=active]:text-foreground group-data-[variant=default]:data-[state=active]:shadow-sm",
+      // Line variant (underline indicator)
+      "group-data-[variant=line]:relative group-data-[variant=line]:rounded-none group-data-[variant=line]:bg-transparent group-data-[variant=line]:text-muted-foreground group-data-[variant=line]:hover:text-foreground group-data-[variant=line]:data-[state=active]:text-foreground group-data-[variant=line]:data-[state=active]:shadow-none",
+      // Line variant underline via after pseudo-element
+      "group-data-[variant=line]:after:absolute group-data-[variant=line]:after:inset-x-0 group-data-[variant=line]:after:-bottom-px group-data-[variant=line]:after:h-0.5 group-data-[variant=line]:after:bg-foreground group-data-[variant=line]:after:opacity-0 group-data-[variant=line]:after:transition-opacity group-data-[variant=line]:data-[state=active]:after:opacity-100",
       className
     )}
     {...props}
@@ -52,4 +74,4 @@ const TabsContent = React.forwardRef<
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };

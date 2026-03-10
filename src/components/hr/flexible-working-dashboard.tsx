@@ -267,7 +267,7 @@ export function FlexibleWorkingDashboard({
       )}
 
       <Tabs key={activeTab} defaultValue={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="my-requests">
             My Requests
             {myRequests.length > 0 && (

@@ -280,7 +280,7 @@ export default async function MyCoursesPage() {
 
       {/* Course tabs */}
       <Tabs defaultValue="in_progress" className="w-full">
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="in_progress">
             In Progress ({inProgressCourses.length})
           </TabsTrigger>

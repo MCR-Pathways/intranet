@@ -192,7 +192,7 @@ export default async function CourseCatalogPage({
 
       {/* Course tabs by category */}
       <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="all">All Courses</TabsTrigger>
           <TabsTrigger value="compliance">
             Compliance ({coursesByCategory.compliance.length})

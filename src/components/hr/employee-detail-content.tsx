@@ -155,7 +155,7 @@ export function EmployeeDetailContent({
   return (
     <>
       <Tabs key={tab} defaultValue={tab} className="w-full">
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="employment">Employment</TabsTrigger>
