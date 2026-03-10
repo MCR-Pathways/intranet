@@ -30,6 +30,13 @@ const BLOCK_TYPES = new Set([
   "orderedList",
   "blockquote",
   "listItem",
+  "table",
+  "tableRow",
+  "tableHeader",
+  "tableCell",
+  "codeBlock",
+  "callout",
+  "image",
 ]);
 
 /**

@@ -1,6 +1,12 @@
 import { type ReactNode, createElement } from "react";
 import { sanitizeUrl } from "@/lib/utils";
 
+/** Validate that a URL uses http(s) protocol (case-insensitive per RFC 3986). */
+export function isValidHttpUrl(url: string): boolean {
+  const trimmed = url.trim();
+  return !!trimmed && /^https?:\/\//i.test(trimmed);
+}
+
 /**
  * Regex for detecting URLs with explicit http(s) protocol.
  * Conservative: requires protocol prefix to avoid false positives.
