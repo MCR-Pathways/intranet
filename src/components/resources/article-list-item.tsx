@@ -12,7 +12,6 @@ interface ArticleListItemProps {
   article: ArticleWithAuthor;
   categorySlug: string;
   isHRAdmin: boolean;
-  onEdit?: () => void;
   onDelete?: () => void;
 }
 
@@ -20,7 +19,6 @@ export function ArticleListItem({
   article,
   categorySlug,
   isHRAdmin,
-  onEdit,
   onDelete,
 }: ArticleListItemProps) {
   const displayDate = article.published_at
@@ -77,13 +75,14 @@ export function ArticleListItem({
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.preventDefault();
-              onEdit?.();
-            }}
-            aria-label={`Edit ${article.title}`}
+            asChild
           >
-            <Pencil className="h-4 w-4" />
+            <Link
+              href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
+              aria-label={`Edit ${article.title}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Link>
           </Button>
           <Button
             variant="ghost"

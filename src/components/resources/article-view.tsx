@@ -1,12 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArticleRenderer } from "./article-renderer";
-import { ArticleFormDialog } from "./article-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import {
   updateArticle,
@@ -20,14 +20,12 @@ import type { TiptapDocument } from "@/lib/tiptap";
 
 interface ArticleViewProps {
   article: ArticleWithAuthor;
-  categoryId: string;
   categorySlug: string;
   isHRAdmin: boolean;
 }
 
 export function ArticleView({
   article,
-  categoryId,
   categorySlug,
   isHRAdmin,
 }: ArticleViewProps) {
@@ -93,16 +91,12 @@ export function ArticleView({
               </>
             )}
           </Button>
-          <ArticleFormDialog
-            trigger={
-              <Button variant="outline" size="sm">
-                <Pencil className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-            }
-            categoryId={categoryId}
-            article={article}
-          />
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Link>
+          </Button>
           <DeleteResourceDialog
             trigger={
               <Button
