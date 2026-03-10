@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment } from "react";
-import { linkifyText } from "@/lib/url";
+import { isValidHttpUrl, linkifyText } from "@/lib/url";
+import { cn } from "@/lib/utils";
+import { CALLOUT_CONFIG } from "@/lib/tiptap-callout";
 import type { TiptapDocument, TiptapNode } from "@/lib/tiptap";
 
 interface ArticleRendererProps {
@@ -13,7 +15,8 @@ interface ArticleRendererProps {
 
 /**
  * Renders article Tiptap JSON with full prose typography.
- * Supports headings, blockquotes, horizontal rules (unlike the feed renderer).
+ * Supports headings, blockquotes, horizontal rules, tables, code blocks,
+ * images, callouts (unlike the feed renderer).
  */
 export function ArticleRenderer({ json, fallback }: ArticleRendererProps) {
   if (!json) {
@@ -96,6 +99,96 @@ function RenderNode({ node }: { node: TiptapNode }) {
     case "horizontalRule":
       return <hr className="my-4 border-muted" />;
 
+    case "table":
+      return (
+        <table className="border-collapse w-full my-4">
+          <tbody>
+            {node.content?.map((child, i) => (
+              <RenderNode key={i} node={child} />
+            ))}
+          </tbody>
+        </table>
+      );
+
+    case "tableRow":
+      return (
+        <tr>
+          {node.content?.map((child, i) => (
+            <RenderNode key={i} node={child} />
+          ))}
+        </tr>
+      );
+
+    case "tableHeader":
+      return (
+        <th className="border border-border p-2 bg-muted font-semibold text-left">
+          {node.content?.map((child, i) => (
+            <RenderNode key={i} node={child} />
+          ))}
+        </th>
+      );
+
+    case "tableCell":
+      return (
+        <td className="border border-border p-2">
+          {node.content?.map((child, i) => (
+            <RenderNode key={i} node={child} />
+          ))}
+        </td>
+      );
+
+    case "codeBlock": {
+      const language = (node.attrs?.language as string) ?? "";
+      return (
+        <pre className="rounded-lg bg-muted p-4 my-4 overflow-x-auto text-sm font-mono">
+          <code className={language ? `language-${language}` : undefined}>
+            {node.content?.map((child) => child.text).join("") ?? ""}
+          </code>
+        </pre>
+      );
+    }
+
+    case "image": {
+      const src = node.attrs?.src as string;
+      const alt = (node.attrs?.alt as string) ?? "";
+      // Sanitise: only allow http(s) and relative paths (not protocol-relative)
+      if (
+        src &&
+        (isValidHttpUrl(src) || (src.startsWith("/") && !src.startsWith("//")))
+      ) {
+        return (
+          <img
+            src={src}
+            alt={alt}
+            className="max-w-full h-auto rounded-lg my-4"
+          />
+        );
+      }
+      return null;
+    }
+
+    case "callout": {
+      const calloutType = (node.attrs?.type as string) ?? "info";
+      const style = Object.hasOwn(CALLOUT_CONFIG, calloutType)
+        ? CALLOUT_CONFIG[calloutType as keyof typeof CALLOUT_CONFIG]
+        : CALLOUT_CONFIG.info;
+      const Icon = style.icon;
+      return (
+        <div
+          className={cn("my-4 rounded-lg border-l-4 p-4", style.bg, style.border)}
+        >
+          <div className="flex gap-3">
+            <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              {node.content?.map((child, i) => (
+                <RenderNode key={i} node={child} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     case "hardBreak":
       return <br />;
 
@@ -132,6 +225,9 @@ function RenderInline({ node }: { node: TiptapNode }) {
           case "strike":
             element = <s>{element}</s>;
             break;
+          case "underline":
+            element = <u>{element}</u>;
+            break;
           case "code":
             element = (
               <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
@@ -141,10 +237,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
             break;
           case "link": {
             const href = mark.attrs?.href as string;
-            if (
-              href &&
-              (/^https?:\/\//i.test(href))
-            ) {
+            if (href && isValidHttpUrl(href)) {
               element = (
                 <a
                   href={href}
