@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import {
   createDepartment,
   updateDepartment,
   toggleDepartmentActive,
 } from "@/app/(protected)/hr/departments/actions";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
   Dialog,
   DialogContent,
@@ -234,6 +236,43 @@ function DepartmentFormDialog({
 }
 
 // =============================================
+// ROW ACTIONS
+// =============================================
+
+function DepartmentRowActions({
+  dept,
+  onEdit,
+  onToggle,
+}: {
+  dept: DepartmentRow;
+  onEdit: (d: DepartmentRow) => void;
+  onToggle: (d: DepartmentRow) => void;
+}) {
+  return (
+    <div className="text-right">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Actions</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => onEdit(dept)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onToggle(dept)}>
+            <Power className="mr-2 h-4 w-4" />
+            {dept.is_active ? "Deactivate" : "Reactivate"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// =============================================
 // MAIN COMPONENT
 // =============================================
 
@@ -300,10 +339,78 @@ export function DepartmentManagementContent({
     });
   };
 
+  const columns = useMemo<ColumnDef<DepartmentRow>[]>(() => [
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Name" />
+      ),
+      cell: ({ row }) => {
+        const dept = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <ColourSwatch colour={dept.colour} />
+            <span className="font-medium">{dept.name}</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              {dept.slug}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "colour",
+      header: "Colour",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.colour}</span>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "staff_count",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Staff" />
+      ),
+      cell: ({ row }) => (
+        <span className="tabular-nums">{row.original.staff_count}</span>
+      ),
+    },
+    {
+      accessorKey: "sort_order",
+      header: "Order",
+      cell: ({ row }) => (
+        <span className="tabular-nums">{row.original.sort_order}</span>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? "success" : "destructive"}>
+          {row.original.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+      enableSorting: false,
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <DepartmentRowActions
+          dept={row.original}
+          onEdit={setEditingDept}
+          onToggle={setToggleTarget}
+        />
+      ),
+      enableSorting: false,
+    },
+  ], []);
+
   return (
     <>
       {/* Header with create button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
           {departments.length} department{departments.length !== 1 ? "s" : ""}
         </p>
@@ -314,96 +421,12 @@ export function DepartmentManagementContent({
       </div>
 
       {/* Departments table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Name
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Colour
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Staff
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Order
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {departments.map((dept) => (
-                <tr
-                  key={dept.id}
-                  className="border-b last:border-0 hover:bg-muted/25"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <ColourSwatch colour={dept.colour} />
-                      <span className="font-medium">{dept.name}</span>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {dept.slug}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs">{dept.colour}</span>
-                  </td>
-                  <td className="px-4 py-3">{dept.staff_count}</td>
-                  <td className="px-4 py-3">{dept.sort_order}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={dept.is_active ? "success" : "destructive"}>
-                      {dept.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onSelect={() => setEditingDept(dept)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => setToggleTarget(dept)}
-                        >
-                          <Power className="mr-2 h-4 w-4" />
-                          {dept.is_active ? "Deactivate" : "Reactivate"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-              {departments.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-8 text-center text-muted-foreground"
-                  >
-                    No departments yet. Create one to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={departments}
+        emptyMessage="No departments yet. Create one to get started."
+        initialSorting={[{ id: "sort_order", desc: false }]}
+      />
 
       {/* Create dialog */}
       {createOpen && (
