@@ -202,9 +202,13 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Pass `totalCount` to DataTable when using external filtering.** When data is filtered outside DataTable (e.g. multi-field search), the footer only shows the filtered count. Pass `totalCount={allData.length}` so the footer shows "Showing X of Y results" for context.
 
-**Decouple `--accent` from `--secondary` in design tokens.** `--accent` (hover/focus states) and `--secondary` (badges/buttons) serve different purposes. Aliasing them (`--accent: var(--secondary)`) makes independent tuning impossible. Give each its own hex value.
+**Decouple `--accent` from `--secondary` in ALL theme modes.** `--accent` (hover/focus states) and `--secondary` (badges/buttons) serve different purposes. Aliasing them (`--accent: var(--secondary)`) makes independent tuning impossible. Give each its own hex value in both light AND dark mode — don't fix one and forget the other.
 
-**Use Shadcn v4's `variant="line"` pattern for underline tabs.** Add `cva` with `default` (pill on `bg-muted`) and `line` (border-b, bg-transparent) variants to `TabsList`. Propagate variant via `data-variant` attribute. `TabsTrigger` uses `group-data-[variant=...]` to respond to parent's variant. Line variant uses `after:` pseudo-element for active underline indicator. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs for visual hierarchy.
+**Use Shadcn v4's `variant="line"` pattern for underline tabs.** Add `cva` with `default` (pill on `bg-muted`) and `line` (border-b, bg-transparent) variants to `TabsList`. Propagate variant via `data-variant` attribute. `TabsTrigger` uses `group-data-[variant=...]` to respond to parent's variant. Line variant uses `after:` pseudo-element for active underline indicator. Both variants get `hover:text-foreground` for consistent hover feedback. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs for visual hierarchy.
+
+**Don't re-declare inherited styles on child components.** If a parent sets `text-muted-foreground`, children inherit it via CSS inheritance — don't redundantly add it to children via `group-data-[variant=...]` selectors. Only add styles that differ from the inherited value.
+
+**Apply CSS token fixes to ALL theme modes.** When decoupling tokens (e.g. `--accent` from `--secondary`) in light mode, check and fix dark mode too. Review every theme block (`:root`, `.dark`, `@theme inline`) for the same coupling pattern.
 
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` utility targets the nearest ancestor with `class="group"`. Without it, the data attribute selectors won't match. Always include `group` in the parent's `cva` base classes.
 
