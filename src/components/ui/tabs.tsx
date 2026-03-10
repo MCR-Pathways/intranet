@@ -47,9 +47,9 @@ const TabsTrigger = React.forwardRef<
       // Base styles (both variants)
       "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       // Default variant (pill on muted bg)
-      "group-data-[variant=default]:rounded-md group-data-[variant=default]:ring-offset-background group-data-[variant=default]:data-[state=active]:bg-background group-data-[variant=default]:data-[state=active]:text-foreground group-data-[variant=default]:data-[state=active]:shadow-sm",
+      "group-data-[variant=default]:rounded-md group-data-[variant=default]:ring-offset-background group-data-[variant=default]:hover:text-foreground group-data-[variant=default]:data-[state=active]:bg-background group-data-[variant=default]:data-[state=active]:text-foreground group-data-[variant=default]:data-[state=active]:shadow-sm",
       // Line variant (underline indicator)
-      "group-data-[variant=line]:relative group-data-[variant=line]:rounded-none group-data-[variant=line]:bg-transparent group-data-[variant=line]:text-muted-foreground group-data-[variant=line]:hover:text-foreground group-data-[variant=line]:data-[state=active]:text-foreground group-data-[variant=line]:data-[state=active]:shadow-none",
+      "group-data-[variant=line]:relative group-data-[variant=line]:rounded-none group-data-[variant=line]:bg-transparent group-data-[variant=line]:hover:text-foreground group-data-[variant=line]:data-[state=active]:text-foreground group-data-[variant=line]:data-[state=active]:shadow-none",
       // Line variant underline via after pseudo-element
       "group-data-[variant=line]:after:absolute group-data-[variant=line]:after:inset-x-0 group-data-[variant=line]:after:-bottom-px group-data-[variant=line]:after:h-0.5 group-data-[variant=line]:after:bg-foreground group-data-[variant=line]:after:opacity-0 group-data-[variant=line]:after:transition-opacity group-data-[variant=line]:data-[state=active]:after:opacity-100",
       className

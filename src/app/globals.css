@@ -59,8 +59,8 @@
   --primary-foreground: #ffffff;
   --secondary: hsl(210, 20%, 18%);
   --secondary-foreground: hsl(210, 20%, 95%);
-  --accent: var(--secondary);
-  --accent-foreground: var(--secondary-foreground);
+  --accent: hsl(210, 25%, 22%);
+  --accent-foreground: hsl(210, 20%, 95%);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
   --muted: hsl(210, 30%, 15%);
