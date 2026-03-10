@@ -88,7 +88,7 @@ export function WorkingLocationContent({
     <>
       <Tabs key={defaultTab} defaultValue={defaultTab}>
         <div className="flex items-center justify-between">
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="my-schedule">My Schedule</TabsTrigger>
             {isManager && (
               <TabsTrigger value="team-schedule">Team Schedule</TabsTrigger>
