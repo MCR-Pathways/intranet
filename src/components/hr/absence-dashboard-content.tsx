@@ -270,7 +270,7 @@ export function AbsenceDashboardContent({
 
   return (
     <Tabs key={tab} defaultValue={tab} className="w-full">
-      <TabsList>
+      <TabsList variant="line">
         <TabsTrigger value="all">
           All Absences ({absenceRecords.length})
         </TabsTrigger>

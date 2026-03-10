@@ -54,7 +54,7 @@ export function LeaveDashboardContent({
     <>
       <Tabs key={tab} defaultValue={tab}>
         <div className="flex items-center justify-between">
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="my-leave">My Leave</TabsTrigger>
             {showApprovals && (
               <TabsTrigger value="approvals">

@@ -179,7 +179,7 @@ export function LeavingDashboardContent({
       </div>
 
       <Tabs key={tab} defaultValue={tab} className="w-full">
-        <TabsList>
+        <TabsList variant="line">
           <TabsTrigger value="active">
             Active ({activeForms.length})
           </TabsTrigger>
