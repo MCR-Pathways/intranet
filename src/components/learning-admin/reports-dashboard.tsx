@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { exportReportCSV } from "@/app/(protected)/learning/admin/reports/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   BookOpen,
   Users,
@@ -52,6 +56,25 @@ interface ProfileData {
 interface TeamData {
   id: string;
   name: string;
+}
+
+interface CourseStat {
+  title: string;
+  category: string;
+  enrolled: number;
+  completed: number;
+  overdue: number;
+  avgScore: number | null;
+}
+
+interface UserStat {
+  name: string;
+  email: string;
+  userType: string;
+  team: string;
+  enrolled: number;
+  completed: number;
+  overdue: number;
 }
 
 interface ReportsDashboardProps {
@@ -124,18 +147,7 @@ export function ReportsDashboard({
 
   // Per-course breakdown
   const courseStats = useMemo(() => {
-    const statsMap = new Map<
-      string,
-      {
-        title: string;
-        category: string;
-        enrolled: number;
-        completed: number;
-        overdue: number;
-        avgScore: number | null;
-      }
-    >();
-
+    const statsMap = new Map<string, CourseStat>();
     const now = new Date();
 
     for (const course of courses) {
@@ -168,26 +180,12 @@ export function ReportsDashboard({
       }
     }
 
-    return Array.from(statsMap.values()).sort((a, b) =>
-      a.title.localeCompare(b.title)
-    );
+    return Array.from(statsMap.values());
   }, [courses, filteredEnrolments]);
 
   // Per-user breakdown
   const userStats = useMemo(() => {
-    const statsMap = new Map<
-      string,
-      {
-        name: string;
-        email: string;
-        userType: string;
-        team: string;
-        enrolled: number;
-        completed: number;
-        overdue: number;
-      }
-    >();
-
+    const statsMap = new Map<string, UserStat>();
     const now = new Date();
 
     for (const profile of profiles) {
@@ -219,9 +217,7 @@ export function ReportsDashboard({
       }
     }
 
-    return Array.from(statsMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    return Array.from(statsMap.values());
   }, [profiles, filteredEnrolments, teamMap]);
 
   const handleExportCSV = () => {
@@ -247,11 +243,157 @@ export function ReportsDashboard({
     });
   };
 
-  const categoryLabels: Record<string, string> = {
-    compliance: "Compliance",
-    upskilling: "Upskilling",
-    soft_skills: "Soft Skills",
-  };
+  // Column definitions for Course Completion table
+  const courseColumns = useMemo<ColumnDef<CourseStat>[]>(() => {
+    const categoryLabels: Record<string, string> = {
+      compliance: "Compliance",
+      upskilling: "Upskilling",
+      soft_skills: "Soft Skills",
+    };
+
+    return [
+    createRowNumberColumn<CourseStat>(),
+    {
+      accessorKey: "title",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Course" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.title}</span>
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {categoryLabels[row.original.category] ?? row.original.category}
+        </Badge>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "enrolled",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Enrolled" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">{row.original.enrolled}</div>
+      ),
+    },
+    {
+      accessorKey: "completed",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Completed" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">{row.original.completed}</div>
+      ),
+    },
+    {
+      id: "rate",
+      accessorFn: (row) => row.enrolled > 0 ? Math.round((row.completed / row.enrolled) * 100) : 0,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Rate" className="justify-end" />
+      ),
+      cell: ({ getValue }) => (
+        <div className="text-right">{getValue<number>()}%</div>
+      ),
+    },
+    {
+      accessorKey: "overdue",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Overdue" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">
+          {row.original.overdue > 0 ? (
+            <span className="text-red-600 font-medium">{row.original.overdue}</span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "avgScore",
+      accessorFn: (row) => row.avgScore ?? -1,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Avg Score" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">
+          {row.original.avgScore !== null ? `${row.original.avgScore}%` : "—"}
+        </div>
+      ),
+    },
+  ];
+  }, []);
+
+  // Column definitions for Learner Progress table
+  const userColumns = useMemo<ColumnDef<UserStat>[]>(() => [
+    createRowNumberColumn<UserStat>(),
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Name" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
+      ),
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.email}</span>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "team",
+      header: "Team",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.team || "—"}
+        </span>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "enrolled",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Enrolled" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">{row.original.enrolled}</div>
+      ),
+    },
+    {
+      accessorKey: "completed",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Completed" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">{row.original.completed}</div>
+      ),
+    },
+    {
+      accessorKey: "overdue",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Overdue" className="justify-end" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">
+          {row.original.overdue > 0 ? (
+            <span className="text-red-600 font-medium">{row.original.overdue}</span>
+          ) : (
+            <span className="text-muted-foreground">0</span>
+          )}
+        </div>
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -382,170 +524,32 @@ export function ReportsDashboard({
       </Card>
 
       {/* Per-Course Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Course Completion
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
-                    Course
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Enrolled
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Completed
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Rate
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Overdue
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Avg Score
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {courseStats.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      No enrolment data
-                    </td>
-                  </tr>
-                ) : (
-                  courseStats.map((cs) => (
-                    <tr
-                      key={cs.title}
-                      className="border-b border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium">{cs.title}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="secondary">
-                          {categoryLabels[cs.category] ?? cs.category}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">{cs.enrolled}</td>
-                      <td className="px-4 py-3 text-right">{cs.completed}</td>
-                      <td className="px-4 py-3 text-right">
-                        {cs.enrolled > 0
-                          ? Math.round((cs.completed / cs.enrolled) * 100)
-                          : 0}
-                        %
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {cs.overdue > 0 ? (
-                          <span className="text-red-600 font-medium">
-                            {cs.overdue}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {cs.avgScore !== null ? `${cs.avgScore}%` : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <div>
+        <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
+          <BarChart3 className="h-5 w-5" />
+          Course Completion
+        </h3>
+        <DataTable
+          columns={courseColumns}
+          data={courseStats}
+          emptyMessage="No enrolment data"
+          initialSorting={[{ id: "title", desc: false }]}
+        />
+      </div>
 
       {/* Per-User Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Learner Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
-                    Team
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Enrolled
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Completed
-                  </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">
-                    Overdue
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {userStats.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      No learner data
-                    </td>
-                  </tr>
-                ) : (
-                  userStats.map((us) => (
-                    <tr
-                      key={us.email}
-                      className="border-b border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium">{us.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {us.email}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {us.team || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">{us.enrolled}</td>
-                      <td className="px-4 py-3 text-right">{us.completed}</td>
-                      <td className="px-4 py-3 text-right">
-                        {us.overdue > 0 ? (
-                          <span className="text-red-600 font-medium">
-                            {us.overdue}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-            {userStats.length} learners
-          </div>
-        </CardContent>
-      </Card>
+      <div>
+        <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
+          <Users className="h-5 w-5" />
+          Learner Progress
+        </h3>
+        <DataTable
+          columns={userColumns}
+          data={userStats}
+          emptyMessage="No learner data"
+          initialSorting={[{ id: "name", desc: false }]}
+        />
+      </div>
     </div>
   );
 }

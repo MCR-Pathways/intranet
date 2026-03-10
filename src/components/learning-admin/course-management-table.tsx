@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { type ColumnDef } from "@tanstack/react-table";
 import { CourseCreateDialog } from "./course-create-dialog";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Search,
   Pencil,
@@ -50,6 +53,109 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [courses, searchQuery, categoryFilter, statusFilter]);
+
+  const columns = useMemo<ColumnDef<Course>[]>(() => [
+    createRowNumberColumn<Course>(),
+    {
+      accessorKey: "title",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Title" />
+      ),
+      cell: ({ row }) => {
+        const course = row.original;
+        return (
+          <div>
+            <Link
+              href={`/learning/admin/courses/${course.id}`}
+              className="font-medium text-foreground hover:underline"
+            >
+              {course.title}
+            </Link>
+            {course.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                {course.description}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      cell: ({ row }) => {
+        const config = categoryConfig[row.original.category];
+        return <Badge variant={config.badgeVariant}>{config.label}</Badge>;
+      },
+      enableSorting: false,
+    },
+    {
+      id: "type",
+      accessorFn: (row) => (row.is_required ? 1 : 0),
+      header: "Type",
+      cell: ({ row }) =>
+        row.original.is_required ? (
+          <Badge variant="warning">Required</Badge>
+        ) : (
+          <Badge variant="secondary">Optional</Badge>
+        ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "duration_minutes",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Duration" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {formatDuration(row.original.duration_minutes)}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      accessorFn: (row) => {
+        if (row.status === "draft") return "draft";
+        return row.is_active ? "published" : "inactive";
+      },
+      header: "Status",
+      cell: ({ row }) => {
+        const course = row.original;
+        if (course.status === "draft") return <Badge variant="warning">Draft</Badge>;
+        if (course.is_active) return <Badge variant="success">Published</Badge>;
+        return <Badge variant="destructive">Inactive</Badge>;
+      },
+      enableSorting: false,
+    },
+    {
+      accessorKey: "updated_at",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Last Modified" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs">
+          {new Date(row.original.updated_at).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+          <Link href={`/learning/admin/courses/${row.original.id}`}>
+            <Pencil className="h-3.5 w-3.5 mr-1" />
+            Edit
+          </Link>
+        </Button>
+      ),
+      enableSorting: false,
+    },
+  ], []);
 
   return (
     <>
@@ -93,126 +199,13 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       </div>
 
       {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 font-medium text-muted-foreground w-12">
-                  #
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Title
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Category
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Type
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Duration
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Last Modified
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-muted-foreground"
-                  >
-                    No courses found
-                  </td>
-                </tr>
-              ) : (
-                filteredCourses.map((course, index) => {
-                  const config = categoryConfig[course.category];
-                  return (
-                    <tr
-                      key={course.id}
-                      className="border-b border-border hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {index + 1}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/learning/admin/courses/${course.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {course.title}
-                        </Link>
-                        {course.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {course.description}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={config.badgeVariant}>{config.label}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        {course.is_required ? (
-                          <Badge variant="warning">Required</Badge>
-                        ) : (
-                          <Badge variant="secondary">Optional</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatDuration(course.duration_minutes)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {course.status === "draft" ? (
-                          <Badge variant="warning">Draft</Badge>
-                        ) : course.is_active ? (
-                          <Badge variant="success">Published</Badge>
-                        ) : (
-                          <Badge variant="destructive">Inactive</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {new Date(course.updated_at).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2"
-                          asChild
-                        >
-                          <Link
-                            href={`/learning/admin/courses/${course.id}`}
-                          >
-                            <Pencil className="h-3.5 w-3.5 mr-1" />
-                            Edit
-                          </Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-          {filteredCourses.length} of {courses.length} courses
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={filteredCourses}
+        totalCount={courses.length}
+        emptyMessage="No courses found"
+        initialSorting={[{ id: "title", desc: false }]}
+      />
 
       {/* Create Course Dialog */}
       <CourseCreateDialog
