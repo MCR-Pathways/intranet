@@ -137,14 +137,14 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
               {isStaff && (
                 <DropdownMenuItem asChild>
                   <Link href="/hr/profile" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
+                    <User className="h-4 w-4" />
                     My Profile
                   </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
                 <Link href="/settings" className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
+                  <Settings className="h-4 w-4" />
                   Settings
                 </Link>
               </DropdownMenuItem>
@@ -153,7 +153,7 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
                 className="cursor-pointer text-destructive focus:text-destructive"
                 onSelect={handleSignOut}
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>

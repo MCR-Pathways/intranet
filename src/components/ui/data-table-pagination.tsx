@@ -32,7 +32,7 @@ export function DataTablePagination<TData>({
   const endRow = Math.min((pageIndex + 1) * pageSize, rowCount);
 
   return (
-    <div className="flex items-center justify-between px-2 py-3">
+    <div className="flex items-center justify-between px-4 py-3">
       <div className="flex-1 text-xs text-muted-foreground">
         Showing {rowCount === 0 ? "0" : `${startRow}–${endRow}`} of{" "}
         {rowCount} result{rowCount !== 1 ? "s" : ""}

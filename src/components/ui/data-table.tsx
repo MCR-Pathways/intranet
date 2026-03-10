@@ -49,6 +49,8 @@ interface DataTableProps<TData, TValue> {
   initialSorting?: SortingState;
   /** Initial column visibility */
   initialColumnVisibility?: VisibilityState;
+  /** Total item count (before external filtering). When provided, footer shows "Showing X of Y results" */
+  totalCount?: number;
 }
 
 export function DataTable<TData, TValue>({
@@ -63,6 +65,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   initialSorting = [],
   initialColumnVisibility = {},
+  totalCount,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] =
@@ -121,12 +124,12 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Table card */}
+      <div className="bg-card shadow-md rounded-xl overflow-clip">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="hover:bg-transparent even:bg-transparent">
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id} colSpan={header.colSpan}>
                     {header.isPlaceholder
@@ -175,17 +178,21 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
-      </div>
 
-      {/* Footer: result count + pagination */}
-      <div className="flex items-center justify-between">
-        {!shouldShowPagination && (
-          <p className="text-xs text-muted-foreground">
-            Showing {filteredRowCount} result
-            {filteredRowCount !== 1 ? "s" : ""}
-          </p>
-        )}
-        {shouldShowPagination && <DataTablePagination table={table} />}
+        {/* Footer inside card */}
+        <div className="border-t border-border">
+          {!shouldShowPagination ? (
+            <p className="px-4 py-3 text-xs text-muted-foreground">
+              Showing {filteredRowCount}
+              {totalCount != null && totalCount !== filteredRowCount
+                ? ` of ${totalCount}`
+                : ""}{" "}
+              result{(totalCount ?? filteredRowCount) !== 1 ? "s" : ""}
+            </p>
+          ) : (
+            <DataTablePagination table={table} />
+          )}
+        </div>
       </div>
     </div>
   );
