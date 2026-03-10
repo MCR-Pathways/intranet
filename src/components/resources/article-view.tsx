@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArticleRenderer } from "./article-renderer";
+import { ArticleOutline } from "./article-outline";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import {
   updateArticle,
@@ -115,36 +116,46 @@ export function ArticleView({
         </div>
       )}
 
-      {/* Article content */}
-      <Card>
-        <CardContent className="p-6">
-          {/* Author + date */}
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={article.author?.avatar_url ?? undefined} />
-              <AvatarFallback className="text-xs">
-                {getInitials(authorName)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-sm">
-              <span className="font-medium">{authorName}</span>
-              <span className="text-muted-foreground ml-2">
-                {displayDate.toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
+      {/* Two-column layout: content + outline sidebar */}
+      <div className="flex gap-8">
+        {/* Article content */}
+        <Card className="flex-1 min-w-0">
+          <CardContent className="p-6">
+            {/* Author + date */}
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={article.author?.avatar_url ?? undefined} />
+                <AvatarFallback className="text-xs">
+                  {getInitials(authorName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-sm">
+                <span className="font-medium">{authorName}</span>
+                <span className="text-muted-foreground ml-2">
+                  {displayDate.toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Body */}
-          <ArticleRenderer
-            json={article.content_json as unknown as TiptapDocument}
-            fallback={article.content}
+            {/* Body */}
+            <ArticleRenderer
+              json={article.content_json as unknown as TiptapDocument}
+              fallback={article.content}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Right sidebar — table of contents */}
+        <div className="hidden lg:block w-56 shrink-0">
+          <ArticleOutline
+            contentJson={article.content_json as unknown as TiptapDocument}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

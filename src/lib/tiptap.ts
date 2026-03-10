@@ -1,9 +1,11 @@
 /**
- * Shared Tiptap utilities for the news feed.
+ * Shared Tiptap utilities.
  *
  * - extractPlainText(): recursively extracts plain text from Tiptap JSON
  * - extractMentionIds(): extracts unique mentioned user IDs from Tiptap JSON
  * - isEmptyDocument(): checks if a Tiptap JSON doc has no content
+ * - extractHeadings(): extracts H2/H3 headings with slugified IDs
+ * - slugifyHeading(): converts heading text to URL-safe IDs
  */
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -90,4 +92,62 @@ export function extractMentionIds(doc: TiptapDocument | TiptapNode): string[] {
 export function isEmptyDocument(doc: TiptapDocument | null | undefined): boolean {
   if (!doc || !doc.content) return true;
   return extractPlainText(doc).trim().length === 0;
+}
+
+// ─── Heading extraction (for article outline / ToC) ─────────────────────
+
+export interface HeadingItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
+/**
+ * Converts heading text to a URL-safe slug for use as an element ID.
+ */
+export function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Extracts H2/H3 headings from a Tiptap JSON document.
+ * Returns headings with deduplicated slugified IDs (appends -2, -3, etc.).
+ * Used by both the article renderer (to set id attributes) and the
+ * article outline sidebar (to generate anchor links).
+ */
+export function extractHeadings(
+  doc: TiptapDocument | Record<string, unknown> | null | undefined
+): HeadingItem[] {
+  if (!doc || !("content" in doc) || !Array.isArray(doc.content)) return [];
+
+  const headings: HeadingItem[] = [];
+  const slugCounts = new Map<string, number>();
+
+  for (const node of doc.content as TiptapNode[]) {
+    if (node.type !== "heading") continue;
+    const level = (node.attrs?.level as number) ?? 2;
+    if (level !== 2 && level !== 3) continue;
+
+    // Extract text from heading children
+    const text = node.content
+      ?.map((child) => child.text ?? "")
+      .join("")
+      .trim();
+    if (!text) continue;
+
+    const baseSlug = slugifyHeading(text);
+    if (!baseSlug) continue;
+
+    // Deduplicate slugs
+    const count = slugCounts.get(baseSlug) ?? 0;
+    slugCounts.set(baseSlug, count + 1);
+    const id = count === 0 ? baseSlug : `${baseSlug}-${count + 1}`;
+
+    headings.push({ id, text, level });
+  }
+
+  return headings;
 }
