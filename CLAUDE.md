@@ -193,3 +193,9 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Use a dedicated `--table-header` design token for table header backgrounds.** `--muted` (#F0F2F5) and `--background` (#F2F4F7) are nearly identical — headers using `bg-muted` blend into the page. The `--table-header` token (#E4E7EC light / hsl(210, 30%, 18%) dark) provides clear contrast against both the page and card backgrounds. Registered as `--color-table-header` in `@theme inline`.
 
 **Add `font-semibold` to `DataTableColumnHeader` for consistent header text.** The ghost Button uses `font-medium` by default, making sortable column headers lighter than non-sortable ones (which inherit `font-semibold` from `<th>`). Override with `font-semibold` on the Button className.
+
+**Don't use `mr-2` on icons inside Shadcn `DropdownMenuItem`.** `DropdownMenuItem` already applies `gap-2` via its className (`items-center gap-2`), so `mr-2` creates double spacing. Use just `h-4 w-4` on icons. This applies to all Radix components with built-in `gap-2`: `DropdownMenuItem`, `DropdownMenuSubTrigger`, etc. `Button` does NOT have `gap-2`, so `mr-2` is still needed for icons inside buttons.
+
+**Use `<Link>` with `asChild` on `DropdownMenuItem` for navigation, not `window.location.href`.** The CLAUDE.md lesson about avoiding `router.push()` in Radix components applies specifically to Dialog `onOpenChange` handlers. `DropdownMenuItem asChild` + `<Link>` is the standard Shadcn pattern and works correctly for client-side navigation.
+
+**Pass `totalCount` to DataTable when using external filtering.** When data is filtered outside DataTable (e.g. multi-field search), the footer only shows the filtered count. Pass `totalCount={allData.length}` so the footer shows "Showing X of Y results" for context.

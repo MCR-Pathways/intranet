@@ -155,13 +155,11 @@ function UserRowActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onSelect={() => {
-            window.location.href = `/hr/users/${profile.id}`;
-          }}
-        >
-          <Eye className="h-4 w-4" />
-          View Profile
+        <DropdownMenuItem asChild>
+          <Link href={`/hr/users/${profile.id}`}>
+            <Eye className="h-4 w-4" />
+            View Profile
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => onEditProfile(profile)}>
@@ -449,6 +447,7 @@ export function UserTable({
       <DataTable
         columns={columns}
         data={filteredProfiles}
+        totalCount={profiles.length}
         emptyMessage="No users found"
         initialSorting={[{ id: "full_name", desc: false }]}
       />

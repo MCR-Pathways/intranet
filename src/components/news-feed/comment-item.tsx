@@ -259,7 +259,7 @@ export function CommentItem({
               <DropdownMenuContent align="start">
                 {isAuthor && (
                   <DropdownMenuItem onSelect={handleStartEdit}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 )}
@@ -268,7 +268,7 @@ export function CommentItem({
                     className="text-destructive focus:text-destructive"
                     onSelect={() => setShowDeleteDialog(true)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 )}

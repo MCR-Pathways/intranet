@@ -259,11 +259,11 @@ function DepartmentRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => onEdit(dept)}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="h-4 w-4" />
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => onToggle(dept)}>
-            <Power className="mr-2 h-4 w-4" />
+            <Power className="h-4 w-4" />
             {dept.is_active ? "Deactivate" : "Reactivate"}
           </DropdownMenuItem>
         </DropdownMenuContent>

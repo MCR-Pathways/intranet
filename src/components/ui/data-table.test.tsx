@@ -190,6 +190,23 @@ describe("DataTable", () => {
     expect(screen.getByText("Showing 1 result")).toBeInTheDocument();
   });
 
+  it("shows total count when totalCount prop provided", () => {
+    render(
+      <DataTable columns={columns} data={[testData[0]]} totalCount={5} />
+    );
+
+    expect(screen.getByText("Showing 1 of 5 results")).toBeInTheDocument();
+  });
+
+  it("hides total count when it matches filtered count", () => {
+    render(
+      <DataTable columns={columns} data={testData} totalCount={5} />
+    );
+
+    // Should show "Showing 5 results" not "Showing 5 of 5 results"
+    expect(screen.getByText("Showing 5 results")).toBeInTheDocument();
+  });
+
   it("shows pagination when data exceeds pageSize", () => {
     // Generate more data than default pageSize of 10
     const moreData = Array.from({ length: 15 }, (_, i) => ({
