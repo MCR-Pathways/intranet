@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Folder } from "lucide-react";
-import { ICON_MAP } from "./category-card";
+import { cn } from "@/lib/utils";
+import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import type { FeaturedArticle } from "@/app/(protected)/intranet/resources/actions";
 
 interface FeaturedResourcesProps {
@@ -19,9 +19,8 @@ export function FeaturedResources({ articles }: FeaturedResourcesProps) {
       </h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {articles.map((article) => {
-          const Icon =
-            (article.category_icon && ICON_MAP[article.category_icon]) ||
-            Folder;
+          const Icon = resolveIcon(article.category_icon);
+          const colour = resolveIconColour(article.category_icon_colour);
 
           return (
             <Link
@@ -29,7 +28,13 @@ export function FeaturedResources({ articles }: FeaturedResourcesProps) {
               href={`/intranet/resources/${article.category_slug}/${article.slug}`}
               className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-primary/50 hover:shadow-sm"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                  colour.bg,
+                  colour.fg
+                )}
+              >
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">

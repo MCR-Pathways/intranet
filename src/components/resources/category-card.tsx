@@ -2,16 +2,13 @@
 
 import Link from "next/link";
 import {
-  Shield,
-  BookOpen,
-  Wrench,
-  FileText,
-  Folder,
-  Star,
   Pencil,
   Trash2,
   MoreHorizontal,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,31 +19,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import type { CategoryWithCount } from "@/types/database.types";
-
-export const ICON_MAP: Record<string, React.ElementType> = {
-  Shield,
-  BookOpen,
-  Wrench,
-  FileText,
-  Folder,
-  Star,
-};
 
 interface CategoryCardProps {
   category: CategoryWithCount;
   isHRAdmin: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 export function CategoryCard({
   category,
   isHRAdmin,
+  isFirst,
+  isLast,
   onEdit,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: CategoryCardProps) {
-  const Icon = (category.icon && ICON_MAP[category.icon]) || Folder;
+  const Icon = resolveIcon(category.icon);
+  const colour = resolveIconColour(category.icon_colour);
 
   return (
     <Card className="group relative transition-colors hover:bg-muted/50">
@@ -57,7 +55,13 @@ export function CategoryCard({
         <span className="sr-only">View {category.name}</span>
       </Link>
       <CardContent className="flex items-start gap-4 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            colour.bg,
+            colour.fg
+          )}
+        >
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -95,6 +99,18 @@ export function CategoryCard({
                   <Pencil className="h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
+                {!isFirst && (
+                  <DropdownMenuItem onSelect={() => onMoveUp?.()}>
+                    <ArrowUp className="h-4 w-4" />
+                    Move up
+                  </DropdownMenuItem>
+                )}
+                {!isLast && (
+                  <DropdownMenuItem onSelect={() => onMoveDown?.()}>
+                    <ArrowDown className="h-4 w-4" />
+                    Move down
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"

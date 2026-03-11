@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
-import Link from "next/link";
-import { Plus, Search, FolderOpen, Trash2 } from "lucide-react";
+import { Plus, Search, FolderOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryCard } from "./category-card";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
-import { deleteCategory } from "@/app/(protected)/intranet/resources/actions";
+import { deleteCategory, reorderCategories } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
 import type { CategoryWithCount, ResourceCategory } from "@/types/database.types";
 
@@ -51,6 +50,22 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
     });
   }
 
+  function handleReorder(index: number, direction: "up" | "down") {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= categories.length) return;
+
+    // Swap the two categories and send the full ordered list
+    const reordered = [...categories];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+
+    startTransition(async () => {
+      const result = await reorderCategories(reordered.map((c) => c.id));
+      if (!result.success) {
+        toast.error(result.error ?? "Failed to reorder categories");
+      }
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -64,22 +79,14 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
           />
         </div>
         {isHRAdmin && (
-          <>
-            <CategoryFormDialog
-              trigger={
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  New Category
-                </Button>
-              }
-            />
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/intranet/resources/bin">
-                <Trash2 className="h-4 w-4 mr-1" />
-                Bin
-              </Link>
-            </Button>
-          </>
+          <CategoryFormDialog
+            trigger={
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                New Category
+              </Button>
+            }
+          />
         )}
       </div>
 
@@ -95,13 +102,17 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((category) => (
+          {filtered.map((category, index) => (
             <CategoryCard
               key={category.id}
               category={category}
               isHRAdmin={isHRAdmin}
+              isFirst={index === 0}
+              isLast={index === filtered.length - 1}
               onEdit={() => setEditCategory(category)}
               onDelete={() => setDeleteTarget(category)}
+              onMoveUp={() => handleReorder(index, "up")}
+              onMoveDown={() => handleReorder(index, "down")}
             />
           ))}
         </div>
