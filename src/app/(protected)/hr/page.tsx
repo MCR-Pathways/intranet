@@ -1,4 +1,5 @@
 import { getCurrentUser, isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -10,19 +11,15 @@ import {
 } from "@/components/ui/card";
 import Link from "next/link";
 import {
-  Users,
   Calendar,
-  User,
   Shield,
   FileCheck,
   CalendarClock,
-  Package,
   Clock,
   AlertTriangle,
   Stethoscope,
   ClipboardCheck,
   UserMinus,
-  Network,
   Briefcase,
   FolderTree,
   UserPlus,
@@ -211,7 +208,12 @@ export default async function HRPage() {
   const isHRAdmin = isHRAdminEffective(profile);
   const isLDAdmin = isLDAdminEffective(profile);
   const isSystemsAdmin = isSystemsAdminEffective(profile);
-  const hasAnyAdmin = isHRAdmin || isSystemsAdmin;
+  const hasAnyAdmin = isHRAdmin || isSystemsAdmin || isLDAdmin;
+
+  // Non-admin users have no reason to be on /hr — redirect to /hr/profile ("Me")
+  if (!hasAnyAdmin) {
+    redirect("/hr/profile");
+  }
 
   const stats = isHRAdmin ? await fetchDashboardStats(supabase) : null;
 
@@ -249,7 +251,7 @@ export default async function HRPage() {
     <div className="space-y-6">
       <PageHeader
         title={`${greeting}, ${firstName}`}
-        subtitle="Manage your profile, leave, and team"
+        subtitle="Admin dashboard"
       />
 
       {/* HR Admin dashboard stats — only show cards that need attention */}
@@ -358,58 +360,8 @@ export default async function HRPage() {
         />
       )}
 
-      {/* My HR — self-service items for all staff */}
-      <section>
-        <SectionHeader>My HR</SectionHeader>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <QuickActionCard
-            title="My Profile"
-            description="View and update your personal information"
-            href="/hr/profile"
-            icon={User}
-          />
-          <QuickActionCard
-            title="Leave"
-            description="Request and manage your leave"
-            href="/hr/leave"
-            icon={Calendar}
-          />
-          <QuickActionCard
-            title="Assets"
-            description="View company assets assigned to you"
-            href="/hr/assets"
-            icon={Package}
-          />
-          <QuickActionCard
-            title="Flexible Working"
-            description="Request a change to your working pattern"
-            href="/hr/flexible-working"
-            icon={Briefcase}
-          />
-        </div>
-      </section>
-
-      {/* People — visible to all staff */}
-      <section>
-        <SectionHeader>People</SectionHeader>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <QuickActionCard
-            title="My Team"
-            description="View your team members"
-            href="/hr/team"
-            icon={Users}
-          />
-          <QuickActionCard
-            title="Org Chart"
-            description="View the organisation structure"
-            href="/hr/org-chart"
-            icon={Network}
-          />
-        </div>
-      </section>
-
       {/* Administration — HR Admin + Systems Admin */}
-      {hasAnyAdmin && (
+      {(isHRAdmin || isSystemsAdmin) && (
         <section>
           <SectionHeader>Administration</SectionHeader>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
