@@ -247,6 +247,9 @@ export function ArticleComposer({
       // Undo/redo
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
+      // Indent/outdent — check both list types since cursor could be in either
+      canSink: e.can().sinkListItem("listItem") || e.can().sinkListItem("taskItem"),
+      canLift: e.can().liftListItem("listItem") || e.can().liftListItem("taskItem"),
     }},
   });
 
@@ -432,6 +435,7 @@ export function ArticleComposer({
           }}
           label="Indent"
           tooltip="Indent"
+          disabled={!editorState?.canSink}
         >
           <IndentIncrease className="h-4 w-4" />
         </ToolbarButton>
@@ -446,6 +450,7 @@ export function ArticleComposer({
           }}
           label="Outdent"
           tooltip="Outdent"
+          disabled={!editorState?.canLift}
         >
           <IndentDecrease className="h-4 w-4" />
         </ToolbarButton>
@@ -727,7 +732,7 @@ function HeadingDropdown({
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem
           onSelect={() => editor.chain().focus().setParagraph().run()}
-          className={cn(!editor.isActive("heading") && "bg-accent")}
+          className={cn(activeLevel === 0 && "bg-accent")}
         >
           <Pilcrow className="h-4 w-4" />
           Normal text
@@ -736,7 +741,7 @@ function HeadingDropdown({
           onSelect={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           className={cn(
             "text-2xl font-bold",
-            editor.isActive("heading", { level: 1 }) && "bg-accent"
+            activeLevel === 1 && "bg-accent"
           )}
         >
           <Heading1 className="h-4 w-4" />
@@ -746,7 +751,7 @@ function HeadingDropdown({
           onSelect={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           className={cn(
             "text-xl font-bold",
-            editor.isActive("heading", { level: 2 }) && "bg-accent"
+            activeLevel === 2 && "bg-accent"
           )}
         >
           <Heading2 className="h-4 w-4" />
@@ -756,7 +761,7 @@ function HeadingDropdown({
           onSelect={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           className={cn(
             "text-lg font-semibold",
-            editor.isActive("heading", { level: 3 }) && "bg-accent"
+            activeLevel === 3 && "bg-accent"
           )}
         >
           <Heading3 className="h-4 w-4" />
@@ -766,7 +771,7 @@ function HeadingDropdown({
           onSelect={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
           className={cn(
             "text-base font-semibold",
-            editor.isActive("heading", { level: 4 }) && "bg-accent"
+            activeLevel === 4 && "bg-accent"
           )}
         >
           <Heading4 className="h-4 w-4" />
