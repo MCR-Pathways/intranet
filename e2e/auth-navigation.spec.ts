@@ -81,48 +81,47 @@ test.describe("Sidebar navigation", () => {
   test("staff sees all navigation modules", async ({ staffPage }) => {
     await staffPage.goto("/intranet");
     const sidebar = staffPage.locator("aside");
-    await expect(sidebar.getByText("Intranet")).toBeVisible();
-    await expect(sidebar.getByText("HR")).toBeVisible();
+    await expect(sidebar.getByText("Home")).toBeVisible();
+    await expect(sidebar.getByText("Me")).toBeVisible();
     await expect(sidebar.getByText("Learning")).toBeVisible();
-    await expect(sidebar.getByText("Working Location")).toBeVisible();
+    await expect(sidebar.getByText("Location")).toBeVisible();
     await expect(sidebar.getByText("Settings")).toBeVisible();
   });
 
-  test("coordinator only sees Intranet and Learning in sidebar", async ({
+  test("coordinator only sees Home and Learning in sidebar", async ({
     coordinatorPage,
   }) => {
     await coordinatorPage.goto("/intranet");
     const sidebar = coordinatorPage.locator("aside");
-    await expect(sidebar.getByText("Intranet")).toBeVisible();
+    await expect(sidebar.getByText("Home")).toBeVisible();
     await expect(sidebar.getByText("Learning")).toBeVisible();
     // Should NOT see staff-only modules
-    await expect(sidebar.getByText("HR")).not.toBeVisible();
-    await expect(sidebar.getByText("Working Location")).not.toBeVisible();
+    await expect(sidebar.getByText("Me")).not.toBeVisible();
+    await expect(sidebar.getByText("Location")).not.toBeVisible();
   });
 
-  test("HR admin sees admin sub-items in HR sidebar", async ({
+  test("HR admin sees Admin link in sidebar utility zone", async ({
     hrAdminPage,
   }) => {
-    await hrAdminPage.goto("/hr");
+    await hrAdminPage.goto("/hr/profile");
     const sidebar = hrAdminPage.locator("aside");
-    // Admin section should appear
+    // Admin link should appear in utility zone
     await expect(sidebar.getByText("Admin")).toBeVisible();
-    await expect(sidebar.getByText("User Management")).toBeVisible();
-    await expect(sidebar.getByText("Onboarding")).toBeVisible();
-    await expect(sidebar.getByText("Absence & Sickness")).toBeVisible();
-  });
-
-  test("regular staff does not see HR admin sub-items", async ({
-    staffPage,
-  }) => {
-    await staffPage.goto("/hr");
-    const sidebar = staffPage.locator("aside");
-    // Regular self-service items should be visible
+    // Me section items should be visible when on /hr/profile
     await expect(sidebar.getByText("My Profile")).toBeVisible();
     await expect(sidebar.getByText("Leave")).toBeVisible();
-    // Admin section should NOT be visible
-    await expect(sidebar.getByText("User Management")).not.toBeVisible();
-    await expect(sidebar.getByText("Onboarding")).not.toBeVisible();
+  });
+
+  test("regular staff does not see Admin link in sidebar", async ({
+    staffPage,
+  }) => {
+    await staffPage.goto("/hr/profile");
+    const sidebar = staffPage.locator("aside");
+    // Me section items should be visible
+    await expect(sidebar.getByText("My Profile")).toBeVisible();
+    await expect(sidebar.getByText("Leave")).toBeVisible();
+    // Admin link should NOT be visible
+    await expect(sidebar.getByText("Admin")).not.toBeVisible();
   });
 
   test("clicking sidebar nav link navigates to module", async ({
@@ -130,7 +129,7 @@ test.describe("Sidebar navigation", () => {
   }) => {
     await staffPage.goto("/intranet");
     const sidebar = staffPage.locator("aside");
-    await sidebar.getByText("HR").click();
-    await expect(staffPage).toHaveURL(/\/hr/);
+    await sidebar.getByText("Me").click();
+    await expect(staffPage).toHaveURL(/\/hr\/profile/);
   });
 });

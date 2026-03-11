@@ -164,6 +164,16 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [ ] **PR 4 — Image Upload via Supabase Storage**: File upload + drag-and-drop + clipboard paste, URL fallback, `resource-images` bucket
 - [ ] **PR 5 — File Attachments**: `resource_article_attachments` table, downloadable files at bottom of articles, MIME type icon mapping
 
+### Sidebar Declutter — Semantic Regrouping + Admin Separation
+- [ ] Rewrite `sidebar.tsx` navigation data model: rename Intranet → Home, HR → Me, Working Location → Location
+- [ ] Split HR children: personal items under "Me", admin items removed from sidebar (live on `/hr` dashboard)
+- [ ] Add "Admin" utility link (single dashboard link, Jira/GitHub Settings pattern) for HR admins and L&D admins
+- [ ] New active state detection: child-path-only matching (resolves Me vs Admin conflict on `/hr/` prefix)
+- [ ] Remove redundant profile info card from `/settings` page (lives on `/hr/profile`)
+- [ ] Add L&D admin quick-action cards to HR dashboard (`/hr`)
+- [ ] Update E2E test assertions for renamed sidebar items
+- No route changes — sidebar is purely visual mapping
+
 ### Intranet Phase 6 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
 - [ ] Cmd+K universal search palette: posts + resources + people (PostgreSQL FTS)

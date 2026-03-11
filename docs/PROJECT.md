@@ -640,7 +640,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 - Maternity leave showing for regular employees (filter `HR_ONLY_LEAVE_TYPES`)
 - Notification dropdown has no scroll for many notifications
 - Weekend calendar cells nearly invisible (`bg-muted/30` on `bg-background`)
-- "HR" sidebar naming unintuitive for employees
+- ~~"HR" sidebar naming unintuitive for employees~~ (addressed by sidebar declutter)
 - System Permissions visible on non-admin Profile view
 
 ### Won't Fix

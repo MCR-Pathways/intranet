@@ -1,4 +1,4 @@
-import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -26,6 +26,8 @@ import {
   Briefcase,
   FolderTree,
   UserPlus,
+  GraduationCap,
+  BarChart3,
 } from "lucide-react";
 import { getOfficeHeadcount } from "@/app/(protected)/sign-in/actions";
 import { getWeekDates, getUKToday } from "@/lib/sign-in";
@@ -207,6 +209,7 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
 export default async function HRPage() {
   const { supabase, profile } = await getCurrentUser();
   const isHRAdmin = isHRAdminEffective(profile);
+  const isLDAdmin = isLDAdminEffective(profile);
   const isSystemsAdmin = isSystemsAdminEffective(profile);
   const hasAnyAdmin = isHRAdmin || isSystemsAdmin;
 
@@ -466,6 +469,29 @@ export default async function HRPage() {
                 />
               </>
             )}
+          </div>
+        </section>
+      )}
+
+      {/* Learning & Development Admin — L&D admin only */}
+      {isLDAdmin && (
+        <section>
+          <SectionHeader>Learning & Development</SectionHeader>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <QuickActionCard
+              title="Course Management"
+              description="Create, edit, and manage courses and lessons"
+              href="/learning/admin/courses"
+              icon={GraduationCap}
+              isAdmin
+            />
+            <QuickActionCard
+              title="L&D Reports"
+              description="View enrolment, completion, and compliance reports"
+              href="/learning/admin/reports"
+              icon={BarChart3}
+              isAdmin
+            />
           </div>
         </section>
       )}
