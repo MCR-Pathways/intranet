@@ -48,7 +48,7 @@ export default async function RTWConfirmationPage({
         title="Return-to-Work Form"
         subtitle="Review and confirm your return-to-work discussion"
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Absence", href: "/hr/absence" },
           { label: "RTW Form" },
         ]}

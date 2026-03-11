@@ -77,6 +77,10 @@ export default async function FlexibleWorkingPage({
       <PageHeader
         title="Flexible Working"
         subtitle="Manage flexible working requests under the Employment Rights Act 1996."
+        breadcrumbs={isHRAdmin ? [
+          { label: "Admin", href: "/hr" },
+          { label: "Flexible Working" },
+        ] : undefined}
       />
 
       <FlexibleWorkingDashboard

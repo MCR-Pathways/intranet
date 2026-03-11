@@ -2,6 +2,7 @@ import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { ABSENCE_RECORD_SELECT } from "@/lib/hr";
 import { redirect } from "next/navigation";
 import { AbsenceDashboardContent } from "@/components/hr/absence-dashboard-content";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function AbsenceDashboardPage({
   searchParams,
@@ -73,12 +74,14 @@ export default async function AbsenceDashboardPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Absence & Sickness</h1>
-        <p className="text-muted-foreground mt-1">
-          Track absence records and return-to-work forms
-        </p>
-      </div>
+      <PageHeader
+        title="Absence & Sickness"
+        subtitle="Track absence records and return-to-work forms"
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "Absence & Sickness" },
+        ]}
+      />
 
       <AbsenceDashboardContent
         absenceRecords={absenceRecords}

@@ -88,6 +88,10 @@ export default async function LeavingDashboardPage({
       <PageHeader
         title="Staff Leaving"
         subtitle="Manage offboarding for departing staff members."
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "Staff Leaving" },
+        ]}
       />
 
       <LeavingDashboardContent

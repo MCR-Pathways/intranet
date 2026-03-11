@@ -24,7 +24,7 @@ export default async function ResourcesPage() {
         title="Resources"
         subtitle="Policies, guides, and reference materials"
         breadcrumbs={[
-          { label: "Intranet", href: "/intranet" },
+          { label: "Home", href: "/intranet" },
           { label: "Resources" },
         ]}
       />

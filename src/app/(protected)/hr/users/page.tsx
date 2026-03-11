@@ -61,6 +61,10 @@ export default async function UserManagementPage() {
       <PageHeader
         title="User Management"
         subtitle="Manage staff profiles, roles, and induction status"
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "User Management" },
+        ]}
       />
       <UserTable
         profiles={profiles ?? []}

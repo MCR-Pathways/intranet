@@ -1,6 +1,7 @@
 import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { KeyDatesDashboard } from "@/components/hr/key-dates-dashboard";
+import { PageHeader } from "@/components/layout/page-header";
 
 const KEY_DATE_SELECT =
   "id, profile_id, date_type, due_date, title, description, is_completed, completed_at, profiles!profile_id(full_name)";
@@ -44,12 +45,14 @@ export default async function KeyDatesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Key Dates</h1>
-        <p className="text-muted-foreground mt-1">
-          Track probation ends, contract renewals, and other important dates
-        </p>
-      </div>
+      <PageHeader
+        title="Key Dates"
+        subtitle="Track probation ends, contract renewals, and other important dates"
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "Key Dates" },
+        ]}
+      />
       <KeyDatesDashboard keyDates={keyDates} employees={employeeList} />
     </div>
   );

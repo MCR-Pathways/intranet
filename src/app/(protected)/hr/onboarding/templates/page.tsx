@@ -31,7 +31,7 @@ export default async function OnboardingTemplatesPage() {
         title="Onboarding Templates"
         subtitle="Configure checklist templates for new starters"
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Onboarding", href: "/hr/onboarding" },
           { label: "Templates" },
         ]}

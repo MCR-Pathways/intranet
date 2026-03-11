@@ -151,7 +151,7 @@ export default async function CourseDetailPage({
         title={course.title}
         subtitle="Manage course details, content, and assignments."
         breadcrumbs={[
-          { label: "Learning", href: "/learning" },
+          { label: "Admin", href: "/hr" },
           { label: "Course Management", href: "/learning/admin/courses" },
           { label: course.title },
         ]}

@@ -50,7 +50,7 @@ export default async function DepartmentsPage() {
         title="Departments"
         subtitle="Manage organisational departments"
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Departments" },
         ]}
       />
