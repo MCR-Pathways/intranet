@@ -187,11 +187,14 @@ export function ArticleComposer({
           "[&_div[data-callout-type='tip']]:bg-green-50 [&_div[data-callout-type='tip']]:border-green-400",
           "[&_div[data-callout-type='warning']]:bg-amber-50 [&_div[data-callout-type='warning']]:border-amber-400",
           "[&_div[data-callout-type='danger']]:bg-red-50 [&_div[data-callout-type='danger']]:border-red-400",
-          // Task list styles
-          "[&_ul[data-type='taskList']]:list-none [&_ul[data-type='taskList']]:pl-0 [&_ul[data-type='taskList']]:my-2",
-          "[&_li[data-type='taskItem']]:flex [&_li[data-type='taskItem']]:gap-2 [&_li[data-type='taskItem']]:items-start",
-          "[&_li[data-type='taskItem']>label]:mt-0.5",
-          "[&_li[data-type='taskItem']>div]:flex-1 [&_li[data-type='taskItem']>div]:min-w-0"
+          // Task list styles — Tiptap v3 renders li with data-checked (not data-type="taskItem")
+          // prose sets display:list-item on li, must override with !flex
+          "[&_ul[data-type='taskList']]:list-none [&_ul[data-type='taskList']]:pl-0 [&_ul[data-type='taskList']]:my-2 [&_ul[data-type='taskList']]:space-y-1",
+          "[&_ul[data-type='taskList']>li]:!flex [&_ul[data-type='taskList']>li]:gap-2 [&_ul[data-type='taskList']>li]:items-start",
+          "[&_ul[data-type='taskList']>li>label]:mt-0.5 [&_ul[data-type='taskList']>li>label]:shrink-0",
+          "[&_ul[data-type='taskList']>li>div]:flex-1 [&_ul[data-type='taskList']>li>div]:min-w-0",
+          // Remove paragraph margins inside task items so text sits inline with checkbox
+          "[&_ul[data-type='taskList']_p]:mt-0 [&_ul[data-type='taskList']_p]:mb-0"
         ),
         // Tailwind v4's outline-none compiles to outline: 2px solid transparent,
         // which doesn't remove the outline on contenteditable elements.
