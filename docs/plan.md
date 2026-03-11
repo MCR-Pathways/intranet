@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-06
+> Last updated: 2026-03-10
 
 ---
 
@@ -70,7 +70,7 @@
 - Preferences section stubbed ("coming soon")
 
 ### Infrastructure ✅
-- Security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, CSP enforcing)
+- Security hardening (HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, CSP enforcing, auth redirect validation, generic error responses, timing-safe tokens, `SET search_path` on all SECURITY DEFINER functions — PRs #106-107)
 - **CSP enforcing** (Mar 2026): `unsafe-eval` omitted entirely (dev violations are cosmetic). Static string CSP with `*.supabase.co` wildcard — IIFEs in header values crash Vercel Fluid Compute. `unsafe-inline` retained for Next.js hydration + inline styles. Nonce-based CSP deferred (forces dynamic rendering — disproportionate cost for internal app).
 - Error and loading boundaries for all protected routes
 - Structured logger (`src/lib/logger.ts`) ready for Sentry/Datadog swap
@@ -151,6 +151,11 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] HR admins create/edit/publish/delete; all users read published content
 - [x] Old `/intranet/guides` and `/intranet/policies` redirect to resources
 - [x] Sidebar updated: single "Resources" nav item replaces "Guides" + "Policies"
+- **Resources Editor Overhaul (PRs #102–105):**
+  - [x] Fix double border in article editor, install 9 Tiptap extension packages (PR #102)
+  - [x] Full formatting suite: links, images, tables, callouts, code blocks, underline, strikethrough (PR #103). Custom callout extension (`tiptap-callout.ts`), link popover, shared `CALLOUT_CONFIG`, centralised `isValidHttpUrl()`.
+  - [x] Full-page editor routes replacing dialog: `/[categorySlug]/new` and `/[articleSlug]/edit` (PR #104). Deleted `article-form-dialog.tsx`. Reserved "new"/"edit" slugs.
+  - [x] Article outline sidebar (table of contents): `extractHeadings()`, `slugifyHeading()`, IntersectionObserver active tracking, two-column reading view (PR #105)
 
 ### Intranet Phase 5 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
@@ -166,11 +171,12 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Add loading states to data fetches
 - [x] Add error handling (error boundaries)
 - [x] Add form validation
-- [x] Security review (headers, `select("*")` audit, SSRF hardening)
+- [x] Security review (headers, `select("*")` audit, SSRF hardening, comprehensive audit Mar 2026 PRs #106-107)
 - [x] Dead code removal (`useUser()` hook deleted)
 - [x] Shared utility dedup (`getInitials` → `src/lib/utils.ts`)
 - [x] Proxy JWT optimisation (PR #49): `user_type`, `status`, `induction_completed_at` synced to `auth.users.raw_app_meta_data` via DB trigger, proxy reads from JWT `app_metadata` instead of querying profiles. DB fallback for pre-migration sessions.
 - [x] CSP tightened to enforcing mode (Mar 2026): switched from Report-Only to enforcing. `unsafe-eval` omitted entirely. Static string CSP (IIFEs crash Vercel Fluid Compute). `unsafe-inline` retained (Next.js hydration + 3 inline style components). Nonce-based CSP deferred.
+- [ ] Rate limiting on API endpoints (requires Upstash Redis for Vercel serverless — in-memory limiters don't persist across invocations). Priority endpoints: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`.
 - [ ] Error monitoring integration (swap logger transport for Sentry/Datadog)
 - [x] Expand test coverage (~20% — 48 test files, 1040 tests / ~236 source files). All 9 phases complete (PRs #52, #53, #56, #57, #58, #61, #73). See [docs/testing-plan.md](./testing-plan.md).
 - [x] UI/UX polish (collapsible sidebar, shared PageHeader, breadcrumbs, dashboard sections)
