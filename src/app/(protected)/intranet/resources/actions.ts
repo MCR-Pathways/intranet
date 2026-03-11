@@ -15,7 +15,7 @@ import type {
 // ─── SELECT constants ────────────────────────────────────────────────────────
 
 const CATEGORY_SELECT =
-  "id, name, slug, description, icon, sort_order, created_at, updated_at, deleted_at, deleted_by";
+  "id, name, slug, description, icon, icon_colour, sort_order, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
   "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order";
@@ -228,6 +228,7 @@ export async function createCategory(data: {
   name: string;
   description?: string;
   icon?: string;
+  icon_colour?: string | null;
 }): Promise<{ success: boolean; error?: string; category?: ResourceCategory }> {
   const { supabase } = await requireHRAdmin();
 
@@ -260,6 +261,7 @@ export async function createCategory(data: {
       slug,
       description: data.description?.trim() || null,
       icon: data.icon || null,
+      icon_colour: data.icon_colour || null,
       sort_order: sortOrder,
     })
     .select(CATEGORY_SELECT)
@@ -279,6 +281,7 @@ export async function updateCategory(
     name?: string;
     description?: string;
     icon?: string;
+    icon_colour?: string | null;
     sort_order?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
@@ -303,6 +306,9 @@ export async function updateCategory(
   }
   if (data.icon !== undefined) {
     update.icon = data.icon || null;
+  }
+  if (data.icon_colour !== undefined) {
+    update.icon_colour = data.icon_colour || null;
   }
   if (data.sort_order !== undefined) {
     update.sort_order = data.sort_order;
@@ -743,6 +749,7 @@ export type FeaturedArticle = ArticleWithAuthor & {
   category_slug: string;
   category_name: string;
   category_icon: string | null;
+  category_icon_colour: string | null;
 };
 
 export async function fetchFeaturedArticles(
@@ -751,7 +758,7 @@ export async function fetchFeaturedArticles(
   const { data } = await supabase
     .from("resource_articles")
     .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(slug, name, icon)`
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(slug, name, icon, icon_colour)`
     )
     .eq("is_featured", true)
     .is("deleted_at", null)
@@ -762,13 +769,14 @@ export async function fetchFeaturedArticles(
   if (!data) return [];
 
   return data.map((a: Record<string, unknown>) => {
-    const cat = a.category as { slug: string; name: string; icon: string | null } | null;
+    const cat = a.category as { slug: string; name: string; icon: string | null; icon_colour: string | null } | null;
     const { category: _, ...rest } = a;
     return {
       ...rest,
       category_slug: cat?.slug ?? "",
       category_name: cat?.name ?? "",
       category_icon: cat?.icon ?? null,
+      category_icon_colour: cat?.icon_colour ?? null,
     };
   }) as FeaturedArticle[];
 }
@@ -867,4 +875,107 @@ export async function toggleArticleFeatured(
 
   revalidate();
   return { success: true };
+}
+
+// ─── Move article between categories ─────────────────────────────────────────
+
+export async function moveArticle(
+  articleId: string,
+  targetCategoryId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  // Get the article
+  const { data: article } = await supabase
+    .from("resource_articles")
+    .select("id, slug, category_id")
+    .eq("id", articleId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!article) {
+    return { success: false, error: "Article not found" };
+  }
+
+  if (article.category_id === targetCategoryId) {
+    return { success: false, error: "Article is already in this category" };
+  }
+
+  // Verify target category exists and is not deleted
+  const { data: targetCategory } = await supabase
+    .from("resource_categories")
+    .select("id, name")
+    .eq("id", targetCategoryId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!targetCategory) {
+    return { success: false, error: "Target category not found" };
+  }
+
+  // Ensure slug is unique in the target category
+  const slug = await ensureUniqueArticleSlug(supabase, article.slug, targetCategoryId, articleId);
+
+  const { error } = await supabase
+    .from("resource_articles")
+    .update({ category_id: targetCategoryId, slug })
+    .eq("id", articleId)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: "Failed to move article" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+// ─── Reorder categories ──────────────────────────────────────────────────────
+
+export async function reorderCategories(
+  orderedIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  if (!orderedIds.length) {
+    return { success: false, error: "No categories provided" };
+  }
+
+  // Batch update sort_order for all categories in parallel
+  const results = await Promise.all(
+    orderedIds.map((id, i) =>
+      supabase.from("resource_categories").update({ sort_order: i }).eq("id", id)
+    )
+  );
+
+  const failedResult = results.find((r) => r.error);
+  if (failedResult) {
+    return { success: false, error: "Failed to reorder categories" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+// ─── Fetch categories for move dialog ────────────────────────────────────────
+
+export async function fetchCategoriesForMove(
+  excludeCategoryId?: string
+): Promise<{ id: string; name: string; icon: string | null; icon_colour: string | null }[]> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+
+  const query = supabase
+    .from("resource_categories")
+    .select("id, name, icon, icon_colour")
+    .is("deleted_at", null)
+    .order("sort_order");
+
+  if (excludeCategoryId) {
+    query.neq("id", excludeCategoryId);
+  }
+
+  const { data } = await query;
+  return (data ?? []) as { id: string; name: string; icon: string | null; icon_colour: string | null }[];
 }

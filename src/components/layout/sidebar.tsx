@@ -119,16 +119,17 @@ function getNavigation(
       : []),
   ];
 
+  const intranetItems: NavChild[] = [
+    { name: "News Feed", href: "/intranet" },
+    { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
+    { name: "Resources", href: "/intranet/resources" },
+    { name: "Surveys", href: "/intranet/surveys" },
+  ];
+  if (isHRAdmin) {
+    intranetItems.push({ name: "Bin", href: "/intranet/resources/bin" });
+  }
   const intranetChildren: NavGroup[] = [
-    {
-      label: null,
-      items: [
-        { name: "News Feed", href: "/intranet" },
-        { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
-        { name: "Resources", href: "/intranet/resources" },
-        { name: "Surveys", href: "/intranet/surveys" },
-      ],
-    },
+    { label: null, items: intranetItems },
   ];
 
   return [
