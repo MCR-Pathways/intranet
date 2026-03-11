@@ -585,21 +585,24 @@ export async function fetchTrashedItems(): Promise<{
 }> {
   const { supabase } = await requireHRAdmin();
 
-  // Fetch soft-deleted articles with author and category name
-  const { data: articles } = await supabase
-    .from("resource_articles")
-    .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(name)`
-    )
-    .not("deleted_at", "is", null)
-    .order("deleted_at", { ascending: false });
+  // Fetch soft-deleted articles and categories in parallel
+  const [articlesResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("resource_articles")
+      .select(
+        `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(name)`
+      )
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false }),
+    supabase
+      .from("resource_categories")
+      .select(CATEGORY_SELECT)
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false }),
+  ]);
 
-  // Fetch soft-deleted categories
-  const { data: categories } = await supabase
-    .from("resource_categories")
-    .select(CATEGORY_SELECT)
-    .not("deleted_at", "is", null)
-    .order("deleted_at", { ascending: false });
+  const { data: articles } = articlesResult;
+  const { data: categories } = categoriesResult;
 
   // Map category name onto articles for display
   const mappedArticles = (articles ?? []).map(
@@ -793,32 +796,32 @@ export async function toggleArticleFeatured(
 
   const newFeatured = !article.is_featured;
 
-  // If featuring, check limit
+  // If featuring, check limit and get sort order in parallel
   if (newFeatured) {
-    const { count } = await supabase
-      .from("resource_articles")
-      .select("id", { count: "exact", head: true })
-      .eq("is_featured", true)
-      .is("deleted_at", null);
+    const [countResult, maxRowResult] = await Promise.all([
+      supabase
+        .from("resource_articles")
+        .select("id", { count: "exact", head: true })
+        .eq("is_featured", true)
+        .is("deleted_at", null),
+      supabase
+        .from("resource_articles")
+        .select("featured_sort_order")
+        .eq("is_featured", true)
+        .is("deleted_at", null)
+        .order("featured_sort_order", { ascending: false })
+        .limit(1)
+        .single(),
+    ]);
 
-    if ((count ?? 0) >= MAX_FEATURED_ARTICLES) {
+    if ((countResult.count ?? 0) >= MAX_FEATURED_ARTICLES) {
       return {
         success: false,
         error: `Maximum of ${MAX_FEATURED_ARTICLES} featured articles allowed. Unfeature one first.`,
       };
     }
 
-    // Set sort order to end
-    const { data: maxRow } = await supabase
-      .from("resource_articles")
-      .select("featured_sort_order")
-      .eq("is_featured", true)
-      .is("deleted_at", null)
-      .order("featured_sort_order", { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrder = (maxRow?.featured_sort_order ?? -1) + 1;
+    const nextOrder = (maxRowResult.data?.featured_sort_order ?? -1) + 1;
 
     const { error } = await supabase
       .from("resource_articles")
@@ -829,6 +832,25 @@ export async function toggleArticleFeatured(
 
     if (error) {
       return { success: false, error: "Failed to feature article" };
+    }
+
+    // Race condition safety: verify we haven't exceeded the limit
+    const { count: postCount } = await supabase
+      .from("resource_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_featured", true)
+      .is("deleted_at", null);
+
+    if ((postCount ?? 0) > MAX_FEATURED_ARTICLES) {
+      // Another admin featured an article simultaneously — roll back
+      await supabase
+        .from("resource_articles")
+        .update({ is_featured: false, featured_sort_order: 0 })
+        .eq("id", id);
+      return {
+        success: false,
+        error: `Maximum of ${MAX_FEATURED_ARTICLES} featured articles allowed. Unfeature one first.`,
+      };
     }
   } else {
     const { error } = await supabase
