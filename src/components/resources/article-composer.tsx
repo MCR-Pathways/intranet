@@ -643,7 +643,7 @@ function ToolbarButton({
   disabled: isDisabled,
   children,
 }: {
-  active: boolean;
+  active?: boolean;
   onClick: () => void;
   label: string;
   tooltip: string;
@@ -782,7 +782,7 @@ function CalloutDropdown({
   isActive,
 }: {
   editor: Editor;
-  isActive: boolean;
+  isActive?: boolean;
 }) {
   return (
     <DropdownMenu>
