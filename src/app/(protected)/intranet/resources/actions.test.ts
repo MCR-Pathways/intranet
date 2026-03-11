@@ -61,6 +61,8 @@ function chainable() {
   chain.neq = vi.fn().mockImplementation(self);
   chain.in = vi.fn().mockImplementation(self);
   chain.is = vi.fn().mockImplementation(self);
+  chain.not = vi.fn().mockImplementation(self);
+  chain.filter = vi.fn().mockImplementation(self);
   chain.single = vi.fn();
   chain.limit = vi.fn().mockImplementation(self);
   chain.order = vi.fn().mockImplementation(self);
@@ -295,20 +297,49 @@ describe("Intranet Resource Actions", () => {
   // =============================================
 
   describe("deleteCategory", () => {
-    it("deletes a category", async () => {
-      const c = chainable();
-      c.single.mockResolvedValue({ data: { id: "cat-1" }, error: null });
-      mockFrom.mockReturnValue(c);
+    it("soft-deletes a category with no articles", async () => {
+      const callLog: string[] = [];
+      mockFrom.mockImplementation((table: string) => {
+        callLog.push(table);
+        const c = chainable();
+        if (table === "resource_articles") {
+          // article count check — returns 0
+          c.is.mockReturnValue({ count: 0, error: null });
+          return c;
+        }
+        // soft-delete update
+        c.single.mockResolvedValue({ data: { id: "cat-1" }, error: null });
+        return c;
+      });
 
       const result = await deleteCategory("cat-1");
       expect(result.success).toBe(true);
       expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
     });
 
-    it("returns error on DB failure", async () => {
+    it("blocks deletion when category has articles", async () => {
       const c = chainable();
-      c.single.mockResolvedValue({ data: null, error: { message: "FK violation" } });
+      // article count check — returns 3
+      c.is.mockReturnValue({ count: 3, error: null });
       mockFrom.mockReturnValue(c);
+
+      const result = await deleteCategory("cat-1");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("3 articles");
+    });
+
+    it("returns error on DB failure", async () => {
+      const callLog: string[] = [];
+      mockFrom.mockImplementation((table: string) => {
+        callLog.push(table);
+        const c = chainable();
+        if (table === "resource_articles") {
+          c.is.mockReturnValue({ count: 0, error: null });
+          return c;
+        }
+        c.single.mockResolvedValue({ data: null, error: { message: "Update failed" } });
+        return c;
+      });
 
       const result = await deleteCategory("cat-1");
       expect(result.success).toBe(false);
@@ -328,7 +359,8 @@ describe("Intranet Resource Actions", () => {
   describe("getCategoryArticleCount", () => {
     it("returns article count for a category", async () => {
       const c = chainable();
-      c.eq.mockResolvedValue({ count: 5, error: null });
+      // Chain: .select().eq().is() — .is() is the terminal
+      c.is.mockResolvedValue({ count: 5, error: null });
       mockFrom.mockReturnValue(c);
 
       const count = await getCategoryArticleCount("cat-1");
@@ -337,7 +369,7 @@ describe("Intranet Resource Actions", () => {
 
     it("returns 0 when count is null", async () => {
       const c = chainable();
-      c.eq.mockResolvedValue({ count: null, error: null });
+      c.is.mockResolvedValue({ count: null, error: null });
       mockFrom.mockReturnValue(c);
 
       const count = await getCategoryArticleCount("cat-1");
@@ -589,13 +621,16 @@ describe("Intranet Resource Actions", () => {
   // =============================================
 
   describe("deleteArticle", () => {
-    it("deletes an article", async () => {
+    it("soft-deletes an article", async () => {
       const c = chainable();
       c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
       mockFrom.mockReturnValue(c);
 
       const result = await deleteArticle("art-1");
       expect(result.success).toBe(true);
+      expect(c.update).toHaveBeenCalledWith(
+        expect.objectContaining({ is_featured: false })
+      );
       expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
     });
 

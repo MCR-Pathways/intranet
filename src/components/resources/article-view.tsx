@@ -6,16 +6,33 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ArticleRenderer } from "./article-renderer";
 import { ArticleOutline } from "./article-outline";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import {
   updateArticle,
   deleteArticle,
+  toggleArticleFeatured,
 } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
 import { getInitials } from "@/lib/utils";
-import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  Star,
+  StarOff,
+} from "lucide-react";
+import { useState } from "react";
 import type { ArticleWithAuthor } from "@/types/database.types";
 import type { TiptapDocument } from "@/lib/tiptap";
 
@@ -31,6 +48,7 @@ export function ArticleView({
   isHRAdmin,
 }: ArticleViewProps) {
   const [isPending, startTransition] = useTransition();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const authorName =
     article.author?.preferred_name || article.author?.full_name || "Unknown";
@@ -54,11 +72,24 @@ export function ArticleView({
     });
   }
 
+  function handleToggleFeatured() {
+    startTransition(async () => {
+      const result = await toggleArticleFeatured(article.id);
+      if (result.success) {
+        toast.success(
+          article.is_featured ? "Article unfeatured" : "Article featured"
+        );
+      } else {
+        toast.error(result.error ?? "Failed to update article");
+      }
+    });
+  }
+
   function handleDelete() {
     startTransition(async () => {
       const result = await deleteArticle(article.id);
       if (result.success) {
-        toast.success("Article deleted");
+        toast.success("Article moved to bin");
         window.location.href = `/intranet/resources/${categorySlug}`;
       } else {
         toast.error(result.error ?? "Failed to delete article");
@@ -74,44 +105,74 @@ export function ArticleView({
           {article.status === "draft" && (
             <Badge variant="outline">Draft</Badge>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleStatus}
-            disabled={isPending}
-          >
-            {article.status === "published" ? (
-              <>
-                <EyeOff className="h-4 w-4 mr-1" />
-                Unpublish
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-1" />
-                Publish
-              </>
-            )}
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}>
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Link>
-          </Button>
+          {article.is_featured && (
+            <Badge variant="secondary">Featured</Badge>
+          )}
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isPending}>
+                  <MoreHorizontal className="h-4 w-4 mr-1" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={handleToggleStatus}
+                >
+                  {article.status === "published" ? (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      Unpublish
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Publish
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={handleToggleFeatured}
+                >
+                  {article.is_featured ? (
+                    <>
+                      <StarOff className="h-4 w-4" />
+                      Unfeature
+                    </>
+                  ) : (
+                    <>
+                      <Star className="h-4 w-4" />
+                      Feature
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <DeleteResourceDialog
-            trigger={
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
-            }
             itemName={article.title}
             onConfirm={handleDelete}
             disabled={isPending}
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
           />
         </div>
       )}
