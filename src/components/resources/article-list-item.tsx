@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getInitials } from "@/lib/utils";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
@@ -58,7 +65,7 @@ export function ArticleListItem({
             </AvatarFallback>
           </Avatar>
           <span>{authorName}</span>
-          <span>·</span>
+          <span>&middot;</span>
           <span>
             {displayDate.toLocaleDateString("en-GB", {
               day: "numeric",
@@ -70,32 +77,38 @@ export function ArticleListItem({
       </div>
 
       {isHRAdmin && (
-        <div className="relative z-10 flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            asChild
-          >
-            <Link
-              href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
-              aria-label={`Edit ${article.title}`}
-            >
-              <Pencil className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.preventDefault();
-              onDelete?.();
-            }}
-            aria-label={`Delete ${article.title}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+        <div className="relative z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.preventDefault()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Actions for {article.title}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={() => onDelete?.()}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </div>

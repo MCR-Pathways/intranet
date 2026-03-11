@@ -40,7 +40,7 @@ export function ArticlesList({
     startTransition(async () => {
       const result = await deleteArticle(deleteTarget.id);
       if (result.success) {
-        toast.success("Article deleted");
+        toast.success("Article moved to bin");
         setDeleteTarget(null);
       } else {
         toast.error(result.error ?? "Failed to delete article");

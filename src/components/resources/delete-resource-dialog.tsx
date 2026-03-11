@@ -44,7 +44,7 @@ export function DeleteResourceDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {itemName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone.
+            This will be moved to the bin. You can restore it within 30 days.
             {warningText && (
               <>
                 {" "}
