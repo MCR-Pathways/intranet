@@ -1,7 +1,7 @@
 # HR Module — Development Roadmap
 
 > **Living document** — updated as features are completed and priorities shift.
-> Last updated: 2026-03-09
+> Last updated: 2026-03-11
 
 ---
 
@@ -68,14 +68,21 @@ All features fully built with RLS policies, audit logging, and input sanitisatio
 Quick wins inspired by nexus-hr analysis (Feb 2026).
 
 ### HR Dashboard Landing Page ✅ DONE
-- **Route:** `/hr` index page
-- **What:** Time-based greeting + 4 HR admin stat cards (server-side data, clickable):
-  - Staff on leave today → links to `/hr/calendar`
+- **Route:** `/hr` index page — **admin-only** (non-admins redirect to `/hr/profile`, PR #111)
+- **What:** Time-based greeting + up to 9 attention-needed stat cards (server-side data, clickable):
+  - Staff on leave today → links to `/hr/leave?tab=calendar`
   - Stale leave requests (pending 3+ days) → links to `/hr/leave`
   - Compliance attention (expiring + expired) → links to `/hr/compliance`
   - Key dates overdue → links to `/hr/key-dates`
-- Stat cards only shown to HR admins; regular users see the quick actions grid as before
-- Colours: green (all clear), amber (warning), red (expired/overdue) — matching compliance dashboard palette
+  - Pending RTW forms → links to `/hr/absence`
+  - Active leavers → links to `/hr/leaving`
+  - Flexible working requests → links to `/hr/flexible-working`
+  - Active onboardings → links to `/hr/onboarding`
+- Office attendance section (today/tomorrow/week) for HR admins
+- Administration quick-action cards (User Management, Onboarding, Absence, Compliance, Key Dates, Leaving, Departments)
+- L&D admin section (Course Management, L&D Reports) for L&D admins
+- Stat cards only appear when count > 0 (zero-state = no cards)
+- Colours: amber (warning), red (expired/overdue), blue (informational), teal/emerald/orange (feature-specific)
 
 ### Leave Team Capacity Notification ✅ DONE
 - **Where:** Approval view (`LeaveRequestTable` in Approvals tab)
@@ -84,8 +91,8 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 - **Format:** "[Name(s)] is/are also on leave during this period. Team: X/Y available."
 
 ### UI/UX Polish ✅ DONE
-- **HR dashboard sections:** Flat 11-card grid replaced with labelled sections (My HR, Organisation, Administration) using `SectionHeader` component
-- **Sidebar grouping:** HR nav items grouped into My HR (My Profile, Leave, Calendar, My Team, Assets), Organisation (Org Chart), Admin (User Management, Absence & Sickness, Compliance, Key Dates, Leaving)
+- **HR admin dashboard (PR #111):** Admin-only `/hr` page with stat cards, office attendance, Administration quick-actions, and L&D admin section. Non-admins redirect to `/hr/profile`. Personal items (My Profile, Leave, etc.) accessed via "Me" sidebar section.
+- **Sidebar regrouping (PR #111):** "HR" renamed to "Me" with personal items only (My Profile, Leave, Assets, Flexible Working, My Team, Org Chart). Admin items removed to single "Admin" dashboard link. "Home" (Intranet), "Learning", "Location" (Sign-In) complete the main nav.
 - **Breadcrumbs:** Added to `/hr/users/[userId]` (HR > User Management > {name}), `/hr/leaving/[formId]` (HR > Leaving > {name}), `/hr/absence/rtw/[formId]` (HR > Absence > RTW Form)
 - **PageHeader:** All HR pages now use shared `PageHeader` component with consistent `text-3xl` title styling
 
