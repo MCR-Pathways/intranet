@@ -32,6 +32,8 @@ const BLOCK_TYPES = new Set([
   "orderedList",
   "blockquote",
   "listItem",
+  "taskList",
+  "taskItem",
   "table",
   "tableRow",
   "tableHeader",
@@ -113,7 +115,7 @@ export function slugifyHeading(text: string): string {
 }
 
 /**
- * Extracts H2/H3 headings from a Tiptap JSON document.
+ * Extracts H1-H4 headings from a Tiptap JSON document.
  * Returns headings with deduplicated slugified IDs (appends -2, -3, etc.).
  * Used by both the article renderer (to set id attributes) and the
  * article outline sidebar (to generate anchor links).
@@ -129,7 +131,7 @@ export function extractHeadings(
   for (const node of doc.content as TiptapNode[]) {
     if (node.type !== "heading") continue;
     const level = (node.attrs?.level as number) ?? 2;
-    if (level !== 2 && level !== 3) continue;
+    if (level < 1 || level > 4) continue;
 
     // Extract text from heading children
     const text = node.content

@@ -6,10 +6,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { isValidHttpUrl } from "@/lib/url";
+import { getTooltipLabel } from "@/lib/editor-shortcuts";
 import type { Editor } from "@tiptap/react";
 
 interface LinkEditPopoverProps {
@@ -71,21 +77,28 @@ export function LinkEditPopover({ editor }: LinkEditPopoverProps) {
 
   return (
     <Popover open={open} onOpenChange={handleOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className={
-            isActive
-              ? "h-8 w-8 p-0 bg-accent text-accent-foreground"
-              : "h-8 w-8 p-0"
-          }
-          aria-label="Insert link"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={
+                isActive
+                  ? "h-8 w-8 p-0 bg-accent text-accent-foreground"
+                  : "h-8 w-8 p-0"
+              }
+              aria-label="Insert link"
+            >
+              <LinkIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          {getTooltipLabel("Link", "link")}
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent className="w-80 p-3" align="start" side="bottom">
         <div className="space-y-2">
           <Input
