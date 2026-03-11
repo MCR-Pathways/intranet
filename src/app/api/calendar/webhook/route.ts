@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { syncUserCalendar } from "@/lib/calendar-sync";
+import { timingSafeTokenCompare } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
 /**
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Channel token format: "secret:userId"
     const [secret, userId] = channelToken.split(":");
-    if (secret !== webhookSecret || !userId) {
+    if (!secret || !userId || !timingSafeTokenCompare(secret, webhookSecret)) {
       return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
     }
 

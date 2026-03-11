@@ -1,6 +1,25 @@
 import { type ReactNode, createElement } from "react";
 import { sanitizeUrl } from "@/lib/utils";
 
+/**
+ * If an image URL is an external http(s) URL, proxy it through /api/og-image
+ * so it satisfies CSP img-src 'self'. Already-proxied relative paths (but not
+ * protocol-relative URLs like //attacker.com) are returned as-is.
+ */
+export function proxyImageUrl(
+  raw: string | null | undefined
+): string | undefined {
+  if (!raw) return undefined;
+  // Already a relative proxy path (new posts) — exclude protocol-relative URLs
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  // External URL (including protocol-relative) — proxy it
+  if (/^(\/\/|https?:\/\/)/i.test(raw)) {
+    const urlToProxy = raw.startsWith("//") ? `https:${raw}` : raw;
+    return `/api/og-image?url=${encodeURIComponent(urlToProxy)}`;
+  }
+  return undefined;
+}
+
 /** Validate that a URL uses http(s) protocol (case-insensitive per RFC 3986). */
 export function isValidHttpUrl(url: string): boolean {
   const trimmed = url.trim();
