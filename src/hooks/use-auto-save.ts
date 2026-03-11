@@ -38,6 +38,7 @@ export function useAutoSave({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const pendingSaveRef = useRef(false);
+  const savePromiseRef = useRef<Promise<void> | null>(null);
   const onSaveRef = useRef(onSave);
   const enabledRef = useRef(enabled);
 
@@ -57,24 +58,30 @@ export function useAutoSave({
     isSavingRef.current = true;
     setStatus("saving");
 
-    try {
-      const result = await onSaveRef.current();
-      if (result.success) {
-        setStatus("saved");
-      } else {
+    const saveWork = (async () => {
+      try {
+        const result = await onSaveRef.current();
+        if (result.success) {
+          setStatus("saved");
+        } else {
+          setStatus("error");
+        }
+      } catch {
         setStatus("error");
-      }
-    } catch {
-      setStatus("error");
-    } finally {
-      isSavingRef.current = false;
+      } finally {
+        isSavingRef.current = false;
+        savePromiseRef.current = null;
 
-      // If another change came in while we were saving, save again
-      if (pendingSaveRef.current) {
-        pendingSaveRef.current = false;
-        executeSave();
+        // If another change came in while we were saving, save again
+        if (pendingSaveRef.current) {
+          pendingSaveRef.current = false;
+          executeSave();
+        }
       }
-    }
+    })();
+
+    savePromiseRef.current = saveWork;
+    await saveWork;
   }, []);
 
   // ── markDirty — reset debounce timer on each call ────────────────────────
@@ -103,6 +110,11 @@ export function useAutoSave({
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+
+    // Wait for any in-flight save to complete before proceeding
+    if (savePromiseRef.current) {
+      await savePromiseRef.current;
     }
 
     // Only flush if there are unsaved changes

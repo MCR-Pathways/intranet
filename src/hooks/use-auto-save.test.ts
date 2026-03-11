@@ -179,6 +179,47 @@ describe("useAutoSave", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  it("flushSave waits for in-flight save before returning", async () => {
+    let resolveInflight: (value: { success: boolean }) => void;
+    const inflightPromise = new Promise<{ success: boolean }>((resolve) => {
+      resolveInflight = resolve;
+    });
+
+    const onSave = vi.fn().mockReturnValueOnce(inflightPromise);
+
+    const { result } = renderHook(() =>
+      useAutoSave({ onSave, debounceMs: 1000 })
+    );
+
+    // Trigger auto-save
+    act(() => {
+      result.current.markDirty();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.status).toBe("saving");
+
+    // Start flushSave — should wait for in-flight save
+    let flushed = false;
+    const flushPromise = act(async () => {
+      await result.current.flushSave();
+      flushed = true;
+    });
+
+    // Resolve the in-flight save
+    await act(async () => {
+      resolveInflight!({ success: true });
+    });
+
+    await flushPromise;
+
+    expect(flushed).toBe(true);
+    expect(result.current.status).toBe("saved");
+  });
+
   it("flushSave does nothing when status is idle", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true });
     const { result } = renderHook(() => useAutoSave({ onSave }));

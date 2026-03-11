@@ -977,12 +977,13 @@ export async function autoSaveArticle(
 ): Promise<{ success: boolean; error?: string; articleId?: string }> {
   const { supabase, user } = await requireHRAdmin();
 
-  if (params.mode === "create") {
-    const title = params.title?.trim();
-    if (!title) {
-      return { success: false, error: "Title is required" };
-    }
+  // Common title validation (shared across create + update)
+  const title = params.title?.trim();
+  if (!title) {
+    return { success: false, error: "Title is required" };
+  }
 
+  if (params.mode === "create") {
     const baseSlug = slugify(title);
     if (!baseSlug) {
       return { success: false, error: "Invalid title" };
@@ -1026,11 +1027,6 @@ export async function autoSaveArticle(
   }
 
   // mode: "update"
-  const title = params.title?.trim();
-  if (!title) {
-    return { success: false, error: "Title is required" };
-  }
-
   const update: Record<string, unknown> = { title };
 
   if (params.content_json !== null) {
