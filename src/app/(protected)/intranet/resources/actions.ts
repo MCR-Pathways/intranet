@@ -942,16 +942,16 @@ export async function reorderCategories(
     return { success: false, error: "No categories provided" };
   }
 
-  // Batch update sort_order for each category
-  for (let i = 0; i < orderedIds.length; i++) {
-    const { error } = await supabase
-      .from("resource_categories")
-      .update({ sort_order: i })
-      .eq("id", orderedIds[i]);
+  // Batch update sort_order for all categories in parallel
+  const results = await Promise.all(
+    orderedIds.map((id, i) =>
+      supabase.from("resource_categories").update({ sort_order: i }).eq("id", id)
+    )
+  );
 
-    if (error) {
-      return { success: false, error: "Failed to reorder categories" };
-    }
+  const failedResult = results.find((r) => r.error);
+  if (failedResult) {
+    return { success: false, error: "Failed to reorder categories" };
   }
 
   revalidate();

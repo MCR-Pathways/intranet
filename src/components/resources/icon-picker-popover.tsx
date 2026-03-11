@@ -206,7 +206,7 @@ function ColourSwatch({
           onClick={onClick}
         >
           {selected && (
-            <div className={cn("h-2 w-2 rounded-full", colour.fg.replace("text-", "bg-"))} />
+            <div className={cn("h-2 w-2 rounded-full", colour.fg.replaceAll("text-", "bg-"))} />
           )}
         </button>
       </TooltipTrigger>
