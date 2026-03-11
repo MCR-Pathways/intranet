@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -11,13 +10,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Newspaper,
-  Users,
+  Home,
+  User,
   GraduationCap,
   MapPin,
   Settings,
   ChevronRight,
   ClipboardList,
+  ShieldCheck,
 } from "lucide-react";
 import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
 import type { Profile, UserType } from "@/types/database.types";
@@ -44,58 +44,67 @@ interface NavItem {
   children?: NavGroup[];
 }
 
+interface NavigationResult {
+  mainNav: NavItem[];
+  adminItem: NavItem | null;
+}
+
 function getNavigation(
   isHRAdmin: boolean,
   isLDAdmin: boolean,
   isSystemsAdmin: boolean,
-): NavItem[] {
-  // HR admin items — filtered per role
-  const hrAdminItems: NavChild[] = [];
+  userType: UserType,
+): NavigationResult {
+  const isStaff = userType === "staff";
+  const hasAnyAdmin = isHRAdmin || isLDAdmin || isSystemsAdmin;
 
-  // User Management: HR admin OR systems admin
-  if (isHRAdmin || isSystemsAdmin) {
-    hrAdminItems.push({ name: "User Management", href: "/hr/users" });
-  }
-
-  // HR-only admin items
-  if (isHRAdmin) {
-    hrAdminItems.push(
-      { name: "Onboarding", href: "/hr/onboarding" },
-      { name: "Absence & Sickness", href: "/hr/absence" },
-      { name: "Compliance", href: "/hr/compliance" },
-      { name: "Key Dates", href: "/hr/key-dates" },
-      { name: "Leaving", href: "/hr/leaving" },
-      { name: "Departments", href: "/hr/departments" },
-    );
-  }
-
-  const hrChildren: NavGroup[] = [
+  // Home — all users
+  const homeChildren: NavGroup[] = [
     {
       label: null,
       items: [
-        { name: "My Profile", href: "/hr/profile" },
-        { name: "Leave", href: "/hr/leave" },
-        { name: "Assets", href: "/hr/assets" },
-        { name: "Flexible Working", href: "/hr/flexible-working" },
+        { name: "Resources", href: "/intranet/resources" },
       ],
     },
+  ];
+  if (isHRAdmin) {
+    homeChildren[0].items.push({ name: "Bin", href: "/intranet/resources/bin" });
+  }
+
+  const mainNav: NavItem[] = [
     {
-      label: "People",
-      items: [
-        { name: "My Team", href: "/hr/team" },
-        { name: "Org Chart", href: "/hr/org-chart" },
-      ],
+      name: "Home",
+      href: "/intranet",
+      icon: Home,
+      module: "intranet",
+      children: homeChildren,
     },
-    ...(hrAdminItems.length > 0
-      ? [
-          {
-            label: "Admin",
-            items: hrAdminItems,
-          },
-        ]
-      : []),
   ];
 
+  // Me — staff only (personal HR items)
+  if (isStaff) {
+    mainNav.push({
+      name: "Me",
+      href: "/hr/profile",
+      icon: User,
+      module: "hr",
+      children: [
+        {
+          label: null,
+          items: [
+            { name: "My Profile", href: "/hr/profile" },
+            { name: "Leave", href: "/hr/leave" },
+            { name: "Assets", href: "/hr/assets" },
+            { name: "Flexible Working", href: "/hr/flexible-working" },
+            { name: "My Team", href: "/hr/team" },
+            { name: "Org Chart", href: "/hr/org-chart" },
+          ],
+        },
+      ],
+    });
+  }
+
+  // Learning — staff + coordinators
   const learningChildren: NavGroup[] = [
     {
       label: null,
@@ -106,56 +115,41 @@ function getNavigation(
         { name: "Tool Shed", href: "/learning/tool-shed" },
       ],
     },
-    ...(isLDAdmin
-      ? [
-          {
-            label: "Admin",
-            items: [
-              { name: "Course Management", href: "/learning/admin/courses" },
-              { name: "Reports", href: "/learning/admin/reports" },
-            ],
-          },
-        ]
-      : []),
   ];
 
-  const intranetItems: NavChild[] = [
-    { name: "News Feed", href: "/intranet" },
-    { name: "Weekly Round Up", href: "/intranet/weekly-roundup" },
-    { name: "Resources", href: "/intranet/resources" },
-    { name: "Surveys", href: "/intranet/surveys" },
-  ];
-  if (isHRAdmin) {
-    intranetItems.push({ name: "Bin", href: "/intranet/resources/bin" });
+  mainNav.push({
+    name: "Learning",
+    href: "/learning",
+    icon: GraduationCap,
+    module: "learning",
+    children: learningChildren,
+  });
+
+  // Location — staff only
+  if (isStaff) {
+    mainNav.push({
+      name: "Location",
+      href: "/sign-in",
+      icon: MapPin,
+      module: "sign-in",
+    });
   }
-  const intranetChildren: NavGroup[] = [
-    { label: null, items: intranetItems },
-  ];
 
-  return [
-    {
-      name: "Intranet",
-      href: "/intranet",
-      icon: Newspaper,
-      module: "intranet",
-      children: intranetChildren,
-    },
-    {
-      name: "HR",
-      href: "/hr",
-      icon: Users,
-      module: "hr",
-      children: hrChildren,
-    },
-    {
-      name: "Learning",
-      href: "/learning",
-      icon: GraduationCap,
-      module: "learning",
-      children: learningChildren,
-    },
-    { name: "Working Location", href: "/sign-in", icon: MapPin, module: "sign-in" },
-  ];
+  // Admin link — single dashboard link for admins
+  let adminItem: NavItem | null = null;
+  if (hasAnyAdmin) {
+    // HR admins + systems admins → HR dashboard
+    // L&D-only admins → L&D admin courses
+    const adminHref = (isHRAdmin || isSystemsAdmin) ? "/hr" : "/learning/admin/courses";
+    adminItem = {
+      name: "Admin",
+      href: adminHref,
+      icon: ShieldCheck,
+      module: null,
+    };
+  }
+
+  return { mainNav, adminItem };
 }
 
 const moduleAccess: Record<string, UserType[]> = {
@@ -170,14 +164,18 @@ const moduleAccess: Record<string, UserType[]> = {
 // =============================================
 
 function isItemActive(pathname: string, item: NavItem): boolean {
-  if (pathname === item.href || pathname.startsWith(item.href + "/")) return true;
-  if (!item.children) return false;
-  return item.children.some((group) =>
-    group.items.some(
-      (child) =>
-        pathname === child.href || pathname.startsWith(child.href + "/")
-    )
-  );
+  if (pathname === item.href) return true;
+  // For items with children, match via child paths only
+  // This resolves Me (/hr/profile) vs Admin (/hr) conflict on shared /hr/ prefix
+  if (item.children) {
+    return item.children.some((group) =>
+      group.items.some(
+        (child) =>
+          pathname === child.href || pathname.startsWith(child.href + "/")
+      )
+    );
+  }
+  return pathname.startsWith(item.href + "/");
 }
 
 function isChildActive(pathname: string, child: NavChild, parentHref: string): boolean {
@@ -212,8 +210,8 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
   const ldAdmin = isLDAdminEffective(profile);
   const systemsAdmin = isSystemsAdminEffective(profile);
 
-  const navigation = getNavigation(hrAdmin, ldAdmin, systemsAdmin);
-  const filteredNav = navigation.filter(
+  const { mainNav, adminItem } = getNavigation(hrAdmin, ldAdmin, systemsAdmin, profile?.user_type ?? "new_user");
+  const filteredNav = mainNav.filter(
     (item) => !item.module || hasModuleAccess(item.module)
   );
 
@@ -344,29 +342,65 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
         </nav>
       </ScrollArea>
 
-      {/* Settings link at bottom */}
+      {/* Utility zone: Admin + Settings */}
       <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
         {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <div className="flex flex-col gap-2">
+            {adminItem && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={adminItem.href}
+                    onClick={onNavClick}
+                    className={cn(
+                      "flex items-center justify-center rounded-lg p-2 transition-colors",
+                      pathname === adminItem.href
+                        ? "bg-primary text-primary-foreground"
+                        : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <adminItem.icon className="h-5 w-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Admin</TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/settings"
+                  onClick={onNavClick}
+                  className={cn(
+                    "flex items-center justify-center rounded-lg p-2 transition-colors",
+                    pathname === "/settings"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Settings className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Settings</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {adminItem && (
               <Link
-                href="/settings"
+                href={adminItem.href}
                 onClick={onNavClick}
                 className={cn(
-                  "flex items-center justify-center rounded-lg p-2 transition-colors",
-                  pathname === "/settings"
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === adminItem.href
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground/70 hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Settings className="h-5 w-5" />
+                <adminItem.icon className="h-5 w-5" />
+                Admin
               </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Settings</TooltipContent>
-          </Tooltip>
-        ) : (
-          <div className="flex flex-col gap-1">
-            <span className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            )}
+            <span className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Account
             </span>
             <Link

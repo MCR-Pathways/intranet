@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Briefcase, Building2, Shield, Bell } from "lucide-react";
+import { Shield, Bell } from "lucide-react";
 import { getMyPatterns } from "@/app/(protected)/sign-in/actions";
 import { DefaultWeekEditor } from "@/components/sign-in/default-week-editor";
 import type { WeeklyPatternEntry } from "@/lib/sign-in";
@@ -27,12 +27,12 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Fetch user profile with team info — explicit columns, never select("*")
+  // Fetch user profile — explicit columns, never select("*")
   const [{ data: profile }, patternData] = await Promise.all([
     supabase
       .from("profiles")
       .select(
-        "id, full_name, preferred_name, email, phone, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, job_title, start_date, induction_completed_at, team_id, teams(name)"
+        "id, full_name, user_type, status, is_hr_admin, is_ld_admin, is_line_manager"
       )
       .eq("id", user.id)
       .single(),
@@ -66,88 +66,6 @@ export default async function SettingsPage() {
         title="Settings"
         subtitle="Manage your account and preferences"
       />
-
-      {/* Profile Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profile Information
-          </CardTitle>
-          <CardDescription>
-            Your personal details. Contact HR to update your information.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                Full Name
-              </p>
-              <p className="text-sm">{profile?.full_name || "Not set"}</p>
-            </div>
-            {profile?.preferred_name && (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Preferred Name
-                </p>
-                <p className="text-sm">{profile.preferred_name}</p>
-              </div>
-            )}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Email
-                </p>
-              </div>
-              <p className="text-sm">{user.email}</p>
-            </div>
-            {profile?.phone && (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Phone
-                </p>
-                <p className="text-sm">{profile.phone}</p>
-              </div>
-            )}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Job Title
-                </p>
-              </div>
-              <p className="text-sm">{profile?.job_title || "Not set"}</p>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Team
-                </p>
-              </div>
-              <p className="text-sm">
-                {(profile?.teams as unknown as { name: string } | null)?.name || "Not assigned"}
-              </p>
-            </div>
-            {profile?.start_date && (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Start Date
-                </p>
-                <p className="text-sm">
-                  {new Date(profile.start_date).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Account Details */}
       <Card>
