@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { CourseManagementTable } from "@/components/learning-admin/course-management-table";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function CourseManagementPage() {
   const { supabase, profile } = await getCurrentUser();
@@ -18,14 +19,14 @@ export default async function CourseManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Course Management
-        </h1>
-        <p className="text-muted-foreground">
-          Create, edit, and manage courses for your organisation.
-        </p>
-      </div>
+      <PageHeader
+        title="Course Management"
+        subtitle="Create, edit, and manage courses for your organisation."
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "Course Management" },
+        ]}
+      />
 
       <CourseManagementTable courses={courses ?? []} />
     </div>

@@ -96,7 +96,7 @@ export default async function LeavingFormPage({
         title="Leaving Form"
         subtitle={`${employee?.full_name ?? "Unknown"}${employee?.job_title ? ` — ${employee.job_title}` : ""}`}
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Leaving", href: "/hr/leaving" },
           { label: employee?.full_name ?? "Unknown" },
         ]}

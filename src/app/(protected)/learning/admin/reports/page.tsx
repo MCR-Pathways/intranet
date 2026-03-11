@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { ReportsDashboard } from "@/components/learning-admin/reports-dashboard";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default async function ReportsPage() {
   const { supabase, profile } = await getCurrentUser();
@@ -38,14 +39,14 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Learning Reports
-        </h1>
-        <p className="text-muted-foreground">
-          Track course completion and learner progress across your organisation.
-        </p>
-      </div>
+      <PageHeader
+        title="Learning Reports"
+        subtitle="Track course completion and learner progress across your organisation."
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "L&D Reports" },
+        ]}
+      />
 
       <ReportsDashboard
         enrolments={enrolments ?? []}

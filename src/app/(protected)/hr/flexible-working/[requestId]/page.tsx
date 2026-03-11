@@ -90,7 +90,7 @@ export default async function FlexibleWorkingDetailPage({
   const isAssignedManager = request.manager_id === user.id;
 
   const breadcrumbs = [
-    { label: "HR", href: "/hr" },
+    { label: "Admin", href: "/hr" },
     { label: "Flexible Working", href: "/hr/flexible-working" },
     { label: request.employee_name },
   ];

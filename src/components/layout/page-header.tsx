@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 // =============================================
 // BREADCRUMBS
@@ -19,11 +18,13 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
     >
       {items.map((item, i) => (
         <Fragment key={item.label}>
-          {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+          {i > 0 && (
+            <span className="text-muted-foreground/50 select-none" aria-hidden>/</span>
+          )}
           {item.href ? (
             <Link
               href={item.href}
-              className="hover:text-foreground transition-colors"
+              className="hover:text-foreground hover:underline underline-offset-4 transition-colors"
             >
               {item.label}
             </Link>

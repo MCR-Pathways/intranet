@@ -427,7 +427,7 @@ export default async function EmployeeDetailPage({
         title={profile.full_name ?? "User Details"}
         subtitle={profile.job_title || "No job title set"}
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "User Management", href: "/hr/users" },
           { label: profile.full_name ?? "User" },
         ]}
