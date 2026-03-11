@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/intranet";
+  const rawNext = searchParams.get("next") ?? "/intranet";
+  // Validate redirect target: must be a relative path, not protocol-relative or absolute
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/intranet";
 
   if (token_hash && type) {
     const supabase = await createClient();
@@ -19,7 +22,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       logger.error("OTP verification error", { error });
       return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(error.message)}`
+        `${origin}/login?error=${encodeURIComponent("Verification failed. Please try again.")}`
       );
     }
 

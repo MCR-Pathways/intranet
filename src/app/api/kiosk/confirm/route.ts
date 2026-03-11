@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUKToday } from "@/lib/sign-in";
 import { timingSafeTokenCompare } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import type { WorkLocation } from "@/types/database.types";
 
 /**
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
     }
 
-    if (!userId || typeof userId !== "string") {
+    if (!userId || typeof userId !== "string" || !userId.trim()) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
         .eq("location", kioskOffice);
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        logger.error("Kiosk confirm update error", { error: error.message });
+        return NextResponse.json({ error: "Check-in failed" }, { status: 500 });
       }
     } else {
       // No entry exists — create one (walk-in, not pre-scheduled)
@@ -74,7 +76,8 @@ export async function POST(request: NextRequest) {
         );
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        logger.error("Kiosk confirm upsert error", { error: error.message });
+        return NextResponse.json({ error: "Check-in failed" }, { status: 500 });
       }
     }
 
