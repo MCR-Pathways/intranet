@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-10
+> **Last reviewed:** 2026-03-11
 > **Document updated during:** Periodic syncs
 
 ---
@@ -113,7 +113,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (49 files, `00001` through `00048` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (51 files, `00001` through `00050` plus a combined migration).
 
 ### Local Supabase
 
@@ -205,7 +205,7 @@ The largest module. Provides employee self-service and HR admin functionality.
 
 | Feature | Route | Key Files |
 |---|---|---|
-| Dashboard | `/hr` | HR metrics, charts |
+| Dashboard | `/hr` | Admin-only dashboard (non-admins → `/hr/profile`) |
 | User Management | `/hr/users`, `/hr/users/[userId]` | 7+ tabs per user |
 | My Profile | `/hr/profile` | 4 tabs (overview, personal, documents, history) |
 | Leave Management | `/hr/leave`, `/hr/calendar` | Self-service requests, HR recording, approvals |
@@ -293,7 +293,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**49 migration files** in `supabase/migrations/`, numbered `00001` through `00048` plus a combined migration.
+**51 migration files** in `supabase/migrations/`, numbered `00001` through `00050` plus a combined migration.
 
 **26+ tables** — key ones:
 
@@ -425,7 +425,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 48 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1057+ tests across 48 files
+- **Coverage:** 1058+ tests across 48 files
 
 ### Test Categories
 
@@ -640,7 +640,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 - Maternity leave showing for regular employees (filter `HR_ONLY_LEAVE_TYPES`)
 - Notification dropdown has no scroll for many notifications
 - Weekend calendar cells nearly invisible (`bg-muted/30` on `bg-background`)
-- ~~"HR" sidebar naming unintuitive for employees~~ (addressed by sidebar declutter)
+- ~~"HR" sidebar naming unintuitive for employees~~ (addressed by sidebar declutter, PR #111)
 - System Permissions visible on non-admin Profile view
 
 ### Won't Fix
@@ -673,6 +673,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-11 | Abdul-Muiz Adaranijo | Sidebar declutter (PR #111): semantic regrouping (Intranet→Home, HR→Me, Working Location→Location), admin separation (single Admin dashboard link), `/hr` now admin-only with non-admin redirect. Resources overhaul PRs #109-110 merged (soft-delete, kebab menus, featured articles, category management, icon picker). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Security audit remediation: PRs #106 (open redirect, error leakage, timing-safe webhook, article image proxy) + #107 (SET search_path on 8 early SECURITY DEFINER functions). Rate limiting documented as future work (requires Upstash Redis). |
 | 2026-03-10 | Abdul-Muiz Adaranijo | Resources editor overhaul: PRs #102-105 merged. Full formatting suite, full-page editor, article outline sidebar. 12 resource components, 5 resource routes, custom callout extension. |
 | 2026-03-10 | Abdul-Muiz Adaranijo | Sync: PRs #100 and #101 merged. All PRs #92-101 now merged. Clean main, 1057 tests. No open PRs. |

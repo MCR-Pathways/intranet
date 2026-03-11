@@ -100,7 +100,7 @@ test.describe("Sidebar navigation", () => {
     await expect(sidebar.getByText("Location")).not.toBeVisible();
   });
 
-  test("HR admin sees Admin link in sidebar utility zone", async ({
+  test("HR admin sees Admin link and Me items in sidebar", async ({
     hrAdminPage,
   }) => {
     await hrAdminPage.goto("/hr/profile");
@@ -120,7 +120,7 @@ test.describe("Sidebar navigation", () => {
     // Me section items should be visible
     await expect(sidebar.getByText("My Profile")).toBeVisible();
     await expect(sidebar.getByText("Leave")).toBeVisible();
-    // Admin link should NOT be visible
+    // Admin link should NOT be visible for non-admin users
     await expect(sidebar.getByText("Admin")).not.toBeVisible();
   });
 

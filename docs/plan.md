@@ -85,7 +85,7 @@
 - **Grouped sidebar navigation**: HR items grouped into My HR / Organisation / Admin sections. Learning items grouped into personal / Admin. Group labels shown when sidebar is expanded.
 - **Shared PageHeader component** (`src/components/layout/page-header.tsx`): Standardised `text-3xl font-bold tracking-tight` title with optional subtitle, breadcrumbs, and action slot. Adopted across all ~15 page files.
 - **Breadcrumbs**: Integrated into PageHeader, added to nested routes (`/hr/users/[userId]`, `/hr/leaving/[formId]`, `/hr/absence/rtw/[formId]`, `/learning/courses/[id]`, `/learning/admin/courses/[id]`, `/intranet/weekly-roundup/[id]`)
-- **HR dashboard sections**: Flat 11-card grid replaced with labelled sections (My HR, Organisation, Administration)
+- **HR admin dashboard**: Admin-only `/hr` page with stat cards, office attendance, administration quick-actions, and L&D admin section. Non-admins redirect to `/hr/profile`.
 - **EmptyState component** (`src/components/ui/empty-state.tsx`): Standardised empty state with icon, title, description, optional CTA
 - **LoadingButton component** (`src/components/ui/loading-button.tsx`): Button wrapper with `loading` prop showing spinner
 - **Sidebar refinements**: Spacing-only separation between modules (no divider lines — research across YouTube, Gmail, Material Design 3 etc. confirmed spacing is preferred for short flat nav lists). Primary-tinted left border for active child lists. "Account" label above Settings. Hamburger alignment with sidebar icons via fixed margin. Single stat card `max-w-sm` constraint.
@@ -159,19 +159,20 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 
 ### Intranet Phase 5 — Resources Overhaul (5 PRs)
 - [x] **PR 1 — Soft-Delete + Kebab Menus + Featured Articles** (PR #109): Migration 00049, soft-delete with 30-day bin, "..." kebab menus on all resource components, featured articles section (max 3, horizontal cards), `/resources/bin` route, auto-purge scheduled task. 1058 tests.
-- [ ] **PR 2 — Category Restructuring + Move Articles + Icon Picker + Landing Page**: Migration 00050, merge "How-to Guides" → "Guides", `icon_colour` column, Notion-style icon picker popover (46 curated Lucide icons, 8 colour swatches, search, categorised grid), redesigned category form dialog, Bin relocated from toolbar to sidebar (Notion/Google Drive pattern), move article between categories, category reordering
+- [x] **PR 2 — Category Restructuring + Move Articles + Icon Picker + Landing Page** (PR #110): Migration 00050, merge "How-to Guides" → "Guides", `icon_colour` column, Notion-style icon picker popover (46 curated Lucide icons, 8 colour swatches, search, categorised grid), redesigned category form dialog, Bin relocated from toolbar to sidebar (Notion/Google Drive pattern), move article between categories, category reordering
 - [ ] **PR 3 — Editor Tooltips + Toolbar Enhancements**: Google Docs-style dark pill tooltips with platform-aware shortcuts, alignment, checklist, indent/outdent, text colour, highlight colour, undo/redo, clear formatting
 - [ ] **PR 4 — Image Upload via Supabase Storage**: File upload + drag-and-drop + clipboard paste, URL fallback, `resource-images` bucket
 - [ ] **PR 5 — File Attachments**: `resource_article_attachments` table, downloadable files at bottom of articles, MIME type icon mapping
 
-### Sidebar Declutter — Semantic Regrouping + Admin Separation
-- [ ] Rewrite `sidebar.tsx` navigation data model: rename Intranet → Home, HR → Me, Working Location → Location
-- [ ] Split HR children: personal items under "Me", admin items removed from sidebar (live on `/hr` dashboard)
-- [ ] Add "Admin" utility link (single dashboard link, Jira/GitHub Settings pattern) for HR admins and L&D admins
-- [ ] New active state detection: child-path-only matching (resolves Me vs Admin conflict on `/hr/` prefix)
-- [ ] Remove redundant profile info card from `/settings` page (lives on `/hr/profile`)
-- [ ] Add L&D admin quick-action cards to HR dashboard (`/hr`)
-- [ ] Update E2E test assertions for renamed sidebar items
+### Sidebar Declutter — Semantic Regrouping + Admin Separation ✅ (PR #111)
+- [x] Rewrite `sidebar.tsx` navigation data model: rename Intranet → Home, HR → Me, Working Location → Location
+- [x] Split HR children: personal items under "Me", admin items removed from sidebar (live on `/hr` dashboard)
+- [x] Add "Admin" utility link (single dashboard link, Jira/GitHub Settings pattern) for HR admins and L&D admins
+- [x] New active state detection: child-path-only matching (resolves Me vs Admin conflict on `/hr/` prefix)
+- [x] Remove redundant profile info card from `/settings` page (lives on `/hr/profile`)
+- [x] Add L&D admin quick-action cards to HR dashboard (`/hr`)
+- [x] Make `/hr` page admin-only — non-admins redirect to `/hr/profile`
+- [x] Update E2E test assertions for renamed sidebar items
 - No route changes — sidebar is purely visual mapping
 
 ### Intranet Phase 6 — Surveys + Universal Search
