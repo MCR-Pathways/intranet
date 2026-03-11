@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useCallback, useTransition } from "react";
 import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -8,9 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { ArticleComposer } from "./article-composer";
+import { SaveStatusIndicator } from "./save-status-indicator";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import {
   createArticle,
   updateArticle,
+  autoSaveArticle,
 } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
 import type { TiptapDocument } from "@/lib/tiptap";
@@ -32,16 +35,67 @@ export function ArticleEditorPage({
     (article?.content_json as unknown as TiptapDocument) ?? null
   );
 
+  // Track article ID for create→edit transition.
+  // In create mode, starts null. After first auto-save creates a draft, stores
+  // the new ID so subsequent saves use update mode instead of creating duplicates.
+  const [autoSavedId, setAutoSavedId] = useState<string | null>(null);
+
   const isEdit = !!article;
   const backHref = isEdit
     ? `/intranet/resources/${category.slug}/${article.slug}`
     : `/intranet/resources/${category.slug}`;
 
+  // ── Auto-save callback ───────────────────────────────────────────────────
+
+  const onAutoSave = useCallback(async (): Promise<{ success: boolean }> => {
+    const title = titleRef.current?.value.trim() ?? "";
+
+    // Don't create untitled drafts
+    if (!title) return { success: true };
+
+    const effectiveId = article?.id ?? autoSavedId;
+
+    if (effectiveId) {
+      // Update existing article (edit mode OR after first auto-save created draft)
+      return autoSaveArticle({
+        mode: "update",
+        articleId: effectiveId,
+        title,
+        content_json: contentRef.current,
+      });
+    }
+
+    // Create new draft (first auto-save in create mode)
+    const result = await autoSaveArticle({
+      mode: "create",
+      categoryId: category.id,
+      title,
+      content_json: contentRef.current,
+    });
+
+    if (result.success && result.articleId) {
+      setAutoSavedId(result.articleId);
+    }
+
+    return result;
+  }, [article?.id, autoSavedId, category.id]);
+
+  const { status, markDirty, flushSave, reset } = useAutoSave({
+    onSave: onAutoSave,
+    enabled: !isPending,
+    debounceMs: 5000,
+  });
+
+  // ── Content / title change handlers ────────────────────────────────────
+
   function handleContentChange(json: TiptapDocument) {
     contentRef.current = json;
+    markDirty();
   }
 
-  function handleSave(status: "draft" | "published") {
+  // ── Manual save (Publish / Save as Draft) ──────────────────────────────
+
+  function handleSave(saveStatus: "draft" | "published") {
     const title = titleRef.current?.value.trim() ?? "";
     if (!title) {
       toast.error("Title is required");
@@ -50,16 +104,24 @@ export function ArticleEditorPage({
     }
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateArticle(article!.id, {
+      // Flush any pending auto-save first, then reset auto-save state
+      await flushSave();
+      reset();
+
+      const effectiveId = article?.id ?? autoSavedId;
+
+      // If auto-save already created a draft, update it via updateArticle
+      // (which regenerates slug and calls revalidatePath)
+      const result = effectiveId
+        ? await updateArticle(effectiveId, {
             title,
             content_json: contentRef.current ?? undefined,
-            status,
+            status: saveStatus,
           })
         : await createArticle(category.id, {
             title,
             content_json: contentRef.current ?? undefined,
-            status,
+            status: saveStatus,
           });
 
       if (result.success) {
@@ -67,13 +129,15 @@ export function ArticleEditorPage({
           toast.success("Article updated");
         } else {
           toast.success(
-            status === "published" ? "Article published" : "Draft saved"
+            saveStatus === "published" ? "Article published" : "Draft saved"
           );
           // Navigate to reading view — full reload ensures fresh server data
-          const article =
+          const resultArticle =
             "article" in result ? (result.article as Record<string, unknown>) : null;
           const slug =
-            article && typeof article.slug === "string" ? article.slug : null;
+            resultArticle && typeof resultArticle.slug === "string"
+              ? resultArticle.slug
+              : null;
           if (slug) {
             window.location.href = `/intranet/resources/${category.slug}/${slug}`;
           } else {
@@ -135,6 +199,7 @@ export function ArticleEditorPage({
           </nav>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <SaveStatusIndicator status={status} />
           <Button variant="outline" size="sm" asChild>
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -169,6 +234,7 @@ export function ArticleEditorPage({
           placeholder="Untitled"
           className="text-3xl font-bold h-auto py-3 px-4 border-none shadow-none bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 rounded-none"
           autoFocus={!isEdit}
+          onInput={() => markDirty()}
         />
         <ArticleComposer
           onChange={handleContentChange}
