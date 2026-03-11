@@ -20,6 +20,18 @@ export function proxyImageUrl(
   return undefined;
 }
 
+/**
+ * Sanitise a redirect path from a query parameter (e.g. `?next=/dashboard`).
+ * Rejects protocol-relative URLs (`//evil.com`) and absolute URLs that could
+ * cause open redirects. Returns the fallback if the path is unsafe.
+ */
+export function sanitizeRedirectPath(
+  raw: string,
+  fallback = "/intranet"
+): string {
+  return raw.startsWith("/") && !raw.startsWith("//") ? raw : fallback;
+}
+
 /** Validate that a URL uses http(s) protocol (case-insensitive per RFC 3986). */
 export function isValidHttpUrl(url: string): boolean {
   const trimmed = url.trim();
