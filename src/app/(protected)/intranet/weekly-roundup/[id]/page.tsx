@@ -51,7 +51,7 @@ export default async function RoundupDetailPage({
         title={roundup.title}
         subtitle={`${formatShortDate(weekStart)} — ${formatShortDate(weekEnd)}, ${weekEnd.getFullYear()}${roundup.summary ? ` · ${roundup.summary}` : ""}`}
         breadcrumbs={[
-          { label: "Intranet", href: "/intranet" },
+          { label: "Home", href: "/intranet" },
           { label: "Weekly Round Up", href: "/intranet/weekly-roundup" },
           { label: roundup.title },
         ]}

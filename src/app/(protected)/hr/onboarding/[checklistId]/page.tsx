@@ -28,7 +28,7 @@ export default async function OnboardingDetailPage({ params }: OnboardingDetailP
         title={checklist.employee_name}
         subtitle="Onboarding checklist"
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Onboarding", href: "/hr/onboarding" },
           { label: checklist.employee_name },
         ]}

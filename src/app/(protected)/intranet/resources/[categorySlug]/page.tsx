@@ -28,7 +28,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         title={category.name}
         subtitle={category.description ?? undefined}
         breadcrumbs={[
-          { label: "Intranet", href: "/intranet" },
+          { label: "Home", href: "/intranet" },
           { label: "Resources", href: "/intranet/resources" },
           { label: category.name },
         ]}

@@ -42,7 +42,7 @@ export default async function OnboardingDashboardPage() {
         title="Onboarding"
         subtitle="Track new starter onboarding progress"
         breadcrumbs={[
-          { label: "HR", href: "/hr" },
+          { label: "Admin", href: "/hr" },
           { label: "Onboarding" },
         ]}
       />

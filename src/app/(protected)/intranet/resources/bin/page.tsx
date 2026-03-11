@@ -19,7 +19,7 @@ export default async function ResourceBinPage() {
         title="Bin"
         subtitle="Deleted resources — items are automatically removed after 30 days"
         breadcrumbs={[
-          { label: "Intranet", href: "/intranet" },
+          { label: "Home", href: "/intranet" },
           { label: "Resources", href: "/intranet/resources" },
           { label: "Bin" },
         ]}

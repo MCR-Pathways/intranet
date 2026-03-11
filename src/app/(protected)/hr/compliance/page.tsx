@@ -1,6 +1,7 @@
 import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ComplianceDashboard } from "@/components/hr/compliance-dashboard";
+import { PageHeader } from "@/components/layout/page-header";
 import type { ComplianceStatus } from "@/lib/hr";
 
 /** Select columns for compliance_documents joined with type + profile. */
@@ -86,14 +87,14 @@ export default async function CompliancePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Compliance Documents
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Track and manage compliance documents across the organisation
-        </p>
-      </div>
+      <PageHeader
+        title="Compliance Documents"
+        subtitle="Track and manage compliance documents across the organisation"
+        breadcrumbs={[
+          { label: "Admin", href: "/hr" },
+          { label: "Compliance" },
+        ]}
+      />
 
       <ComplianceDashboard
         documentTypes={types}

@@ -3,7 +3,7 @@
 import { useRef, useTransition } from "react";
 import { Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -90,6 +90,7 @@ export function ArticleEditorPage({
   }
 
   const breadcrumbs = [
+    { label: "Home", href: "/intranet" },
     { label: "Resources", href: "/intranet/resources" },
     { label: category.name, href: `/intranet/resources/${category.slug}` },
     ...(isEdit
@@ -115,12 +116,12 @@ export function ArticleEditorPage({
             {breadcrumbs.map((item, i) => (
               <Fragment key={i}>
                 {i > 0 && (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-muted-foreground/50 select-none" aria-hidden>/</span>
                 )}
                 {"href" in item && item.href ? (
                   <Link
                     href={item.href}
-                    className="hover:text-foreground transition-colors"
+                    className="hover:text-foreground hover:underline underline-offset-4 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -160,21 +161,21 @@ export function ArticleEditorPage({
         </div>
       </div>
 
-      {/* Title input */}
-      <Input
-        ref={titleRef}
-        defaultValue={article?.title ?? ""}
-        placeholder="Untitled"
-        className="text-3xl font-bold h-auto py-2 border-none shadow-none bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50"
-        autoFocus={!isEdit}
-      />
-
-      {/* Editor */}
-      <ArticleComposer
-        onChange={handleContentChange}
-        initialContent={article?.content_json}
-        disabled={isPending}
-      />
+      {/* Title + Editor — unified card surface */}
+      <div className="rounded-xl bg-card shadow-md overflow-clip">
+        <Input
+          ref={titleRef}
+          defaultValue={article?.title ?? ""}
+          placeholder="Untitled"
+          className="text-3xl font-bold h-auto py-3 px-4 border-none shadow-none bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 rounded-none"
+          autoFocus={!isEdit}
+        />
+        <ArticleComposer
+          onChange={handleContentChange}
+          initialContent={article?.content_json}
+          disabled={isPending}
+        />
+      </div>
     </div>
   );
 }
