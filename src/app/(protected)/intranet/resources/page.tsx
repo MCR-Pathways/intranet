@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
-import { fetchCategoriesWithClient } from "./actions";
+import {
+  fetchCategoriesWithClient,
+  fetchFeaturedArticles,
+} from "./actions";
 import { PageHeader } from "@/components/layout/page-header";
+import { FeaturedResources } from "@/components/resources/featured-resources";
 import { ResourcesGrid } from "@/components/resources/resources-grid";
 
 export default async function ResourcesPage() {
@@ -9,7 +13,10 @@ export default async function ResourcesPage() {
   if (!user || !profile) redirect("/login");
 
   const isHRAdmin = isHRAdminEffective(profile);
-  const categories = await fetchCategoriesWithClient(supabase);
+  const [categories, featuredArticles] = await Promise.all([
+    fetchCategoriesWithClient(supabase),
+    fetchFeaturedArticles(supabase),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -22,6 +29,7 @@ export default async function ResourcesPage() {
         ]}
       />
 
+      <FeaturedResources articles={featuredArticles} />
       <ResourcesGrid categories={categories} isHRAdmin={isHRAdmin} />
     </div>
   );

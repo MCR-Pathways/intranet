@@ -873,6 +873,8 @@ export interface Database {
           description: string | null;
           icon: string | null;
           sort_order: number;
+          deleted_at: string | null;
+          deleted_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -883,6 +885,8 @@ export interface Database {
           description?: string | null;
           icon?: string | null;
           sort_order?: number;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -893,6 +897,8 @@ export interface Database {
           description?: string | null;
           icon?: string | null;
           sort_order?: number;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -908,6 +914,10 @@ export interface Database {
           status: ArticleStatus;
           author_id: string;
           published_at: string | null;
+          is_featured: boolean;
+          featured_sort_order: number;
+          deleted_at: string | null;
+          deleted_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -921,6 +931,10 @@ export interface Database {
           status?: ArticleStatus;
           author_id: string;
           published_at?: string | null;
+          is_featured?: boolean;
+          featured_sort_order?: number;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -934,6 +948,10 @@ export interface Database {
           status?: ArticleStatus;
           author_id?: string;
           published_at?: string | null;
+          is_featured?: boolean;
+          featured_sort_order?: number;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
-import { Plus, Search, FolderOpen } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, FolderOpen, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -42,7 +43,7 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
     startTransition(async () => {
       const result = await deleteCategory(deleteTarget.id);
       if (result.success) {
-        toast.success("Category deleted");
+        toast.success("Category moved to bin");
         setDeleteTarget(null);
       } else {
         toast.error(result.error ?? "Failed to delete category");
@@ -63,14 +64,22 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
           />
         </div>
         {isHRAdmin && (
-          <CategoryFormDialog
-            trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                New Category
-              </Button>
-            }
-          />
+          <>
+            <CategoryFormDialog
+              trigger={
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Category
+                </Button>
+              }
+            />
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/intranet/resources/bin">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Bin
+              </Link>
+            </Button>
+          </>
         )}
       </div>
 
@@ -115,7 +124,7 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
         itemName={deleteTarget?.name ?? ""}
         warningText={
           deleteTarget && deleteTarget.article_count > 0
-            ? `This will also delete ${deleteTarget.article_count} ${deleteTarget.article_count === 1 ? "article" : "articles"} within this category.`
+            ? `This category has ${deleteTarget.article_count} ${deleteTarget.article_count === 1 ? "article" : "articles"}. Move or delete them first.`
             : undefined
         }
         onConfirm={handleDelete}

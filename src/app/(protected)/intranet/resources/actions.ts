@@ -15,10 +15,12 @@ import type {
 // ─── SELECT constants ────────────────────────────────────────────────────────
 
 const CATEGORY_SELECT =
-  "id, name, slug, description, icon, sort_order, created_at, updated_at";
+  "id, name, slug, description, icon, sort_order, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
-  "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at";
+  "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order";
+
+const MAX_FEATURED_ARTICLES = 3;
 
 const AUTHOR_SELECT = "id, full_name, preferred_name, avatar_url";
 
@@ -42,7 +44,8 @@ async function ensureUniqueCategorySlug(
     const query = supabase
       .from("resource_categories")
       .select("id")
-      .eq("slug", slug);
+      .eq("slug", slug)
+      .is("deleted_at", null);
     if (excludeId) query.neq("id", excludeId);
     const { data } = await query.limit(1);
     if (!data || data.length === 0) return slug;
@@ -52,7 +55,7 @@ async function ensureUniqueCategorySlug(
 }
 
 /** Slugs reserved for Next.js routes — articles cannot use these. */
-const RESERVED_ARTICLE_SLUGS = new Set(["new", "edit"]);
+const RESERVED_ARTICLE_SLUGS = new Set(["new", "edit", "bin"]);
 
 async function ensureUniqueArticleSlug(
   supabase: SupabaseClient,
@@ -74,7 +77,8 @@ async function ensureUniqueArticleSlug(
       .from("resource_articles")
       .select("id")
       .eq("category_id", categoryId)
-      .eq("slug", slug);
+      .eq("slug", slug)
+      .is("deleted_at", null);
     if (excludeId) query.neq("id", excludeId);
     const { data } = await query.limit(1);
     if (!data || data.length === 0) return slug;
@@ -92,10 +96,12 @@ function revalidate() {
 export async function fetchCategoriesWithClient(
   supabase: SupabaseClient
 ): Promise<CategoryWithCount[]> {
-  // Fetch categories with article count via Supabase relation count
+  // Fetch non-deleted categories with non-deleted article count
   const { data, error } = await supabase
     .from("resource_categories")
     .select(`${CATEGORY_SELECT}, resource_articles(count)`)
+    .is("deleted_at", null)
+    .filter("resource_articles.deleted_at", "is", null)
     .order("sort_order")
     .order("name");
 
@@ -120,6 +126,7 @@ export async function fetchCategoryBySlugWithClient(
     .from("resource_categories")
     .select(CATEGORY_SELECT)
     .eq("slug", categorySlug)
+    .is("deleted_at", null)
     .single();
 
   if (error || !data) return null;
@@ -134,22 +141,24 @@ export async function fetchCategoryArticlesWithClient(
   category: ResourceCategory | null;
   articles: ArticleWithAuthor[];
 }> {
-  // Fetch category by slug
+  // Fetch category by slug (non-deleted only)
   const { data: category, error: catError } = await supabase
     .from("resource_categories")
     .select(CATEGORY_SELECT)
     .eq("slug", categorySlug)
+    .is("deleted_at", null)
     .single();
 
   if (catError || !category) {
     return { category: null, articles: [] };
   }
 
-  // Fetch articles for this category (belt-and-suspenders: filter by status for non-admins)
+  // Fetch non-deleted articles for this category
   let query = supabase
     .from("resource_articles")
     .select(`${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`)
     .eq("category_id", category.id)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   if (!isHRAdmin) {
@@ -177,23 +186,25 @@ export async function fetchArticleWithClient(
   category: ResourceCategory | null;
   article: ArticleWithAuthor | null;
 }> {
-  // Fetch category by slug
+  // Fetch category by slug (non-deleted only)
   const { data: category, error: catError } = await supabase
     .from("resource_categories")
     .select(CATEGORY_SELECT)
     .eq("slug", categorySlug)
+    .is("deleted_at", null)
     .single();
 
   if (catError || !category) {
     return { category: null, article: null };
   }
 
-  // Fetch single article
+  // Fetch single non-deleted article
   let query = supabase
     .from("resource_articles")
     .select(`${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`)
     .eq("category_id", category.id)
-    .eq("slug", articleSlug);
+    .eq("slug", articleSlug)
+    .is("deleted_at", null);
 
   if (!isHRAdmin) {
     query = query.eq("status", "published");
@@ -319,12 +330,28 @@ export async function updateCategory(
 export async function deleteCategory(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase, user } = await requireHRAdmin();
 
+  // Block deletion if category still has non-deleted articles
+  const { count } = await supabase
+    .from("resource_articles")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id)
+    .is("deleted_at", null);
+
+  if (count && count > 0) {
+    return {
+      success: false,
+      error: `Cannot delete category — it still has ${count} article${count === 1 ? "" : "s"}. Move or delete them first.`,
+    };
+  }
+
+  // Soft-delete
   const { error } = await supabase
     .from("resource_categories")
-    .delete()
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
     .eq("id", id)
+    .is("deleted_at", null)
     .select("id")
     .single();
 
@@ -345,7 +372,8 @@ export async function getCategoryArticleCount(
   const { count } = await supabase
     .from("resource_articles")
     .select("id", { count: "exact", head: true })
-    .eq("category_id", id);
+    .eq("category_id", id)
+    .is("deleted_at", null);
 
   return count ?? 0;
 }
@@ -496,17 +524,323 @@ export async function updateArticle(
 export async function deleteArticle(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase, user } = await requireHRAdmin();
 
+  // Soft-delete: set deleted_at + deleted_by, unfeatured if featured
   const { error } = await supabase
     .from("resource_articles")
-    .delete()
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: user.id,
+      is_featured: false,
+    })
     .eq("id", id)
+    .is("deleted_at", null)
     .select("id")
     .single();
 
   if (error) {
     return { success: false, error: "Failed to delete article" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+// ─── Bulk article deletion ──────────────────────────────────────────────────
+
+export async function bulkDeleteArticles(
+  articleIds: string[]
+): Promise<{ success: boolean; error?: string; deletedCount?: number }> {
+  const { supabase, user } = await requireHRAdmin();
+
+  if (!articleIds.length) {
+    return { success: false, error: "No articles selected" };
+  }
+
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: user.id,
+      is_featured: false,
+    })
+    .in("id", articleIds)
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) {
+    return { success: false, error: "Failed to delete articles" };
+  }
+
+  revalidate();
+  return { success: true, deletedCount: data?.length ?? 0 };
+}
+
+// ─── Bin (soft-deleted items) ───────────────────────────────────────────────
+
+export async function fetchTrashedItems(): Promise<{
+  articles: (ArticleWithAuthor & { category_name?: string })[];
+  categories: ResourceCategory[];
+}> {
+  const { supabase } = await requireHRAdmin();
+
+  // Fetch soft-deleted articles with author and category name
+  const { data: articles } = await supabase
+    .from("resource_articles")
+    .select(
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(name)`
+    )
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+
+  // Fetch soft-deleted categories
+  const { data: categories } = await supabase
+    .from("resource_categories")
+    .select(CATEGORY_SELECT)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+
+  // Map category name onto articles for display
+  const mappedArticles = (articles ?? []).map(
+    (a: Record<string, unknown>) => {
+      const cat = a.category as { name: string } | null;
+      const { category: _, ...rest } = a;
+      return { ...rest, category_name: cat?.name ?? "Unknown" };
+    }
+  ) as (ArticleWithAuthor & { category_name?: string })[];
+
+  return {
+    articles: mappedArticles,
+    categories: (categories ?? []) as ResourceCategory[],
+  };
+}
+
+export async function restoreArticle(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  // Ensure the parent category is not deleted
+  const { data: article } = await supabase
+    .from("resource_articles")
+    .select("category_id")
+    .eq("id", id)
+    .single();
+
+  if (!article) {
+    return { success: false, error: "Article not found" };
+  }
+
+  const { data: category } = await supabase
+    .from("resource_categories")
+    .select("id, deleted_at")
+    .eq("id", article.category_id)
+    .single();
+
+  if (category?.deleted_at) {
+    return {
+      success: false,
+      error: "Cannot restore article — its category is also in the bin. Restore the category first.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("resource_articles")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", id)
+    .not("deleted_at", "is", null)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: "Failed to restore article" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+export async function restoreCategory(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  const { error } = await supabase
+    .from("resource_categories")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", id)
+    .not("deleted_at", "is", null)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: "Failed to restore category" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+export async function permanentlyDeleteArticle(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  // Only allow permanent delete of soft-deleted articles
+  const { error } = await supabase
+    .from("resource_articles")
+    .delete()
+    .eq("id", id)
+    .not("deleted_at", "is", null);
+
+  if (error) {
+    return { success: false, error: "Failed to permanently delete article" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+export async function permanentlyDeleteCategory(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  // Only allow permanent delete of soft-deleted categories with no articles
+  const { count } = await supabase
+    .from("resource_articles")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id);
+
+  if (count && count > 0) {
+    return {
+      success: false,
+      error: "Cannot permanently delete category — it still has articles (including binned ones). Permanently delete those first.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("resource_categories")
+    .delete()
+    .eq("id", id)
+    .not("deleted_at", "is", null);
+
+  if (error) {
+    return { success: false, error: "Failed to permanently delete category" };
+  }
+
+  revalidate();
+  return { success: true };
+}
+
+// ─── Featured articles ──────────────────────────────────────────────────────
+
+export type FeaturedArticle = ArticleWithAuthor & {
+  category_slug: string;
+  category_name: string;
+  category_icon: string | null;
+};
+
+export async function fetchFeaturedArticles(
+  supabase: SupabaseClient
+): Promise<FeaturedArticle[]> {
+  const { data } = await supabase
+    .from("resource_articles")
+    .select(
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(slug, name, icon)`
+    )
+    .eq("is_featured", true)
+    .is("deleted_at", null)
+    .eq("status", "published")
+    .order("featured_sort_order")
+    .limit(MAX_FEATURED_ARTICLES);
+
+  if (!data) return [];
+
+  return data.map((a: Record<string, unknown>) => {
+    const cat = a.category as { slug: string; name: string; icon: string | null } | null;
+    const { category: _, ...rest } = a;
+    return {
+      ...rest,
+      category_slug: cat?.slug ?? "",
+      category_name: cat?.name ?? "",
+      category_icon: cat?.icon ?? null,
+    };
+  }) as FeaturedArticle[];
+}
+
+export async function toggleArticleFeatured(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireHRAdmin();
+
+  // Get current featured state
+  const { data: article } = await supabase
+    .from("resource_articles")
+    .select("is_featured, status")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .single();
+
+  if (!article) {
+    return { success: false, error: "Article not found" };
+  }
+
+  if (article.status !== "published") {
+    return { success: false, error: "Only published articles can be featured" };
+  }
+
+  const newFeatured = !article.is_featured;
+
+  // If featuring, check limit
+  if (newFeatured) {
+    const { count } = await supabase
+      .from("resource_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_featured", true)
+      .is("deleted_at", null);
+
+    if ((count ?? 0) >= MAX_FEATURED_ARTICLES) {
+      return {
+        success: false,
+        error: `Maximum of ${MAX_FEATURED_ARTICLES} featured articles allowed. Unfeature one first.`,
+      };
+    }
+
+    // Set sort order to end
+    const { data: maxRow } = await supabase
+      .from("resource_articles")
+      .select("featured_sort_order")
+      .eq("is_featured", true)
+      .is("deleted_at", null)
+      .order("featured_sort_order", { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextOrder = (maxRow?.featured_sort_order ?? -1) + 1;
+
+    const { error } = await supabase
+      .from("resource_articles")
+      .update({ is_featured: true, featured_sort_order: nextOrder })
+      .eq("id", id)
+      .select("id")
+      .single();
+
+    if (error) {
+      return { success: false, error: "Failed to feature article" };
+    }
+  } else {
+    const { error } = await supabase
+      .from("resource_articles")
+      .update({ is_featured: false, featured_sort_order: 0 })
+      .eq("id", id)
+      .select("id")
+      .single();
+
+    if (error) {
+      return { success: false, error: "Failed to unfeature article" };
+    }
   }
 
   revalidate();
