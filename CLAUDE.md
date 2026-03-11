@@ -213,3 +213,27 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` utility targets the nearest ancestor with `class="group"`. Without it, the data attribute selectors won't match. Always include `group` in the parent's `cva` base classes.
 
 **Consolidate repeated `toLocaleDateString` calls into shared utilities.** `formatDate()` for "3 Feb 2026" style, `formatShortDate()` for "3 Feb" style — both in `src/lib/utils.ts`. Domain wrappers (e.g. `formatHRDate` in `hr.ts`, `formatDayMonth` in `sign-in.ts`) should delegate to these rather than inlining `toLocaleDateString`. Check for duplicates before adding new inline date formatting.
+
+**Guard Record lookups from user input with `Object.hasOwn()`.** When looking up a user-controlled key in a Record (e.g. `CALLOUT_STYLES[calloutType]`), the key `"constructor"` or `"__proto__"` will return `Object.prototype` properties instead of `undefined`, causing crashes. Always guard: `Object.hasOwn(RECORD, key) ? RECORD[key] : RECORD.default`.
+
+**`@tiptap/extension-table` uses named exports, not default exports.** Use `import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table"`. A default import causes "export default not found" build errors.
+
+**Extract shared config between editor and renderer as a single source of truth.** When both the Tiptap composer toolbar and the article renderer need the same config (e.g. callout types, icons, colours), define it once in a shared module (e.g. `CALLOUT_CONFIG` in `tiptap-callout.ts`). Prevents style drift between editing and reading views.
+
+**Reserve route-colliding slugs in auto-generated slugs.** When dynamic routes like `[articleSlug]` coexist with static routes like `/new` and `/edit`, add them to a `RESERVED_SLUGS` set in the slug generation function. Otherwise an article titled "New" gets slug "new" which collides with the `/new` route.
+
+**Use `useMemo` for derived data used as a `useEffect` dependency.** Without memoisation, calling `extractHeadings(doc)` on every render creates a new array reference, causing `useEffect` to run cleanup/setup every render (e.g. IntersectionObserver disconnecting and reconnecting). Wrap in `useMemo` with the source data as dependency.
+
+**Skip already-merged commits during chain rebase after squash-merge.** When squash-merging PR A to main, then rebasing child PR B onto main, git doesn't recognise A's original commits as duplicates (different hashes). Use `git rebase --skip` for each conflicting commit from A until reaching B's own commits.
+
+**Validate redirect target parameters in auth callbacks.** User-controlled `next` query params (e.g. `/auth/callback?next=...`) must be validated: check `startsWith("/") && !startsWith("//")`. Without this, `next=@evil.com` produces `https://origin@evil.com` — an open redirect where the browser treats the origin as a username. Never redirect to unvalidated user input.
+
+**Return generic error messages to clients, log details server-side.** Raw Supabase error messages (e.g. `error.message`) expose schema details, table names, and constraint info. Return "Authentication failed" / "Check-in failed" to the client and `logger.error()` the real message server-side.
+
+**Use `timingSafeTokenCompare` consistently for ALL token/secret comparisons.** Using `!==` for token comparison in one endpoint while using timing-safe comparison in another is an inconsistency bug. Even low-risk cases (e.g. webhook secrets from trusted sources) should use timing-safe comparison for defence-in-depth.
+
+**Move shared utilities out of component files into `src/lib/`.** `proxyImageUrl()` was defined locally in `link-preview-card.tsx` but needed by `article-renderer.tsx` too. Extract to `src/lib/url.ts` on first use, import everywhere. Prevents drift and duplication.
+
+**Always verify exploration agent claims against actual code.** In the Mar 2026 security audit, agents reported: `.env.local` was "committed to git" (FALSE — never committed, `.gitignore` covers it), missing `search_path` was "CRITICAL" (OVERSTATED — all functions used schema-qualified refs), calendar webhook timing attack was "CRITICAL" (OVERSTATED — header comes from Google, not end users), kiosk "lacks ownership verification" (BY DESIGN — shared office tablet), "missing CSRF protection" (FALSE — Next.js Server Actions have built-in CSRF). Always run your own `git log`, `grep`, and `read` to verify before acting on agent findings.
+
+**Rate limiting on Vercel serverless requires an external store.** In-memory rate limiters don't persist across cold starts on Vercel. Use Upstash Redis (`@upstash/ratelimit`) for production rate limiting. Priority endpoints: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`.
