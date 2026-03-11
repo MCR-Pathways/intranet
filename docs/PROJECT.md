@@ -517,7 +517,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 | `src/lib/intranet.ts` | Intranet utilities |
 | `src/lib/tiptap.ts` | Tiptap rich text utilities (extractPlainText, extractMentionIds, extractHeadings, slugifyHeading) |
 | `src/lib/tiptap-callout.ts` | Custom Tiptap callout extension + shared CALLOUT_CONFIG |
-| `src/lib/url.ts` | URL utilities (isValidHttpUrl, extractUrls, linkifyText, proxyImageUrl) |
+| `src/lib/url.ts` | URL utilities (isValidHttpUrl, extractUrls, linkifyText, proxyImageUrl, sanitizeRedirectPath) |
 | `src/lib/ssrf.ts` | SSRF protection for link preview fetching |
 | `src/lib/notifications.ts` | Notification helpers |
 
