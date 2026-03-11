@@ -958,6 +958,101 @@ export async function reorderCategories(
   return { success: true };
 }
 
+// ─── Auto-save (silent background save) ──────────────────────────────────────
+
+export async function autoSaveArticle(
+  params:
+    | {
+        mode: "create";
+        categoryId: string;
+        title: string;
+        content_json: TiptapDocument | null;
+      }
+    | {
+        mode: "update";
+        articleId: string;
+        title: string;
+        content_json: TiptapDocument | null;
+      }
+): Promise<{ success: boolean; error?: string; articleId?: string }> {
+  const { supabase, user } = await requireHRAdmin();
+
+  if (params.mode === "create") {
+    const title = params.title?.trim();
+    if (!title) {
+      return { success: false, error: "Title is required" };
+    }
+
+    const baseSlug = slugify(title);
+    if (!baseSlug) {
+      return { success: false, error: "Invalid title" };
+    }
+
+    const slug = await ensureUniqueArticleSlug(
+      supabase,
+      params.categoryId,
+      baseSlug
+    );
+
+    const content = params.content_json
+      ? extractPlainText(params.content_json)
+      : "";
+
+    const insert: Record<string, unknown> = {
+      category_id: params.categoryId,
+      title,
+      slug,
+      content,
+      author_id: user.id,
+      status: "draft",
+    };
+
+    if (params.content_json) {
+      insert.content_json = params.content_json;
+    }
+
+    const { data: article, error } = await supabase
+      .from("resource_articles")
+      .insert(insert)
+      .select("id")
+      .single();
+
+    if (error) {
+      return { success: false, error: "Failed to save" };
+    }
+
+    // No revalidatePath — silent background save
+    return { success: true, articleId: article.id };
+  }
+
+  // mode: "update"
+  const title = params.title?.trim();
+  if (!title) {
+    return { success: false, error: "Title is required" };
+  }
+
+  const update: Record<string, unknown> = { title };
+
+  if (params.content_json !== null) {
+    update.content_json = params.content_json;
+    update.content = extractPlainText(params.content_json);
+  }
+
+  const { error } = await supabase
+    .from("resource_articles")
+    .update(update)
+    .eq("id", params.articleId)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: "Failed to save" };
+  }
+
+  // No revalidatePath — silent background save, no slug regeneration
+  return { success: true, articleId: params.articleId };
+}
+
 // ─── Fetch categories for move dialog ────────────────────────────────────────
 
 export async function fetchCategoriesForMove(
