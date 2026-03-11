@@ -2,8 +2,8 @@
 --
 -- Defence-in-depth: all these functions already use schema-qualified table
 -- references (public.profiles, auth.uid()), so the risk is theoretical.
--- Adding SET search_path = '' brings them in line with the convention
--- established in later migrations (00037+) and prevents any future risk
+-- Adding SET search_path = '' improves upon the convention established
+-- in later migrations (00037+ used 'public') and prevents any future risk
 -- if unqualified references are added during edits.
 --
 -- Functions fixed:

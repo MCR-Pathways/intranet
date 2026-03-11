@@ -1,14 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { sanitizeRedirectPath } from "@/lib/url";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const rawNext = searchParams.get("next") ?? "/intranet";
-  // Validate redirect target: must be a relative path, not protocol-relative or absolute
-  const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/intranet";
+  const next = sanitizeRedirectPath(searchParams.get("next") ?? "/intranet");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
