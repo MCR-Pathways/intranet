@@ -5,7 +5,10 @@ import { logger } from "@/lib/logger";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/intranet";
+  const rawNext = searchParams.get("next") ?? "/intranet";
+  // Validate redirect target: must be a relative path, not protocol-relative or absolute
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/intranet";
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
@@ -39,7 +42,7 @@ export async function GET(request: Request) {
         );
       }
       return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(exchangeError.message)}`
+        `${origin}/login?error=${encodeURIComponent("Authentication failed. Please try again.")}`
       );
     }
 

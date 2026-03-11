@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { isValidHttpUrl, linkifyText } from "@/lib/url";
+import { isValidHttpUrl, linkifyText, proxyImageUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { CALLOUT_CONFIG } from "@/lib/tiptap-callout";
 import { extractHeadings } from "@/lib/tiptap";
@@ -192,9 +192,12 @@ function RenderNode({
         src &&
         (isValidHttpUrl(src) || (src.startsWith("/") && !src.startsWith("//")))
       ) {
+        // Proxy external URLs for CSP compliance (old articles may have raw external URLs)
+        const safeSrc = proxyImageUrl(src) ?? src;
         return (
+          // eslint-disable-next-line @next/next/no-img-element -- user-uploaded article image
           <img
-            src={src}
+            src={safeSrc}
             alt={alt}
             className="max-w-full h-auto rounded-lg my-4"
           />
