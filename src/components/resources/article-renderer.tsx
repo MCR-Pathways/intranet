@@ -16,8 +16,9 @@ interface ArticleRendererProps {
 
 /**
  * Renders article Tiptap JSON with full prose typography.
- * Supports headings, blockquotes, horizontal rules, tables, code blocks,
- * images, callouts (unlike the feed renderer).
+ * Supports headings (H1-H4), blockquotes, horizontal rules, tables, code blocks,
+ * images, callouts, task lists, text alignment, text colour, highlight,
+ * subscript, superscript (unlike the feed renderer).
  */
 export function ArticleRenderer({ json, fallback }: ArticleRendererProps) {
   if (!json) {
@@ -41,7 +42,7 @@ export function ArticleRenderer({ json, fallback }: ArticleRendererProps) {
         // Track heading index to assign matching IDs
         if (node.type === "heading") {
           const level = (node.attrs?.level as number) ?? 2;
-          if ((level === 2 || level === 3) && headingIndex < headings.length) {
+          if (level >= 1 && level <= 4 && headingIndex < headings.length) {
             const heading = headings[headingIndex];
             headingIndex++;
             return (
@@ -63,36 +64,65 @@ function RenderNode({
   headingId?: string;
 }) {
   switch (node.type) {
-    case "paragraph":
+    case "paragraph": {
+      const textAlign = node.attrs?.textAlign as string | undefined;
       return (
-        <p className="whitespace-pre-wrap">
+        <p
+          className="whitespace-pre-wrap"
+          style={textAlign ? { textAlign: textAlign as React.CSSProperties["textAlign"] } : undefined}
+        >
           {node.content?.map((child, i) => (
             <RenderInline key={i} node={child} />
           )) ?? <br />}
         </p>
       );
+    }
 
     case "heading": {
       const level = (node.attrs?.level as number) ?? 2;
+      const textAlign = node.attrs?.textAlign as string | undefined;
+      const alignStyle = textAlign ? { textAlign: textAlign as React.CSSProperties["textAlign"] } : undefined;
       const children = node.content?.map((child, i) => (
         <RenderInline key={i} node={child} />
       ));
+      if (level === 1)
+        return (
+          <h1
+            id={headingId}
+            className="text-2xl font-bold mt-6 mb-2 scroll-mt-20"
+            style={alignStyle}
+          >
+            {children}
+          </h1>
+        );
       if (level === 2)
         return (
           <h2
             id={headingId}
-            className="text-xl font-bold mt-6 mb-2 scroll-mt-20"
+            className="text-xl font-bold mt-5 mb-1.5 scroll-mt-20"
+            style={alignStyle}
           >
             {children}
           </h2>
         );
+      if (level === 3)
+        return (
+          <h3
+            id={headingId}
+            className="text-lg font-semibold mt-4 mb-1 scroll-mt-20"
+            style={alignStyle}
+          >
+            {children}
+          </h3>
+        );
       return (
-        <h3
+        <h4
           id={headingId}
-          className="text-lg font-semibold mt-4 mb-1 scroll-mt-20"
+          className="text-base font-semibold mt-3 mb-1 scroll-mt-20"
+          style={alignStyle}
         >
           {children}
-        </h3>
+        </h4>
       );
     }
 
@@ -131,6 +161,34 @@ function RenderNode({
           ))}
         </li>
       );
+
+    case "taskList":
+      return (
+        <ul className="list-none pl-0 my-2 space-y-1">
+          {node.content?.map((child, i) => (
+            <RenderNode key={i} node={child} />
+          ))}
+        </ul>
+      );
+
+    case "taskItem": {
+      const checked = node.attrs?.checked === true;
+      return (
+        <li className="flex gap-2 items-start">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled
+            className="mt-1 h-4 w-4 rounded border-border"
+          />
+          <div className="flex-1 min-w-0">
+            {node.content?.map((child, i) => (
+              <RenderNode key={i} node={child} />
+            ))}
+          </div>
+        </li>
+      );
+    }
 
     case "horizontalRule":
       return <hr className="my-4 border-muted" />;
@@ -274,6 +332,30 @@ function RenderInline({ node }: { node: TiptapNode }) {
               </code>
             );
             break;
+          case "subscript":
+            element = <sub>{element}</sub>;
+            break;
+          case "superscript":
+            element = <sup>{element}</sup>;
+            break;
+          case "textStyle": {
+            const color = mark.attrs?.color as string;
+            if (color) {
+              element = <span style={{ color }}>{element}</span>;
+            }
+            break;
+          }
+          case "highlight": {
+            const bgColor = mark.attrs?.color as string;
+            element = (
+              <mark
+                style={bgColor ? { backgroundColor: bgColor } : undefined}
+              >
+                {element}
+              </mark>
+            );
+            break;
+          }
           case "link": {
             const href = mark.attrs?.href as string;
             if (href && isValidHttpUrl(href)) {

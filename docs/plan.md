@@ -84,7 +84,7 @@
 - **Collapsible sidebar** (YouTube-style): hamburger toggle always visible, collapses to 64px icon rail with tooltips, expands to 256px with labels. State persisted in `localStorage`.
 - **Grouped sidebar navigation**: HR items grouped into My HR / Organisation / Admin sections. Learning items grouped into personal / Admin. Group labels shown when sidebar is expanded.
 - **Shared PageHeader component** (`src/components/layout/page-header.tsx`): Standardised `text-3xl font-bold tracking-tight` title with optional subtitle, breadcrumbs, and action slot. Adopted across all ~15 page files.
-- **Breadcrumbs**: Integrated into PageHeader, added to nested routes (`/hr/users/[userId]`, `/hr/leaving/[formId]`, `/hr/absence/rtw/[formId]`, `/learning/courses/[id]`, `/learning/admin/courses/[id]`, `/intranet/weekly-roundup/[id]`)
+- **Breadcrumbs**: Integrated into PageHeader with `/` separator (GitHub/Linear/Notion style) and hover underlines. Standardised across all pages: 14 existing pages updated (HR→Admin, Intranet→Home labels), 8 admin pages gained breadcrumbs (absence, compliance, key-dates, leaving, users, flexible-working, course management, L&D reports). Article editor prepends "Home" root. PR #112.
 - **HR admin dashboard**: Admin-only `/hr` page with stat cards, office attendance, administration quick-actions, and L&D admin section. Non-admins redirect to `/hr/profile`.
 - **EmptyState component** (`src/components/ui/empty-state.tsx`): Standardised empty state with icon, title, description, optional CTA
 - **LoadingButton component** (`src/components/ui/loading-button.tsx`): Button wrapper with `loading` prop showing spinner
@@ -160,7 +160,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 ### Intranet Phase 5 — Resources Overhaul (5 PRs)
 - [x] **PR 1 — Soft-Delete + Kebab Menus + Featured Articles** (PR #109): Migration 00049, soft-delete with 30-day bin, "..." kebab menus on all resource components, featured articles section (max 3, horizontal cards), `/resources/bin` route, auto-purge scheduled task. 1058 tests.
 - [x] **PR 2 — Category Restructuring + Move Articles + Icon Picker + Landing Page** (PR #110): Migration 00050, merge "How-to Guides" → "Guides", `icon_colour` column, Notion-style icon picker popover (46 curated Lucide icons, 8 colour swatches, search, categorised grid), redesigned category form dialog, Bin relocated from toolbar to sidebar (Notion/Google Drive pattern), move article between categories, category reordering
-- [ ] **PR 3 — Editor Tooltips + Toolbar Enhancements**: Google Docs-style dark pill tooltips with platform-aware shortcuts, alignment, checklist, indent/outdent, text colour, highlight colour, undo/redo, clear formatting
+- [x] **PR 3 — Editor Tooltips + Toolbar Enhancements** (PR #113): Google Docs-style dark pill tooltips on all 25+ buttons, heading dropdown (Normal text + H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11 colours), highlight (9 colours), undo/redo, clear formatting, 8 new Tiptap extensions, renderer support for all new node types/marks. Post-merge fixes: checklist CSS (Tiptap v3 DOM attributes), Vercel build (optional props for useEditorState null).
 - [ ] **PR 4 — Image Upload via Supabase Storage**: File upload + drag-and-drop + clipboard paste, URL fallback, `resource-images` bucket
 - [ ] **PR 5 — File Attachments**: `resource_article_attachments` table, downloadable files at bottom of articles, MIME type icon mapping
 
@@ -174,6 +174,13 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Make `/hr` page admin-only — non-admins redirect to `/hr/profile`
 - [x] Update E2E test assertions for renamed sidebar items
 - No route changes — sidebar is purely visual mapping
+
+### Breadcrumb Consistency ✅ (PR #112)
+- [x] Rename stale root labels: HR→Admin (8 admin pages), Intranet→Home (5 resource/roundup pages), Learning→Admin (1 L&D admin page)
+- [x] Add breadcrumbs to 8 admin pages missing them (absence, compliance, key-dates, leaving, users, flexible-working, course management, L&D reports)
+- [x] Replace manual `<h1>` headers with shared PageHeader component (5 pages)
+- [x] Fix article editor: prepend "Home" root breadcrumb
+- [x] Visual refresh: `/` separator (GitHub/Linear/Notion style), `hover:underline` on links, removed ChevronRight icon
 
 ### Intranet Phase 6 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard

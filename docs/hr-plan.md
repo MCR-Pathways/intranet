@@ -93,7 +93,7 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 ### UI/UX Polish ✅ DONE
 - **HR admin dashboard (PR #111):** Admin-only `/hr` page with stat cards, office attendance, Administration quick-actions, and L&D admin section. Non-admins redirect to `/hr/profile`. Personal items (My Profile, Leave, etc.) accessed via "Me" sidebar section.
 - **Sidebar regrouping (PR #111):** "HR" renamed to "Me" with personal items only (My Profile, Leave, Assets, Flexible Working, My Team, Org Chart). Admin items removed to single "Admin" dashboard link. "Home" (Intranet), "Learning", "Location" (Sign-In) complete the main nav.
-- **Breadcrumbs:** Added to `/hr/users/[userId]` (HR > User Management > {name}), `/hr/leaving/[formId]` (HR > Leaving > {name}), `/hr/absence/rtw/[formId]` (HR > Absence > RTW Form)
+- **Breadcrumbs (PR #112):** Standardised across all HR pages with `/` separator (GitHub/Linear/Notion style). Root label changed from "HR" to "Admin". All 8 admin sub-pages (absence, compliance, key-dates, leaving, users, flexible-working, onboarding, departments) now have breadcrumbs. Flexible working breadcrumbs conditional — only shown for HR admins (employees see no breadcrumbs). Manual `<h1>` headers on absence, compliance, key-dates replaced with PageHeader.
 - **PageHeader:** All HR pages now use shared `PageHeader` component with consistent `text-3xl` title styling
 
 ### Bradford Factor — DECISION: Wellbeing Prompts Instead
