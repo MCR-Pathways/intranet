@@ -872,6 +872,7 @@ export interface Database {
           slug: string;
           description: string | null;
           icon: string | null;
+          icon_colour: string | null;
           sort_order: number;
           deleted_at: string | null;
           deleted_by: string | null;
@@ -884,6 +885,7 @@ export interface Database {
           slug: string;
           description?: string | null;
           icon?: string | null;
+          icon_colour?: string | null;
           sort_order?: number;
           deleted_at?: string | null;
           deleted_by?: string | null;
@@ -896,6 +898,7 @@ export interface Database {
           slug?: string;
           description?: string | null;
           icon?: string | null;
+          icon_colour?: string | null;
           sort_order?: number;
           deleted_at?: string | null;
           deleted_by?: string | null;

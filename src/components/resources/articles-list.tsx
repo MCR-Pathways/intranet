@@ -8,18 +8,21 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArticleListItem } from "./article-list-item";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
+import { MoveArticleDialog } from "./move-article-dialog";
 import { deleteArticle } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
 interface ArticlesListProps {
   articles: ArticleWithAuthor[];
+  categoryId: string;
   categorySlug: string;
   isHRAdmin: boolean;
 }
 
 export function ArticlesList({
   articles,
+  categoryId,
   categorySlug,
   isHRAdmin,
 }: ArticlesListProps) {
@@ -27,6 +30,7 @@ export function ArticlesList({
   const [deleteTarget, setDeleteTarget] = useState<ArticleWithAuthor | null>(
     null
   );
+  const [moveTarget, setMoveTarget] = useState<ArticleWithAuthor | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -91,6 +95,7 @@ export function ArticlesList({
               categorySlug={categorySlug}
               isHRAdmin={isHRAdmin}
               onDelete={() => setDeleteTarget(article)}
+              onMove={() => setMoveTarget(article)}
             />
           ))}
         </div>
@@ -106,6 +111,19 @@ export function ArticlesList({
           if (!open) setDeleteTarget(null);
         }}
       />
+
+      {/* Move dialog — controlled */}
+      {moveTarget && (
+        <MoveArticleDialog
+          articleId={moveTarget.id}
+          articleTitle={moveTarget.title}
+          currentCategoryId={categoryId}
+          open={!!moveTarget}
+          onOpenChange={(open) => {
+            if (!open) setMoveTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

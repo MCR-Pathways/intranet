@@ -157,7 +157,14 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
   - [x] Full-page editor routes replacing dialog: `/[categorySlug]/new` and `/[articleSlug]/edit` (PR #104). Deleted `article-form-dialog.tsx`. Reserved "new"/"edit" slugs.
   - [x] Article outline sidebar (table of contents): `extractHeadings()`, `slugifyHeading()`, IntersectionObserver active tracking, two-column reading view (PR #105)
 
-### Intranet Phase 5 — Surveys + Universal Search
+### Intranet Phase 5 — Resources Overhaul (5 PRs)
+- [x] **PR 1 — Soft-Delete + Kebab Menus + Featured Articles** (PR #109): Migration 00049, soft-delete with 30-day bin, "..." kebab menus on all resource components, featured articles section (max 3, horizontal cards), `/resources/bin` route, auto-purge scheduled task. 1058 tests.
+- [ ] **PR 2 — Category Restructuring + Move Articles + Icon Picker + Landing Page**: Migration 00050, merge "How-to Guides" → "Guides", `icon_colour` column, Notion-style icon picker popover (46 curated Lucide icons, 8 colour swatches, search, categorised grid), redesigned category form dialog, Bin relocated from toolbar to sidebar (Notion/Google Drive pattern), move article between categories, category reordering
+- [ ] **PR 3 — Editor Tooltips + Toolbar Enhancements**: Google Docs-style dark pill tooltips with platform-aware shortcuts, alignment, checklist, indent/outdent, text colour, highlight colour, undo/redo, clear formatting
+- [ ] **PR 4 — Image Upload via Supabase Storage**: File upload + drag-and-drop + clipboard paste, URL fallback, `resource-images` bucket
+- [ ] **PR 5 — File Attachments**: `resource_article_attachments` table, downloadable files at bottom of articles, MIME type icon mapping
+
+### Intranet Phase 6 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
 - [ ] Cmd+K universal search palette: posts + resources + people (PostgreSQL FTS)
 

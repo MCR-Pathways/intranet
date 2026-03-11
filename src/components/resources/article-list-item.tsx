@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { FileText, Pencil, Trash2, MoreHorizontal, FolderInput } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,7 @@ interface ArticleListItemProps {
   categorySlug: string;
   isHRAdmin: boolean;
   onDelete?: () => void;
+  onMove?: () => void;
 }
 
 export function ArticleListItem({
@@ -27,6 +28,7 @@ export function ArticleListItem({
   categorySlug,
   isHRAdmin,
   onDelete,
+  onMove,
 }: ArticleListItemProps) {
   const displayDate = article.published_at
     ? new Date(article.published_at)
@@ -98,6 +100,10 @@ export function ArticleListItem({
                   <Pencil className="h-4 w-4" />
                   Edit
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMove?.()}>
+                <FolderInput className="h-4 w-4" />
+                Move to...
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

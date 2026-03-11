@@ -16,6 +16,7 @@ import {
 import { ArticleRenderer } from "./article-renderer";
 import { ArticleOutline } from "./article-outline";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
+import { MoveArticleDialog } from "./move-article-dialog";
 import {
   updateArticle,
   deleteArticle,
@@ -31,6 +32,7 @@ import {
   EyeOff,
   Star,
   StarOff,
+  FolderInput,
 } from "lucide-react";
 import { useState } from "react";
 import type { ArticleWithAuthor } from "@/types/database.types";
@@ -38,17 +40,20 @@ import type { TiptapDocument } from "@/lib/tiptap";
 
 interface ArticleViewProps {
   article: ArticleWithAuthor;
+  categoryId: string;
   categorySlug: string;
   isHRAdmin: boolean;
 }
 
 export function ArticleView({
   article,
+  categoryId,
   categorySlug,
   isHRAdmin,
 }: ArticleViewProps) {
   const [isPending, startTransition] = useTransition();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   const authorName =
     article.author?.preferred_name || article.author?.full_name || "Unknown";
@@ -155,6 +160,12 @@ export function ArticleView({
                     </>
                   )}
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setShowMoveDialog(true)}
+                >
+                  <FolderInput className="h-4 w-4" />
+                  Move to...
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
@@ -173,6 +184,14 @@ export function ArticleView({
             disabled={isPending}
             open={showDeleteDialog}
             onOpenChange={setShowDeleteDialog}
+          />
+
+          <MoveArticleDialog
+            articleId={article.id}
+            articleTitle={article.title}
+            currentCategoryId={categoryId}
+            open={showMoveDialog}
+            onOpenChange={setShowMoveDialog}
           />
         </div>
       )}
