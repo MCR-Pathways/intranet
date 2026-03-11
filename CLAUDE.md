@@ -226,13 +226,13 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Skip already-merged commits during chain rebase after squash-merge.** When squash-merging PR A to main, then rebasing child PR B onto main, git doesn't recognise A's original commits as duplicates (different hashes). Use `git rebase --skip` for each conflicting commit from A until reaching B's own commits.
 
-**Validate redirect target parameters in auth callbacks.** User-controlled `next` query params (e.g. `/auth/callback?next=...`) must be validated: check `startsWith("/") && !startsWith("//")`. Without this, `next=@evil.com` produces `https://origin@evil.com` — an open redirect where the browser treats the origin as a username. Never redirect to unvalidated user input.
+**Validate redirect target parameters in auth callbacks.** User-controlled `next` query params (e.g. `/auth/callback?next=...`) must be validated via `sanitizeRedirectPath()` from `src/lib/url.ts`. Without this, `next=@evil.com` produces `https://origin@evil.com` — an open redirect where the browser treats the origin as a username. Never redirect to unvalidated user input.
 
 **Return generic error messages to clients, log details server-side.** Raw Supabase error messages (e.g. `error.message`) expose schema details, table names, and constraint info. Return "Authentication failed" / "Check-in failed" to the client and `logger.error()` the real message server-side.
 
 **Use `timingSafeTokenCompare` consistently for ALL token/secret comparisons.** Using `!==` for token comparison in one endpoint while using timing-safe comparison in another is an inconsistency bug. Even low-risk cases (e.g. webhook secrets from trusted sources) should use timing-safe comparison for defence-in-depth.
 
-**Move shared utilities out of component files into `src/lib/`.** `proxyImageUrl()` was defined locally in `link-preview-card.tsx` but needed by `article-renderer.tsx` too. Extract to `src/lib/url.ts` on first use, import everywhere. Prevents drift and duplication.
+**Extract shared logic to `src/lib/` immediately, not after review.** `proxyImageUrl()` was local to `link-preview-card.tsx` until a second consumer appeared; `sanitizeRedirectPath()` was duplicated inline in two auth routes. Both were caught in review. Extract to `src/lib/url.ts` on first write when the logic is non-trivial or security-sensitive — don't wait for the duplication to happen.
 
 **Always verify exploration agent claims against actual code.** In the Mar 2026 security audit, agents reported: `.env.local` was "committed to git" (FALSE — never committed, `.gitignore` covers it), missing `search_path` was "CRITICAL" (OVERSTATED — all functions used schema-qualified refs), calendar webhook timing attack was "CRITICAL" (OVERSTATED — header comes from Google, not end users), kiosk "lacks ownership verification" (BY DESIGN — shared office tablet), "missing CSRF protection" (FALSE — Next.js Server Actions have built-in CSRF). Always run your own `git log`, `grep`, and `read` to verify before acting on agent findings.
 
