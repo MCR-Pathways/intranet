@@ -673,6 +673,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-11 | Abdul-Muiz Adaranijo | Breadcrumb consistency (PR #112): Standardised breadcrumbs across all 24 pages. Renamed stale root labels (HR→Admin, Intranet→Home), added breadcrumbs to 8 admin pages, replaced manual headers with PageHeader, visual refresh (/ separator, hover underlines). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Sidebar declutter (PR #111): semantic regrouping (Intranet→Home, HR→Me, Working Location→Location), admin separation (single Admin dashboard link), `/hr` now admin-only with non-admin redirect. Resources overhaul PRs #109-110 merged (soft-delete, kebab menus, featured articles, category management, icon picker). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Security audit remediation: PRs #106 (open redirect, error leakage, timing-safe webhook, article image proxy) + #107 (SET search_path on 8 early SECURITY DEFINER functions). Rate limiting documented as future work (requires Upstash Redis). |
 | 2026-03-10 | Abdul-Muiz Adaranijo | Resources editor overhaul: PRs #102-105 merged. Full formatting suite, full-page editor, article outline sidebar. 12 resource components, 5 resource routes, custom callout extension. |

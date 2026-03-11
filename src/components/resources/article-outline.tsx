@@ -10,7 +10,7 @@ interface ArticleOutlineProps {
 }
 
 /**
- * Sticky right sidebar showing a table of contents (H2/H3 headings).
+ * Sticky right sidebar showing a table of contents (H1-H4 headings).
  * Highlights the currently visible section via IntersectionObserver.
  * Hidden on smaller screens and when fewer than 2 headings exist.
  */
@@ -100,7 +100,9 @@ function OutlineItem({
         onClick={(e) => onClick(e, heading.id)}
         className={cn(
           "block text-sm py-1 transition-colors",
-          heading.level === 3 && "pl-4",
+          heading.level === 2 && "pl-3",
+          heading.level === 3 && "pl-6",
+          heading.level === 4 && "pl-9",
           isActive
             ? "text-primary font-medium"
             : "text-muted-foreground hover:text-foreground"
