@@ -40,11 +40,9 @@ export async function updateUserProfile(
     delete data.is_systems_admin;
   }
 
-  // Systems-only admins cannot change admin flags or department
+  // Systems-only admins cannot change HR admin flag or department
   if (isSystemsAdmin && !isHRAdmin) {
     delete data.is_hr_admin;
-    delete data.is_ld_admin;
-    delete data.is_systems_admin;
     delete data.department;
   }
 

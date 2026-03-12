@@ -81,15 +81,27 @@ describe("PermissionsEditDialog", () => {
     expect(screen.getByRole("switch", { name: "Line Manager" })).toBeChecked();
   });
 
-  it("disables admin toggles when current user is not HR admin", () => {
-    renderDialog({ isCurrentUserHRAdmin: false });
+  it("disables all admin toggles when current user is neither HR nor systems admin", () => {
+    renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: false });
 
-    // Admin switches should be disabled
     const switches = screen.getAllByRole("switch");
     // HR Admin, L&D Admin, Systems Admin should be disabled
     expect(switches[0]).toBeDisabled();
     expect(switches[1]).toBeDisabled();
     expect(switches[2]).toBeDisabled();
+    // Line Manager should be enabled
+    expect(switches[3]).not.toBeDisabled();
+  });
+
+  it("systems admin can toggle L&D Admin and Systems Admin but not HR Admin", () => {
+    renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: true });
+
+    const switches = screen.getAllByRole("switch");
+    // HR Admin should be disabled (only HR admins can grant it)
+    expect(switches[0]).toBeDisabled();
+    // L&D Admin and Systems Admin should be enabled
+    expect(switches[1]).not.toBeDisabled();
+    expect(switches[2]).not.toBeDisabled();
     // Line Manager should be enabled
     expect(switches[3]).not.toBeDisabled();
   });

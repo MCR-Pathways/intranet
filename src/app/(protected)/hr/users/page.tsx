@@ -71,6 +71,7 @@ export default async function UserManagementPage() {
         currentUserId={user.id}
         departments={departments}
         isCurrentUserHRAdmin={isHRAdminEffective(profile)}
+        isCurrentUserSystemsAdmin={isSystemsAdminEffective(profile)}
         people={people}
         teams={teamOptions}
       />

@@ -161,6 +161,49 @@ describe("HR User Actions", () => {
         updateUserProfile("user-456", { full_name: "Jane" })
       ).rejects.toThrow("Unauthorised: HR admin or systems admin access required");
     });
+
+    it("systems-only admin can change is_ld_admin and is_systems_admin", async () => {
+      vi.mocked(requireHROrSystemsAdmin).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "sysadmin-123", email: "sysadmin@mcrpathways.org" } as never,
+        isHRAdmin: false,
+        isSystemsAdmin: true,
+      });
+
+      const result = await updateUserProfile("user-456", {
+        is_ld_admin: true,
+        is_systems_admin: true,
+        is_line_manager: true,
+      });
+
+      expect(result).toEqual({ success: true, error: null });
+      expect(mockUpdate).toHaveBeenCalledWith({
+        is_ld_admin: true,
+        is_systems_admin: true,
+        is_line_manager: true,
+      });
+    });
+
+    it("systems-only admin cannot change is_hr_admin or department", async () => {
+      vi.mocked(requireHROrSystemsAdmin).mockResolvedValue({
+        supabase: mockSupabase as never,
+        user: { id: "sysadmin-123", email: "sysadmin@mcrpathways.org" } as never,
+        isHRAdmin: false,
+        isSystemsAdmin: true,
+      });
+
+      const result = await updateUserProfile("user-456", {
+        is_hr_admin: true,
+        department: "Operations",
+        is_ld_admin: true,
+      });
+
+      expect(result).toEqual({ success: true, error: null });
+      // is_hr_admin and department stripped, only is_ld_admin passes
+      expect(mockUpdate).toHaveBeenCalledWith({
+        is_ld_admin: true,
+      });
+    });
   });
 
   describe("completeUserInduction", () => {

@@ -93,6 +93,7 @@ interface EmployeeDetailContentProps {
   complianceDocuments: ComplianceDocumentRow[];
   complianceDocumentTypes?: DocumentType[];
   isHRAdmin?: boolean;
+  isSystemsAdmin?: boolean;
   currentUserId: string;
   lineManagerName: string | null;
   teamName: string | null;
@@ -126,6 +127,7 @@ export function EmployeeDetailContent({
   complianceDocuments,
   complianceDocumentTypes = [],
   isHRAdmin = false,
+  isSystemsAdmin = false,
   currentUserId,
   lineManagerName,
   teamName,
@@ -391,6 +393,7 @@ export function EmployeeDetailContent({
         profileName={profile.full_name}
         currentUserId={currentUserId}
         isCurrentUserHRAdmin={isHRAdmin}
+        isCurrentUserSystemsAdmin={isSystemsAdmin}
         isHRAdmin={profile.is_hr_admin}
         isLDAdmin={profile.is_ld_admin}
         isSystemsAdmin={profile.is_systems_admin}
