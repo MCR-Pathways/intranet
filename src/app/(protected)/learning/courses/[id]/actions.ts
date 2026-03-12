@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function enrollInCourse(courseId: string) {
   const { supabase, user } = await getCurrentUser();
@@ -21,7 +22,8 @@ export async function enrollInCourse(courseId: string) {
     if (error.code === "23505") {
       return { success: false, error: "Already enrolled in this course" };
     }
-    return { success: false, error: error.message };
+    logger.error("Failed to enrol in course", { error: error.message });
+    return { success: false, error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
@@ -48,7 +50,8 @@ export async function completeLesson(lessonId: string, courseId: string) {
   );
 
   if (error) {
-    return { success: false, error: error.message, progressPercent: null };
+    logger.error("Failed to complete lesson", { error: error.message });
+    return { success: false, error: "Failed to complete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", progressPercent: null };
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
@@ -76,7 +79,8 @@ export async function submitQuiz(
   });
 
   if (error) {
-    return { success: false, error: error.message, result: null };
+    logger.error("Failed to submit quiz", { error: error.message });
+    return { success: false, error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", result: null };
   }
 
   revalidatePath(`/learning/courses/${courseId}`);

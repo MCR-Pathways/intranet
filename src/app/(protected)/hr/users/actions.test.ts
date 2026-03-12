@@ -137,7 +137,7 @@ describe("HR User Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Database constraint violation",
+        error: "Failed to update profile. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
@@ -184,7 +184,7 @@ describe("HR User Actions", () => {
 
       const result = await completeUserInduction("user-456");
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -206,7 +206,7 @@ describe("HR User Actions", () => {
 
       const result = await resetUserInduction("user-456");
 
-      expect(result).toEqual({ success: false, error: "Reset failed" });
+      expect(result).toEqual({ success: false, error: "Failed to reset induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 });

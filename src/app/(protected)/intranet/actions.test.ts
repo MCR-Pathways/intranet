@@ -544,7 +544,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await deletePost("post-1");
 
-      expect(result).toEqual({ success: false, error: "Delete failed" });
+      expect(result).toEqual({ success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
 
@@ -853,7 +853,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await addComment("post-1", "Test comment");
 
-      expect(result).toEqual({ success: false, error: "Insert failed" });
+      expect(result).toEqual({ success: false, error: "Failed to add comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
   });
@@ -1105,7 +1105,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await togglePinPost("post-1");
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to update post pin status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
   });

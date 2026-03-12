@@ -136,7 +136,7 @@ describe("HR Profile Actions", () => {
 
       const result = await updatePersonalDetails({ city: "Edinburgh" });
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Upsert failed");
+      expect(result.error).toContain("Failed to update personal details");
     });
 
     it("allows all expected fields", async () => {
@@ -258,7 +258,7 @@ describe("HR Profile Actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Insert failed");
+      expect(result.error).toContain("Failed to add emergency contact");
     });
 
     it("returns error on update DB failure", async () => {
@@ -275,7 +275,7 @@ describe("HR Profile Actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Update failed");
+      expect(result.error).toContain("Failed to update emergency contact");
     });
   });
 
@@ -320,7 +320,7 @@ describe("HR Profile Actions", () => {
 
       const result = await deleteEmergencyContact("contact-1");
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Delete failed");
+      expect(result.error).toContain("Failed to delete emergency contact");
     });
   });
 });

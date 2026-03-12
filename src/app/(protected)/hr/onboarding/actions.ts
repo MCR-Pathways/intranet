@@ -19,6 +19,7 @@ import type {
 } from "@/types/hr";
 import { createNotification } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // VALID VALUES
@@ -112,7 +113,8 @@ export async function createTemplate(data: {
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to create template: ${error.message}` };
+    logger.error("Failed to create onboarding template", { error: error.message });
+    return { success: false, error: "Failed to create template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -167,7 +169,8 @@ export async function updateTemplate(
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to update template: ${error.message}` };
+    logger.error("Failed to update onboarding template", { error: error.message });
+    return { success: false, error: "Failed to update template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -199,7 +202,8 @@ export async function deleteTemplate(
     .eq("id", templateId);
 
   if (error) {
-    return { success: false, error: `Failed to delete template: ${error.message}` };
+    logger.error("Failed to delete onboarding template", { error: error.message });
+    return { success: false, error: "Failed to delete template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -267,7 +271,8 @@ export async function addTemplateItem(
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to add item: ${error.message}` };
+    logger.error("Failed to add template item", { error: error.message });
+    return { success: false, error: "Failed to add item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -325,7 +330,8 @@ export async function updateTemplateItem(
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to update item: ${error.message}` };
+    logger.error("Failed to update template item", { error: error.message });
+    return { success: false, error: "Failed to update item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -343,7 +349,8 @@ export async function deleteTemplateItem(
     .eq("id", itemId);
 
   if (error) {
-    return { success: false, error: `Failed to delete item: ${error.message}` };
+    logger.error("Failed to delete template item", { error: error.message });
+    return { success: false, error: "Failed to delete item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -368,7 +375,8 @@ export async function reorderTemplateItems(
   const results = await Promise.all(updates);
   const failed = results.find((r) => r.error);
   if (failed?.error) {
-    return { success: false, error: `Failed to reorder items: ${failed.error.message}` };
+    logger.error("Failed to reorder template items", { error: failed.error.message });
+    return { success: false, error: "Failed to reorder items. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/onboarding/templates");
@@ -507,7 +515,8 @@ export async function createOnboardingChecklist(data: {
         error: "This employee already has an active onboarding checklist. Complete or cancel it first.",
       };
     }
-    return { success: false, error: `Failed to create checklist: ${checklistError.message}` };
+    logger.error("Failed to create onboarding checklist", { error: checklistError.message });
+    return { success: false, error: "Failed to create checklist. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Create checklist items from template — resolve due dates and assignees
@@ -554,7 +563,8 @@ export async function createOnboardingChecklist(data: {
       .delete()
       .eq("id", checklist.id as string);
 
-    return { success: false, error: `Failed to create checklist items: ${itemsError.message}` };
+    logger.error("Failed to create checklist items", { error: itemsError.message });
+    return { success: false, error: "Failed to create checklist items. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Notify employee (non-critical)
@@ -758,7 +768,8 @@ export async function toggleChecklistItem(
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to update item: ${error.message}` };
+    logger.error("Failed to update checklist item", { error: error.message });
+    return { success: false, error: "Failed to update item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidateOnboardingPaths(checklist.profile_id as string);
@@ -834,7 +845,8 @@ export async function addChecklistItem(
     .single();
 
   if (error) {
-    return { success: false, error: `Failed to add item: ${error.message}` };
+    logger.error("Failed to add checklist item", { error: error.message });
+    return { success: false, error: "Failed to add item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/hr/onboarding/${checklistId}`);

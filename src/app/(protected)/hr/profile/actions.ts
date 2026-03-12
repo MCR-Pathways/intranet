@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 /**
  * Update the current user's own personal details (employee_details table).
@@ -56,7 +57,8 @@ export async function updatePersonalDetails(data: {
     .upsert({ ...sanitized, profile_id: user.id }, { onConflict: "profile_id" });
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update personal details", { error: error.message });
+    return { success: false, error: "Failed to update personal details. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/profile");
@@ -109,7 +111,8 @@ export async function upsertEmergencyContact(data: {
       .single();
 
     if (error) {
-      return { success: false, error: error.message };
+      logger.error("Failed to update emergency contact", { error: error.message });
+      return { success: false, error: "Failed to update emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   } else {
     // Check count before insert — max 2 emergency contacts
@@ -127,7 +130,8 @@ export async function upsertEmergencyContact(data: {
       .insert({ ...sanitized, profile_id: user.id });
 
     if (error) {
-      return { success: false, error: error.message };
+      logger.error("Failed to add emergency contact", { error: error.message });
+      return { success: false, error: "Failed to add emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
@@ -153,7 +157,8 @@ export async function deleteEmergencyContact(contactId: string) {
     .eq("profile_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete emergency contact", { error: error.message });
+    return { success: false, error: "Failed to delete emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/profile");

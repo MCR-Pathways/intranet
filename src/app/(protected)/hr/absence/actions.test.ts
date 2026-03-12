@@ -306,7 +306,7 @@ describe("HR Absence Actions", () => {
         start_date: "2026-03-02",
         end_date: "2026-03-03",
       });
-      expect(result).toEqual({ success: false, error: "DB insert failed" });
+      expect(result).toEqual({ success: false, error: "Failed to record absence. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
 
     it("accepts valid sickness categories", async () => {
@@ -485,7 +485,7 @@ describe("HR Absence Actions", () => {
       });
 
       const result = await deleteAbsence("abs-1");
-      expect(result).toEqual({ success: false, error: "FK constraint" });
+      expect(result).toEqual({ success: false, error: "Failed to delete absence record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -563,7 +563,7 @@ describe("HR Absence Actions", () => {
 
       const fd = makeFormData();
       const result = await uploadFitNote(fd);
-      expect(result).toEqual({ success: false, error: "DB update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to save fit note record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       // Should remove the uploaded file
       expect(mockStorageRemove).toHaveBeenCalled();
     });
@@ -576,7 +576,7 @@ describe("HR Absence Actions", () => {
 
       const fd = makeFormData();
       const result = await uploadFitNote(fd);
-      expect(result).toEqual({ success: false, error: "Upload failed: Storage full" });
+      expect(result).toEqual({ success: false, error: "Failed to upload fit note. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
 
     it("deletes old fit note after successful replacement", async () => {
@@ -675,7 +675,7 @@ describe("HR Absence Actions", () => {
       });
 
       const result = await deleteFitNote("abs-1");
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to delete fit note. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -1155,7 +1155,7 @@ describe("HR Absence Actions", () => {
       mockFrom.mockReturnValue(c);
 
       const result = await fetchAbsenceHistory("emp-1");
-      expect(result).toEqual({ records: [], error: "Query failed" });
+      expect(result).toEqual({ records: [], error: "Failed to fetch absence history. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -1192,7 +1192,7 @@ describe("HR Absence Actions", () => {
       mockFrom.mockReturnValue(c);
 
       const result = await fetchRTWForm("form-1");
-      expect(result).toEqual({ form: null, error: "Not found" });
+      expect(result).toEqual({ form: null, error: "Failed to fetch return-to-work form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -1241,7 +1241,7 @@ describe("HR Absence Actions", () => {
       mockFrom.mockReturnValue(c);
 
       const result = await fetchTriggerPointStatus("emp-1");
-      expect(result.error).toBe("Query error");
+      expect(result.error).toBe("Failed to fetch trigger point status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.");
     });
   });
 });

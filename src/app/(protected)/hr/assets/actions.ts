@@ -2,6 +2,7 @@
 
 import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // CREATE ASSET
@@ -44,7 +45,8 @@ export async function createAsset(data: {
     if (error.message.includes("duplicate") || error.message.includes("unique")) {
       return { success: false, error: "An asset with this tag already exists" };
     }
-    return { success: false, error: error.message };
+    logger.error("Failed to create asset", { error: error.message });
+    return { success: false, error: "Failed to create asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/assets");
@@ -96,7 +98,8 @@ export async function updateAsset(
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update asset", { error: error.message });
+    return { success: false, error: "Failed to update asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/assets");
@@ -148,7 +151,8 @@ export async function assignAsset(
     .single();
 
   if (assignError) {
-    return { success: false, error: assignError.message };
+    logger.error("Failed to assign asset", { error: assignError.message });
+    return { success: false, error: "Failed to assign asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Update asset status
@@ -162,7 +166,8 @@ export async function assignAsset(
   if (updateError) {
     // Rollback: remove the assignment record to keep state consistent
     await supabase.from("asset_assignments").delete().eq("id", newAssignment.id);
-    return { success: false, error: updateError.message };
+    logger.error("Failed to update asset status after assignment", { error: updateError.message });
+    return { success: false, error: "Failed to assign asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/assets");
@@ -208,7 +213,8 @@ export async function returnAsset(
     .single();
 
   if (returnError) {
-    return { success: false, error: returnError.message };
+    logger.error("Failed to return asset", { error: returnError.message });
+    return { success: false, error: "Failed to return asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Update asset status to available
@@ -225,7 +231,8 @@ export async function returnAsset(
       .from("asset_assignments")
       .update({ returned_date: null, condition_on_return: null })
       .eq("id", assignmentId);
-    return { success: false, error: updateError.message };
+    logger.error("Failed to update asset status after return", { error: updateError.message });
+    return { success: false, error: "Failed to return asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/assets");
@@ -260,7 +267,8 @@ export async function retireAsset(assetId: string) {
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to retire asset", { error: error.message });
+    return { success: false, error: "Failed to retire asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/assets");

@@ -51,7 +51,8 @@ export async function createCourse(data: {
     .single();
 
   if (error) {
-    return { success: false, error: error.message, courseId: null };
+    logger.error("Failed to create course", { error: error.message });
+    return { success: false, error: "Failed to create course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", courseId: null };
   }
 
   revalidatePath("/learning/admin/courses");
@@ -109,7 +110,8 @@ export async function updateCourse(
     .eq("id", courseId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update course", { error: error.message });
+    return { success: false, error: "Failed to update course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/admin/courses");
@@ -127,7 +129,8 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
     .eq("id", courseId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to toggle course active state", { error: error.message });
+    return { success: false, error: "Failed to update course status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/admin/courses");
@@ -182,7 +185,8 @@ export async function publishCourse(courseId: string) {
     .eq("id", courseId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to publish course", { error: error.message });
+    return { success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Send notifications to assigned users
@@ -217,7 +221,8 @@ export async function unpublishCourse(courseId: string) {
     .eq("id", courseId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to unpublish course", { error: error.message });
+    return { success: false, error: "Failed to unpublish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/admin/courses");
@@ -290,7 +295,8 @@ export async function createLesson(data: {
     .single();
 
   if (error) {
-    return { success: false, error: error.message, lessonId: null };
+    logger.error("Failed to create lesson", { error: error.message });
+    return { success: false, error: "Failed to create lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", lessonId: null };
   }
 
   revalidatePath(`/learning/admin/courses/${data.course_id}`);
@@ -364,7 +370,8 @@ export async function updateLesson(
     .eq("id", lessonId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update lesson", { error: error.message });
+    return { success: false, error: "Failed to update lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -392,7 +399,8 @@ export async function deleteLesson(lessonId: string, courseId: string) {
     .eq("id", lessonId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete lesson", { error: error.message });
+    return { success: false, error: "Failed to delete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -414,7 +422,8 @@ export async function reorderLessons(
 
   const failed = results.find((r) => r.error);
   if (failed?.error) {
-    return { success: false, error: failed.error.message };
+    logger.error("Failed to reorder lessons", { error: failed.error.message });
+    return { success: false, error: "Failed to reorder lessons. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -448,7 +457,8 @@ export async function assignCourse(data: {
     if (error.code === "23505") {
       return { success: false, error: "This assignment already exists" };
     }
-    return { success: false, error: error.message };
+    logger.error("Failed to assign course", { error: error.message });
+    return { success: false, error: "Failed to assign course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // If the course is published, notify newly matched users
@@ -514,7 +524,8 @@ export async function removeAssignment(assignmentId: string, courseId: string) {
     .eq("id", assignmentId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to remove course assignment", { error: error.message });
+    return { success: false, error: "Failed to remove assignment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -562,7 +573,8 @@ export async function uploadCourseVideo(formData: FormData) {
     .upload(filePath, file);
 
   if (uploadError) {
-    return { success: false, error: uploadError.message, url: null, storagePath: null };
+    logger.error("Failed to upload course video", { error: uploadError.message });
+    return { success: false, error: "Failed to upload video. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", url: null, storagePath: null };
   }
 
   const {
@@ -613,7 +625,8 @@ export async function uploadLessonImage(formData: FormData) {
     .upload(filePath, file);
 
   if (uploadError) {
-    return { success: false, error: uploadError.message, image: null };
+    logger.error("Failed to upload lesson image", { error: uploadError.message });
+    return { success: false, error: "Failed to upload image. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", image: null };
   }
 
   const {
@@ -647,7 +660,8 @@ export async function uploadLessonImage(formData: FormData) {
   if (insertError) {
     // Cleanup uploaded file if DB insert fails
     await supabase.storage.from("lesson-images").remove([filePath]);
-    return { success: false, error: insertError.message, image: null };
+    logger.error("Failed to save lesson image record", { error: insertError.message });
+    return { success: false, error: "Failed to save image record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", image: null };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -676,7 +690,8 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
     .eq("id", imageId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete lesson image", { error: error.message });
+    return { success: false, error: "Failed to delete image. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Then delete from storage — orphaned files are preferable to dangling DB refs
@@ -748,7 +763,8 @@ export async function createQuizQuestion(data: {
     .single();
 
   if (qError) {
-    return { success: false, error: qError.message, questionId: null };
+    logger.error("Failed to create quiz question", { error: qError.message });
+    return { success: false, error: "Failed to create quiz question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", questionId: null };
   }
 
   // Insert options
@@ -764,7 +780,8 @@ export async function createQuizQuestion(data: {
   if (oError) {
     // Cleanup question if options failed
     await supabase.from("quiz_questions").delete().eq("id", question.id);
-    return { success: false, error: oError.message, questionId: null };
+    logger.error("Failed to create quiz options", { error: oError.message });
+    return { success: false, error: "Failed to create quiz options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", questionId: null };
   }
 
   revalidatePath(`/learning/admin/courses/${data.course_id}`);
@@ -799,7 +816,8 @@ export async function updateQuizQuestion(
       .eq("id", questionId);
 
     if (error) {
-      return { success: false, error: error.message };
+      logger.error("Failed to update quiz question", { error: error.message });
+      return { success: false, error: "Failed to update quiz question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
@@ -828,7 +846,8 @@ export async function updateQuizQuestion(
     // Replace all options: delete existing, insert new set
     const { error: deleteError } = await supabase.from("quiz_options").delete().eq("question_id", questionId);
     if (deleteError) {
-      return { success: false, error: deleteError.message };
+      logger.error("Failed to delete quiz options", { error: deleteError.message });
+      return { success: false, error: "Failed to update quiz options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 
     const newOptions = data.options.map((opt, i) => ({
@@ -840,7 +859,8 @@ export async function updateQuizQuestion(
 
     const { error } = await supabase.from("quiz_options").insert(newOptions);
     if (error) {
-      return { success: false, error: error.message };
+      logger.error("Failed to insert quiz options", { error: error.message });
+      return { success: false, error: "Failed to update quiz options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
@@ -858,7 +878,8 @@ export async function deleteQuizQuestion(questionId: string, courseId: string) {
     .eq("id", questionId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete quiz question", { error: error.message });
+    return { success: false, error: "Failed to delete quiz question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);

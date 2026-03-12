@@ -2,6 +2,7 @@
 
 import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // CREATE KEY DATE
@@ -31,7 +32,8 @@ export async function createKeyDate(data: {
   });
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to create key date", { error: error.message });
+    return { success: false, error: "Failed to create key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/hr/users/${data.profile_id}`);
@@ -82,7 +84,8 @@ export async function updateKeyDate(
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update key date", { error: error.message });
+    return { success: false, error: "Failed to update key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   if (keyDate?.profile_id) {
@@ -117,7 +120,8 @@ export async function completeKeyDate(keyDateId: string) {
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to complete key date", { error: error.message });
+    return { success: false, error: "Failed to complete key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   if (keyDate?.profile_id) {
@@ -150,7 +154,8 @@ export async function deleteKeyDate(keyDateId: string) {
     .eq("id", keyDateId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete key date", { error: error.message });
+    return { success: false, error: "Failed to delete key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/hr/users/${keyDate.profile_id}`);

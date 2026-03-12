@@ -2,6 +2,7 @@
 
 import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // CREATE DEPARTMENT
@@ -27,15 +28,16 @@ export async function createDepartment(data: {
       if (error.code === "23505") {
         return { success: false, error: "A department with this slug already exists" };
       }
-      return { success: false, error: error.message };
+      logger.error("Failed to create department", { error: error.message });
+      return { success: false, error: "Failed to create department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 
     revalidatePath("/hr/departments");
     revalidatePath("/hr/users");
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create department";
-    return { success: false, error: message };
+    logger.error("Failed to create department", { error: err instanceof Error ? err.message : String(err) });
+    return { success: false, error: "Failed to create department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 }
 
@@ -75,15 +77,16 @@ export async function updateDepartment(
       if (error.code === "23505") {
         return { success: false, error: "A department with this slug already exists" };
       }
-      return { success: false, error: error.message };
+      logger.error("Failed to update department", { error: error.message });
+      return { success: false, error: "Failed to update department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 
     revalidatePath("/hr/departments");
     revalidatePath("/hr/users");
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update department";
-    return { success: false, error: message };
+    logger.error("Failed to update department", { error: err instanceof Error ? err.message : String(err) });
+    return { success: false, error: "Failed to update department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 }
 
@@ -130,14 +133,15 @@ export async function toggleDepartmentActive(
       .eq("id", id);
 
     if (updateError) {
-      return { success: false, error: updateError.message };
+      logger.error("Failed to toggle department status", { error: updateError.message });
+      return { success: false, error: "Failed to update department status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 
     revalidatePath("/hr/departments");
     revalidatePath("/hr/users");
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update department status";
-    return { success: false, error: message };
+    logger.error("Failed to toggle department status", { error: err instanceof Error ? err.message : String(err) });
+    return { success: false, error: "Failed to update department status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 }

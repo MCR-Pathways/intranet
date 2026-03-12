@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 import type { CourseCategory } from "@/types/database.types";
 
 // ===========================================
@@ -75,7 +76,8 @@ export async function addExternalCourse(data: {
   const { error } = await supabase.from("external_courses").insert(sanitized);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to add external course", { error: error.message });
+    return { success: false, error: "Failed to add external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/my-courses");
@@ -123,7 +125,8 @@ export async function updateExternalCourse(
     .eq("user_id", user.id); // RLS + explicit check
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update external course", { error: error.message });
+    return { success: false, error: "Failed to update external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/my-courses");
@@ -144,7 +147,8 @@ export async function deleteExternalCourse(courseId: string) {
     .eq("user_id", user.id); // RLS + explicit check
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete external course", { error: error.message });
+    return { success: false, error: "Failed to delete external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/learning/my-courses");

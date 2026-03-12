@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function getNotifications() {
   const { supabase, user } = await getCurrentUser();
@@ -18,7 +19,8 @@ export async function getNotifications() {
     .limit(20);
 
   if (error) {
-    return { notifications: [], error: error.message };
+    logger.error("Failed to fetch notifications", { error: error.message });
+    return { notifications: [], error: "Failed to fetch notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   return { notifications: data || [], error: null };
@@ -40,7 +42,8 @@ export async function markNotificationRead(
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to mark notification as read", { error: error.message });
+    return { success: false, error: "Failed to update notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/", "layout");
@@ -61,7 +64,8 @@ export async function markAllNotificationsRead(): Promise<{ success: boolean; er
     .eq("is_read", false);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to mark all notifications as read", { error: error.message });
+    return { success: false, error: "Failed to update notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/", "layout");

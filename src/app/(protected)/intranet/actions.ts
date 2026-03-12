@@ -518,7 +518,8 @@ export async function fetchWeeklyRoundupsWithClient(
     .limit(52);
 
   if (error) {
-    return { roundups: [], error: error.message };
+    logger.error("Failed to fetch weekly roundups", { error: error.message });
+    return { roundups: [], error: "Failed to fetch weekly roundups. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   return { roundups: roundups ?? [], error: null };
@@ -961,7 +962,8 @@ export async function deletePost(
   const { error } = await supabase.from("posts").delete().eq("id", postId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete post", { error: error.message });
+    return { success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Clean up storage files after successful DB delete
@@ -1023,21 +1025,30 @@ export async function toggleReaction(
     if (existing.reaction_type === reactionType) {
       // Same reaction — remove it (toggle off)
       const { error } = await supabase.from("post_reactions").delete().eq("id", existing.id);
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        logger.error("Failed to remove post reaction", { error: error.message });
+        return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      }
     } else {
       // Different reaction — update
       const { error } = await supabase
         .from("post_reactions")
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        logger.error("Failed to update post reaction", { error: error.message });
+        return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      }
     }
   } else {
     // No existing reaction — create
     const { error } = await supabase
       .from("post_reactions")
       .insert({ post_id: postId, user_id: user.id, reaction_type: reactionType });
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logger.error("Failed to add post reaction", { error: error.message });
+      return { success: false, error: "Failed to add reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
   }
 
   revalidatePath("/intranet");
@@ -1072,21 +1083,30 @@ export async function toggleCommentReaction(
     if (existing.reaction_type === reactionType) {
       // Same reaction — remove it (toggle off)
       const { error } = await supabase.from("comment_reactions").delete().eq("id", existing.id);
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        logger.error("Failed to remove comment reaction", { error: error.message });
+        return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      }
     } else {
       // Different reaction — update
       const { error } = await supabase
         .from("comment_reactions")
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        logger.error("Failed to update comment reaction", { error: error.message });
+        return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      }
     }
   } else {
     // No existing reaction — create
     const { error } = await supabase
       .from("comment_reactions")
       .insert({ comment_id: commentId, user_id: user.id, reaction_type: reactionType });
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logger.error("Failed to add comment reaction", { error: error.message });
+      return { success: false, error: "Failed to add reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
   }
 
   revalidatePath("/intranet");
@@ -1157,7 +1177,8 @@ export async function addComment(
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to create comment", { error: error.message });
+    return { success: false, error: "Failed to add comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Insert mentions and send notifications if content_json contains @mentions
@@ -1229,7 +1250,8 @@ export async function deleteComment(
     .eq("id", commentId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete comment", { error: error.message });
+    return { success: false, error: "Failed to delete comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/intranet");
@@ -1280,7 +1302,8 @@ export async function uploadPostAttachment(
     .upload(filePath, file);
 
   if (uploadError) {
-    return { success: false, error: uploadError.message };
+    logger.error("Failed to upload post attachment", { error: uploadError.message });
+    return { success: false, error: "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   const {
@@ -1481,7 +1504,8 @@ export async function togglePinPost(
     .eq("id", postId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to toggle pin on post", { error: error.message });
+    return { success: false, error: "Failed to update post pin status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/intranet");
@@ -1548,8 +1572,8 @@ export async function votePoll(
   );
 
   if (error) {
-    logger.error("Failed to upsert poll vote", { error });
-    return { success: false, error: error.message };
+    logger.error("Failed to upsert poll vote", { error: error.message });
+    return { success: false, error: "Failed to submit vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/intranet");
@@ -1569,7 +1593,8 @@ export async function removeVote(
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to remove poll vote", { error: error.message });
+    return { success: false, error: "Failed to remove vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/intranet");

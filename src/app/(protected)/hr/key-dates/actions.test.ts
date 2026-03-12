@@ -138,7 +138,7 @@ describe("HR Key Dates Actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("DB error");
+      expect(result.error).toContain("Failed to create key date");
     });
 
     it("throws when user is not HR admin", async () => {
@@ -210,7 +210,7 @@ describe("HR Key Dates Actions", () => {
 
       const result = await updateKeyDate("kd-1", { title: "Updated" });
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Update failed");
+      expect(result.error).toContain("Failed to update key date");
     });
   });
 
@@ -273,7 +273,7 @@ describe("HR Key Dates Actions", () => {
 
       const result = await completeKeyDate("kd-1");
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Complete failed");
+      expect(result.error).toContain("Failed to complete key date");
     });
 
     it("throws when user is not HR admin", async () => {
@@ -335,7 +335,7 @@ describe("HR Key Dates Actions", () => {
 
       const result = await deleteKeyDate("kd-1");
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Delete failed");
+      expect(result.error).toContain("Failed to delete key date");
     });
 
     it("throws when user is not HR admin", async () => {

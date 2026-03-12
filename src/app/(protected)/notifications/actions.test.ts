@@ -104,7 +104,7 @@ describe("Notification Actions", () => {
 
       expect(result).toEqual({
         notifications: [],
-        error: "Database connection error",
+        error: "Failed to fetch notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
 
@@ -170,7 +170,7 @@ describe("Notification Actions", () => {
 
       const result = await markNotificationRead("n1");
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to update notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -227,7 +227,7 @@ describe("Notification Actions", () => {
 
       const result = await markAllNotificationsRead();
 
-      expect(result).toEqual({ success: false, error: "Bulk update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to update notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 });

@@ -4,6 +4,7 @@ import { requireHRAdmin, getCurrentUser } from "@/lib/auth";
 import { validateHRDocument } from "@/lib/hr";
 import type { ComplianceStatus } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 const HR_DOCUMENTS_BUCKET = "hr-documents";
 
@@ -87,7 +88,8 @@ export async function uploadComplianceDocument(formData: FormData) {
       .upload(filePath, file);
 
     if (uploadError) {
-      return { success: false, error: `Upload failed: ${uploadError.message}` };
+      logger.error("Failed to upload compliance document", { error: uploadError.message });
+      return { success: false, error: "Failed to upload document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
@@ -114,7 +116,8 @@ export async function uploadComplianceDocument(formData: FormData) {
     if (filePath) {
       await supabase.storage.from(HR_DOCUMENTS_BUCKET).remove([filePath]);
     }
-    return { success: false, error: insertError.message };
+    logger.error("Failed to save compliance document record", { error: insertError.message });
+    return { success: false, error: "Failed to save document record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/compliance");
@@ -184,7 +187,8 @@ export async function updateComplianceDocument(
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update compliance document", { error: error.message });
+    return { success: false, error: "Failed to update document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/compliance");
@@ -223,7 +227,8 @@ export async function verifyComplianceDocument(docId: string) {
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to verify compliance document", { error: error.message });
+    return { success: false, error: "Failed to verify document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/compliance");
@@ -262,7 +267,8 @@ export async function deleteComplianceDocument(docId: string) {
     .eq("id", docId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to delete compliance document", { error: error.message });
+    return { success: false, error: "Failed to delete document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Delete file from storage after DB record is removed
@@ -307,7 +313,8 @@ export async function getComplianceDocumentUrl(filePath: string) {
     .createSignedUrl(filePath, 3600); // 60 minutes
 
   if (error) {
-    return { success: false, error: error.message, url: null };
+    logger.error("Failed to generate document URL", { error: error.message });
+    return { success: false, error: "Failed to generate download link. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", url: null };
   }
 
   return { success: true, error: null, url: data.signedUrl };
