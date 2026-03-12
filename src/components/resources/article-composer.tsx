@@ -118,7 +118,7 @@ export function ArticleComposer({
         openOnClick: false,
         autolink: true,
         HTMLAttributes: {
-          class: "text-primary underline",
+          class: "text-link underline hover:text-link/80",
         },
       }),
       Image.configure({
