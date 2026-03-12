@@ -518,7 +518,7 @@ export async function fetchWeeklyRoundupsWithClient(
     .limit(52);
 
   if (error) {
-    logger.error("Failed to fetch weekly roundups", { error: error.message });
+    logger.error("Failed to fetch weekly roundups", { error });
     return { roundups: [], error: "Failed to fetch weekly roundups. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -962,7 +962,7 @@ export async function deletePost(
   const { error } = await supabase.from("posts").delete().eq("id", postId);
 
   if (error) {
-    logger.error("Failed to delete post", { error: error.message });
+    logger.error("Failed to delete post", { error });
     return { success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -1026,7 +1026,7 @@ export async function toggleReaction(
       // Same reaction — remove it (toggle off)
       const { error } = await supabase.from("post_reactions").delete().eq("id", existing.id);
       if (error) {
-        logger.error("Failed to remove post reaction", { error: error.message });
+        logger.error("Failed to remove post reaction", { error });
         return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
       }
     } else {
@@ -1036,7 +1036,7 @@ export async function toggleReaction(
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
       if (error) {
-        logger.error("Failed to update post reaction", { error: error.message });
+        logger.error("Failed to update post reaction", { error });
         return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
       }
     }
@@ -1046,7 +1046,7 @@ export async function toggleReaction(
       .from("post_reactions")
       .insert({ post_id: postId, user_id: user.id, reaction_type: reactionType });
     if (error) {
-      logger.error("Failed to add post reaction", { error: error.message });
+      logger.error("Failed to add post reaction", { error });
       return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
@@ -1084,7 +1084,7 @@ export async function toggleCommentReaction(
       // Same reaction — remove it (toggle off)
       const { error } = await supabase.from("comment_reactions").delete().eq("id", existing.id);
       if (error) {
-        logger.error("Failed to remove comment reaction", { error: error.message });
+        logger.error("Failed to remove comment reaction", { error });
         return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
       }
     } else {
@@ -1094,7 +1094,7 @@ export async function toggleCommentReaction(
         .update({ reaction_type: reactionType })
         .eq("id", existing.id);
       if (error) {
-        logger.error("Failed to update comment reaction", { error: error.message });
+        logger.error("Failed to update comment reaction", { error });
         return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
       }
     }
@@ -1104,7 +1104,7 @@ export async function toggleCommentReaction(
       .from("comment_reactions")
       .insert({ comment_id: commentId, user_id: user.id, reaction_type: reactionType });
     if (error) {
-      logger.error("Failed to add comment reaction", { error: error.message });
+      logger.error("Failed to add comment reaction", { error });
       return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
@@ -1177,7 +1177,7 @@ export async function addComment(
     .single();
 
   if (error) {
-    logger.error("Failed to create comment", { error: error.message });
+    logger.error("Failed to create comment", { error });
     return { success: false, error: "Failed to add comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -1250,7 +1250,7 @@ export async function deleteComment(
     .eq("id", commentId);
 
   if (error) {
-    logger.error("Failed to delete comment", { error: error.message });
+    logger.error("Failed to delete comment", { error });
     return { success: false, error: "Failed to delete comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -1504,7 +1504,7 @@ export async function togglePinPost(
     .eq("id", postId);
 
   if (error) {
-    logger.error("Failed to toggle pin on post", { error: error.message });
+    logger.error("Failed to toggle pin on post", { error });
     return { success: false, error: "Failed to update post pin status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -1572,7 +1572,7 @@ export async function votePoll(
   );
 
   if (error) {
-    logger.error("Failed to upsert poll vote", { error: error.message });
+    logger.error("Failed to upsert poll vote", { error });
     return { success: false, error: "Failed to submit vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -1593,7 +1593,7 @@ export async function removeVote(
     .eq("user_id", user.id);
 
   if (error) {
-    logger.error("Failed to remove poll vote", { error: error.message });
+    logger.error("Failed to remove poll vote", { error });
     return { success: false, error: "Failed to remove vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

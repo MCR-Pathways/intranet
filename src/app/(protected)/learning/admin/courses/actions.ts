@@ -51,7 +51,7 @@ export async function createCourse(data: {
     .single();
 
   if (error) {
-    logger.error("Failed to create course", { error: error.message });
+    logger.error("Failed to create course", { error });
     return { success: false, error: "Failed to create course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", courseId: null };
   }
 
@@ -110,7 +110,7 @@ export async function updateCourse(
     .eq("id", courseId);
 
   if (error) {
-    logger.error("Failed to update course", { error: error.message });
+    logger.error("Failed to update course", { error });
     return { success: false, error: "Failed to update course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -129,7 +129,7 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
     .eq("id", courseId);
 
   if (error) {
-    logger.error("Failed to toggle course active state", { error: error.message });
+    logger.error("Failed to toggle course active state", { error });
     return { success: false, error: "Failed to update course status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -185,7 +185,7 @@ export async function publishCourse(courseId: string) {
     .eq("id", courseId);
 
   if (error) {
-    logger.error("Failed to publish course", { error: error.message });
+    logger.error("Failed to publish course", { error });
     return { success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -221,7 +221,7 @@ export async function unpublishCourse(courseId: string) {
     .eq("id", courseId);
 
   if (error) {
-    logger.error("Failed to unpublish course", { error: error.message });
+    logger.error("Failed to unpublish course", { error });
     return { success: false, error: "Failed to unpublish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -295,7 +295,7 @@ export async function createLesson(data: {
     .single();
 
   if (error) {
-    logger.error("Failed to create lesson", { error: error.message });
+    logger.error("Failed to create lesson", { error });
     return { success: false, error: "Failed to create lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", lessonId: null };
   }
 
@@ -370,7 +370,7 @@ export async function updateLesson(
     .eq("id", lessonId);
 
   if (error) {
-    logger.error("Failed to update lesson", { error: error.message });
+    logger.error("Failed to update lesson", { error });
     return { success: false, error: "Failed to update lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -399,7 +399,7 @@ export async function deleteLesson(lessonId: string, courseId: string) {
     .eq("id", lessonId);
 
   if (error) {
-    logger.error("Failed to delete lesson", { error: error.message });
+    logger.error("Failed to delete lesson", { error });
     return { success: false, error: "Failed to delete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -457,7 +457,7 @@ export async function assignCourse(data: {
     if (error.code === "23505") {
       return { success: false, error: "This assignment already exists" };
     }
-    logger.error("Failed to assign course", { error: error.message });
+    logger.error("Failed to assign course", { error });
     return { success: false, error: "Failed to assign course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -508,7 +508,7 @@ export async function notifyCoursePublished(courseId: string) {
 
   if (error) {
     // Non-blocking: notifications failing should not block publishing
-    logger.error("Failed to send course notifications", { error: error.message });
+    logger.error("Failed to send course notifications", { error });
     return { success: true, notifiedCount: 0 };
   }
 
@@ -524,7 +524,7 @@ export async function removeAssignment(assignmentId: string, courseId: string) {
     .eq("id", assignmentId);
 
   if (error) {
-    logger.error("Failed to remove course assignment", { error: error.message });
+    logger.error("Failed to remove course assignment", { error });
     return { success: false, error: "Failed to remove assignment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -690,7 +690,7 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
     .eq("id", imageId);
 
   if (error) {
-    logger.error("Failed to delete lesson image", { error: error.message });
+    logger.error("Failed to delete lesson image", { error });
     return { success: false, error: "Failed to delete image. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -816,7 +816,7 @@ export async function updateQuizQuestion(
       .eq("id", questionId);
 
     if (error) {
-      logger.error("Failed to update quiz question", { error: error.message });
+      logger.error("Failed to update quiz question", { error });
       return { success: false, error: "Failed to update quiz question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
@@ -859,7 +859,7 @@ export async function updateQuizQuestion(
 
     const { error } = await supabase.from("quiz_options").insert(newOptions);
     if (error) {
-      logger.error("Failed to insert quiz options", { error: error.message });
+      logger.error("Failed to insert quiz options", { error });
       return { success: false, error: "Failed to update quiz options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
@@ -878,7 +878,7 @@ export async function deleteQuizQuestion(questionId: string, courseId: string) {
     .eq("id", questionId);
 
   if (error) {
-    logger.error("Failed to delete quiz question", { error: error.message });
+    logger.error("Failed to delete quiz question", { error });
     return { success: false, error: "Failed to delete quiz question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

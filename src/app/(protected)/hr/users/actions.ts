@@ -93,7 +93,7 @@ export async function updateUserProfile(
     .eq("id", userId);
 
   if (error) {
-    logger.error("Failed to update user profile", { error: error.message });
+    logger.error("Failed to update user profile", { error });
     return { success: false, error: "Failed to update profile. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -114,7 +114,7 @@ export async function completeUserInduction(userId: string) {
     .eq("id", userId);
 
   if (error) {
-    logger.error("Failed to complete user induction", { error: error.message });
+    logger.error("Failed to complete user induction", { error });
     return { success: false, error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -131,7 +131,7 @@ export async function resetUserInduction(userId: string) {
   });
 
   if (error) {
-    logger.error("Failed to reset user induction", { error: error.message });
+    logger.error("Failed to reset user induction", { error });
     return { success: false, error: "Failed to reset induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -194,7 +194,7 @@ export async function updateEmployeePersonalDetails(
     .upsert({ ...sanitized, profile_id: userId }, { onConflict: "profile_id" });
 
   if (error) {
-    logger.error("Failed to update employee personal details", { error: error.message });
+    logger.error("Failed to update employee personal details", { error });
     return { success: false, error: "Failed to update personal details. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

@@ -164,7 +164,7 @@ export async function fetchFlexibleWorkingRequests(): Promise<{
     .order("created_at", { ascending: false });
 
   if (error) {
-    logger.error("Failed to fetch flexible working requests", { error: error.message });
+    logger.error("Failed to fetch flexible working requests", { error });
     return { data: [], error: "Failed to fetch flexible working requests. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

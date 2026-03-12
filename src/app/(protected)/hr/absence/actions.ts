@@ -238,7 +238,7 @@ export async function recordAbsence(data: {
     .single();
 
   if (error) {
-    logger.error("Failed to record absence", { error: error.message });
+    logger.error("Failed to record absence", { error });
     return { success: false, error: "Failed to record absence. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -342,7 +342,7 @@ export async function updateAbsence(
     .single();
 
   if (error) {
-    logger.error("Failed to update absence", { error: error.message });
+    logger.error("Failed to update absence", { error });
     return { success: false, error: "Failed to update absence record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -385,7 +385,7 @@ export async function deleteAbsence(
     .eq("id", absenceId);
 
   if (error) {
-    logger.error("Failed to delete absence", { error: error.message });
+    logger.error("Failed to delete absence", { error });
     return { success: false, error: "Failed to delete absence record. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -506,7 +506,7 @@ export async function deleteFitNote(
     .eq("id", absenceId);
 
   if (error) {
-    logger.error("Failed to delete fit note", { error: error.message });
+    logger.error("Failed to delete fit note", { error });
     return { success: false, error: "Failed to delete fit note. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -605,7 +605,7 @@ export async function createRTWForm(
     .single();
 
   if (error) {
-    logger.error("Failed to create RTW form", { error: error.message });
+    logger.error("Failed to create RTW form", { error });
     return { success: false, error: "Failed to create return-to-work form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -668,7 +668,7 @@ export async function saveRTWForm(
     .eq("id", formId);
 
   if (error) {
-    logger.error("Failed to save RTW form", { error: error.message });
+    logger.error("Failed to save RTW form", { error });
     return { success: false, error: "Failed to save return-to-work form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -858,7 +858,7 @@ export async function unlockRTWForm(
     .eq("id", formId);
 
   if (error) {
-    logger.error("Failed to unlock RTW form", { error: error.message });
+    logger.error("Failed to unlock RTW form", { error });
     return { success: false, error: "Failed to unlock return-to-work form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -889,7 +889,7 @@ export async function fetchAbsenceHistory(
     .order("start_date", { ascending: false });
 
   if (error) {
-    logger.error("Failed to fetch absence history", { error: error.message });
+    logger.error("Failed to fetch absence history", { error });
     return { records: [], error: "Failed to fetch absence history. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -919,7 +919,7 @@ export async function fetchRTWForm(
     .single();
 
   if (error) {
-    logger.error("Failed to fetch RTW form", { error: error.message });
+    logger.error("Failed to fetch RTW form", { error });
     return { form: null, error: "Failed to fetch return-to-work form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -962,7 +962,7 @@ export async function fetchTriggerPointStatus(
   const { data, error } = await query;
 
   if (error) {
-    logger.error("Failed to fetch trigger point status", { error: error.message });
+    logger.error("Failed to fetch trigger point status", { error });
     return { result: { reached: false, spells: 0, days: 0, reason: null }, error: "Failed to fetch trigger point status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
   const result = calculateTriggerPoint(

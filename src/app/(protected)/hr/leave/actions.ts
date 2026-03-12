@@ -116,7 +116,7 @@ export async function requestLeave(data: {
   });
 
   if (error) {
-    logger.error("Failed to request leave", { error: error.message });
+    logger.error("Failed to request leave", { error });
     return { success: false, error: "Failed to submit leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -238,7 +238,7 @@ export async function approveLeave(requestId: string, notes?: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to approve leave", { error: error.message });
+    logger.error("Failed to approve leave", { error });
     return { success: false, error: "Failed to approve leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -314,7 +314,7 @@ export async function rejectLeave(requestId: string, reason: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to reject leave", { error: error.message });
+    logger.error("Failed to reject leave", { error });
     return { success: false, error: "Failed to reject leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -358,7 +358,7 @@ export async function cancelLeave(requestId: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to cancel leave", { error: error.message });
+    logger.error("Failed to cancel leave", { error });
     return { success: false, error: "Failed to cancel leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -453,7 +453,7 @@ export async function recordLeave(data: {
     .single();
 
   if (error) {
-    logger.error("Failed to record leave", { error: error.message });
+    logger.error("Failed to record leave", { error });
     return { success: false, error: "Failed to record leave. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -526,7 +526,7 @@ export async function upsertLeaveEntitlement(data: {
   );
 
   if (error) {
-    logger.error("Failed to upsert leave entitlement", { error: error.message });
+    logger.error("Failed to upsert leave entitlement", { error });
     return { success: false, error: "Failed to update leave entitlement. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

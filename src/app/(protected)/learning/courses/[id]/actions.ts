@@ -22,7 +22,7 @@ export async function enrollInCourse(courseId: string) {
     if (error.code === "23505") {
       return { success: false, error: "Already enrolled in this course" };
     }
-    logger.error("Failed to enrol in course", { error: error.message });
+    logger.error("Failed to enrol in course", { error });
     return { success: false, error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -50,7 +50,7 @@ export async function completeLesson(lessonId: string, courseId: string) {
   );
 
   if (error) {
-    logger.error("Failed to complete lesson", { error: error.message });
+    logger.error("Failed to complete lesson", { error });
     return { success: false, error: "Failed to complete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", progressPercent: null };
   }
 
@@ -79,7 +79,7 @@ export async function submitQuiz(
   });
 
   if (error) {
-    logger.error("Failed to submit quiz", { error: error.message });
+    logger.error("Failed to submit quiz", { error });
     return { success: false, error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", result: null };
   }
 

@@ -32,7 +32,7 @@ export async function createKeyDate(data: {
   });
 
   if (error) {
-    logger.error("Failed to create key date", { error: error.message });
+    logger.error("Failed to create key date", { error });
     return { success: false, error: "Failed to create key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -84,7 +84,7 @@ export async function updateKeyDate(
     .single();
 
   if (error) {
-    logger.error("Failed to update key date", { error: error.message });
+    logger.error("Failed to update key date", { error });
     return { success: false, error: "Failed to update key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -120,7 +120,7 @@ export async function completeKeyDate(keyDateId: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to complete key date", { error: error.message });
+    logger.error("Failed to complete key date", { error });
     return { success: false, error: "Failed to complete key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -154,7 +154,7 @@ export async function deleteKeyDate(keyDateId: string) {
     .eq("id", keyDateId);
 
   if (error) {
-    logger.error("Failed to delete key date", { error: error.message });
+    logger.error("Failed to delete key date", { error });
     return { success: false, error: "Failed to delete key date. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

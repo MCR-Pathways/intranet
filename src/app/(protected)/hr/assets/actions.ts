@@ -45,7 +45,7 @@ export async function createAsset(data: {
     if (error.message.includes("duplicate") || error.message.includes("unique")) {
       return { success: false, error: "An asset with this tag already exists" };
     }
-    logger.error("Failed to create asset", { error: error.message });
+    logger.error("Failed to create asset", { error });
     return { success: false, error: "Failed to create asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -98,7 +98,7 @@ export async function updateAsset(
     .single();
 
   if (error) {
-    logger.error("Failed to update asset", { error: error.message });
+    logger.error("Failed to update asset", { error });
     return { success: false, error: "Failed to update asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -267,7 +267,7 @@ export async function retireAsset(assetId: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to retire asset", { error: error.message });
+    logger.error("Failed to retire asset", { error });
     return { success: false, error: "Failed to retire asset. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

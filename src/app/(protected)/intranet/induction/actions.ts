@@ -25,7 +25,7 @@ export async function markInductionItemComplete(
       revalidatePath("/intranet/induction");
       redirect("/intranet/induction");
     }
-    logger.error("Failed to mark induction item complete", { error: error.message });
+    logger.error("Failed to mark induction item complete", { error });
     return { success: false, error: "Failed to complete induction item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -65,7 +65,7 @@ export async function completeInduction(): Promise<{ success: boolean; error: st
     .eq("id", user.id);
 
   if (error) {
-    logger.error("Failed to complete induction", { error: error.message });
+    logger.error("Failed to complete induction", { error });
     return { success: false, error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

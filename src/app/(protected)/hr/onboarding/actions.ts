@@ -113,7 +113,7 @@ export async function createTemplate(data: {
     .single();
 
   if (error) {
-    logger.error("Failed to create onboarding template", { error: error.message });
+    logger.error("Failed to create onboarding template", { error });
     return { success: false, error: "Failed to create template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -169,7 +169,7 @@ export async function updateTemplate(
     .single();
 
   if (error) {
-    logger.error("Failed to update onboarding template", { error: error.message });
+    logger.error("Failed to update onboarding template", { error });
     return { success: false, error: "Failed to update template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -202,7 +202,7 @@ export async function deleteTemplate(
     .eq("id", templateId);
 
   if (error) {
-    logger.error("Failed to delete onboarding template", { error: error.message });
+    logger.error("Failed to delete onboarding template", { error });
     return { success: false, error: "Failed to delete template. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -271,7 +271,7 @@ export async function addTemplateItem(
     .single();
 
   if (error) {
-    logger.error("Failed to add template item", { error: error.message });
+    logger.error("Failed to add template item", { error });
     return { success: false, error: "Failed to add item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -330,7 +330,7 @@ export async function updateTemplateItem(
     .single();
 
   if (error) {
-    logger.error("Failed to update template item", { error: error.message });
+    logger.error("Failed to update template item", { error });
     return { success: false, error: "Failed to update item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -349,7 +349,7 @@ export async function deleteTemplateItem(
     .eq("id", itemId);
 
   if (error) {
-    logger.error("Failed to delete template item", { error: error.message });
+    logger.error("Failed to delete template item", { error });
     return { success: false, error: "Failed to delete item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -768,7 +768,7 @@ export async function toggleChecklistItem(
     .single();
 
   if (error) {
-    logger.error("Failed to update checklist item", { error: error.message });
+    logger.error("Failed to update checklist item", { error });
     return { success: false, error: "Failed to update item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -845,7 +845,7 @@ export async function addChecklistItem(
     .single();
 
   if (error) {
-    logger.error("Failed to add checklist item", { error: error.message });
+    logger.error("Failed to add checklist item", { error });
     return { success: false, error: "Failed to add item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

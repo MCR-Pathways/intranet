@@ -28,7 +28,7 @@ export async function createDepartment(data: {
       if (error.code === "23505") {
         return { success: false, error: "A department with this slug already exists" };
       }
-      logger.error("Failed to create department", { error: error.message });
+      logger.error("Failed to create department", { error });
       return { success: false, error: "Failed to create department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 
@@ -77,7 +77,7 @@ export async function updateDepartment(
       if (error.code === "23505") {
         return { success: false, error: "A department with this slug already exists" };
       }
-      logger.error("Failed to update department", { error: error.message });
+      logger.error("Failed to update department", { error });
       return { success: false, error: "Failed to update department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
 

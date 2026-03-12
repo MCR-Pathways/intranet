@@ -76,7 +76,7 @@ export async function addExternalCourse(data: {
   const { error } = await supabase.from("external_courses").insert(sanitized);
 
   if (error) {
-    logger.error("Failed to add external course", { error: error.message });
+    logger.error("Failed to add external course", { error });
     return { success: false, error: "Failed to add external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -125,7 +125,7 @@ export async function updateExternalCourse(
     .eq("user_id", user.id); // RLS + explicit check
 
   if (error) {
-    logger.error("Failed to update external course", { error: error.message });
+    logger.error("Failed to update external course", { error });
     return { success: false, error: "Failed to update external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -147,7 +147,7 @@ export async function deleteExternalCourse(courseId: string) {
     .eq("user_id", user.id); // RLS + explicit check
 
   if (error) {
-    logger.error("Failed to delete external course", { error: error.message });
+    logger.error("Failed to delete external course", { error });
     return { success: false, error: "Failed to delete external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

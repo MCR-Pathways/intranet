@@ -92,7 +92,7 @@ export async function setWorkingLocation(
     );
 
   if (error) {
-    logger.error("Failed to set working location", { error: error.message });
+    logger.error("Failed to set working location", { error });
     return { success: false, error: "Failed to set working location. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -169,7 +169,7 @@ export async function clearWorkingLocation(
     .eq("user_id", user.id);
 
   if (error) {
-    logger.error("Failed to clear working location", { error: error.message });
+    logger.error("Failed to clear working location", { error });
     return { success: false, error: "Failed to clear working location. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -235,7 +235,7 @@ export async function confirmArrival(): Promise<{ success: boolean; error: strin
     .in("location", ["glasgow_office", "stevenage_office"]);
 
   if (error) {
-    logger.error("Failed to confirm arrival", { error: error.message });
+    logger.error("Failed to confirm arrival", { error });
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -324,7 +324,7 @@ export async function saveWeeklyPattern(
     );
 
   if (error) {
-    logger.error("Failed to save weekly pattern", { error: error.message });
+    logger.error("Failed to save weekly pattern", { error });
     return { success: false, error: "Failed to save weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -353,7 +353,7 @@ export async function clearWeeklyPattern(
     .eq("time_slot", timeSlot);
 
   if (error) {
-    logger.error("Failed to clear weekly pattern", { error: error.message });
+    logger.error("Failed to clear weekly pattern", { error });
     return { success: false, error: "Failed to clear weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -443,7 +443,7 @@ export async function applyPatternsToWeek(
     .upsert(entries, { onConflict: "user_id,date,time_slot" });
 
   if (error) {
-    logger.error("Failed to apply weekly patterns", { error: error.message });
+    logger.error("Failed to apply weekly patterns", { error });
     return { success: false, applied: 0, error: "Failed to apply weekly patterns. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -653,7 +653,7 @@ export async function confirmRemoteArrival() {
     .eq("confirmed", false);
 
   if (error) {
-    logger.error("Failed to confirm remote arrival", { error: error.message });
+    logger.error("Failed to confirm remote arrival", { error });
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

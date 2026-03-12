@@ -57,7 +57,7 @@ export async function updatePersonalDetails(data: {
     .upsert({ ...sanitized, profile_id: user.id }, { onConflict: "profile_id" });
 
   if (error) {
-    logger.error("Failed to update personal details", { error: error.message });
+    logger.error("Failed to update personal details", { error });
     return { success: false, error: "Failed to update personal details. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -111,7 +111,7 @@ export async function upsertEmergencyContact(data: {
       .single();
 
     if (error) {
-      logger.error("Failed to update emergency contact", { error: error.message });
+      logger.error("Failed to update emergency contact", { error });
       return { success: false, error: "Failed to update emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   } else {
@@ -130,7 +130,7 @@ export async function upsertEmergencyContact(data: {
       .insert({ ...sanitized, profile_id: user.id });
 
     if (error) {
-      logger.error("Failed to add emergency contact", { error: error.message });
+      logger.error("Failed to add emergency contact", { error });
       return { success: false, error: "Failed to add emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
@@ -157,7 +157,7 @@ export async function deleteEmergencyContact(contactId: string) {
     .eq("profile_id", user.id);
 
   if (error) {
-    logger.error("Failed to delete emergency contact", { error: error.message });
+    logger.error("Failed to delete emergency contact", { error });
     return { success: false, error: "Failed to delete emergency contact. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

@@ -187,7 +187,7 @@ export async function updateComplianceDocument(
     .single();
 
   if (error) {
-    logger.error("Failed to update compliance document", { error: error.message });
+    logger.error("Failed to update compliance document", { error });
     return { success: false, error: "Failed to update document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -227,7 +227,7 @@ export async function verifyComplianceDocument(docId: string) {
     .single();
 
   if (error) {
-    logger.error("Failed to verify compliance document", { error: error.message });
+    logger.error("Failed to verify compliance document", { error });
     return { success: false, error: "Failed to verify document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -267,7 +267,7 @@ export async function deleteComplianceDocument(docId: string) {
     .eq("id", docId);
 
   if (error) {
-    logger.error("Failed to delete compliance document", { error: error.message });
+    logger.error("Failed to delete compliance document", { error });
     return { success: false, error: "Failed to delete document. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
@@ -313,7 +313,7 @@ export async function getComplianceDocumentUrl(filePath: string) {
     .createSignedUrl(filePath, 3600); // 60 minutes
 
   if (error) {
-    logger.error("Failed to generate document URL", { error: error.message });
+    logger.error("Failed to generate document URL", { error });
     return { success: false, error: "Failed to generate download link. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", url: null };
   }
 
