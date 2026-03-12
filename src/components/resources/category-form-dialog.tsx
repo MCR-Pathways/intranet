@@ -181,30 +181,24 @@ export function CategoryFormDialog({
           <div className="space-y-2">
             <Label>Visibility</Label>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setVisibility("internal")}
-                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
-                  visibility === "internal"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Lock className="h-4 w-4" />
-                Internal only
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisibility("all")}
-                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
-                  visibility === "all"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Globe className="h-4 w-4" />
-                All users
-              </button>
+              {([
+                { value: "internal" as const, icon: Lock, label: "Internal only" },
+                { value: "all" as const, icon: Globe, label: "All users" },
+              ]).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setVisibility(option.value)}
+                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                    visibility === option.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <option.icon className="h-4 w-4" />
+                  {option.label}
+                </button>
+              ))}
             </div>
             <p className="text-xs text-muted-foreground">
               {visibility === "internal"
