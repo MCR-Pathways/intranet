@@ -875,6 +875,8 @@ export interface Database {
           icon: string | null;
           icon_colour: string | null;
           sort_order: number;
+          parent_id: string | null;
+          visibility: "all" | "internal";
           deleted_at: string | null;
           deleted_by: string | null;
           created_at: string;
@@ -888,6 +890,8 @@ export interface Database {
           icon?: string | null;
           icon_colour?: string | null;
           sort_order?: number;
+          parent_id?: string | null;
+          visibility?: "all" | "internal";
           deleted_at?: string | null;
           deleted_by?: string | null;
           created_at?: string;
@@ -901,6 +905,8 @@ export interface Database {
           icon?: string | null;
           icon_colour?: string | null;
           sort_order?: number;
+          parent_id?: string | null;
+          visibility?: "all" | "internal";
           deleted_at?: string | null;
           deleted_by?: string | null;
           created_at?: string;
@@ -920,6 +926,7 @@ export interface Database {
           published_at: string | null;
           is_featured: boolean;
           featured_sort_order: number;
+          visibility: "all" | "internal" | null;
           deleted_at: string | null;
           deleted_by: string | null;
           created_at: string;
@@ -937,6 +944,7 @@ export interface Database {
           published_at?: string | null;
           is_featured?: boolean;
           featured_sort_order?: number;
+          visibility?: "all" | "internal" | null;
           deleted_at?: string | null;
           deleted_by?: string | null;
           created_at?: string;
@@ -954,6 +962,7 @@ export interface Database {
           published_at?: string | null;
           is_featured?: boolean;
           featured_sort_order?: number;
+          visibility?: "all" | "internal" | null;
           deleted_at?: string | null;
           deleted_by?: string | null;
           created_at?: string;
@@ -1163,4 +1172,8 @@ export interface ArticleWithAuthor extends ResourceArticle {
 
 export interface CategoryWithCount extends ResourceCategory {
   article_count: number;
+}
+
+export interface CategoryWithChildren extends CategoryWithCount {
+  children: CategoryWithCount[];
 }
