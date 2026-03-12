@@ -427,13 +427,11 @@ export async function recordLeave(data: {
   }
 
   // Validate text lengths
-  if (data.reason) {
-    const reasonErr = validateTextLength(data.reason, MAX_MEDIUM_TEXT_LENGTH);
-    if (reasonErr) return { success: false, error: reasonErr };
-  }
-  if (data.notes) {
-    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
-    if (notesErr) return { success: false, error: notesErr };
+  for (const value of [data.reason, data.notes]) {
+    if (value) {
+      const err = validateTextLength(value, MAX_MEDIUM_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   // Fetch employee region for working day calculation

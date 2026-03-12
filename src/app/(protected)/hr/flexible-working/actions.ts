@@ -129,8 +129,8 @@ function sanitiseConsultationFields(
     } else if (field === "consultation_format") {
       if (typeof value !== "string" || !CONSULTATION_FORMAT_VALUES.includes(value as typeof CONSULTATION_FORMAT_VALUES[number])) continue;
     } else {
-      // Text fields: must be string and within length limit
-      if (typeof value !== "string" || value.length > MAX_LONG_TEXT_LENGTH) continue;
+      // Text fields: must be string
+      if (typeof value !== "string") continue;
     }
 
     sanitised[field] = value;
@@ -287,15 +287,11 @@ export async function createFlexibleWorkingRequest(data: {
   }
 
   // Validate text lengths (FWR fields are legally significant — LONG limit)
-  const patternErr = validateTextLength(data.current_working_pattern, MAX_LONG_TEXT_LENGTH);
-  if (patternErr) return { success: false, error: patternErr };
-
-  const requestedErr = validateTextLength(data.requested_working_pattern, MAX_LONG_TEXT_LENGTH);
-  if (requestedErr) return { success: false, error: requestedErr };
-
-  if (data.reason) {
-    const reasonErr = validateTextLength(data.reason, MAX_LONG_TEXT_LENGTH);
-    if (reasonErr) return { success: false, error: reasonErr };
+  for (const value of [data.current_working_pattern, data.requested_working_pattern, data.reason]) {
+    if (value) {
+      const err = validateTextLength(value, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   // Fetch the employee's profile for manager_id and current work_pattern
@@ -528,6 +524,16 @@ export async function recordConsultation(
   // Validate consultation format if provided
   if (data.consultation_format && !VALID_CONSULTATION_FORMATS.includes(data.consultation_format as FWRConsultationFormat)) {
     return { success: false, error: "Invalid consultation format" };
+  }
+
+  // Validate text lengths before sanitising
+  const consultationTextFields = ["consultation_attendees", "consultation_summary", "consultation_alternatives"] as const;
+  for (const field of consultationTextFields) {
+    const val = data[field];
+    if (val && typeof val === "string") {
+      const err = validateTextLength(val, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   const sanitised = sanitiseConsultationFields(data);
