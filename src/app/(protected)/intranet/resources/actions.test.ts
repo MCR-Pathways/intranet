@@ -205,7 +205,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to create");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(createCategory({ name: "Test" })).rejects.toThrow("Not authorised");
     });
@@ -286,7 +286,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to update");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(updateCategory("cat-1", { name: "New" })).rejects.toThrow("Not authorised");
     });
@@ -346,7 +346,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to delete");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(deleteCategory("cat-1")).rejects.toThrow("Not authorised");
     });
@@ -491,7 +491,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to create");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(createArticle("cat-1", { title: "Test" })).rejects.toThrow("Not authorised");
     });
@@ -610,7 +610,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to update");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(updateArticle("art-1", { title: "New" })).rejects.toThrow("Not authorised");
     });
@@ -644,7 +644,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to delete");
     });
 
-    it("throws when user is not HR admin", async () => {
+    it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(deleteArticle("art-1")).rejects.toThrow("Not authorised");
     });

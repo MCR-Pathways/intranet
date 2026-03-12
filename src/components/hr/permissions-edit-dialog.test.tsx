@@ -88,28 +88,21 @@ describe("PermissionsEditDialog", () => {
   it("disables all admin toggles when current user is neither HR nor systems admin", () => {
     renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: false });
 
-    const switches = screen.getAllByRole("switch");
-    // HR Admin, L&D Admin, Systems Admin, Content Editor should be disabled
-    expect(switches[0]).toBeDisabled();
-    expect(switches[1]).toBeDisabled();
-    expect(switches[2]).toBeDisabled();
-    expect(switches[3]).toBeDisabled();
-    // Line Manager should be enabled
-    expect(switches[4]).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "HR Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "L&D Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Systems Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Content Editor" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Line Manager" })).not.toBeDisabled();
   });
 
   it("systems admin can toggle L&D Admin, Systems Admin, and Content Editor but not HR Admin", () => {
     renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: true });
 
-    const switches = screen.getAllByRole("switch");
-    // HR Admin should be disabled (only HR admins can grant it)
-    expect(switches[0]).toBeDisabled();
-    // L&D Admin, Systems Admin, Content Editor should be enabled
-    expect(switches[1]).not.toBeDisabled();
-    expect(switches[2]).not.toBeDisabled();
-    expect(switches[3]).not.toBeDisabled();
-    // Line Manager should be enabled
-    expect(switches[4]).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "HR Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "L&D Admin" })).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Systems Admin" })).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Content Editor" })).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Line Manager" })).not.toBeDisabled();
   });
 
   it("disables admin toggles when editing self", () => {
@@ -119,22 +112,17 @@ describe("PermissionsEditDialog", () => {
       isCurrentUserHRAdmin: true,
     });
 
-    const switches = screen.getAllByRole("switch");
-    // HR Admin, L&D Admin, Systems Admin, Content Editor should be disabled (self-edit)
-    expect(switches[0]).toBeDisabled();
-    expect(switches[1]).toBeDisabled();
-    expect(switches[2]).toBeDisabled();
-    expect(switches[3]).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "HR Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "L&D Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Systems Admin" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Content Editor" })).toBeDisabled();
   });
 
   it("shows confirmation dialog when toggling admin permission", async () => {
     renderDialog({ isCurrentUserHRAdmin: true });
 
-    // Click HR Admin switch — should show confirmation (granting admin access)
-    const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[0]);
+    fireEvent.click(screen.getByRole("switch", { name: "HR Admin" }));
 
-    // Confirmation title is "Grant HR Admin Access"
     await waitFor(() => {
       expect(screen.getByText(/Grant HR Admin Access/)).toBeInTheDocument();
     });
@@ -143,9 +131,7 @@ describe("PermissionsEditDialog", () => {
   it("does not show confirmation for Line Manager toggle", () => {
     renderDialog({ isCurrentUserHRAdmin: true });
 
-    // Click Line Manager switch (last one)
-    const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[4]);
+    fireEvent.click(screen.getByRole("switch", { name: "Line Manager" }));
 
     // Should NOT show confirmation dialog
     expect(screen.queryByText(/Grant.*Access/)).not.toBeInTheDocument();
@@ -158,9 +144,7 @@ describe("PermissionsEditDialog", () => {
       isLineManager: false,
     });
 
-    // Toggle Line Manager (no confirmation needed)
-    const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[4]);
+    fireEvent.click(screen.getByRole("switch", { name: "Line Manager" }));
 
     // Click Save
     fireEvent.click(screen.getByRole("button", { name: /Save/i }));
