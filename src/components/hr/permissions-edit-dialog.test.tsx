@@ -27,6 +27,7 @@ const defaultProps = {
   isHRAdmin: false,
   isLDAdmin: false,
   isSystemsAdmin: false,
+  isContentEditor: false,
   isLineManager: false,
   open: true,
   onOpenChange: vi.fn(),
@@ -55,12 +56,13 @@ describe("PermissionsEditDialog", () => {
     expect(screen.getByText(/Sarah Mitchell/)).toBeInTheDocument();
   });
 
-  it("renders all four permission switches", () => {
+  it("renders all five permission switches", () => {
     renderDialog();
 
     expect(screen.getByText("HR Admin")).toBeInTheDocument();
     expect(screen.getByText("L&D Admin")).toBeInTheDocument();
     expect(screen.getByText("Systems Admin")).toBeInTheDocument();
+    expect(screen.getByText("Content Editor")).toBeInTheDocument();
     expect(screen.getByText("Line Manager")).toBeInTheDocument();
   });
 
@@ -69,15 +71,17 @@ describe("PermissionsEditDialog", () => {
       isHRAdmin: true,
       isLDAdmin: false,
       isSystemsAdmin: true,
+      isContentEditor: true,
       isLineManager: true,
     });
 
     // Check that switches reflect the current state
     const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(4);
+    expect(switches).toHaveLength(5);
     expect(screen.getByRole("switch", { name: "HR Admin" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "L&D Admin" })).not.toBeChecked();
     expect(screen.getByRole("switch", { name: "Systems Admin" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Content Editor" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "Line Manager" })).toBeChecked();
   });
 
@@ -85,25 +89,27 @@ describe("PermissionsEditDialog", () => {
     renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: false });
 
     const switches = screen.getAllByRole("switch");
-    // HR Admin, L&D Admin, Systems Admin should be disabled
+    // HR Admin, L&D Admin, Systems Admin, Content Editor should be disabled
     expect(switches[0]).toBeDisabled();
     expect(switches[1]).toBeDisabled();
     expect(switches[2]).toBeDisabled();
+    expect(switches[3]).toBeDisabled();
     // Line Manager should be enabled
-    expect(switches[3]).not.toBeDisabled();
+    expect(switches[4]).not.toBeDisabled();
   });
 
-  it("systems admin can toggle L&D Admin and Systems Admin but not HR Admin", () => {
+  it("systems admin can toggle L&D Admin, Systems Admin, and Content Editor but not HR Admin", () => {
     renderDialog({ isCurrentUserHRAdmin: false, isCurrentUserSystemsAdmin: true });
 
     const switches = screen.getAllByRole("switch");
     // HR Admin should be disabled (only HR admins can grant it)
     expect(switches[0]).toBeDisabled();
-    // L&D Admin and Systems Admin should be enabled
+    // L&D Admin, Systems Admin, Content Editor should be enabled
     expect(switches[1]).not.toBeDisabled();
     expect(switches[2]).not.toBeDisabled();
-    // Line Manager should be enabled
     expect(switches[3]).not.toBeDisabled();
+    // Line Manager should be enabled
+    expect(switches[4]).not.toBeDisabled();
   });
 
   it("disables admin toggles when editing self", () => {
@@ -114,10 +120,11 @@ describe("PermissionsEditDialog", () => {
     });
 
     const switches = screen.getAllByRole("switch");
-    // HR Admin, L&D Admin, Systems Admin should be disabled (self-edit)
+    // HR Admin, L&D Admin, Systems Admin, Content Editor should be disabled (self-edit)
     expect(switches[0]).toBeDisabled();
     expect(switches[1]).toBeDisabled();
     expect(switches[2]).toBeDisabled();
+    expect(switches[3]).toBeDisabled();
   });
 
   it("shows confirmation dialog when toggling admin permission", async () => {
@@ -138,7 +145,7 @@ describe("PermissionsEditDialog", () => {
 
     // Click Line Manager switch (last one)
     const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[3]);
+    fireEvent.click(switches[4]);
 
     // Should NOT show confirmation dialog
     expect(screen.queryByText(/Grant.*Access/)).not.toBeInTheDocument();
@@ -153,7 +160,7 @@ describe("PermissionsEditDialog", () => {
 
     // Toggle Line Manager (no confirmation needed)
     const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[3]);
+    fireEvent.click(switches[4]);
 
     // Click Save
     fireEvent.click(screen.getByRole("button", { name: /Save/i }));
@@ -177,7 +184,7 @@ describe("PermissionsEditDialog", () => {
 
     // Toggle Line Manager
     const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[3]);
+    fireEvent.click(switches[4]);
 
     // Save
     fireEvent.click(screen.getByRole("button", { name: /Save/i }));
@@ -197,7 +204,7 @@ describe("PermissionsEditDialog", () => {
 
     // Toggle and save
     const switches = screen.getAllByRole("switch");
-    fireEvent.click(switches[3]);
+    fireEvent.click(switches[4]);
     fireEvent.click(screen.getByRole("button", { name: /Save/i }));
 
     await waitFor(() => {

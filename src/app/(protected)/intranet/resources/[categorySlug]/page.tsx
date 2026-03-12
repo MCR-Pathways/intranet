@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import { fetchCategoryArticlesWithClient } from "../actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { ArticlesList } from "@/components/resources/articles-list";
@@ -13,11 +13,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const isHRAdmin = isHRAdminEffective(profile);
+  const canEdit = isHRAdminEffective(profile) || isContentEditorEffective(profile);
   const { category, articles } = await fetchCategoryArticlesWithClient(
     supabase,
     categorySlug,
-    isHRAdmin
+    canEdit
   );
 
   if (!category) notFound();
@@ -38,7 +38,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         articles={articles}
         categoryId={category.id}
         categorySlug={category.slug}
-        isHRAdmin={isHRAdmin}
+        canEdit={canEdit}
       />
     </div>
   );

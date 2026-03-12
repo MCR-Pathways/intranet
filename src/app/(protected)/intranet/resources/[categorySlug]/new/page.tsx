@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import { fetchCategoryBySlugWithClient } from "../../actions";
 import { ArticleEditorPage } from "@/components/resources/article-editor-page";
 
@@ -12,8 +12,8 @@ export default async function NewArticlePage({ params }: NewArticlePageProps) {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  // Only HR admins can create articles
-  if (!isHRAdminEffective(profile)) {
+  // Only editors (HR admins or content editors) can create articles
+  if (!isHRAdminEffective(profile) && !isContentEditorEffective(profile)) {
     redirect(`/intranet/resources/${categorySlug}`);
   }
 

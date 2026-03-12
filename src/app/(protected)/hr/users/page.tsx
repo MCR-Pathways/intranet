@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 
 /** Extended select for the user management table — includes HR fields. */
 const USER_TABLE_SELECT =
-  "id, full_name, preferred_name, email, user_type, status, is_hr_admin, is_ld_admin, is_systems_admin, is_line_manager, job_title, avatar_url, induction_completed_at, fte, department, region, contract_type, work_pattern, start_date, probation_end_date, contract_end_date, is_external, line_manager_id, team_id, created_at";
+  "id, full_name, preferred_name, email, user_type, status, is_hr_admin, is_ld_admin, is_systems_admin, is_content_editor, is_line_manager, job_title, avatar_url, induction_completed_at, fte, department, region, contract_type, work_pattern, start_date, probation_end_date, contract_end_date, is_external, line_manager_id, team_id, created_at";
 
 export default async function UserManagementPage() {
   const { supabase, user, profile } = await getCurrentUser();
