@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials } from "@/lib/utils";
+import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials, getAvatarColour } from "@/lib/utils";
 
 describe("cn utility", () => {
   it("merges class names", () => {
@@ -182,5 +182,51 @@ describe("formatDuration", () => {
     it("formats 1 hour with minutes", () => {
       expect(formatDuration(75, "long")).toBe("1 hour 15 minutes");
     });
+  });
+});
+
+describe("getAvatarColour", () => {
+  it("returns a valid colour object with bg and fg", () => {
+    const result = getAvatarColour("Alice Smith");
+    expect(result).toHaveProperty("bg");
+    expect(result).toHaveProperty("fg");
+    expect(typeof result.bg).toBe("string");
+    expect(typeof result.fg).toBe("string");
+  });
+
+  it("is deterministic — same name always returns same colour", () => {
+    const first = getAvatarColour("John Doe");
+    const second = getAvatarColour("John Doe");
+    expect(first).toEqual(second);
+  });
+
+  it("returns Navy (default) for empty input", () => {
+    const result = getAvatarColour("");
+    expect(result.bg).toBe("bg-primary");
+    expect(result.fg).toBe("text-primary-foreground");
+  });
+
+  it("returns Navy (default) for whitespace-only input", () => {
+    const result = getAvatarColour("   ");
+    expect(result.bg).toBe("bg-primary");
+    expect(result.fg).toBe("text-primary-foreground");
+  });
+
+  it("distributes across all 3 colours", () => {
+    // Test a range of names to verify all 3 colours appear
+    const names = [
+      "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank",
+      "Grace", "Hank", "Ivy", "Jack", "Kate", "Leo",
+    ];
+    const uniqueColours = new Set(names.map((n) => getAvatarColour(n).bg));
+    expect(uniqueColours.size).toBe(3);
+  });
+
+  it("different names can produce different colours", () => {
+    // With 12 names, statistically impossible for all to hash to the same bucket
+    const names = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"];
+    const colours = names.map((n) => getAvatarColour(n).bg);
+    const unique = new Set(colours);
+    expect(unique.size).toBeGreaterThan(1);
   });
 });

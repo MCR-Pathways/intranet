@@ -23,7 +23,7 @@ import {
   toggleArticleFeatured,
 } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour } from "@/lib/utils";
 import {
   MoreHorizontal,
   Pencil,
@@ -205,7 +205,7 @@ export function ArticleView({
             <div className="flex items-center gap-3 mb-6 pb-4 border-b">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={article.author?.avatar_url ?? undefined} />
-                <AvatarFallback className="text-xs">
+                <AvatarFallback className={cn(getAvatarColour(authorName).bg, getAvatarColour(authorName).fg, "text-xs")}>
                   {getInitials(authorName)}
                 </AvatarFallback>
               </Avatar>
