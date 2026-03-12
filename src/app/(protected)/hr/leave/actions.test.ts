@@ -640,6 +640,41 @@ describe("HR Leave Actions", () => {
       });
     });
 
+    it("returns error for invalid leave type", async () => {
+      const result = await recordLeave({
+        profile_id: "emp-1",
+        leave_type: "invalid_type",
+        start_date: "2026-03-02",
+        end_date: "2026-03-03",
+      });
+      expect(result).toEqual({
+        success: false,
+        error: "Invalid leave type. Please select a valid option.",
+      });
+    });
+
+    it("accepts HR-only leave types", async () => {
+      mockFrom.mockImplementation((table: string) => {
+        const c = chainable();
+        if (table === "profiles") {
+          c.single.mockResolvedValue({ data: { region: "scotland" }, error: null });
+        } else if (table === "public_holidays") {
+          c.order.mockResolvedValue({ data: [], error: null });
+        } else if (table === "leave_requests") {
+          c.single.mockResolvedValue({ data: { id: "req-1" }, error: null });
+        }
+        return c;
+      });
+
+      const result = await recordLeave({
+        profile_id: "emp-1",
+        leave_type: "sick",
+        start_date: "2026-03-02",
+        end_date: "2026-03-03",
+      });
+      expect(result.success).toBe(true);
+    });
+
     it("returns error when end date is before start date", async () => {
       const result = await recordLeave({
         profile_id: "emp-1",
@@ -666,7 +701,7 @@ describe("HR Leave Actions", () => {
 
       const result = await recordLeave({
         profile_id: "emp-1",
-        leave_type: "sick_full_pay",
+        leave_type: "sick",
         start_date: "2026-03-07", // Saturday
         end_date: "2026-03-08",   // Sunday
       });
@@ -695,7 +730,7 @@ describe("HR Leave Actions", () => {
 
       const result = await recordLeave({
         profile_id: "emp-1",
-        leave_type: "sick_full_pay",
+        leave_type: "sick",
         start_date: "2026-03-02",
         end_date: "2026-03-03",
       });
@@ -703,7 +738,7 @@ describe("HR Leave Actions", () => {
     });
 
     it("allows HR-only leave types (sick, maternity, etc.)", async () => {
-      const hrOnlyTypes = ["sick_full_pay", "sick_half_pay", "maternity", "paternity"];
+      const hrOnlyTypes = ["sick", "maternity", "paternity", "jury_service"];
       for (const type of hrOnlyTypes) {
         vi.clearAllMocks();
         vi.mocked(requireHRAdmin).mockResolvedValue({
