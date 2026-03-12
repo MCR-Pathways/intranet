@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour } from "@/lib/utils";
 import {
   formatFTE,
   formatHRDate,
@@ -103,7 +103,7 @@ export function ProfileOverviewTab({
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <Avatar className="h-20 w-20">
               <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.full_name} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className={cn(getAvatarColour(profile.full_name).bg, getAvatarColour(profile.full_name).fg, "text-lg")}>
                 {getInitials(profile.full_name)}
               </AvatarFallback>
             </Avatar>

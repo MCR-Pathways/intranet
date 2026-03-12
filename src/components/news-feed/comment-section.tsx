@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Send } from "lucide-react";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour } from "@/lib/utils";
 import { addComment } from "@/app/(protected)/intranet/actions";
 import { CommentItem } from "./comment-item";
 import type { MentionUser } from "./mention-list";
@@ -171,7 +171,7 @@ export function CommentSection({
                       src={currentUserProfile.avatar_url || undefined}
                       alt={displayName}
                     />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                    <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-[10px]")}>
                       {getInitials(displayName)}
                     </AvatarFallback>
                   </Avatar>
@@ -224,7 +224,7 @@ export function CommentSection({
             src={currentUserProfile.avatar_url || undefined}
             alt={displayName}
           />
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+          <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-xs")}>
             {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>

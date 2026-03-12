@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getAvatarColour } from "@/lib/utils";
 import { LEAVE_TYPE_CONFIG, WORK_PATTERN_CONFIG, formatHRDate } from "@/lib/hr";
 import type { LeaveType, WorkPattern } from "@/lib/hr";
 import { MoreHorizontal, User, Calendar, Eye, Cake } from "lucide-react";
@@ -97,7 +97,7 @@ export function TeamMemberCard({ member, leaveInfo, anniversaryInfo, showActions
         <div className="relative shrink-0">
           <Avatar className="h-10 w-10">
             <AvatarImage src={member.avatar_url ?? undefined} alt={member.full_name} />
-            <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
+            <AvatarFallback className={cn(getAvatarColour(member.full_name).bg, getAvatarColour(member.full_name).fg)}>{getInitials(member.full_name)}</AvatarFallback>
           </Avatar>
           {/* Status dot */}
           <span

@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
@@ -163,7 +163,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
                 src={userProfile.avatar_url || undefined}
                 alt={displayName}
               />
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+              <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-sm")}>
                 {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>

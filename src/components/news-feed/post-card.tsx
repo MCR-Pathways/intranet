@@ -14,7 +14,7 @@ import {
 import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2 } from "lucide-react";
 import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
-import { timeAgo, getInitials } from "@/lib/utils";
+import { cn, timeAgo, getInitials, getAvatarColour } from "@/lib/utils";
 import { TiptapRenderer } from "./tiptap-renderer";
 import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
@@ -194,7 +194,7 @@ export function PostCard({
                     src={post.author.avatar_url || undefined}
                     alt={displayName}
                   />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-sm")}>
                     {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>

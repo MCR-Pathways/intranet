@@ -8,7 +8,7 @@ import { TeamMemberCard } from "@/components/hr/team-member-card";
 import type { TeamMember, LeaveInfo } from "@/components/hr/team-member-card";
 import { LEAVE_TYPE_CONFIG, formatHRDate } from "@/lib/hr";
 import type { LeaveType } from "@/lib/hr";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour } from "@/lib/utils";
 import { Users, Info } from "lucide-react";
 
 // =============================================
@@ -56,7 +56,7 @@ export function TeamPeerContent({
             <CardContent className="flex items-center gap-3 py-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={manager.avatar_url ?? undefined} alt={manager.full_name} />
-                <AvatarFallback>{getInitials(manager.full_name)}</AvatarFallback>
+                <AvatarFallback className={cn(getAvatarColour(manager.full_name).bg, getAvatarColour(manager.full_name).fg)}>{getInitials(manager.full_name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">{manager.full_name}</p>

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn, timeAgo, getInitials } from "@/lib/utils";
+import { cn, timeAgo, getInitials, getAvatarColour } from "@/lib/utils";
 import { Trash2, Loader2, Pencil, Check, X, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -175,7 +175,7 @@ export function CommentItem({
           src={comment.author.avatar_url || undefined}
           alt={displayName}
         />
-        <AvatarFallback className="bg-muted text-xs">
+        <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-xs")}>
           {getInitials(displayName)}
         </AvatarFallback>
       </Avatar>
