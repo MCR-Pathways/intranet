@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { updateUserProfile } from "@/app/(protected)/hr/users/actions";
 import {
   Dialog,
@@ -21,11 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   CONTRACT_TYPE_CONFIG,
   DEPARTMENT_CONFIG,
@@ -77,15 +72,6 @@ export function EmploymentEditDialog({
   const [isExternal, setIsExternal] = useState(profile.is_external ?? false);
   const [lineManagerId, setLineManagerId] = useState<string | null>(profile.line_manager_id ?? null);
   const [teamId, setTeamId] = useState<string | null>(profile.team_id ?? null);
-
-  // Auto-derive: pathways coordinators are always external
-  const isPathwaysCoordinator = profile.user_type === "pathways_coordinator";
-
-  useEffect(() => {
-    if (isPathwaysCoordinator) {
-      setIsExternal(true);
-    }
-  }, [isPathwaysCoordinator]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,26 +284,11 @@ export function EmploymentEditDialog({
 
             <div className="flex items-center justify-between">
               <Label htmlFor="is_external">External Employee</Label>
-              {isPathwaysCoordinator ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Switch
-                        id="is_external"
-                        checked={true}
-                        disabled
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Pathways Coordinators are always classified as external</TooltipContent>
-                </Tooltip>
-              ) : (
-                <Switch
-                  id="is_external"
-                  checked={isExternal}
-                  onCheckedChange={setIsExternal}
-                />
-              )}
+              <Switch
+                id="is_external"
+                checked={isExternal}
+                onCheckedChange={setIsExternal}
+              />
             </div>
 
             {error && (

@@ -31,7 +31,7 @@ export interface ProfileSummary {
   email: string;
   avatar_url: string | null;
   job_title: string | null;
-  user_type: "staff" | "pathways_coordinator" | "new_user";
+  user_type: "staff" | "new_user";
   status: "active" | "inactive" | "pending_induction";
   fte: number;
   department: Department | null;

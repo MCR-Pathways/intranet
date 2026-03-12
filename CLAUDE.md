@@ -43,9 +43,10 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 - **Supabase Auth** with Google OAuth and email OTP (magic links)
 - **Domain restriction**: Only `@mcrpathways.org` emails allowed
-- **Proxy** (`src/proxy.ts`): Checks auth, fetches profile, enforces module access by `user_type`, redirects users needing induction
-- **User types**: `staff` (full access), `pathways_coordinator` (learning + intranet), `new_user` (induction only)
-- **Module access map**: `/hr` and `/sign-in` → staff only; `/learning` and `/intranet` → staff + pathways_coordinator
+- **Proxy** (`src/proxy.ts`): Checks auth, fetches profile, enforces module access by `user_type` + `is_external`, redirects users needing induction
+- **User types**: `staff` (full access for internal, restricted for external), `new_user` (induction only)
+- **External staff** (`is_external = true`): School-employed Pathways Coordinators — can access `/learning` and `/intranet` only
+- **Module access**: `/hr` and `/sign-in` → internal staff only; `/learning` and `/intranet` → all staff (internal + external)
 
 ### Supabase Client Pattern
 

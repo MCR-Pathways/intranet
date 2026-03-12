@@ -4,13 +4,11 @@ import { updateSession } from "@/lib/supabase/middleware";
 // Routes that don't require authentication
 const publicRoutes = ["/login", "/auth/callback", "/auth/confirm", "/kiosk"];
 
-// Module access by user type
-const moduleAccess: Record<string, string[]> = {
-  "/hr": ["staff"],
-  "/sign-in": ["staff"],
-  "/learning": ["staff", "pathways_coordinator"],
-  "/intranet": ["staff", "pathways_coordinator"],
-};
+// Module access by user type and external status
+// Internal staff: full access to all modules
+// External staff (PCs): Learning + Intranet only
+// Staff-only modules (no external access): HR, Sign-In
+const internalOnlyModules = ["/hr", "/sign-in"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -49,12 +47,14 @@ export async function proxy(request: NextRequest) {
     is_hr_admin?: boolean;
     is_ld_admin?: boolean;
     is_systems_admin?: boolean;
+    is_external?: boolean;
   };
 
   let profile: {
     user_type: string;
     status: string;
     induction_completed_at: string | null;
+    is_external: boolean;
   };
 
   if (claims.user_type) {
@@ -63,12 +63,13 @@ export async function proxy(request: NextRequest) {
       user_type: claims.user_type,
       status: claims.status ?? "pending_induction",
       induction_completed_at: claims.induction_completed_at ?? null,
+      is_external: claims.is_external ?? false,
     };
   } else {
     // Fallback: pre-migration session without claims — query the DB
     const { data: dbProfile } = await supabase
       .from("profiles")
-      .select("user_type, induction_completed_at, status")
+      .select("user_type, induction_completed_at, status, is_external")
       .eq("id", user.id)
       .single();
 
@@ -80,6 +81,7 @@ export async function proxy(request: NextRequest) {
       user_type: dbProfile.user_type,
       status: dbProfile.status,
       induction_completed_at: dbProfile.induction_completed_at,
+      is_external: dbProfile.is_external ?? false,
     };
   }
 
@@ -109,14 +111,25 @@ export async function proxy(request: NextRequest) {
   }
 
   // Check module access
-  for (const [modulePath, allowedTypes] of Object.entries(moduleAccess)) {
-    if (pathname.startsWith(modulePath)) {
-      if (!allowedTypes.includes(profile.user_type)) {
-        // Redirect to dashboard if user doesn't have access
+  if (profile.user_type === "staff") {
+    // External staff (PCs) can only access Learning + Intranet
+    if (profile.is_external) {
+      if (internalOnlyModules.some((mod) => pathname.startsWith(mod))) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/intranet";
         return NextResponse.redirect(redirectUrl);
       }
+    }
+    // Internal staff: full access — no redirect needed
+  } else {
+    // Non-staff (new_user): if induction is pending, they were already redirected
+    // above at line 107. Here they've completed induction but haven't been
+    // promoted to staff yet — allow /intranet as a landing page, block the rest.
+    const staffOnlyModules = ["/hr", "/sign-in", "/learning"];
+    if (staffOnlyModules.some((mod) => pathname.startsWith(mod))) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/intranet";
+      return NextResponse.redirect(redirectUrl);
     }
   }
 

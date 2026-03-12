@@ -28,7 +28,7 @@ export default async function ReportsPage() {
       .order("title"),
     supabase
       .from("profiles")
-      .select("id, full_name, email, user_type, team_id, status")
+      .select("id, full_name, email, user_type, team_id, status, is_external")
       .eq("status", "active")
       .order("full_name"),
     supabase
