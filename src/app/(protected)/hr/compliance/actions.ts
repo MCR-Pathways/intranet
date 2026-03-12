@@ -3,6 +3,7 @@
 import { requireHRAdmin, getCurrentUser } from "@/lib/auth";
 import { validateHRDocument } from "@/lib/hr";
 import type { ComplianceStatus } from "@/lib/hr";
+import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 
@@ -298,10 +299,22 @@ export async function getComplianceDocumentUrl(filePath: string) {
     return { success: false, error: "Not authenticated", url: null };
   }
 
-  // The file path format is `{profileId}/{uuid}.{ext}`
-  // Check if the user owns the document or is an HR admin
+  // Validate file path format: {profileId}/{filename}
+  // Reject path traversal attempts and malformed paths
+  if (!filePath || filePath.includes("..") || filePath.startsWith("/")) {
+    return { success: false, error: "Invalid file path", url: null };
+  }
+
   const pathParts = filePath.split("/");
-  const fileOwner = pathParts[0];
+  if (pathParts.length !== 2) {
+    return { success: false, error: "Invalid file path", url: null };
+  }
+
+  const [fileOwner, fileName] = pathParts;
+  if (!isValidUUID(fileOwner) || !fileName) {
+    return { success: false, error: "Invalid file path", url: null };
+  }
+
   const isOwner = fileOwner === user.id;
 
   if (!isOwner && !profile.is_hr_admin) {
