@@ -152,12 +152,8 @@ function getNavigation(
   return { mainNav, adminItem };
 }
 
-const moduleAccess: Record<string, UserType[]> = {
-  hr: ["staff"],
-  "sign-in": ["staff"],
-  learning: ["staff", "pathways_coordinator"],
-  intranet: ["staff", "pathways_coordinator"],
-};
+// Modules restricted to internal staff only (not external PCs)
+const internalOnlyModules = new Set(["hr", "sign-in"]);
 
 // =============================================
 // HELPERS
@@ -201,9 +197,12 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
 
   const hasModuleAccess = (module: string): boolean => {
     if (!profile) return false;
-    const allowedTypes = moduleAccess[module];
-    if (!allowedTypes) return true;
-    return allowedTypes.includes(profile.user_type);
+    // new_user types see an empty sidebar during induction — by design,
+    // the proxy redirects them to /intranet/induction before they see the sidebar
+    if (profile.user_type !== "staff") return false;
+    // External staff can't access internal-only modules (HR, Sign-In)
+    if (profile.is_external && internalOnlyModules.has(module)) return false;
+    return true;
   };
 
   const hrAdmin = isHRAdminEffective(profile);

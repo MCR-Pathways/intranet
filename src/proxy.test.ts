@@ -42,6 +42,7 @@ function mockAuthenticatedUser(claims: {
   user_type: string;
   induction_completed_at: string | null;
   status: string;
+  is_external?: boolean;
 }) {
   mockGetUser.mockReturnValue({
     id: "user-1",
@@ -49,6 +50,7 @@ function mockAuthenticatedUser(claims: {
       user_type: claims.user_type,
       status: claims.status,
       induction_completed_at: claims.induction_completed_at,
+      is_external: claims.is_external ?? false,
     },
   });
 }
@@ -134,44 +136,48 @@ describe("proxy", () => {
       expect(response.status).toBe(200);
     });
 
-    it("redirects pathways_coordinator away from /hr", async () => {
+    it("redirects external staff away from /hr", async () => {
       mockAuthenticatedUser({
-        user_type: "pathways_coordinator",
+        user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        is_external: true,
       });
 
       const response = await proxy(createRequest("/hr/users"));
       expectRedirectTo(response, "/intranet");
     });
 
-    it("redirects pathways_coordinator away from /sign-in", async () => {
+    it("redirects external staff away from /sign-in", async () => {
       mockAuthenticatedUser({
-        user_type: "pathways_coordinator",
+        user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        is_external: true,
       });
 
       const response = await proxy(createRequest("/sign-in"));
       expectRedirectTo(response, "/intranet");
     });
 
-    it("allows pathways_coordinator to access /learning", async () => {
+    it("allows external staff to access /learning", async () => {
       mockAuthenticatedUser({
-        user_type: "pathways_coordinator",
+        user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        is_external: true,
       });
 
       const response = await proxy(createRequest("/learning/courses"));
       expect(response.status).toBe(200);
     });
 
-    it("allows pathways_coordinator to access /intranet", async () => {
+    it("allows external staff to access /intranet", async () => {
       mockAuthenticatedUser({
-        user_type: "pathways_coordinator",
+        user_type: "staff",
         induction_completed_at: "2024-01-01",
         status: "active",
+        is_external: true,
       });
 
       const response = await proxy(createRequest("/intranet"));
@@ -262,6 +268,39 @@ describe("proxy", () => {
       );
       expectRedirectTo(response, "/intranet");
     });
+
+    it("allows new_user who completed induction to access /intranet", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/intranet"));
+      expect(response.status).toBe(200);
+    });
+
+    it("blocks new_user who completed induction from /hr", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/hr/users"));
+      expectRedirectTo(response, "/intranet");
+    });
+
+    it("blocks new_user who completed induction from /learning", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/learning"));
+      expectRedirectTo(response, "/intranet");
+    });
   });
 
   describe("sign-in access", () => {
@@ -347,9 +386,10 @@ describe("proxy", () => {
       mockGetUser.mockReturnValue({ id: "old-user", app_metadata: {} });
       mockSingle.mockResolvedValue({
         data: {
-          user_type: "pathways_coordinator",
+          user_type: "staff",
           status: "active",
           induction_completed_at: "2024-01-01",
+          is_external: true,
         },
         error: null,
       });

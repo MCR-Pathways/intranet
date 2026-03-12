@@ -51,25 +51,25 @@ test.describe("Module access control", () => {
     await expect(staffPage).toHaveURL(/\/sign-in/);
   });
 
-  // Coordinator (user_type: pathways_coordinator) can access intranet + learning only
-  test("coordinator can access /intranet", async ({ coordinatorPage }) => {
+  // External staff (is_external: true) can access intranet + learning only
+  test("external staff can access /intranet", async ({ coordinatorPage }) => {
     await coordinatorPage.goto("/intranet");
     await expect(coordinatorPage).toHaveURL(/\/intranet/);
   });
 
-  test("coordinator can access /learning", async ({ coordinatorPage }) => {
+  test("external staff can access /learning", async ({ coordinatorPage }) => {
     await coordinatorPage.goto("/learning");
     await expect(coordinatorPage).toHaveURL(/\/learning/);
   });
 
-  test("coordinator is redirected from /hr to /intranet", async ({
+  test("external staff is redirected from /hr to /intranet", async ({
     coordinatorPage,
   }) => {
     await coordinatorPage.goto("/hr");
     await expect(coordinatorPage).toHaveURL(/\/intranet/);
   });
 
-  test("coordinator is redirected from /sign-in to /intranet", async ({
+  test("external staff is redirected from /sign-in to /intranet", async ({
     coordinatorPage,
   }) => {
     await coordinatorPage.goto("/sign-in");
@@ -88,14 +88,14 @@ test.describe("Sidebar navigation", () => {
     await expect(sidebar.getByText("Settings")).toBeVisible();
   });
 
-  test("coordinator only sees Home and Learning in sidebar", async ({
+  test("external staff only sees Home and Learning in sidebar", async ({
     coordinatorPage,
   }) => {
     await coordinatorPage.goto("/intranet");
     const sidebar = coordinatorPage.locator("aside");
     await expect(sidebar.getByText("Home")).toBeVisible();
     await expect(sidebar.getByText("Learning")).toBeVisible();
-    // Should NOT see staff-only modules
+    // Should NOT see internal-only modules
     await expect(sidebar.getByText("Me")).not.toBeVisible();
     await expect(sidebar.getByText("Location")).not.toBeVisible();
   });

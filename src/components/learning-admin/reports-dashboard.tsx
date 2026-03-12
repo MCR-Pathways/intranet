@@ -51,6 +51,7 @@ interface ProfileData {
   user_type: string;
   team_id: string | null;
   status: string;
+  is_external: boolean;
 }
 
 interface TeamData {
@@ -114,8 +115,8 @@ export function ReportsDashboard({
       const profile = profileMap.get(e.user_id);
       if (!profile) return false;
       if (teamFilter !== "all" && profile.team_id !== teamFilter) return false;
-      if (userTypeFilter !== "all" && profile.user_type !== userTypeFilter)
-        return false;
+      if (userTypeFilter === "internal" && profile.is_external) return false;
+      if (userTypeFilter === "external" && !profile.is_external) return false;
 
       return true;
     });
@@ -225,7 +226,7 @@ export function ReportsDashboard({
       const result = await exportReportCSV({
         courseId: courseFilter !== "all" ? courseFilter : undefined,
         teamId: teamFilter !== "all" ? teamFilter : undefined,
-        userType: userTypeFilter !== "all" ? userTypeFilter : undefined,
+        isExternal: userTypeFilter === "external" ? true : userTypeFilter === "internal" ? false : undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
       });
 
@@ -490,11 +491,9 @@ export function ReportsDashboard({
                   <SelectValue placeholder="All User Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All User Types</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="pathways_coordinator">
-                    Pathways Coordinator
-                  </SelectItem>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  <SelectItem value="internal">Internal Staff</SelectItem>
+                  <SelectItem value="external">External Staff</SelectItem>
                 </SelectContent>
               </Select>
 

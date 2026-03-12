@@ -153,19 +153,19 @@ describe("Intranet Post Actions", () => {
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it("allows pathways_coordinator to create posts", async () => {
+    it("allows external staff to create posts", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
         supabase: mockSupabase,
         user: mockUser,
-        profile: { ...mockProfile, user_type: "pathways_coordinator" },
+        profile: { ...mockProfile, user_type: "staff", is_external: true },
       } as never);
 
-      const result = await createPost({ content: "Hello from coordinator" });
+      const result = await createPost({ content: "Hello from external staff" });
 
       expect(result).toEqual({ success: true, error: null, postId: "post-1" });
       expect(mockInsert).toHaveBeenCalledWith({
         author_id: "user-1",
-        content: "Hello from coordinator",
+        content: "Hello from external staff",
       });
     });
 

@@ -442,7 +442,7 @@ export async function assignCourse(data: {
 }) {
   const { supabase, user } = await requireLDAdmin();
 
-  if (!["team", "user_type"].includes(data.assign_type)) {
+  if (!["team", "user_type", "is_external"].includes(data.assign_type)) {
     return { success: false, error: "Invalid assignment type" };
   }
 

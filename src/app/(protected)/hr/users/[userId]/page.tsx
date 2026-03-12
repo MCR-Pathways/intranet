@@ -348,7 +348,7 @@ export default async function EmployeeDetailPage({
     email: profile.email as string,
     avatar_url: profile.avatar_url as string | null,
     job_title: profile.job_title as string | null,
-    user_type: profile.user_type as "staff" | "pathways_coordinator" | "new_user",
+    user_type: profile.user_type as "staff" | "new_user",
     status: profile.status as "active" | "inactive" | "pending_induction",
     fte: (profile.fte as number) ?? 1,
     department: profile.department ?? null,

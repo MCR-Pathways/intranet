@@ -80,11 +80,6 @@ export async function updateUserProfile(
     return { success: false, error: "No valid fields to update" };
   }
 
-  // Auto-derive: pathways coordinators are always external
-  if (sanitized.user_type === "pathways_coordinator") {
-    sanitized.is_external = true;
-  }
-
   const { error } = await supabase
     .from("profiles")
     .update(sanitized)

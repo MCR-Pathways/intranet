@@ -15,7 +15,7 @@ export default async function IntranetPage() {
   }
 
   const isStaff = profile.user_type === "staff";
-  const canPost = profile.user_type === "staff" || profile.user_type === "pathways_coordinator";
+  const canPost = profile.user_type === "staff";
   const isHRAdmin = isHRAdminEffective(profile);
 
   const currentUserProfile: PostAuthor = {
