@@ -268,6 +268,39 @@ describe("proxy", () => {
       );
       expectRedirectTo(response, "/intranet");
     });
+
+    it("allows new_user who completed induction to access /intranet", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/intranet"));
+      expect(response.status).toBe(200);
+    });
+
+    it("blocks new_user who completed induction from /hr", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/hr/users"));
+      expectRedirectTo(response, "/intranet");
+    });
+
+    it("blocks new_user who completed induction from /learning", async () => {
+      mockAuthenticatedUser({
+        user_type: "new_user",
+        induction_completed_at: "2024-01-01",
+        status: "active",
+      });
+
+      const response = await proxy(createRequest("/learning"));
+      expectRedirectTo(response, "/intranet");
+    });
   });
 
   describe("sign-in access", () => {

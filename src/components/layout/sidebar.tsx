@@ -197,6 +197,8 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
 
   const hasModuleAccess = (module: string): boolean => {
     if (!profile) return false;
+    // new_user types see an empty sidebar during induction — by design,
+    // the proxy redirects them to /intranet/induction before they see the sidebar
     if (profile.user_type !== "staff") return false;
     // External staff can't access internal-only modules (HR, Sign-In)
     if (profile.is_external && internalOnlyModules.has(module)) return false;

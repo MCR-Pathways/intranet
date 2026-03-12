@@ -122,12 +122,13 @@ export async function proxy(request: NextRequest) {
     }
     // Internal staff: full access — no redirect needed
   } else {
-    // Non-staff (new_user) can only access induction (handled above)
-    // Block access to all modules
-    const protectedModules = ["/hr", "/sign-in", "/learning", "/intranet"];
-    if (protectedModules.some((mod) => pathname.startsWith(mod))) {
+    // Non-staff (new_user): if induction is pending, they were already redirected
+    // above at line 107. Here they've completed induction but haven't been
+    // promoted to staff yet — allow /intranet as a landing page, block the rest.
+    const staffOnlyModules = ["/hr", "/sign-in", "/learning"];
+    if (staffOnlyModules.some((mod) => pathname.startsWith(mod))) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/intranet/induction";
+      redirectUrl.pathname = "/intranet";
       return NextResponse.redirect(redirectUrl);
     }
   }
