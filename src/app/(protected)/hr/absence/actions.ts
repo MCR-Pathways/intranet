@@ -13,6 +13,7 @@ import {
 } from "@/lib/hr";
 import type { Region } from "@/lib/hr";
 import type { AbsenceType } from "@/types/hr";
+import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 
@@ -420,8 +421,7 @@ export async function uploadFitNote(
   }
 
   // Validate UUID format to prevent path manipulation in storage paths
-  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID_REGEX.test(profileId) || !UUID_REGEX.test(absenceId)) {
+  if (!isValidUUID(profileId) || !isValidUUID(absenceId)) {
     return { success: false, error: "Invalid ID format" };
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidHexColour } from "./validation";
+import { isValidHexColour, isValidUUID } from "./validation";
 
 describe("isValidHexColour", () => {
   it("accepts valid 6-digit hex", () => {
@@ -51,5 +51,30 @@ describe("isValidHexColour", () => {
     expect(isValidHexColour("#FFFF")).toBe(false); // 4 digits
     expect(isValidHexColour("#DC262600")).toBe(false); // 8 digits (alpha)
     expect(isValidHexColour("#FF")).toBe(false); // 2 digits
+  });
+});
+
+describe("isValidUUID", () => {
+  it("accepts valid UUID v4", () => {
+    expect(isValidUUID("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isValidUUID("550E8400-E29B-41D4-A716-446655440000")).toBe(true);
+  });
+
+  it("rejects non-UUID strings", () => {
+    expect(isValidUUID("not-a-uuid")).toBe(false);
+    expect(isValidUUID("user-123")).toBe(false);
+    expect(isValidUUID("")).toBe(false);
+  });
+
+  it("rejects truncated UUIDs", () => {
+    expect(isValidUUID("550e8400-e29b")).toBe(false);
+  });
+
+  it("rejects path traversal segments", () => {
+    expect(isValidUUID("../admin")).toBe(false);
+    expect(isValidUUID("..")).toBe(false);
   });
 });
