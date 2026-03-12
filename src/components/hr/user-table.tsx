@@ -55,7 +55,7 @@ import {
   RotateCcw,
   GraduationCap,
 } from "lucide-react";
-import { cn, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import {
   DEPARTMENT_CONFIG,
   REGION_CONFIG,
@@ -307,7 +307,7 @@ export function UserTable({
         return (
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.full_name} />
+              <AvatarImage src={filterAvatarUrl(profile.avatar_url)} alt={profile.full_name} />
               <AvatarFallback className={cn(getAvatarColour(profile.full_name).bg, getAvatarColour(profile.full_name).fg, "text-xs")}>
                 {getInitials(profile.full_name)}
               </AvatarFallback>

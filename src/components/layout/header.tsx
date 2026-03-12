@@ -21,7 +21,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
-import { cn, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import type { NotificationData } from "@/types/notification";
 
@@ -108,7 +108,7 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={profile?.avatar_url || undefined}
+                    src={filterAvatarUrl(profile?.avatar_url)}
                     alt={displayName}
                   />
                   <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg)}>
