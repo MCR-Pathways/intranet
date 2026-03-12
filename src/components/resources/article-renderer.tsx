@@ -3,6 +3,7 @@
 import { Fragment } from "react";
 import { isValidHttpUrl, linkifyText, proxyImageUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
+import { isValidHexColour } from "@/lib/validation";
 import { CALLOUT_CONFIG } from "@/lib/tiptap-callout";
 import { extractHeadings } from "@/lib/tiptap";
 import type { TiptapDocument, TiptapNode } from "@/lib/tiptap";
@@ -340,7 +341,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
             break;
           case "textStyle": {
             const color = mark.attrs?.color as string;
-            if (color) {
+            if (color && isValidHexColour(color)) {
               element = <span style={{ color }}>{element}</span>;
             }
             break;
@@ -349,7 +350,11 @@ function RenderInline({ node }: { node: TiptapNode }) {
             const bgColor = mark.attrs?.color as string;
             element = (
               <mark
-                style={bgColor ? { backgroundColor: bgColor } : undefined}
+                style={
+                  bgColor && isValidHexColour(bgColor)
+                    ? { backgroundColor: bgColor }
+                    : undefined
+                }
               >
                 {element}
               </mark>
