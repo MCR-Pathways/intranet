@@ -205,7 +205,7 @@ describe("Upload Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Storage quota exceeded",
+        error: "Failed to upload video. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
         url: null,
         storagePath: null,
       });
@@ -327,7 +327,7 @@ describe("Upload Actions", () => {
       const result = await uploadLessonImage(fd);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Insert failed");
+      expect(result.error).toContain("Failed to save image record");
       // Verify storage cleanup was called
       expect(mockStorageRemove).toHaveBeenCalled();
     });
@@ -347,7 +347,7 @@ describe("Upload Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Upload failed",
+        error: "Failed to upload image. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
         image: null,
       });
     });
@@ -420,7 +420,7 @@ describe("Upload Actions", () => {
 
       const result = await deleteLessonImage("img-1", "c1");
 
-      expect(result).toEqual({ success: false, error: "Delete failed" });
+      expect(result).toEqual({ success: false, error: "Failed to delete image. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       expect(mockStorageRemove).not.toHaveBeenCalled();
     });
   });

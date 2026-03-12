@@ -9,6 +9,7 @@ import {
 } from "@/lib/hr";
 import type { LeavingReason } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 // =============================================
 // ALLOWED FIELDS (whitelist for input sanitisation)
@@ -167,7 +168,8 @@ export async function createLeavingForm(data: {
         error: "This employee already has an active leaving form. Cancel it first to create a new one.",
       };
     }
-    return { success: false, error: `Failed to create leaving form: ${insertError.message}` };
+    logger.error("Failed to create leaving form", { error: insertError.message });
+    return { success: false, error: "Failed to create leaving form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidateLeavingPaths(data.profile_id);
@@ -228,7 +230,8 @@ export async function updateLeavingForm(
     .single();
 
   if (updateError) {
-    return { success: false, error: `Failed to update form: ${updateError.message}` };
+    logger.error("Failed to update leaving form", { error: updateError.message });
+    return { success: false, error: "Failed to update form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidateLeavingPaths(form.profile_id as string);
@@ -549,7 +552,8 @@ export async function cancelLeavingForm(
     .single();
 
   if (updateError) {
-    return { success: false, error: `Failed to cancel form: ${updateError.message}` };
+    logger.error("Failed to cancel leaving form", { error: updateError.message });
+    return { success: false, error: "Failed to cancel form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidateLeavingPaths(form.profile_id as string);

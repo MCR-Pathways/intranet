@@ -164,7 +164,8 @@ export async function fetchFlexibleWorkingRequests(): Promise<{
     .order("created_at", { ascending: false });
 
   if (error) {
-    return { data: [], error: error.message };
+    logger.error("Failed to fetch flexible working requests", { error });
+    return { data: [], error: "Failed to fetch flexible working requests. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   return { data: data ?? [], error: null };
@@ -332,7 +333,8 @@ export async function createFlexibleWorkingRequest(data: {
         error: "You have already made 2 flexible working requests in the last 12 months (statutory limit).",
       };
     }
-    return { success: false, error: `Failed to create request: ${insertError.message}` };
+    logger.error("Failed to create flexible working request", { error: insertError.message });
+    return { success: false, error: "Failed to create request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   const requestId = request.id as string;
@@ -530,7 +532,7 @@ export async function recordConsultation(
 
   if (updateError) {
     logger.error("Failed to record consultation", { requestId, error: updateError.message });
-    return { success: false, error: `Failed to record consultation: ${updateError.message}` };
+    return { success: false, error: "Failed to record consultation. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidateFWRPaths(request.profile_id as string);
@@ -945,7 +947,8 @@ export async function submitFWRAppeal(
     .single();
 
   if (appealError) {
-    return { success: false, error: `Failed to submit appeal: ${appealError.message}` };
+    logger.error("Failed to submit appeal", { error: appealError.message });
+    return { success: false, error: "Failed to submit appeal. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Step 2: Update request status
@@ -1064,7 +1067,7 @@ export async function decideFWRAppeal(
 
   if (appealError) {
     logger.error("Failed to record appeal decision", { requestId, error: appealError.message });
-    return { success: false, error: `Failed to record appeal decision: ${appealError.message}` };
+    return { success: false, error: "Failed to record appeal decision. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Step 2: Update request status

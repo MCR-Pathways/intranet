@@ -268,7 +268,7 @@ describe("HR Leave Actions", () => {
         start_date: "2026-03-02",
         end_date: "2026-03-03",
       });
-      expect(result).toEqual({ success: false, error: "Constraint violation" });
+      expect(result).toEqual({ success: false, error: "Failed to submit leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
 
     it("accepts all requestable leave types", async () => {
@@ -606,7 +606,7 @@ describe("HR Leave Actions", () => {
       });
 
       const result = await cancelLeave("req-1");
-      expect(result).toEqual({ success: false, error: "Concurrent update" });
+      expect(result).toEqual({ success: false, error: "Failed to cancel leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
   });
 
@@ -828,7 +828,7 @@ describe("HR Leave Actions", () => {
         base_entitlement_days: 25,
         fte_at_calculation: 1.0,
       });
-      expect(result).toEqual({ success: false, error: "Unique constraint" });
+      expect(result).toEqual({ success: false, error: "Failed to update leave entitlement. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
 
     it("uses default leave year when not specified", async () => {

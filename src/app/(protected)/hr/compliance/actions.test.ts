@@ -207,7 +207,7 @@ describe("HR Compliance Actions", () => {
       const result = await uploadComplianceDocument(createFormData());
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Insert failed");
+      expect(result.error).toContain("Failed to save document record");
       // Storage cleanup should have been called
       expect(mockStorageRemove).toHaveBeenCalled();
     });
@@ -398,7 +398,7 @@ describe("HR Compliance Actions", () => {
 
       const result = await deleteComplianceDocument("doc-1");
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Delete failed");
+      expect(result.error).toContain("Failed to delete document");
       // Storage should NOT be cleaned up since DB delete failed
       expect(mockStorageRemove).not.toHaveBeenCalled();
     });

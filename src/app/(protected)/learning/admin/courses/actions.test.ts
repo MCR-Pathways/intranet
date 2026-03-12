@@ -146,7 +146,7 @@ describe("L&D Course Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Duplicate title",
+        error: "Failed to create course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
         courseId: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
@@ -260,7 +260,7 @@ describe("L&D Course Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Database constraint violation",
+        error: "Failed to update course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
@@ -439,7 +439,7 @@ describe("L&D Course Actions", () => {
 
       const result = await publishCourse("course-001");
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
     });
 
     it("sends notifications when course has assignments", async () => {
@@ -571,7 +571,7 @@ describe("L&D Course Actions", () => {
 
       const result = await unpublishCourse("course-001");
 
-      expect(result).toEqual({ success: false, error: "Update failed" });
+      expect(result).toEqual({ success: false, error: "Failed to unpublish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
 
