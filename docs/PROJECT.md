@@ -113,7 +113,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (51 files, `00001` through `00050` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (52 files, `00001` through `00051` plus a combined migration).
 
 ### Local Supabase
 
@@ -293,7 +293,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**51 migration files** in `supabase/migrations/`, numbered `00001` through `00050` plus a combined migration.
+**52 migration files** in `supabase/migrations/`, numbered `00001` through `00051` plus a combined migration.
 
 **26+ tables** — key ones:
 
@@ -402,6 +402,7 @@ Enforcing CSP on all routes (configured in `next.config.ts`):
 - **CSV exports sanitise cells** to prevent formula injection in Excel/Sheets
 - **SSRF protection** on link preview fetching (private IP checks, redirect validation, SVG blocking, 2MB size limit) — `src/lib/ssrf.ts`
 - **`Object.hasOwn()` guards** on Record lookups from user input (prevents prototype pollution)
+- **Input validation hardening** (PRs #115-120): SVG upload removal, CSS hex colour validation, leave type validation, generic error messages (95 instances across 17 files), path traversal + UUID validation, 3-tier string length limits (SHORT 200, MEDIUM 2000, LONG 5000) on all HR free-text fields — shared utilities in `src/lib/validation.ts`
 
 ### RLS
 
@@ -424,8 +425,8 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 49 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1072+ tests across 49 files
+- **Files:** 50 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1099 tests across 50 files
 
 ### Test Categories
 
@@ -673,6 +674,8 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (3 PRs): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C). 16 avatar files, 7 link files, 2 icon files + CSS tokens. `docs/design-system.md` updated with all tokens and WCAG contrast data. |
+| 2026-03-12 | Abdul-Muiz Adaranijo | Input validation hardening (PRs #115-120): SVG upload removal + DB migration, CSS hex colour validation, leave type validation (LEAVE_TYPE_CONFIG), generic error messages (95 instances, 17 files), path traversal + UUID validation, 3-tier string length limits on all HR free-text fields. Shared `src/lib/validation.ts` (isValidHexColour, isValidUUID, validateTextLength). 37 client-side maxLength attributes. 1099 tests, 50 files. Design system doc created (`docs/design-system.md`). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Auto-save (PR #114): Notion-style debounced saves (5s), useAutoSave hook with state machine + concurrent save protection, SaveStatusIndicator, create→edit transition, beforeunload safety net. 15 tests, 1073 total. |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Editor tooltips + toolbar (PR #113): 25+ toolbar buttons with Google Docs-style tooltips, heading dropdown (H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11), highlight (9), undo/redo, clear formatting. 8 new Tiptap extensions, 3 new files. Post-merge fixes: checklist CSS, Vercel build, reactive indent/outdent + heading state. |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Breadcrumb consistency (PR #112): Standardised breadcrumbs across all 24 pages. Renamed stale root labels (HR→Admin, Intranet→Home), added breadcrumbs to 8 admin pages, replaced manual headers with PageHeader, visual refresh (/ separator, hover underlines). |

@@ -369,7 +369,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline hover:text-primary/80"
+                  className="text-link underline hover:text-link/80"
                 >
                   {element}
                 </a>
