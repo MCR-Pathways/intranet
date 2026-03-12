@@ -1047,7 +1047,7 @@ export async function toggleReaction(
       .insert({ post_id: postId, user_id: user.id, reaction_type: reactionType });
     if (error) {
       logger.error("Failed to add post reaction", { error: error.message });
-      return { success: false, error: "Failed to add reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
@@ -1105,7 +1105,7 @@ export async function toggleCommentReaction(
       .insert({ comment_id: commentId, user_id: user.id, reaction_type: reactionType });
     if (error) {
       logger.error("Failed to add comment reaction", { error: error.message });
-      return { success: false, error: "Failed to add reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+      return { success: false, error: "Failed to update reaction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
     }
   }
 
