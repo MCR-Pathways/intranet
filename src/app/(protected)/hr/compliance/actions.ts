@@ -300,13 +300,14 @@ export async function getComplianceDocumentUrl(filePath: string) {
   }
 
   // Validate file path format: {profileId}/{filename}
-  // Reject path traversal attempts and malformed paths
-  if (!filePath || filePath.includes("..") || filePath.startsWith("/")) {
-    return { success: false, error: "Invalid file path", url: null };
-  }
-
-  const pathParts = filePath.split("/");
-  if (pathParts.length !== 2) {
+  // Reject path traversal attempts, absolute paths, and malformed paths
+  const pathParts = filePath ? filePath.split("/") : [];
+  if (
+    !filePath ||
+    filePath.includes("..") ||
+    filePath.startsWith("/") ||
+    pathParts.length !== 2
+  ) {
     return { success: false, error: "Invalid file path", url: null };
   }
 
