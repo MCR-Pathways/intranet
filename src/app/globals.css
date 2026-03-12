@@ -41,6 +41,14 @@
   --ring: var(--mcr-dark-blue);
   --table-header: #E4E7EC;
 
+  /* Icon foreground colours — darkened variants for contrast on white card backgrounds */
+  --icon-fg-teal: var(--mcr-teal);     /* 6.93:1 on white */
+  --icon-fg-green: #4A7A00;            /* Darkened, 5.15:1 on white */
+  --icon-fg-orange: #9E5B00;           /* Darkened, 5.32:1 on white */
+  --icon-fg-wine: var(--mcr-wine);     /* 10.46:1 on white */
+  --icon-fg-light-blue: #1A6E8E;       /* Darkened, 5.73:1 on white */
+  --icon-fg-pink: var(--mcr-pink);     /* 4.18:1 on white, passes 3:1 for icons */
+
   /* Status Colors */
   --status-active: #22c55e;
   --status-pending: var(--mcr-yellow);
@@ -74,6 +82,14 @@
   --input: hsl(210, 50%, 20%);
   --ring: var(--mcr-light-blue);
   --table-header: hsl(210, 30%, 18%);
+
+  /* Icon foreground colours — bright MCR originals for contrast on dark card backgrounds */
+  --icon-fg-teal: var(--mcr-light-blue);     /* 7.55:1 on dark */
+  --icon-fg-green: var(--mcr-green);         /* 9.68:1 on dark */
+  --icon-fg-orange: var(--mcr-orange);       /* 6.30:1 on dark */
+  --icon-fg-wine: #FF82B2;                   /* 6.41:1 on dark */
+  --icon-fg-light-blue: var(--mcr-light-blue); /* 7.55:1 on dark */
+  --icon-fg-pink: #FF82B2;                   /* 6.41:1 on dark */
 }
 
 @theme inline {
@@ -101,6 +117,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-table-header: var(--table-header);
+
+  /* Icon foreground colours */
+  --color-icon-fg-teal: var(--icon-fg-teal);
+  --color-icon-fg-green: var(--icon-fg-green);
+  --color-icon-fg-orange: var(--icon-fg-orange);
+  --color-icon-fg-wine: var(--icon-fg-wine);
+  --color-icon-fg-light-blue: var(--icon-fg-light-blue);
+  --color-icon-fg-pink: var(--icon-fg-pink);
 
   /* MCR Brand Colors */
   --color-mcr-dark-blue: var(--mcr-dark-blue);
