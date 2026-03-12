@@ -340,18 +340,18 @@ function RenderInline({ node }: { node: TiptapNode }) {
             element = <sup>{element}</sup>;
             break;
           case "textStyle": {
-            const color = mark.attrs?.color as string;
-            if (color && isValidHexColour(color)) {
+            const color = mark.attrs?.color;
+            if (typeof color === "string" && isValidHexColour(color)) {
               element = <span style={{ color }}>{element}</span>;
             }
             break;
           }
           case "highlight": {
-            const bgColor = mark.attrs?.color as string;
+            const bgColor = mark.attrs?.color;
             element = (
               <mark
                 style={
-                  bgColor && isValidHexColour(bgColor)
+                  typeof bgColor === "string" && isValidHexColour(bgColor)
                     ? { backgroundColor: bgColor }
                     : undefined
                 }
