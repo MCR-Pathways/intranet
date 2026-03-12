@@ -24,6 +24,7 @@ const defaultProps = {
   profileName: "Sarah Mitchell",
   currentUserId: "admin-1",
   isCurrentUserHRAdmin: true,
+  isCurrentUserSystemsAdmin: false,
   isHRAdmin: false,
   isLDAdmin: false,
   isSystemsAdmin: false,

@@ -7,8 +7,6 @@ import {
   MoreHorizontal,
   ArrowUp,
   ArrowDown,
-  Globe,
-  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
+import { VisibilityBadge } from "./visibility-badge";
 import type { CategoryWithCount } from "@/types/database.types";
 
 interface CategoryCardProps {
@@ -74,14 +73,7 @@ export function CategoryCard({
               {category.article_count === 1 ? "article" : "articles"}
             </Badge>
             {canEdit && (
-              <Badge variant="outline" className="shrink-0 text-xs gap-1">
-                {category.visibility === "all" ? (
-                  <Globe className="h-3 w-3" />
-                ) : (
-                  <Lock className="h-3 w-3" />
-                )}
-                {category.visibility === "all" ? "All" : "Internal"}
-              </Badge>
+              <VisibilityBadge visibility={category.visibility as "all" | "internal"} />
             )}
           </div>
           {category.description && (

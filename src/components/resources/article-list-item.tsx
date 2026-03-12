@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pencil, Trash2, MoreHorizontal, FolderInput, Globe, Lock } from "lucide-react";
+import { FileText, Pencil, Trash2, MoreHorizontal, FolderInput } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { VisibilityBadge } from "./visibility-badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -59,14 +60,7 @@ export function ArticleListItem({
             </Badge>
           )}
           {canEdit && article.visibility && (
-            <Badge variant="outline" className="shrink-0 text-xs gap-1">
-              {article.visibility === "all" ? (
-                <Globe className="h-3 w-3" />
-              ) : (
-                <Lock className="h-3 w-3" />
-              )}
-              {article.visibility === "all" ? "All" : "Internal"}
-            </Badge>
+            <VisibilityBadge visibility={article.visibility as "all" | "internal"} />
           )}
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
