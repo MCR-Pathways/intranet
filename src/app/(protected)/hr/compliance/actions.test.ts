@@ -27,12 +27,12 @@ const mockSupabase = vi.hoisted(() => ({
 vi.mock("@/lib/auth", () => ({
   requireHRAdmin: vi.fn().mockResolvedValue({
     supabase: mockSupabase,
-    user: { id: "admin-123", email: "admin@mcrpathways.org" },
+    user: { id: "a0000000-0000-0000-0000-000000000001", email: "admin@mcrpathways.org" },
   }),
   getCurrentUser: vi.fn().mockResolvedValue({
     supabase: mockSupabase,
-    user: { id: "user-123", email: "user@mcrpathways.org" },
-    profile: { id: "user-123", is_hr_admin: false },
+    user: { id: "b0000000-0000-0000-0000-000000000002", email: "user@mcrpathways.org" },
+    profile: { id: "b0000000-0000-0000-0000-000000000002", is_hr_admin: false },
   }),
 }));
 
@@ -90,13 +90,13 @@ describe("HR Compliance Actions", () => {
 
     vi.mocked(requireHRAdmin).mockResolvedValue({
       supabase: mockSupabase as never,
-      user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
+      user: { id: "a0000000-0000-0000-0000-000000000001", email: "admin@mcrpathways.org" } as never,
     });
 
     vi.mocked(getCurrentUser).mockResolvedValue({
       supabase: mockSupabase as never,
-      user: { id: "user-123", email: "user@mcrpathways.org" } as never,
-      profile: { id: "user-123", is_hr_admin: false } as never,
+      user: { id: "b0000000-0000-0000-0000-000000000002", email: "user@mcrpathways.org" } as never,
+      profile: { id: "b0000000-0000-0000-0000-000000000002", is_hr_admin: false } as never,
     });
   });
 
@@ -410,28 +410,37 @@ describe("HR Compliance Actions", () => {
 
   describe("getComplianceDocumentUrl", () => {
     it("returns signed URL for document owner", async () => {
-      const result = await getComplianceDocumentUrl("user-123/test-uuid.pdf");
+      const result = await getComplianceDocumentUrl(
+        "b0000000-0000-0000-0000-000000000002/test-uuid.pdf"
+      );
 
       expect(result.success).toBe(true);
       expect(result.url).toBe("https://example.com/signed-url");
-      expect(mockStorageCreateSignedUrl).toHaveBeenCalledWith("user-123/test-uuid.pdf", 3600);
+      expect(mockStorageCreateSignedUrl).toHaveBeenCalledWith(
+        "b0000000-0000-0000-0000-000000000002/test-uuid.pdf",
+        3600
+      );
     });
 
     it("returns signed URL for HR admin (non-owner)", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
         supabase: mockSupabase as never,
-        user: { id: "admin-123", email: "admin@mcrpathways.org" } as never,
-        profile: { id: "admin-123", is_hr_admin: true } as never,
+        user: { id: "a0000000-0000-0000-0000-000000000001", email: "admin@mcrpathways.org" } as never,
+        profile: { id: "a0000000-0000-0000-0000-000000000001", is_hr_admin: true } as never,
       });
 
-      const result = await getComplianceDocumentUrl("emp-456/test-uuid.pdf");
+      const result = await getComplianceDocumentUrl(
+        "c0000000-0000-0000-0000-000000000003/test-uuid.pdf"
+      );
 
       expect(result.success).toBe(true);
       expect(result.url).toBe("https://example.com/signed-url");
     });
 
     it("denies access to non-owner non-admin", async () => {
-      const result = await getComplianceDocumentUrl("other-user/test-uuid.pdf");
+      const result = await getComplianceDocumentUrl(
+        "c0000000-0000-0000-0000-000000000003/test-uuid.pdf"
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Access denied");
@@ -445,9 +454,37 @@ describe("HR Compliance Actions", () => {
         profile: null as never,
       });
 
-      const result = await getComplianceDocumentUrl("user-123/test.pdf");
+      const result = await getComplianceDocumentUrl(
+        "b0000000-0000-0000-0000-000000000002/test.pdf"
+      );
       expect(result.success).toBe(false);
       expect(result.error).toContain("Not authenticated");
+    });
+
+    it("rejects path traversal attempts", async () => {
+      const result = await getComplianceDocumentUrl("../../secret/file.pdf");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid file path");
+    });
+
+    it("rejects paths starting with /", async () => {
+      const result = await getComplianceDocumentUrl("/etc/passwd");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid file path");
+    });
+
+    it("rejects paths with more than 2 segments", async () => {
+      const result = await getComplianceDocumentUrl(
+        "b0000000-0000-0000-0000-000000000002/sub/file.pdf"
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid file path");
+    });
+
+    it("rejects non-UUID owner segment", async () => {
+      const result = await getComplianceDocumentUrl("not-a-uuid/file.pdf");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid file path");
     });
   });
 });
