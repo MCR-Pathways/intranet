@@ -25,7 +25,8 @@ export async function markInductionItemComplete(
       revalidatePath("/intranet/induction");
       redirect("/intranet/induction");
     }
-    return { success: false, error: error.message };
+    logger.error("Failed to mark induction item complete", { error });
+    return { success: false, error: "Failed to complete induction item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/intranet/induction");
@@ -64,7 +65,8 @@ export async function completeInduction(): Promise<{ success: boolean; error: st
     .eq("id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to complete induction", { error });
+    return { success: false, error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Refresh session so the JWT picks up the new claims from the DB trigger.

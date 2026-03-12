@@ -167,7 +167,7 @@ describe("Induction Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Profile update failed",
+        error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
   });
@@ -228,7 +228,7 @@ describe("Induction Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "relation does not exist",
+        error: "Failed to complete induction item. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
   });

@@ -163,7 +163,7 @@ describe("HR Asset Actions", () => {
       const result = await updateAsset("asset-1", { notes: "Updated" });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("DB error");
+      expect(result.error).toContain("Failed to update asset");
     });
 
     it("sanitises fields — only allowed fields pass through", async () => {
@@ -291,7 +291,7 @@ describe("HR Asset Actions", () => {
 
       const result = await assignAsset("asset-1", "emp-456", {});
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Assignment failed");
+      expect(result.error).toContain("Failed to assign asset");
     });
 
     it("rolls back assignment when status update fails", async () => {
@@ -299,7 +299,7 @@ describe("HR Asset Actions", () => {
 
       const result = await assignAsset("asset-1", "emp-456", {});
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Status update failed");
+      expect(result.error).toContain("Failed to assign asset");
       // Verify rollback — delete was called on asset_assignments
       expect(deleteTracker).toHaveBeenCalled();
     });
@@ -390,7 +390,7 @@ describe("HR Asset Actions", () => {
 
       const result = await returnAsset("assign-1", {});
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Return update failed");
+      expect(result.error).toContain("Failed to return asset");
     });
 
     it("rolls back when asset status update fails", async () => {
@@ -398,7 +398,7 @@ describe("HR Asset Actions", () => {
 
       const result = await returnAsset("assign-1", {});
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Status update failed");
+      expect(result.error).toContain("Failed to return asset");
       // Verify rollback reverted returned_date and condition_on_return
       expect(rollbackTracker).toHaveBeenCalled();
     });
@@ -460,7 +460,7 @@ describe("HR Asset Actions", () => {
 
       const result = await retireAsset("asset-1");
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Retire failed");
+      expect(result.error).toContain("Failed to retire asset");
     });
 
     it("throws when user is not HR admin", async () => {

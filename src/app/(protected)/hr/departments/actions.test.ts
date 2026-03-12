@@ -75,7 +75,7 @@ describe("Department Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Unauthorised",
+        error: "Failed to create department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
 
@@ -138,7 +138,7 @@ describe("Department Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Some DB error",
+        error: "Failed to create department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
   });
@@ -155,7 +155,7 @@ describe("Department Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Unauthorised",
+        error: "Failed to update department. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
 
@@ -219,7 +219,7 @@ describe("Department Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Unauthorised",
+        error: "Failed to update department status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
     });
 

@@ -92,7 +92,8 @@ export async function setWorkingLocation(
     );
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to set working location", { error });
+    return { success: false, error: "Failed to set working location. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Write-back to Google Calendar (non-blocking, full_day only)
@@ -168,7 +169,8 @@ export async function clearWorkingLocation(
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to clear working location", { error });
+    return { success: false, error: "Failed to clear working location. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   // Delete the Google Calendar event if one exists (non-blocking)
@@ -233,7 +235,8 @@ export async function confirmArrival(): Promise<{ success: boolean; error: strin
     .in("location", ["glasgow_office", "stevenage_office"]);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to confirm arrival", { error });
+    return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/sign-in");
@@ -321,7 +324,8 @@ export async function saveWeeklyPattern(
     );
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to save weekly pattern", { error });
+    return { success: false, error: "Failed to save weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/sign-in");
@@ -349,7 +353,8 @@ export async function clearWeeklyPattern(
     .eq("time_slot", timeSlot);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to clear weekly pattern", { error });
+    return { success: false, error: "Failed to clear weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/sign-in");
@@ -438,7 +443,8 @@ export async function applyPatternsToWeek(
     .upsert(entries, { onConflict: "user_id,date,time_slot" });
 
   if (error) {
-    return { success: false, applied: 0, error: error.message };
+    logger.error("Failed to apply weekly patterns", { error });
+    return { success: false, applied: 0, error: "Failed to apply weekly patterns. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/sign-in");
@@ -647,7 +653,8 @@ export async function confirmRemoteArrival() {
     .eq("confirmed", false);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to confirm remote arrival", { error });
+    return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/sign-in");
@@ -862,9 +869,10 @@ export async function triggerCalendarSync() {
       deleted: result.deleted,
     };
   } catch (err) {
+    logger.error("Calendar sync failed", { error: err instanceof Error ? err.message : String(err) });
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Sync failed",
+      error: "Calendar sync failed. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
     };
   }
 }

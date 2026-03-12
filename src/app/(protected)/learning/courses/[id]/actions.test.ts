@@ -122,7 +122,7 @@ describe("Course Learner Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Database connection error",
+        error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
@@ -193,7 +193,7 @@ describe("Course Learner Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "RPC failed",
+        error: "Failed to complete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
         progressPercent: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe("Course Learner Actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Quiz submission failed",
+        error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
         result: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();

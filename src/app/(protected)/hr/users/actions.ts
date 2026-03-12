@@ -2,6 +2,7 @@
 
 import { requireHRAdmin, requireHROrSystemsAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function updateUserProfile(
   userId: string,
@@ -92,7 +93,8 @@ export async function updateUserProfile(
     .eq("id", userId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update user profile", { error });
+    return { success: false, error: "Failed to update profile. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/users");
@@ -112,7 +114,8 @@ export async function completeUserInduction(userId: string) {
     .eq("id", userId);
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to complete user induction", { error });
+    return { success: false, error: "Failed to complete induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/users");
@@ -128,7 +131,8 @@ export async function resetUserInduction(userId: string) {
   });
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to reset user induction", { error });
+    return { success: false, error: "Failed to reset induction. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath("/hr/users");
@@ -190,7 +194,8 @@ export async function updateEmployeePersonalDetails(
     .upsert({ ...sanitized, profile_id: userId }, { onConflict: "profile_id" });
 
   if (error) {
-    return { success: false, error: error.message };
+    logger.error("Failed to update employee personal details", { error });
+    return { success: false, error: "Failed to update personal details. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
   revalidatePath(`/hr/users/${userId}`);
