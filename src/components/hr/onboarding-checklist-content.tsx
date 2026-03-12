@@ -56,7 +56,7 @@ import {
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, Plus, Ban } from "lucide-react";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getAvatarColour } from "@/lib/utils";
 import { MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
@@ -185,7 +185,7 @@ export function OnboardingChecklistContent({
           <div className="flex items-start gap-4">
             <Avatar className="h-12 w-12 shrink-0">
               <AvatarImage src={checklist.employee_avatar ?? undefined} />
-              <AvatarFallback>
+              <AvatarFallback className={cn(getAvatarColour(checklist.employee_name).bg, getAvatarColour(checklist.employee_name).fg)}>
                 {getInitials(checklist.employee_name)}
               </AvatarFallback>
             </Avatar>

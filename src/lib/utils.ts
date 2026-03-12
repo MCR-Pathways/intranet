@@ -124,3 +124,25 @@ export function formatDuration(
   const rem = minutes % 60;
   return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
 }
+
+// ─── Avatar colours ─────────────────────────────────────────────────────────
+
+/** 3 MCR brand colours that pass WCAG AA (4.5:1) with white text. */
+const AVATAR_COLOURS = [
+  { bg: "bg-primary", fg: "text-primary-foreground" },  // Navy #213350 (12.70:1)
+  { bg: "bg-mcr-teal", fg: "text-white" },              // Teal #2A6075 (6.93:1)
+  { bg: "bg-mcr-wine", fg: "text-white" },              // Wine #751B48 (10.46:1)
+] as const;
+
+/**
+ * Deterministic avatar colour based on user name.
+ * Same name always returns the same colour. Uses djb2-style hash.
+ */
+export function getAvatarColour(name: string): { bg: string; fg: string } {
+  if (!name?.trim()) return AVATAR_COLOURS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLOURS[Math.abs(hash) % AVATAR_COLOURS.length];
+}
