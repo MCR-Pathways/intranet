@@ -269,6 +269,19 @@ describe("Upload Actions", () => {
       expect(result.error).toContain("Invalid image type");
     });
 
+    it("rejects SVG files", async () => {
+      const fd = createFormData({
+        file: createFile("icon.svg", "image/svg+xml", 1000),
+        lessonId: "l1",
+        courseId: "c1",
+      });
+
+      const result = await uploadLessonImage(fd);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid image type");
+    });
+
     it("uploads valid png and returns image record", async () => {
       const imageRow = {
         id: "img-1",
