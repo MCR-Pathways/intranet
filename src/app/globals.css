@@ -11,7 +11,7 @@
   --mcr-yellow: #F8D45B;
   --mcr-green: #B5E046;
   --mcr-teal: #2A6075;
-  --mcr-pink: #FF82B2;
+  --mcr-pink: #DA417C; /* WCAG fix: was #FF82B2 (2.31:1 FAIL) → #DA417C (4.18:1, passes 3:1 for icons/large text) */
   --mcr-wine: #751B48;
   --mcr-ivory: #FDF9EA;
 
@@ -30,6 +30,8 @@
   --accent-foreground: var(--mcr-dark-blue);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
+  /* Link colour — underlines MUST remain (link-to-body contrast 1.83:1 fails 3:1 without underline per WCAG SC 1.4.1) */
+  --link: var(--mcr-teal); /* #2A6075, 6.93:1 on white */
   --muted: #F0F2F5;
   --muted-foreground: #6b7280;
   --destructive: #ef4444;
@@ -63,6 +65,7 @@
   --accent-foreground: hsl(210, 20%, 95%);
   --action: var(--mcr-pink);
   --action-foreground: #ffffff;
+  --link: var(--mcr-light-blue); /* #5BC6E9, 7.55:1 on dark card */
   --muted: hsl(210, 30%, 15%);
   --muted-foreground: hsl(210, 20%, 60%);
   --destructive: #ef4444;
@@ -89,6 +92,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-action: var(--action);
   --color-action-foreground: var(--action-foreground);
+  --color-link: var(--link);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);

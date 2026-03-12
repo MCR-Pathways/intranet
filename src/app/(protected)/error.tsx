@@ -24,7 +24,7 @@ export default function ProtectedError({
         An unexpected error occurred. Please try again, or contact the{" "}
         <a
           href="mailto:helpdesk@mcrpathways.org"
-          className="text-primary underline hover:text-primary/80"
+          className="text-link underline hover:text-link/80"
         >
           HelpDesk
         </a>{" "}

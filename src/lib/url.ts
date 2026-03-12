@@ -100,7 +100,7 @@ export function linkifyText(text: string): ReactNode[] {
             target: "_blank",
             rel: "noopener noreferrer",
             className:
-              "text-primary underline hover:text-primary/80 break-all",
+              "text-link underline hover:text-link/80 break-all",
           },
           url
         )

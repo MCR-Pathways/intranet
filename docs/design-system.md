@@ -19,10 +19,10 @@ Defined in `src/app/globals.css` `:root`:
 | `--mcr-light-blue` | `#5BC6E9` | Focus ring (dark mode only) |
 | `--mcr-orange` | `#F09336` | Sidebar induction prompt, learning warnings, kiosk accents |
 | `--mcr-yellow` | `#F8D45B` | Pending status badge (via `--status-pending`) |
-| `--mcr-green` | `#B5E046` | **Unused** — defined but zero usage in any component |
-| `--mcr-teal` | `#2A6075` | **Unused** — defined but zero usage in any component |
-| `--mcr-pink` | `#FF82B2` | Action buttons (via `--action` token) — sign-out, special CTAs |
-| `--mcr-wine` | `#751B48` | **Unused** — defined but zero usage in any component |
+| `--mcr-green` | `#B5E046` | Icon palette (via `--icon-fg-green`) |
+| `--mcr-teal` | `#2A6075` | Link colour (via `--link`), avatar palette, icon palette (via `--icon-fg-teal`) |
+| `--mcr-pink` | `#DA417C` | Action buttons (via `--action`), icon palette (via `--icon-fg-pink`). **WCAG fix**: was `#FF82B2` (2.31:1 FAIL) → `#DA417C` (4.18:1, passes 3:1 for icons) |
+| `--mcr-wine` | `#751B48` | Avatar palette, icon palette (via `--icon-fg-wine`) |
 | `--mcr-ivory` | `#FDF9EA` | **Unused** — defined but zero usage in any component |
 
 ### 1.2 Semantic Colour Tokens (Light Mode)
@@ -32,11 +32,18 @@ Defined in `src/app/globals.css` `:root`:
 | `--background` | `#F2F4F7` | Page background (light grey) |
 | `--foreground` | `var(--mcr-dark-blue)` | Default text colour |
 | `--card` | `#ffffff` | Card/modal surfaces |
-| `--primary` | `var(--mcr-dark-blue)` | Primary buttons, active nav, checkboxes, switches, tooltips, progress bars, links |
+| `--primary` | `var(--mcr-dark-blue)` | Primary buttons, active nav, checkboxes, switches, tooltips, progress bars |
 | `--primary-foreground` | `#ffffff` | Text on primary backgrounds |
 | `--secondary` | `#E8ECF0` | Secondary buttons |
 | `--accent` | `#E2E8F0` | Hover/focus highlights |
 | `--action` | `var(--mcr-pink)` | Special action buttons (pink) |
+| `--link` | `var(--mcr-teal)` | Link text colour (#2A6075, 6.93:1 on white). Underlines MUST remain (link-to-body 1.83:1 fails 3:1) |
+| `--icon-fg-teal` | `var(--mcr-teal)` | Icon foreground — teal (6.93:1 on white) |
+| `--icon-fg-green` | `#4A7A00` | Icon foreground — darkened green (5.15:1 on white) |
+| `--icon-fg-orange` | `#9E5B00` | Icon foreground — darkened orange (5.32:1 on white) |
+| `--icon-fg-wine` | `var(--mcr-wine)` | Icon foreground — wine (10.46:1 on white) |
+| `--icon-fg-light-blue` | `#1A6E8E` | Icon foreground — darkened light blue (5.73:1 on white) |
+| `--icon-fg-pink` | `var(--mcr-pink)` | Icon foreground — pink (4.18:1 on white, passes 3:1 for icons) |
 | `--muted` | `#F0F2F5` | Muted backgrounds |
 | `--muted-foreground` | `#6b7280` | Secondary text |
 | `--destructive` | `#ef4444` | Delete/error actions |
@@ -55,8 +62,15 @@ Defined in `src/app/globals.css` `:root`:
 | `--primary` | `var(--mcr-dark-blue)` | Same as light mode |
 | `--ring` | `var(--mcr-light-blue)` | Light blue for visibility |
 | `--action` | `var(--mcr-pink)` | Same as light mode |
+| `--link` | `var(--mcr-light-blue)` | Link text colour (#5BC6E9, 7.55:1 on dark card) |
 | `--secondary` | `hsl(210, 20%, 18%)` | |
 | `--accent` | `hsl(210, 25%, 22%)` | |
+| `--icon-fg-teal` | `var(--mcr-light-blue)` | Bright variant for dark backgrounds (7.55:1) |
+| `--icon-fg-green` | `var(--mcr-green)` | Bright variant for dark backgrounds (9.68:1) |
+| `--icon-fg-orange` | `var(--mcr-orange)` | Bright variant for dark backgrounds (6.30:1) |
+| `--icon-fg-wine` | `#FF82B2` | Bright variant for dark backgrounds (6.41:1) |
+| `--icon-fg-light-blue` | `var(--mcr-light-blue)` | Bright variant for dark backgrounds (7.55:1) |
+| `--icon-fg-pink` | `#FF82B2` | Bright variant for dark backgrounds (6.41:1) |
 
 ### 1.4 Typography
 
@@ -90,6 +104,9 @@ Defined in `src/app/globals.css` `:root`:
 | Tab bar (line) | `border-b` underline variant with `hover:text-foreground` |
 | Tab bar (pill) | `bg-muted` rounded pill |
 | Badges | `bg-primary` (dark blue), `bg-secondary` (grey), `bg-destructive` (red), `bg-status-*` |
+| Links | `text-link underline hover:text-link/80` — teal light mode, light blue dark mode. Underlines mandatory (link-to-body 1.83:1 fails 3:1 without underline) |
+| Avatar fallbacks | `getAvatarColour(name)` from `src/lib/utils.ts` — deterministic Navy/Teal/Wine hash. Org chart excluded (uses department colours) |
+| Icon swatches | `bg-mcr-{colour}/15` background + `text-icon-fg-{colour}` foreground. 8 preset swatches via `ICON_COLOURS` in `src/lib/resource-icons.ts` |
 
 ### 1.7 Status Colour Conventions
 
@@ -123,7 +140,7 @@ Source: MCR Pathways Brand Guidelines (Aug 2025, 40 pages)
 | Yellow | `#F8D45B` | `#F8D45B` | Matches |
 | Light Green | `#AFDA44` | `#B5E046` | **Differs** |
 | Dark Pink | `#892055` | — | **Missing from codebase** |
-| Pink | `#DA417C` | `#FF82B2` | **Differs** (codebase is lighter/more saturated) |
+| Pink | `#DA417C` | `#DA417C` | **Matches** (corrected from `#FF82B2` in brand colour refinement PR #115) |
 | Ivory | `#FFFFE3` | `#FDF9EA` | **Differs** (codebase is warmer/less green) |
 
 **Additional codebase-only colours** (not in brand guidelines):
@@ -231,7 +248,7 @@ Based on research across design systems and common UI colour mistakes:
 
 ### 3.8 Where MCR Intranet Differs
 
-- **4 defined brand colours are completely unused** (green, teal, wine, ivory) — wasted design tokens
+- ~~**4 defined brand colours are completely unused**~~ — RESOLVED: teal (links, avatars, icons), wine (avatars, icons), green (icons) now used. Only ivory remains unused.
 - **No brand colour in sidebar** — unlike Slack's distinctive approach
 - **Orange (the stated primary brand colour) barely appears** — only in induction prompt and learning module warnings
 - **Pink action token is unconventional** — most platforms use their primary colour for all actions, not a secondary brand colour
@@ -241,35 +258,21 @@ Based on research across design systems and common UI colour mistakes:
 
 ## 4. Proposals
 
-### 4.1 Colour Token Accuracy (Investigation Needed)
+### 4.1 Colour Token Accuracy — RESOLVED
 
-**Current state**: 5 hex values differ from official guidelines, 2 colours missing entirely.
+**Decision (Mar 2026):** Pink corrected from `#FF82B2` to `#DA417C` (matches brand guidelines, passes WCAG 3:1 for icons/large text at 4.18:1). Green and ivory kept as-is (minor differences, no WCAG impact).
 
-**Recommendation**: Visual comparison needed before changing. The codebase values may have been intentionally adapted for screen use (guidelines could be print-optimised). Specifically:
+Missing Mid Blue (#347791) and Dark Pink (#892055) remain unimplemented — no current use case identified.
 
-| Colour | Guidelines | Codebase | Visual Difference |
-|--------|-----------|----------|-------------------|
-| Pink | `#DA417C` (darker, muted) | `#FF82B2` (brighter, more saturated) | Significant — `#DA417C` is closer to the public website's "Donate" button |
-| Light Green | `#AFDA44` (slightly duller) | `#B5E046` (brighter) | Minor shift |
-| Ivory | `#FFFFE3` (green-tinted) | `#FDF9EA` (warm cream) | Noticeable — different colour feel entirely |
+### 4.2 Strategic Brand Colour Placement — RESOLVED
 
-**Action**: Create a visual swatch comparison (side-by-side in the browser) before committing to either set. The missing Mid Blue (#347791) and Dark Pink (#892055) should be added regardless — they appear prominently on the public website.
+**Decision (Mar 2026):** Implemented 3 brand colour touchpoints:
 
-### 4.2 Strategic Brand Colour Placement
+1. **Avatar palette** — Navy/Teal/Wine deterministic hash via `getAvatarColour()`. Gives visual variety to user avatars (was all-navy). Pink dropped from avatar palette (4.18:1 fails 4.5:1 AA for small white text on avatar backgrounds).
+2. **Link colour** — `--link` token using Teal (#2A6075) light / Light Blue (#5BC6E9) dark. Distinguishes clickable text from body text.
+3. **Icon palette** — 6 MCR brand swatches for resource category icons. Darkened variants in light mode for contrast, bright originals in dark mode. Legacy DB keys auto-mapped (blue→teal, red→wine, purple→light-blue).
 
-Following the industry pattern of 1-3 brand touchpoints, here are options to consider (each independently):
-
-**Option A — Orange accent for attention-drawing elements:**
-Use `mcr-orange` for elements that need to draw the eye — notification badges, "new" indicators, important banners, featured content markers. This follows the public website's use of orange for highlights. Currently, orange only appears in the induction prompt and learning warnings.
-
-**Option B — Subtle brand warmth in empty states / onboarding:**
-Use brand colours in empty state illustrations, onboarding cards, or welcome messages. Asana does this — celebratory moments use brand colour, daily work is neutral. MCR's "Vital Spark" brand idea suits this approach.
-
-**Option C — Primary button colour investigation:**
-The current dark blue primary works well for a professional tool. However, if the organisation wants stronger MCR identity, the orange primary question should be explored with mockups. GitHub proves that a non-neutral primary button colour can work if it's consistent.
-
-**Option D — Retire unused tokens:**
-Green, teal, wine, and ivory are defined but unused. Options: (a) find appropriate uses for them, (b) remove them to reduce maintenance surface, or (c) keep them documented for future use. Recommendation: keep them defined (costs nothing) but don't force usage.
+Options B (empty states), C (orange primary), and D (retire tokens) remain open for future consideration. Ivory is the only remaining unused token.
 
 ### 4.3 Typography Alignment
 
@@ -300,11 +303,9 @@ The public website's ivory background suits its emotional, charity-marketing pur
 
 ## 5. Open Questions
 
-These decisions require stakeholder input or visual prototyping:
-
 1. **Should orange replace dark blue as `--primary`?** — Needs mockup comparison
-2. **Should we correct hex values to match guidelines exactly?** — Needs visual swatch comparison (especially pink: #FF82B2 vs #DA417C)
-3. **Where (if anywhere) should unused brand colours appear?** — Green, teal, wine, ivory
+2. ~~**Should we correct hex values to match guidelines exactly?**~~ — RESOLVED: Pink corrected to `#DA417C`
+3. ~~**Where (if anywhere) should unused brand colours appear?**~~ — RESOLVED: Teal, wine, green used in avatars/icons. Ivory remains unused.
 4. **Should the sidebar have a brand-coloured background?** — Slack pattern (distinctive but polarising)
 5. **Should the `--action` token remain pink, or merge with `--primary`?** — Most platforms use one action colour, not two
 
