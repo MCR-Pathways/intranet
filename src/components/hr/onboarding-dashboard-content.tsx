@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Settings, Search, AlertCircle, ClipboardList } from "lucide-react";
-import { getInitials, getAvatarColour } from "@/lib/utils";
+import { getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 
 // =============================================
 // TYPES
@@ -169,7 +169,7 @@ function OnboardingRow({ checklist }: { checklist: OnboardingChecklistWithProgre
       )}>
         {/* Avatar */}
         <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={checklist.employee_avatar ?? undefined} />
+          <AvatarImage src={filterAvatarUrl(checklist.employee_avatar)} />
           <AvatarFallback className={cn(getAvatarColour(checklist.employee_name).bg, getAvatarColour(checklist.employee_name).fg, "text-xs")}>
             {getInitials(checklist.employee_name)}
           </AvatarFallback>

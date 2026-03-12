@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, X } from "lucide-react";
-import { cn, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
@@ -170,7 +170,7 @@ export function PostCreateDialog({
           <div className="flex items-center gap-3 py-3">
             <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage
-                src={userProfile.avatar_url || undefined}
+                src={filterAvatarUrl(userProfile.avatar_url)}
                 alt={displayName}
               />
               <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-sm")}>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 
 describe("cn utility", () => {
   it("merges class names", () => {
@@ -228,5 +228,43 @@ describe("getAvatarColour", () => {
     const colours = names.map((n) => getAvatarColour(n).bg);
     const unique = new Set(colours);
     expect(unique.size).toBeGreaterThan(1);
+  });
+});
+
+describe("filterAvatarUrl", () => {
+  it("returns undefined for null", () => {
+    expect(filterAvatarUrl(null)).toBeUndefined();
+  });
+
+  it("returns undefined for undefined", () => {
+    expect(filterAvatarUrl(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined for empty string", () => {
+    expect(filterAvatarUrl("")).toBeUndefined();
+  });
+
+  it("filters Google default avatar URLs", () => {
+    expect(
+      filterAvatarUrl(
+        "https://lh3.googleusercontent.com/a/ACg8ocLHbOUXzpAUaqmpX9IHa0bVRvojKC60pwa-8eWVWXnu52ffNQ=s96-c"
+      )
+    ).toBeUndefined();
+  });
+
+  it("filters any googleusercontent.com URL", () => {
+    expect(
+      filterAvatarUrl("https://lh3.googleusercontent.com/a/default-user=s96-c")
+    ).toBeUndefined();
+  });
+
+  it("passes through non-Google URLs", () => {
+    const url = "https://example.com/avatar.jpg";
+    expect(filterAvatarUrl(url)).toBe(url);
+  });
+
+  it("passes through relative URLs (future upload feature)", () => {
+    const url = "/uploads/avatars/abc123.jpg";
+    expect(filterAvatarUrl(url)).toBe(url);
   });
 });
