@@ -130,6 +130,11 @@ export const HR_ONLY_LEAVE_TYPES: LeaveType[] = [
   "jury_service",
 ];
 
+/** All valid leave types (both employee-requestable and HR-only). */
+export const VALID_LEAVE_TYPES = Object.keys(
+  LEAVE_TYPE_CONFIG
+) as LeaveType[];
+
 // =============================================
 // CONTRACT TYPES
 // =============================================
