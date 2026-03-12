@@ -1084,13 +1084,11 @@ export async function decideFWRAppeal(
     return { success: false, error: "Appeal record not found" };
   }
 
-  if (data.outcome_notes) {
-    const outErr = validateTextLength(data.outcome_notes, MAX_LONG_TEXT_LENGTH);
-    if (outErr) return { success: false, error: outErr };
-  }
-  if (data.meeting_notes) {
-    const meetErr = validateTextLength(data.meeting_notes, MAX_LONG_TEXT_LENGTH);
-    if (meetErr) return { success: false, error: meetErr };
+  for (const value of [data.outcome_notes, data.meeting_notes]) {
+    if (value) {
+      const err = validateTextLength(value, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   // Step 1: Update appeal record
