@@ -15,6 +15,7 @@ import type {
 } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // CONSTANTS
@@ -114,7 +115,6 @@ async function verifyFWRAuthority(
 // =============================================
 
 const CONSULTATION_FORMAT_VALUES = ["in_person", "video", "phone"] as const;
-const MAX_TEXT_LENGTH = 5000;
 
 function sanitiseConsultationFields(
   data: Record<string, unknown>,
@@ -129,8 +129,8 @@ function sanitiseConsultationFields(
     } else if (field === "consultation_format") {
       if (typeof value !== "string" || !CONSULTATION_FORMAT_VALUES.includes(value as typeof CONSULTATION_FORMAT_VALUES[number])) continue;
     } else {
-      // Text fields: must be string and within length limit
-      if (typeof value !== "string" || value.length > MAX_TEXT_LENGTH) continue;
+      // Text fields: must be string
+      if (typeof value !== "string") continue;
     }
 
     sanitised[field] = value;
@@ -284,6 +284,14 @@ export async function createFlexibleWorkingRequest(data: {
 
   if (!VALID_REQUEST_TYPES.includes(data.request_type as FWRRequestType)) {
     return { success: false, error: "Invalid request type" };
+  }
+
+  // Validate text lengths (FWR fields are legally significant — LONG limit)
+  for (const value of [data.current_working_pattern, data.requested_working_pattern, data.reason]) {
+    if (value) {
+      const err = validateTextLength(value, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   // Fetch the employee's profile for manager_id and current work_pattern
@@ -518,6 +526,16 @@ export async function recordConsultation(
     return { success: false, error: "Invalid consultation format" };
   }
 
+  // Validate text lengths before sanitising
+  const consultationTextFields = ["consultation_attendees", "consultation_summary", "consultation_alternatives"] as const;
+  for (const field of consultationTextFields) {
+    const val = data[field];
+    if (val && typeof val === "string") {
+      const err = validateTextLength(val, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
+  }
+
   const sanitised = sanitiseConsultationFields(data);
   if (Object.keys(sanitised).length === 0) {
     return { success: false, error: "No valid consultation fields provided" };
@@ -574,6 +592,11 @@ export async function approveFlexibleWorkingRequest(
   const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
+  }
+
+  if (data.decision_notes) {
+    const notesErr = validateTextLength(data.decision_notes, MAX_LONG_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   const profileId = request.profile_id as string;
@@ -688,6 +711,14 @@ export async function rejectFlexibleWorkingRequest(
 
   if (!data.rejection_explanation?.trim()) {
     return { success: false, error: "An explanation of why refusal is reasonable is required" };
+  }
+
+  const explErr = validateTextLength(data.rejection_explanation, MAX_LONG_TEXT_LENGTH);
+  if (explErr) return { success: false, error: explErr };
+
+  if (data.decision_notes) {
+    const notesErr = validateTextLength(data.decision_notes, MAX_LONG_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   // Validate each ground
@@ -936,6 +967,9 @@ export async function submitFWRAppeal(
     return { success: false, error: "Only rejected requests can be appealed" };
   }
 
+  const appealErr = validateTextLength(appealReason, MAX_LONG_TEXT_LENGTH);
+  if (appealErr) return { success: false, error: appealErr };
+
   // Step 1: Create appeal record
   const { error: appealError } = await supabase
     .from("fwr_appeals")
@@ -1048,6 +1082,13 @@ export async function decideFWRAppeal(
 
   if (!appeal) {
     return { success: false, error: "Appeal record not found" };
+  }
+
+  for (const value of [data.outcome_notes, data.meeting_notes]) {
+    if (value) {
+      const err = validateTextLength(value, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   // Step 1: Update appeal record

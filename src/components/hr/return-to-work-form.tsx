@@ -43,6 +43,7 @@ import {
   unlockRTWForm,
   fetchTriggerPointStatus,
 } from "@/app/(protected)/hr/absence/actions";
+import { MAX_LONG_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { AlertTriangle, CheckCircle2, Info, Loader2, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -332,6 +333,7 @@ export function ReturnToWorkForm({
                   placeholder="Discuss the reason for the absence"
                   rows={2}
                   disabled={!isEditable}
+                  maxLength={MAX_LONG_TEXT_LENGTH}
                 />
               </div>
 
@@ -343,6 +345,7 @@ export function ReturnToWorkForm({
                   placeholder="Notes from the wellbeing discussion"
                   rows={3}
                   disabled={!isEditable}
+                  maxLength={MAX_LONG_TEXT_LENGTH}
                 />
               </div>
 
@@ -354,6 +357,7 @@ export function ReturnToWorkForm({
                   placeholder="Any medical advice the employee is happy to share, including adjustments"
                   rows={2}
                   disabled={!isEditable}
+                  maxLength={MAX_LONG_TEXT_LENGTH}
                 />
               </div>
 
@@ -417,6 +421,7 @@ export function ReturnToWorkForm({
                   placeholder="Any workplace adjustments required"
                   rows={2}
                   disabled={!isEditable}
+                  maxLength={MAX_LONG_TEXT_LENGTH}
                 />
               </div>
 
@@ -439,6 +444,7 @@ export function ReturnToWorkForm({
                     placeholder="Details of the phased return arrangement"
                     rows={2}
                     disabled={!isEditable}
+                    maxLength={MAX_LONG_TEXT_LENGTH}
                   />
                 </div>
               )}
@@ -495,6 +501,7 @@ export function ReturnToWorkForm({
                         placeholder="e.g. Attendance review meeting to be scheduled"
                         rows={2}
                         disabled={!isEditable}
+                        maxLength={MAX_LONG_TEXT_LENGTH}
                       />
                     </div>
                   </>
@@ -532,6 +539,7 @@ export function ReturnToWorkForm({
                     placeholder="Explain why procedures were not followed"
                     rows={2}
                     disabled={!isEditable}
+                    maxLength={MAX_LONG_TEXT_LENGTH}
                   />
                 </div>
               )}
@@ -551,6 +559,7 @@ export function ReturnToWorkForm({
               placeholder="Summary of discussion, including any adjustments or phased return arrangements agreed"
               rows={3}
               disabled={!isEditable}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </section>
 
@@ -567,6 +576,7 @@ export function ReturnToWorkForm({
                 onChange={(e) => setEmployeeComments(e.target.value)}
                 placeholder="Add any comments before confirming (optional)"
                 rows={2}
+                maxLength={MAX_MEDIUM_TEXT_LENGTH}
               />
             ) : (
               <p className="text-sm text-muted-foreground">

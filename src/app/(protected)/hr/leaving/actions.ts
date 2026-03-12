@@ -10,6 +10,7 @@ import {
 import type { LeavingReason } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // ALLOWED FIELDS (whitelist for input sanitisation)
@@ -132,6 +133,11 @@ export async function createLeavingForm(data: {
     return { success: false, error: "Invalid leaving reason" };
   }
 
+  if (data.reason_details) {
+    const detailsErr = validateTextLength(data.reason_details, MAX_LONG_TEXT_LENGTH);
+    if (detailsErr) return { success: false, error: detailsErr };
+  }
+
   // Verify authority
   const auth = await verifyLeavingAuthority(supabase, user.id, data.profile_id);
   if (!auth.authorised) {
@@ -220,6 +226,20 @@ export async function updateLeavingForm(
   const sanitised = sanitiseLeavingFields(data);
   if (Object.keys(sanitised).length === 0) {
     return { success: false, error: "No valid fields to update" };
+  }
+
+  // Validate text field lengths (leaving fields are legally significant — LONG limit)
+  const LEAVING_TEXT_FIELDS = [
+    "reason_details", "exit_interview_notes", "knowledge_transfer_notes",
+    "equipment_notes", "additional_notes",
+  ] as const;
+
+  for (const field of LEAVING_TEXT_FIELDS) {
+    const val = sanitised[field];
+    if (val && typeof val === "string") {
+      const err = validateTextLength(val, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
   }
 
   const { error: updateError } = await supabase

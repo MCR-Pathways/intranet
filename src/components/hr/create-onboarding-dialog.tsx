@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface CreateOnboardingDialogProps {
@@ -157,6 +158,7 @@ export function CreateOnboardingDialog({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any additional context for this onboarding"
               rows={2}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
         </div>

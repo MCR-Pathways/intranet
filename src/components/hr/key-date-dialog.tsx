@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { createKeyDate, updateKeyDate } from "@/app/(protected)/hr/key-dates/actions";
+import { MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 const DATE_TYPE_OPTIONS = [
@@ -149,12 +150,12 @@ export function KeyDateDialog({
 
           <div className="grid gap-2">
             <Label>Title *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Probation review" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Probation review" maxLength={MAX_SHORT_TEXT_LENGTH} />
           </div>
 
           <div className="grid gap-2">
             <Label>Description</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={MAX_MEDIUM_TEXT_LENGTH} />
           </div>
         </div>
 

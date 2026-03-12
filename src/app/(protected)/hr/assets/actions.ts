@@ -3,6 +3,7 @@
 import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // CREATE ASSET
@@ -35,6 +36,11 @@ export async function createAsset(data: {
 
   if (!sanitized.asset_type_id || !sanitized.asset_tag) {
     return { success: false, error: "Asset type and tag are required" };
+  }
+
+  if (sanitized.notes && typeof sanitized.notes === "string") {
+    const notesErr = validateTextLength(sanitized.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   sanitized.status = "available";
@@ -90,6 +96,11 @@ export async function updateAsset(
     return { success: false, error: "No valid fields to update" };
   }
 
+  if (sanitized.notes && typeof sanitized.notes === "string") {
+    const notesErr = validateTextLength(sanitized.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
+  }
+
   const { error } = await supabase
     .from("assets")
     .update(sanitized)
@@ -134,6 +145,11 @@ export async function assignAsset(
 
   if (asset.status !== "available" && asset.status !== "in_repair") {
     return { success: false, error: `Cannot assign asset with status '${asset.status}'` };
+  }
+
+  if (data.notes) {
+    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   // Create assignment record
@@ -198,6 +214,11 @@ export async function returnAsset(
 
   if (!assignment) {
     return { success: false, error: "Assignment not found" };
+  }
+
+  if (data.notes) {
+    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   // Update assignment with return info

@@ -27,6 +27,7 @@ import {
   formatLeaveDays,
 } from "@/lib/hr";
 import { requestLeave } from "@/app/(protected)/hr/leave/actions";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface LeaveRequestDialogProps {
@@ -248,6 +249,7 @@ export function LeaveRequestDialog({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Add any notes for your manager..."
               rows={3}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
         </div>

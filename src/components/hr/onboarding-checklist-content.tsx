@@ -57,6 +57,7 @@ import { LoadingButton } from "@/components/ui/loading-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, Plus, Ban } from "lucide-react";
 import { getInitials } from "@/lib/utils";
+import { MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 // =============================================
@@ -416,6 +417,7 @@ export function OnboardingChecklistContent({
                 value={newItemTitle}
                 onChange={(e) => setNewItemTitle(e.target.value)}
                 placeholder="e.g. Order additional monitor"
+                maxLength={MAX_SHORT_TEXT_LENGTH}
               />
             </div>
             <div className="space-y-2">
@@ -425,6 +427,7 @@ export function OnboardingChecklistContent({
                 value={newItemDescription}
                 onChange={(e) => setNewItemDescription(e.target.value)}
                 rows={2}
+                maxLength={MAX_MEDIUM_TEXT_LENGTH}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
