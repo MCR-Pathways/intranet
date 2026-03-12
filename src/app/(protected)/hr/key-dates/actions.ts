@@ -3,6 +3,7 @@
 import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // CREATE KEY DATE
@@ -20,6 +21,14 @@ export async function createKeyDate(data: {
 
   if (!data.profile_id || !data.date_type || !data.due_date || !data.title) {
     return { success: false, error: "Employee, type, date, and title are required" };
+  }
+
+  const titleErr = validateTextLength(data.title, MAX_SHORT_TEXT_LENGTH);
+  if (titleErr) return { success: false, error: titleErr };
+
+  if (data.description) {
+    const descErr = validateTextLength(data.description, MAX_MEDIUM_TEXT_LENGTH);
+    if (descErr) return { success: false, error: descErr };
   }
 
   const { error } = await supabase.from("key_dates").insert({
@@ -67,6 +76,15 @@ export async function updateKeyDate(
 
   if (Object.keys(sanitized).length === 0) {
     return { success: false, error: "No valid fields to update" };
+  }
+
+  if (sanitized.title && typeof sanitized.title === "string") {
+    const titleErr = validateTextLength(sanitized.title, MAX_SHORT_TEXT_LENGTH);
+    if (titleErr) return { success: false, error: titleErr };
+  }
+  if (sanitized.description && typeof sanitized.description === "string") {
+    const descErr = validateTextLength(sanitized.description, MAX_MEDIUM_TEXT_LENGTH);
+    if (descErr) return { success: false, error: descErr };
   }
 
   // Fetch profile_id for revalidation

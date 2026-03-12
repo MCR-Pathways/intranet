@@ -15,6 +15,7 @@ import type {
 } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // CONSTANTS
@@ -114,7 +115,6 @@ async function verifyFWRAuthority(
 // =============================================
 
 const CONSULTATION_FORMAT_VALUES = ["in_person", "video", "phone"] as const;
-const MAX_TEXT_LENGTH = 5000;
 
 function sanitiseConsultationFields(
   data: Record<string, unknown>,
@@ -130,7 +130,7 @@ function sanitiseConsultationFields(
       if (typeof value !== "string" || !CONSULTATION_FORMAT_VALUES.includes(value as typeof CONSULTATION_FORMAT_VALUES[number])) continue;
     } else {
       // Text fields: must be string and within length limit
-      if (typeof value !== "string" || value.length > MAX_TEXT_LENGTH) continue;
+      if (typeof value !== "string" || value.length > MAX_LONG_TEXT_LENGTH) continue;
     }
 
     sanitised[field] = value;
@@ -284,6 +284,18 @@ export async function createFlexibleWorkingRequest(data: {
 
   if (!VALID_REQUEST_TYPES.includes(data.request_type as FWRRequestType)) {
     return { success: false, error: "Invalid request type" };
+  }
+
+  // Validate text lengths (FWR fields are legally significant — LONG limit)
+  const patternErr = validateTextLength(data.current_working_pattern, MAX_LONG_TEXT_LENGTH);
+  if (patternErr) return { success: false, error: patternErr };
+
+  const requestedErr = validateTextLength(data.requested_working_pattern, MAX_LONG_TEXT_LENGTH);
+  if (requestedErr) return { success: false, error: requestedErr };
+
+  if (data.reason) {
+    const reasonErr = validateTextLength(data.reason, MAX_LONG_TEXT_LENGTH);
+    if (reasonErr) return { success: false, error: reasonErr };
   }
 
   // Fetch the employee's profile for manager_id and current work_pattern
@@ -576,6 +588,11 @@ export async function approveFlexibleWorkingRequest(
     return { success: false, error: auth.error ?? "Not authorised" };
   }
 
+  if (data.decision_notes) {
+    const notesErr = validateTextLength(data.decision_notes, MAX_LONG_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
+  }
+
   const profileId = request.profile_id as string;
   const isTrial = data.trial_period === true && data.trial_end_date;
   const newStatus = isTrial ? "approved_trial" : "approved";
@@ -688,6 +705,14 @@ export async function rejectFlexibleWorkingRequest(
 
   if (!data.rejection_explanation?.trim()) {
     return { success: false, error: "An explanation of why refusal is reasonable is required" };
+  }
+
+  const explErr = validateTextLength(data.rejection_explanation, MAX_LONG_TEXT_LENGTH);
+  if (explErr) return { success: false, error: explErr };
+
+  if (data.decision_notes) {
+    const notesErr = validateTextLength(data.decision_notes, MAX_LONG_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   // Validate each ground
@@ -936,6 +961,9 @@ export async function submitFWRAppeal(
     return { success: false, error: "Only rejected requests can be appealed" };
   }
 
+  const appealErr = validateTextLength(appealReason, MAX_LONG_TEXT_LENGTH);
+  if (appealErr) return { success: false, error: appealErr };
+
   // Step 1: Create appeal record
   const { error: appealError } = await supabase
     .from("fwr_appeals")
@@ -1048,6 +1076,15 @@ export async function decideFWRAppeal(
 
   if (!appeal) {
     return { success: false, error: "Appeal record not found" };
+  }
+
+  if (data.outcome_notes) {
+    const outErr = validateTextLength(data.outcome_notes, MAX_LONG_TEXT_LENGTH);
+    if (outErr) return { success: false, error: outErr };
+  }
+  if (data.meeting_notes) {
+    const meetErr = validateTextLength(data.meeting_notes, MAX_LONG_TEXT_LENGTH);
+    if (meetErr) return { success: false, error: meetErr };
   }
 
   // Step 1: Update appeal record

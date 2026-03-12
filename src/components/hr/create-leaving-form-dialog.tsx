@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { LEAVING_REASON_CONFIG } from "@/lib/hr";
 import { createLeavingForm } from "@/app/(protected)/hr/leaving/actions";
+import { MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface Employee {
@@ -159,6 +160,7 @@ export function CreateLeavingFormDialog({
                 onChange={(e) => setReasonDetails(e.target.value)}
                 placeholder="Provide additional details..."
                 rows={3}
+                maxLength={MAX_LONG_TEXT_LENGTH}
               />
             </div>
           )}

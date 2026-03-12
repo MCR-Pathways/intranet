@@ -29,6 +29,7 @@ import {
   validateHRDocument,
 } from "@/lib/hr";
 import { recordAbsence, uploadFitNote } from "@/app/(protected)/hr/absence/actions";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { AlertTriangle, Info } from "lucide-react";
 import { toast } from "sonner";
 
@@ -239,6 +240,7 @@ export function RecordAbsenceDialog({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reason for absence (optional)"
               rows={2}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
 

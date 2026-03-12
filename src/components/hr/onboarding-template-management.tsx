@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 // =============================================
@@ -432,6 +433,7 @@ export function OnboardingTemplateManagement({
                 onChange={(e) => setNewTemplateDescription(e.target.value)}
                 placeholder="Brief description of when to use this template"
                 rows={2}
+                maxLength={MAX_MEDIUM_TEXT_LENGTH}
               />
             </div>
           </div>
@@ -480,6 +482,7 @@ export function OnboardingTemplateManagement({
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={2}
+                maxLength={MAX_MEDIUM_TEXT_LENGTH}
               />
             </div>
           </div>
@@ -746,7 +749,7 @@ function ItemFormDialog({
               value={itemTitle}
               onChange={(e) => onItemTitleChange(e.target.value)}
               placeholder="e.g. Collect signed contract"
-              maxLength={200}
+              maxLength={MAX_SHORT_TEXT_LENGTH}
             />
           </div>
           <div className="space-y-2">
@@ -757,6 +760,7 @@ function ItemFormDialog({
               onChange={(e) => onItemDescriptionChange(e.target.value)}
               placeholder="Additional details or instructions"
               rows={2}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">

@@ -11,6 +11,7 @@ import {
 import type { LeaveType, Region } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // SELECT CONSTANTS
@@ -70,6 +71,12 @@ export async function requestLeave(data: {
   // Validate leave type
   if (!REQUESTABLE_LEAVE_TYPES.includes(data.leave_type as LeaveType)) {
     return { success: false, error: "Invalid leave type for self-service request" };
+  }
+
+  // Validate text lengths
+  if (data.reason) {
+    const reasonErr = validateTextLength(data.reason, MAX_MEDIUM_TEXT_LENGTH);
+    if (reasonErr) return { success: false, error: reasonErr };
   }
 
   // Validate dates
@@ -208,6 +215,11 @@ export async function approveLeave(requestId: string, notes?: string) {
     return { success: false, error: "Not authenticated" };
   }
 
+  if (notes) {
+    const notesErr = validateTextLength(notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
+  }
+
   // Fetch the request to check ownership and dates for leave integration
   const { data: request } = await supabase
     .from("leave_requests")
@@ -283,6 +295,9 @@ export async function rejectLeave(requestId: string, reason: string) {
   if (!reason?.trim()) {
     return { success: false, error: "A reason is required when rejecting leave" };
   }
+
+  const reasonErr = validateTextLength(reason, MAX_MEDIUM_TEXT_LENGTH);
+  if (reasonErr) return { success: false, error: reasonErr };
 
   // Fetch the request
   const { data: request } = await supabase
@@ -411,6 +426,16 @@ export async function recordLeave(data: {
     return { success: false, error: "End date cannot be before start date" };
   }
 
+  // Validate text lengths
+  if (data.reason) {
+    const reasonErr = validateTextLength(data.reason, MAX_MEDIUM_TEXT_LENGTH);
+    if (reasonErr) return { success: false, error: reasonErr };
+  }
+  if (data.notes) {
+    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
+  }
+
   // Fetch employee region for working day calculation
   const { data: profile } = await supabase
     .from("profiles")
@@ -509,6 +534,11 @@ export async function upsertLeaveEntitlement(data: {
 
   if (data.base_entitlement_days < 0) {
     return { success: false, error: "Base entitlement cannot be negative" };
+  }
+
+  if (data.notes) {
+    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   const { error } = await supabase.from("leave_entitlements").upsert(

@@ -23,6 +23,7 @@ import {
 import { Info } from "lucide-react";
 import { FWR_REQUEST_TYPE_CONFIG } from "@/lib/hr";
 import { createFlexibleWorkingRequest } from "@/app/(protected)/hr/flexible-working/actions";
+import { MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface FlexibleWorkingRequestDialogProps {
@@ -132,6 +133,7 @@ export function FlexibleWorkingRequestDialog({
               value={currentPattern}
               onChange={(e) => setCurrentPattern(e.target.value)}
               rows={3}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -145,6 +147,7 @@ export function FlexibleWorkingRequestDialog({
               value={requestedPattern}
               onChange={(e) => setRequestedPattern(e.target.value)}
               rows={3}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -171,6 +174,7 @@ export function FlexibleWorkingRequestDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
         </div>

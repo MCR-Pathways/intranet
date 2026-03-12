@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { createAsset, updateAsset } from "@/app/(protected)/hr/assets/actions";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface AssetType {
@@ -168,7 +169,7 @@ export function AssetDialog({ assetTypes, open, onOpenChange, existing }: AssetD
 
           <div className="grid gap-2">
             <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={MAX_MEDIUM_TEXT_LENGTH} />
           </div>
         </div>
 
