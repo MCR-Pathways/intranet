@@ -48,6 +48,7 @@ export async function proxy(request: NextRequest) {
     is_ld_admin?: boolean;
     is_systems_admin?: boolean;
     is_external?: boolean;
+    is_content_editor?: boolean;
   };
 
   let profile: {

@@ -14,6 +14,7 @@ export async function updateUserProfile(
     is_hr_admin?: boolean;
     is_ld_admin?: boolean;
     is_systems_admin?: boolean;
+    is_content_editor?: boolean;
     is_line_manager?: boolean;
     fte?: number;
     contract_type?: string;
@@ -38,6 +39,7 @@ export async function updateUserProfile(
     delete data.is_hr_admin;
     delete data.is_ld_admin;
     delete data.is_systems_admin;
+    delete data.is_content_editor;
   }
 
   // Systems-only admins cannot change HR admin flag or department
@@ -55,6 +57,7 @@ export async function updateUserProfile(
     "is_hr_admin",
     "is_ld_admin",
     "is_systems_admin",
+    "is_content_editor",
     "is_line_manager",
     "fte",
     "contract_type",

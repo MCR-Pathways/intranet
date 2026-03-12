@@ -357,6 +357,7 @@ export default async function EmployeeDetailPage({
     is_hr_admin: profile.is_hr_admin as boolean,
     is_ld_admin: profile.is_ld_admin as boolean,
     is_systems_admin: (profile.is_systems_admin as boolean) ?? false,
+    is_content_editor: (profile.is_content_editor as boolean) ?? false,
     is_external: (profile.is_external as boolean) ?? false,
     phone: profile.phone as string | null,
     start_date: profile.start_date as string | null,

@@ -40,6 +40,7 @@ export interface ProfileSummary {
   is_hr_admin: boolean;
   is_ld_admin: boolean;
   is_systems_admin: boolean;
+  is_content_editor: boolean;
   is_external: boolean;
 }
 

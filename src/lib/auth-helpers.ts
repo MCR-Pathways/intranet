@@ -32,3 +32,9 @@ export function isSystemsAdminEffective(profile: Pick<Profile, "is_systems_admin
   if (!profile || profile.status !== "active") return false;
   return profile.is_systems_admin === true;
 }
+
+/** Check if a profile has explicit content editor access */
+export function isContentEditorEffective(profile: Pick<Profile, "is_content_editor" | "status"> | null): boolean {
+  if (!profile || profile.status !== "active") return false;
+  return profile.is_content_editor === true;
+}

@@ -1,7 +1,7 @@
 /**
  * Tests for intranet resource (knowledge base) server actions.
  *
- * Mock strategy: mock @/lib/auth (requireHRAdmin / getCurrentUser) instead
+ * Mock strategy: mock @/lib/auth (requireContentEditor / getCurrentUser) instead
  * of the Supabase client. Use per-test mockFrom.mockImplementation for chain routing.
  */
 
@@ -13,7 +13,7 @@ const {
   mockSupabase,
   mockFrom,
   mockRpc,
-  requireHRAdmin,
+  requireContentEditor,
   getCurrentUser,
   revalidatePath,
 } = vi.hoisted(() => {
@@ -24,14 +24,14 @@ const {
     mockSupabase,
     mockFrom,
     mockRpc,
-    requireHRAdmin: vi.fn(),
+    requireContentEditor: vi.fn(),
     getCurrentUser: vi.fn(),
     revalidatePath: vi.fn(),
   };
 });
 
 vi.mock("@/lib/auth", () => ({
-  requireHRAdmin,
+  requireContentEditor,
   getCurrentUser,
 }));
 
@@ -89,7 +89,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireHRAdmin.mockResolvedValue({
+  requireContentEditor.mockResolvedValue({
     supabase: mockSupabase as never,
     user: { id: "admin-123" } as never,
     profile: { id: "admin-123" } as never,
@@ -205,8 +205,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to create");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(createCategory({ name: "Test" })).rejects.toThrow("Not authorised");
     });
   });
@@ -286,8 +286,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to update");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(updateCategory("cat-1", { name: "New" })).rejects.toThrow("Not authorised");
     });
   });
@@ -346,8 +346,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to delete");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(deleteCategory("cat-1")).rejects.toThrow("Not authorised");
     });
   });
@@ -491,8 +491,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to create");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(createArticle("cat-1", { title: "Test" })).rejects.toThrow("Not authorised");
     });
   });
@@ -610,8 +610,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to update");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(updateArticle("art-1", { title: "New" })).rejects.toThrow("Not authorised");
     });
   });
@@ -644,8 +644,8 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to delete");
     });
 
-    it("throws when user is not HR admin", async () => {
-      vi.mocked(requireHRAdmin).mockRejectedValue(new Error("Not authorised"));
+    it("throws when user is not a content editor or HR admin", async () => {
+      vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(deleteArticle("art-1")).rejects.toThrow("Not authorised");
     });
   });

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import {
   fetchCategoriesWithClient,
   fetchFeaturedArticles,
@@ -12,7 +12,7 @@ export default async function ResourcesPage() {
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const isHRAdmin = isHRAdminEffective(profile);
+  const canEdit = isHRAdminEffective(profile) || isContentEditorEffective(profile);
   const [categories, featuredArticles] = await Promise.all([
     fetchCategoriesWithClient(supabase),
     fetchFeaturedArticles(supabase),
@@ -30,7 +30,7 @@ export default async function ResourcesPage() {
       />
 
       <FeaturedResources articles={featuredArticles} />
-      <ResourcesGrid categories={categories} isHRAdmin={isHRAdmin} />
+      <ResourcesGrid categories={categories} canEdit={canEdit} />
     </div>
   );
 }

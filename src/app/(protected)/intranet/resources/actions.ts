@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentUser, requireHRAdmin } from "@/lib/auth";
+import { getCurrentUser, requireContentEditor } from "@/lib/auth";
 import { extractPlainText } from "@/lib/tiptap";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TiptapDocument } from "@/lib/tiptap";
@@ -230,7 +230,7 @@ export async function createCategory(data: {
   icon?: string;
   icon_colour?: string | null;
 }): Promise<{ success: boolean; error?: string; category?: ResourceCategory }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   const name = data.name?.trim();
   if (!name) {
@@ -285,7 +285,7 @@ export async function updateCategory(
     sort_order?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Whitelist allowed fields
   const update: Record<string, unknown> = {};
@@ -336,7 +336,7 @@ export async function updateCategory(
 export async function deleteCategory(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase, user } = await requireHRAdmin();
+  const { supabase, user } = await requireContentEditor();
 
   // Block deletion if category still has non-deleted articles
   const { count } = await supabase
@@ -398,7 +398,7 @@ export async function createArticle(
   error?: string;
   article?: ResourceArticle;
 }> {
-  const { supabase, user } = await requireHRAdmin();
+  const { supabase, user } = await requireContentEditor();
 
   const title = data.title?.trim();
   if (!title) {
@@ -458,7 +458,7 @@ export async function updateArticle(
     status?: "draft" | "published";
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   const update: Record<string, unknown> = {};
 
@@ -530,7 +530,7 @@ export async function updateArticle(
 export async function deleteArticle(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase, user } = await requireHRAdmin();
+  const { supabase, user } = await requireContentEditor();
 
   // Soft-delete: set deleted_at + deleted_by, unfeatured if featured
   const { error } = await supabase
@@ -558,7 +558,7 @@ export async function deleteArticle(
 export async function bulkDeleteArticles(
   articleIds: string[]
 ): Promise<{ success: boolean; error?: string; deletedCount?: number }> {
-  const { supabase, user } = await requireHRAdmin();
+  const { supabase, user } = await requireContentEditor();
 
   if (!articleIds.length) {
     return { success: false, error: "No articles selected" };
@@ -589,7 +589,7 @@ export async function fetchTrashedItems(): Promise<{
   articles: (ArticleWithAuthor & { category_name?: string })[];
   categories: ResourceCategory[];
 }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Fetch soft-deleted articles and categories in parallel
   const [articlesResult, categoriesResult] = await Promise.all([
@@ -628,7 +628,7 @@ export async function fetchTrashedItems(): Promise<{
 export async function restoreArticle(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Ensure the parent category is not deleted
   const { data: article } = await supabase
@@ -673,7 +673,7 @@ export async function restoreArticle(
 export async function restoreCategory(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   const { error } = await supabase
     .from("resource_categories")
@@ -694,7 +694,7 @@ export async function restoreCategory(
 export async function permanentlyDeleteArticle(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Only allow permanent delete of soft-deleted articles
   const { error } = await supabase
@@ -714,7 +714,7 @@ export async function permanentlyDeleteArticle(
 export async function permanentlyDeleteCategory(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Only allow permanent delete of soft-deleted categories with no articles
   const { count } = await supabase
@@ -784,7 +784,7 @@ export async function fetchFeaturedArticles(
 export async function toggleArticleFeatured(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Get current featured state
   const { data: article } = await supabase
@@ -883,7 +883,7 @@ export async function moveArticle(
   articleId: string,
   targetCategoryId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   // Get the article
   const { data: article } = await supabase
@@ -936,7 +936,7 @@ export async function moveArticle(
 export async function reorderCategories(
   orderedIds: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireHRAdmin();
+  const { supabase } = await requireContentEditor();
 
   if (!orderedIds.length) {
     return { success: false, error: "No categories provided" };
@@ -975,7 +975,7 @@ export async function autoSaveArticle(
         content_json: TiptapDocument | null;
       }
 ): Promise<{ success: boolean; error?: string; articleId?: string }> {
-  const { supabase, user } = await requireHRAdmin();
+  const { supabase, user } = await requireContentEditor();
 
   // Common title validation (shared across create + update)
   const title = params.title?.trim();
