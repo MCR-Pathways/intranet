@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { approveFlexibleWorkingRequest } from "@/app/(protected)/hr/flexible-working/actions";
+import { MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface FlexibleWorkingApproveDialogProps {
@@ -148,6 +149,7 @@ export function FlexibleWorkingApproveDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
         </div>

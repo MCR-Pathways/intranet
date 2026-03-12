@@ -18,6 +18,7 @@ import type {
   OnboardingChecklistItem,
 } from "@/types/hr";
 import { createNotification } from "@/lib/notifications";
+import { validateTextLength, MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 
@@ -102,6 +103,14 @@ export async function createTemplate(data: {
     return { success: false, error: "Template name is required" };
   }
 
+  const nameErr = validateTextLength(name, MAX_SHORT_TEXT_LENGTH);
+  if (nameErr) return { success: false, error: nameErr };
+
+  if (data.description) {
+    const descErr = validateTextLength(data.description, MAX_MEDIUM_TEXT_LENGTH);
+    if (descErr) return { success: false, error: descErr };
+  }
+
   const { data: template, error } = await supabase
     .from("onboarding_templates")
     .insert({
@@ -132,10 +141,17 @@ export async function updateTemplate(
   if (data.name !== undefined) {
     const name = data.name.trim();
     if (!name) return { success: false, error: "Template name cannot be empty" };
+    const nameErr = validateTextLength(name, MAX_SHORT_TEXT_LENGTH);
+    if (nameErr) return { success: false, error: nameErr };
     updates.name = name;
   }
   if (data.description !== undefined) {
-    updates.description = data.description.trim() || null;
+    const desc = data.description.trim();
+    if (desc) {
+      const descErr = validateTextLength(desc, MAX_MEDIUM_TEXT_LENGTH);
+      if (descErr) return { success: false, error: descErr };
+    }
+    updates.description = desc || null;
   }
   if (data.is_active !== undefined) {
     updates.is_active = data.is_active;
@@ -230,8 +246,12 @@ export async function addTemplateItem(
   if (!title) {
     return { success: false, error: "Item title is required" };
   }
-  if (title.length > 200) {
-    return { success: false, error: "Item title must be 200 characters or fewer" };
+  const titleErr = validateTextLength(title, MAX_SHORT_TEXT_LENGTH);
+  if (titleErr) return { success: false, error: titleErr };
+
+  if (data.description) {
+    const descErr = validateTextLength(data.description, MAX_MEDIUM_TEXT_LENGTH);
+    if (descErr) return { success: false, error: descErr };
   }
 
   const section = data.section ?? "general";
@@ -296,11 +316,17 @@ export async function updateTemplateItem(
   if (data.title !== undefined) {
     const title = data.title.trim();
     if (!title) return { success: false, error: "Item title cannot be empty" };
-    if (title.length > 200) return { success: false, error: "Item title must be 200 characters or fewer" };
+    const titleErr = validateTextLength(title, MAX_SHORT_TEXT_LENGTH);
+    if (titleErr) return { success: false, error: titleErr };
     updates.title = title;
   }
   if (data.description !== undefined) {
-    updates.description = data.description.trim() || null;
+    const desc = data.description.trim();
+    if (desc) {
+      const descErr = validateTextLength(desc, MAX_MEDIUM_TEXT_LENGTH);
+      if (descErr) return { success: false, error: descErr };
+    }
+    updates.description = desc || null;
   }
   if (data.section !== undefined) {
     if (!VALID_SECTIONS.includes(data.section)) {
@@ -462,6 +488,11 @@ export async function createOnboardingChecklist(data: {
   // Validate inputs
   if (!data.profile_id || !data.template_id || !data.start_date) {
     return { success: false, error: "Employee, template, and start date are required" };
+  }
+
+  if (data.notes) {
+    const notesErr = validateTextLength(data.notes, MAX_MEDIUM_TEXT_LENGTH);
+    if (notesErr) return { success: false, error: notesErr };
   }
 
   // Validate start_date before any DB operations to prevent orphaned records
@@ -791,6 +822,14 @@ export async function addChecklistItem(
   const title = data.title?.trim();
   if (!title) {
     return { success: false, error: "Item title is required" };
+  }
+
+  const titleErr = validateTextLength(title, MAX_SHORT_TEXT_LENGTH);
+  if (titleErr) return { success: false, error: titleErr };
+
+  if (data.description) {
+    const descErr = validateTextLength(data.description, MAX_MEDIUM_TEXT_LENGTH);
+    if (descErr) return { success: false, error: descErr };
   }
 
   // Verify checklist is active

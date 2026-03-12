@@ -51,6 +51,7 @@ import {
   PlayCircle,
   Save,
 } from "lucide-react";
+import { MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -377,6 +378,7 @@ export function LeavingFormContent({
                 disabled={!isEditable}
                 placeholder="Additional details..."
                 rows={2}
+                maxLength={MAX_LONG_TEXT_LENGTH}
               />
             </div>
           </div>
@@ -508,6 +510,7 @@ export function LeavingFormContent({
               placeholder="Exit interview notes..."
               rows={2}
               className="ml-6"
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -529,6 +532,7 @@ export function LeavingFormContent({
               placeholder="Knowledge transfer notes..."
               rows={2}
               className="ml-6"
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -555,6 +559,7 @@ export function LeavingFormContent({
               placeholder="Equipment return notes..."
               rows={2}
               className="ml-6"
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -618,6 +623,7 @@ export function LeavingFormContent({
               disabled={!isEditable}
               placeholder="Any additional notes about the departure..."
               rows={3}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
         </CardContent>

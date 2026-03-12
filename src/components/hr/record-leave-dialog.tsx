@@ -26,6 +26,7 @@ import {
   formatLeaveDays,
 } from "@/lib/hr";
 import { recordLeave } from "@/app/(protected)/hr/leave/actions";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface RecordLeaveDialogProps {
@@ -232,6 +233,7 @@ export function RecordLeaveDialog({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reason for absence..."
               rows={3}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
         </div>

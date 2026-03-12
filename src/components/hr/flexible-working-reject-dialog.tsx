@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle } from "lucide-react";
 import { FWR_REJECTION_GROUNDS } from "@/lib/hr";
 import { rejectFlexibleWorkingRequest } from "@/app/(protected)/hr/flexible-working/actions";
+import { MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 import { toast } from "sonner";
 
 interface FlexibleWorkingRejectDialogProps {
@@ -126,6 +127,7 @@ export function FlexibleWorkingRejectDialog({
               onChange={(e) => setExplanation(e.target.value)}
               rows={4}
               disabled={!hasConsultation}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
 
@@ -138,6 +140,7 @@ export function FlexibleWorkingRejectDialog({
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               disabled={!hasConsultation}
+              maxLength={MAX_LONG_TEXT_LENGTH}
             />
           </div>
         </div>

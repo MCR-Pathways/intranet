@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { isValidHexColour, isValidUUID } from "./validation";
+import {
+  isValidHexColour,
+  isValidUUID,
+  validateTextLength,
+  MAX_SHORT_TEXT_LENGTH,
+  MAX_MEDIUM_TEXT_LENGTH,
+  MAX_LONG_TEXT_LENGTH,
+} from "./validation";
 
 describe("isValidHexColour", () => {
   it("accepts valid 6-digit hex", () => {
@@ -76,5 +83,39 @@ describe("isValidUUID", () => {
   it("rejects path traversal segments", () => {
     expect(isValidUUID("../admin")).toBe(false);
     expect(isValidUUID("..")).toBe(false);
+  });
+});
+
+describe("validateTextLength", () => {
+  it("returns null when within limit", () => {
+    expect(validateTextLength("hello", 10)).toBeNull();
+    expect(validateTextLength("", 10)).toBeNull();
+  });
+
+  it("returns null at exact limit", () => {
+    expect(validateTextLength("12345", 5)).toBeNull();
+  });
+
+  it("returns error message when over limit", () => {
+    const result = validateTextLength("123456", 5);
+    expect(result).not.toBeNull();
+    expect(result).toContain("6");
+    expect(result).toContain("5");
+    expect(result).toContain("exceeds the maximum");
+  });
+
+  it("includes formatted numbers in error", () => {
+    const longText = "a".repeat(5001);
+    const result = validateTextLength(longText, 5000);
+    expect(result).toContain("5,001");
+    expect(result).toContain("5,000");
+  });
+});
+
+describe("constants", () => {
+  it("has expected values", () => {
+    expect(MAX_SHORT_TEXT_LENGTH).toBe(200);
+    expect(MAX_MEDIUM_TEXT_LENGTH).toBe(2000);
+    expect(MAX_LONG_TEXT_LENGTH).toBe(5000);
   });
 });

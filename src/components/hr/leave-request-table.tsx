@@ -36,6 +36,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LEAVE_TYPE_CONFIG, formatHRDate, formatLeaveDays } from "@/lib/hr";
+import { MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import type { LeaveType } from "@/lib/hr";
 import type { LeaveRequest, LeaveRequestWithEmployee } from "@/types/hr";
 import {
@@ -501,6 +502,7 @@ export function LeaveRequestTable({
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
               rows={3}
+              maxLength={MAX_MEDIUM_TEXT_LENGTH}
             />
           </div>
           <DialogFooter>

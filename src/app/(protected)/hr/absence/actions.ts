@@ -16,6 +16,7 @@ import type { AbsenceType } from "@/types/hr";
 import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
 // ALLOWED FIELDS (whitelist for input sanitisation)
@@ -196,6 +197,12 @@ export async function recordAbsence(data: {
     return { success: false, error: "Invalid sickness category" };
   }
 
+  // Validate text lengths
+  if (data.reason) {
+    const reasonErr = validateTextLength(data.reason, MAX_MEDIUM_TEXT_LENGTH);
+    if (reasonErr) return { success: false, error: reasonErr };
+  }
+
   // Check for overlapping absences
   const { data: overlapping } = await supabase
     .from("absence_records")
@@ -281,6 +288,12 @@ export async function updateAbsence(
   // Validate sickness category if changed
   if (sanitised.sickness_category && !VALID_SICKNESS_CATEGORIES.includes(sanitised.sickness_category as string)) {
     return { success: false, error: "Invalid sickness category" };
+  }
+
+  // Validate text lengths
+  if (sanitised.reason && typeof sanitised.reason === "string") {
+    const reasonErr = validateTextLength(sanitised.reason, MAX_MEDIUM_TEXT_LENGTH);
+    if (reasonErr) return { success: false, error: reasonErr };
   }
 
   // If end_date changed, recalculate total_days
@@ -662,6 +675,21 @@ export async function saveRTWForm(
     return { success: false, error: "No valid fields to update" };
   }
 
+  // Validate text field lengths (RTW fields are legally significant — LONG limit)
+  const RTW_TEXT_FIELDS = [
+    "reason_for_absence", "wellbeing_discussion", "medical_advice_details",
+    "adjustments_needed", "phased_return_details", "trigger_point_details",
+    "procedures_not_followed_reason", "additional_notes",
+  ] as const;
+
+  for (const field of RTW_TEXT_FIELDS) {
+    const val = sanitised[field];
+    if (val && typeof val === "string") {
+      const err = validateTextLength(val, MAX_LONG_TEXT_LENGTH);
+      if (err) return { success: false, error: err };
+    }
+  }
+
   const { error } = await supabase
     .from("return_to_work_forms")
     .update(sanitised)
@@ -798,6 +826,11 @@ export async function confirmRTWForm(
 
   if ((form.status as string) !== "submitted") {
     return { success: false, error: "This form is not awaiting your confirmation" };
+  }
+
+  if (employeeComments) {
+    const commentsErr = validateTextLength(employeeComments, MAX_MEDIUM_TEXT_LENGTH);
+    if (commentsErr) return { success: false, error: commentsErr };
   }
 
   const { error } = await supabase
