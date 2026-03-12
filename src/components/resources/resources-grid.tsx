@@ -14,10 +14,10 @@ import type { CategoryWithCount, ResourceCategory } from "@/types/database.types
 
 interface ResourcesGridProps {
   categories: CategoryWithCount[];
-  isHRAdmin: boolean;
+  canEdit: boolean;
 }
 
-export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
+export function ResourcesGrid({ categories, canEdit }: ResourcesGridProps) {
   const [search, setSearch] = useState("");
   const [editCategory, setEditCategory] = useState<ResourceCategory | null>(
     null
@@ -78,7 +78,7 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
             className="pl-9"
           />
         </div>
-        {isHRAdmin && (
+        {canEdit && (
           <CategoryFormDialog
             trigger={
               <Button size="sm">
@@ -95,7 +95,7 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
           icon={FolderOpen}
           title={search ? "No categories match your search" : "No categories yet"}
           description={
-            isHRAdmin
+            canEdit
               ? "Create a category to start organising your resources."
               : "Resources will appear here once added by an administrator."
           }
@@ -106,7 +106,7 @@ export function ResourcesGrid({ categories, isHRAdmin }: ResourcesGridProps) {
             <CategoryCard
               key={category.id}
               category={category}
-              isHRAdmin={isHRAdmin}
+              canEdit={canEdit}
               isFirst={index === 0}
               isLast={index === filtered.length - 1}
               onEdit={() => setEditCategory(category)}

@@ -40,12 +40,15 @@ const PERMISSION_WARNINGS: Record<string, string> = {
     "Granting L&D Admin access will allow this person to create, edit, and publish learning courses and manage all learner enrolments.",
   is_systems_admin:
     "Granting Systems Admin access will allow this person to manage company assets, user accounts, and system configuration.",
+  is_content_editor:
+    "Granting Content Editor access will allow this person to create, edit, and delete resource articles and categories.",
 };
 
 const PERMISSION_LABELS: Record<string, string> = {
   is_hr_admin: "HR Admin",
   is_ld_admin: "L&D Admin",
   is_systems_admin: "Systems Admin",
+  is_content_editor: "Content Editor",
 };
 
 // =============================================
@@ -108,6 +111,7 @@ interface PermissionsEditDialogProps {
   isHRAdmin: boolean;
   isLDAdmin: boolean;
   isSystemsAdmin: boolean;
+  isContentEditor: boolean;
   isLineManager: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -122,6 +126,7 @@ export function PermissionsEditDialog({
   isHRAdmin: initialHRAdmin,
   isLDAdmin: initialLDAdmin,
   isSystemsAdmin: initialSystemsAdmin,
+  isContentEditor: initialContentEditor,
   isLineManager: initialLineManager,
   open,
   onOpenChange,
@@ -134,6 +139,7 @@ export function PermissionsEditDialog({
   const [isHRAdmin, setIsHRAdmin] = useState(initialHRAdmin);
   const [isLDAdmin, setIsLDAdmin] = useState(initialLDAdmin);
   const [isSystemsAdmin, setIsSystemsAdmin] = useState(initialSystemsAdmin);
+  const [isContentEditor, setIsContentEditor] = useState(initialContentEditor);
   const [isLineManager, setIsLineManager] = useState(initialLineManager);
 
   // Permission confirmation dialog state
@@ -146,9 +152,10 @@ export function PermissionsEditDialog({
     const currentValue =
       field === "is_hr_admin" ? isHRAdmin :
       field === "is_ld_admin" ? isLDAdmin :
-      isSystemsAdmin;
+      field === "is_systems_admin" ? isSystemsAdmin :
+      isContentEditor;
     setPendingPermission({ field, newValue: !currentValue });
-  }, [isHRAdmin, isLDAdmin, isSystemsAdmin]);
+  }, [isHRAdmin, isLDAdmin, isSystemsAdmin, isContentEditor]);
 
   const confirmPermission = useCallback(() => {
     if (!pendingPermission) return;
@@ -156,8 +163,9 @@ export function PermissionsEditDialog({
     if (field === "is_hr_admin") setIsHRAdmin(newValue);
     else if (field === "is_ld_admin") setIsLDAdmin(newValue);
     else if (field === "is_systems_admin") setIsSystemsAdmin(newValue);
+    else if (field === "is_content_editor") setIsContentEditor(newValue);
     setPendingPermission(null);
-  }, [pendingPermission, setIsHRAdmin, setIsLDAdmin, setIsSystemsAdmin]);
+  }, [pendingPermission, setIsHRAdmin, setIsLDAdmin, setIsSystemsAdmin, setIsContentEditor]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +176,7 @@ export function PermissionsEditDialog({
         is_hr_admin: isHRAdmin,
         is_ld_admin: isLDAdmin,
         is_systems_admin: isSystemsAdmin,
+        is_content_editor: isContentEditor,
         is_line_manager: isLineManager,
       });
 
@@ -228,6 +237,15 @@ export function PermissionsEditDialog({
                 label="Systems Admin"
                 checked={isSystemsAdmin}
                 onCheckedChange={() => handlePermissionToggle("is_systems_admin")}
+                disabled={isSelf || (!isCurrentUserHRAdmin && !isCurrentUserSystemsAdmin)}
+                disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins or systems admins can change this"}
+              />
+
+              <PermissionRow
+                id="perm_is_content_editor"
+                label="Content Editor"
+                checked={isContentEditor}
+                onCheckedChange={() => handlePermissionToggle("is_content_editor")}
                 disabled={isSelf || (!isCurrentUserHRAdmin && !isCurrentUserSystemsAdmin)}
                 disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins or systems admins can change this"}
               />

@@ -17,14 +17,14 @@ interface ArticlesListProps {
   articles: ArticleWithAuthor[];
   categoryId: string;
   categorySlug: string;
-  isHRAdmin: boolean;
+  canEdit: boolean;
 }
 
 export function ArticlesList({
   articles,
   categoryId,
   categorySlug,
-  isHRAdmin,
+  canEdit,
 }: ArticlesListProps) {
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ArticleWithAuthor | null>(
@@ -66,7 +66,7 @@ export function ArticlesList({
             />
           </div>
         )}
-        {isHRAdmin && (
+        {canEdit && (
           <Button size="sm" asChild>
             <Link href={`/intranet/resources/${categorySlug}/new`}>
               <Plus className="h-4 w-4 mr-1" />
@@ -81,7 +81,7 @@ export function ArticlesList({
           icon={FileText}
           title={search ? "No articles match your search" : "No articles yet"}
           description={
-            isHRAdmin
+            canEdit
               ? "Create an article to add content to this category."
               : "Articles will appear here once published."
           }
@@ -93,7 +93,7 @@ export function ArticlesList({
               key={article.id}
               article={article}
               categorySlug={categorySlug}
-              isHRAdmin={isHRAdmin}
+              canEdit={canEdit}
               onDelete={() => setDeleteTarget(article)}
               onMove={() => setMoveTarget(article)}
             />

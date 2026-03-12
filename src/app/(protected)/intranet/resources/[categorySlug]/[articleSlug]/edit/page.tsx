@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import { fetchArticleWithClient } from "../../../actions";
 import { ArticleEditorPage } from "@/components/resources/article-editor-page";
 
@@ -14,8 +14,8 @@ export default async function EditArticlePage({
   const { supabase, user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  // Only HR admins can edit articles
-  if (!isHRAdminEffective(profile)) {
+  // Only editors (HR admins or content editors) can edit articles
+  if (!isHRAdminEffective(profile) && !isContentEditorEffective(profile)) {
     redirect(`/intranet/resources/${categorySlug}/${articleSlug}`);
   }
 

@@ -55,6 +55,7 @@ export interface Database {
           is_hr_admin: boolean;
           is_ld_admin: boolean;
           is_systems_admin: boolean;
+          is_content_editor: boolean;
           fte: number;
           contract_type: string;
           department: string | null;

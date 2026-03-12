@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import { fetchTrashedItems } from "../actions";
 import { PageHeader } from "@/components/layout/page-header";
 import { ResourceBin } from "@/components/resources/resource-bin";
@@ -8,8 +8,8 @@ export default async function ResourceBinPage() {
   const { user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const isHRAdmin = isHRAdminEffective(profile);
-  if (!isHRAdmin) redirect("/intranet/resources");
+  const canEdit = isHRAdminEffective(profile) || isContentEditorEffective(profile);
+  if (!canEdit) redirect("/intranet/resources");
 
   const { articles, categories } = await fetchTrashedItems();
 

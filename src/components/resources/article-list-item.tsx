@@ -18,7 +18,7 @@ import type { ArticleWithAuthor } from "@/types/database.types";
 interface ArticleListItemProps {
   article: ArticleWithAuthor;
   categorySlug: string;
-  isHRAdmin: boolean;
+  canEdit: boolean;
   onDelete?: () => void;
   onMove?: () => void;
 }
@@ -26,7 +26,7 @@ interface ArticleListItemProps {
 export function ArticleListItem({
   article,
   categorySlug,
-  isHRAdmin,
+  canEdit,
   onDelete,
   onMove,
 }: ArticleListItemProps) {
@@ -53,7 +53,7 @@ export function ArticleListItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h3 className="font-medium truncate">{article.title}</h3>
-          {isHRAdmin && article.status === "draft" && (
+          {canEdit && article.status === "draft" && (
             <Badge variant="outline" className="shrink-0 text-xs">
               Draft
             </Badge>
@@ -78,7 +78,7 @@ export function ArticleListItem({
         </div>
       </div>
 
-      {isHRAdmin && (
+      {canEdit && (
         <div className="relative z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
