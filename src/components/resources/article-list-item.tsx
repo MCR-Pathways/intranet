@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Pencil, Trash2, MoreHorizontal, FolderInput } from "lucide-react";
+import { FileText, Pencil, Trash2, MoreHorizontal, FolderInput, Globe, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,6 +56,16 @@ export function ArticleListItem({
           {canEdit && article.status === "draft" && (
             <Badge variant="outline" className="shrink-0 text-xs">
               Draft
+            </Badge>
+          )}
+          {canEdit && article.visibility && (
+            <Badge variant="outline" className="shrink-0 text-xs gap-1">
+              {article.visibility === "all" ? (
+                <Globe className="h-3 w-3" />
+              ) : (
+                <Lock className="h-3 w-3" />
+              )}
+              {article.visibility === "all" ? "All" : "Internal"}
             </Badge>
           )}
         </div>

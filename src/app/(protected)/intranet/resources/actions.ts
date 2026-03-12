@@ -8,6 +8,7 @@ import type { TiptapDocument } from "@/lib/tiptap";
 import type {
   ArticleWithAuthor,
   CategoryWithCount,
+  CategoryWithChildren,
   ResourceCategory,
   ResourceArticle,
 } from "@/types/database.types";
@@ -15,10 +16,10 @@ import type {
 // ─── SELECT constants ────────────────────────────────────────────────────────
 
 const CATEGORY_SELECT =
-  "id, name, slug, description, icon, icon_colour, sort_order, created_at, updated_at, deleted_at, deleted_by";
+  "id, name, slug, description, icon, icon_colour, sort_order, parent_id, visibility, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
-  "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order";
+  "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order, visibility";
 
 const MAX_FEATURED_ARTICLES = 3;
 
@@ -95,7 +96,7 @@ function revalidate() {
 
 export async function fetchCategoriesWithClient(
   supabase: SupabaseClient
-): Promise<CategoryWithCount[]> {
+): Promise<CategoryWithChildren[]> {
   // Fetch non-deleted categories with non-deleted article count
   const { data, error } = await supabase
     .from("resource_categories")
@@ -107,15 +108,34 @@ export async function fetchCategoriesWithClient(
 
   if (error || !data) return [];
 
-  return data.map((cat: Record<string, unknown>) => {
+  const flat = data.map((cat: Record<string, unknown>) => {
     const articles = cat.resource_articles as
       | [{ count: number }]
       | undefined;
     const articleCount = articles?.[0]?.count ?? 0;
-    // Remove the nested relation from the returned object
     const { resource_articles: _, ...category } = cat;
     return { ...category, article_count: articleCount } as CategoryWithCount;
   });
+
+  // Build nested structure: top-level parents with children array
+  const childMap = new Map<string, CategoryWithCount[]>();
+  const topLevel: CategoryWithChildren[] = [];
+
+  for (const cat of flat) {
+    if (cat.parent_id) {
+      const siblings = childMap.get(cat.parent_id) ?? [];
+      siblings.push(cat);
+      childMap.set(cat.parent_id, siblings);
+    }
+  }
+
+  for (const cat of flat) {
+    if (!cat.parent_id) {
+      topLevel.push({ ...cat, children: childMap.get(cat.id) ?? [] });
+    }
+  }
+
+  return topLevel;
 }
 
 export async function fetchCategoryBySlugWithClient(
@@ -229,6 +249,8 @@ export async function createCategory(data: {
   description?: string;
   icon?: string;
   icon_colour?: string | null;
+  parent_id?: string | null;
+  visibility?: "all" | "internal";
 }): Promise<{ success: boolean; error?: string; category?: ResourceCategory }> {
   const { supabase } = await requireContentEditor();
 
@@ -263,6 +285,8 @@ export async function createCategory(data: {
       icon: data.icon || null,
       icon_colour: data.icon_colour || null,
       sort_order: sortOrder,
+      parent_id: data.parent_id || null,
+      visibility: data.visibility ?? "internal",
     })
     .select(CATEGORY_SELECT)
     .single();
@@ -283,6 +307,7 @@ export async function updateCategory(
     icon?: string;
     icon_colour?: string | null;
     sort_order?: number;
+    visibility?: "all" | "internal";
   }
 ): Promise<{ success: boolean; error?: string }> {
   const { supabase } = await requireContentEditor();
@@ -312,6 +337,9 @@ export async function updateCategory(
   }
   if (data.sort_order !== undefined) {
     update.sort_order = data.sort_order;
+  }
+  if (data.visibility !== undefined) {
+    update.visibility = data.visibility;
   }
 
   if (Object.keys(update).length === 0) {
@@ -392,6 +420,7 @@ export async function createArticle(
     title: string;
     content_json?: TiptapDocument;
     status?: "draft" | "published";
+    visibility?: "all" | "internal" | null;
   }
 ): Promise<{
   success: boolean;
@@ -431,6 +460,9 @@ export async function createArticle(
   if (data.content_json) {
     insert.content_json = data.content_json;
   }
+  if (data.visibility !== undefined) {
+    insert.visibility = data.visibility;
+  }
 
   if (status === "published") {
     insert.published_at = new Date().toISOString();
@@ -456,6 +488,7 @@ export async function updateArticle(
     title?: string;
     content_json?: TiptapDocument;
     status?: "draft" | "published";
+    visibility?: "all" | "internal" | null;
   }
 ): Promise<{ success: boolean; error?: string }> {
   const { supabase } = await requireContentEditor();
@@ -506,6 +539,10 @@ export async function updateArticle(
         update.published_at = new Date().toISOString();
       }
     }
+  }
+
+  if (data.visibility !== undefined) {
+    update.visibility = data.visibility;
   }
 
   if (Object.keys(update).length === 0) {
@@ -1069,4 +1106,27 @@ export async function fetchCategoriesForMove(
 
   const { data } = await query;
   return (data ?? []) as { id: string; name: string; icon: string | null; icon_colour: string | null }[];
+}
+
+// ─── Fetch top-level categories for parent picker ─────────────────────────────
+
+export async function fetchTopLevelCategories(
+  excludeId?: string
+): Promise<{ id: string; name: string }[]> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+
+  const query = supabase
+    .from("resource_categories")
+    .select("id, name")
+    .is("deleted_at", null)
+    .is("parent_id", null)
+    .order("sort_order");
+
+  if (excludeId) {
+    query.neq("id", excludeId);
+  }
+
+  const { data } = await query;
+  return (data ?? []) as { id: string; name: string }[];
 }

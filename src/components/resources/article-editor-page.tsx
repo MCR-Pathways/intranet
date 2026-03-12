@@ -7,6 +7,13 @@ import { ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArticleComposer } from "./article-composer";
 import { SaveStatusIndicator } from "./save-status-indicator";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -39,6 +46,9 @@ export function ArticleEditorPage({
   // In create mode, starts null. After first auto-save creates a draft, stores
   // the new ID so subsequent saves use update mode instead of creating duplicates.
   const [autoSavedId, setAutoSavedId] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<string>(
+    article?.visibility ?? "inherit"
+  );
 
   const isEdit = !!article;
   const backHref = isEdit
@@ -112,16 +122,19 @@ export function ArticleEditorPage({
 
       // If auto-save already created a draft, update it via updateArticle
       // (which regenerates slug and calls revalidatePath)
+      const articleVisibility = visibility === "inherit" ? null : (visibility as "all" | "internal");
       const result = effectiveId
         ? await updateArticle(effectiveId, {
             title,
             content_json: contentRef.current ?? undefined,
             status: saveStatus,
+            visibility: articleVisibility,
           })
         : await createArticle(category.id, {
             title,
             content_json: contentRef.current ?? undefined,
             status: saveStatus,
+            visibility: articleVisibility,
           });
 
       if (result.success) {
@@ -200,6 +213,18 @@ export function ArticleEditorPage({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <SaveStatusIndicator status={status} />
+          <Select value={visibility} onValueChange={setVisibility}>
+            <SelectTrigger className="h-8 w-[130px] text-xs bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">
+                Inherit ({category.visibility === "all" ? "All" : "Internal"})
+              </SelectItem>
+              <SelectItem value="all">All users</SelectItem>
+              <SelectItem value="internal">Internal only</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" asChild>
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4 mr-1" />

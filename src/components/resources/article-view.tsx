@@ -33,6 +33,8 @@ import {
   Star,
   StarOff,
   FolderInput,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { useState } from "react";
 import type { ArticleWithAuthor } from "@/types/database.types";
@@ -112,6 +114,16 @@ export function ArticleView({
           )}
           {article.is_featured && (
             <Badge variant="secondary">Featured</Badge>
+          )}
+          {article.visibility && (
+            <Badge variant="outline" className="gap-1">
+              {article.visibility === "all" ? (
+                <Globe className="h-3 w-3" />
+              ) : (
+                <Lock className="h-3 w-3" />
+              )}
+              {article.visibility === "all" ? "All" : "Internal"}
+            </Badge>
           )}
           <div className="ml-auto">
             <DropdownMenu>

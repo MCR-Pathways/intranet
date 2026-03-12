@@ -10,10 +10,10 @@ import { CategoryFormDialog } from "./category-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import { deleteCategory, reorderCategories } from "@/app/(protected)/intranet/resources/actions";
 import { toast } from "sonner";
-import type { CategoryWithCount, ResourceCategory } from "@/types/database.types";
+import type { CategoryWithChildren, CategoryWithCount, ResourceCategory } from "@/types/database.types";
 
 interface ResourcesGridProps {
-  categories: CategoryWithCount[];
+  categories: CategoryWithChildren[];
   canEdit: boolean;
 }
 
@@ -30,11 +30,26 @@ export function ResourcesGrid({ categories, canEdit }: ResourcesGridProps) {
   const filtered = useMemo(() => {
     if (!search.trim()) return categories;
     const q = search.toLowerCase();
-    return categories.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.description?.toLowerCase().includes(q)
-    );
+    return categories
+      .map((parent) => {
+        const matchingChildren = parent.children.filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            c.description?.toLowerCase().includes(q)
+        );
+        const parentMatches =
+          parent.name.toLowerCase().includes(q) ||
+          parent.description?.toLowerCase().includes(q);
+        // Show parent if it matches or any child matches
+        if (parentMatches || matchingChildren.length > 0) {
+          return {
+            ...parent,
+            children: parentMatches ? parent.children : matchingChildren,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as CategoryWithChildren[];
   }, [categories, search]);
 
   function handleDelete() {
@@ -101,19 +116,35 @@ export function ResourcesGrid({ categories, canEdit }: ResourcesGridProps) {
           }
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-6">
           {filtered.map((category, index) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              canEdit={canEdit}
-              isFirst={index === 0}
-              isLast={index === filtered.length - 1}
-              onEdit={() => setEditCategory(category)}
-              onDelete={() => setDeleteTarget(category)}
-              onMoveUp={() => handleReorder(index, "up")}
-              onMoveDown={() => handleReorder(index, "down")}
-            />
+            <div key={category.id} className="space-y-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <CategoryCard
+                  category={category}
+                  canEdit={canEdit}
+                  isFirst={index === 0}
+                  isLast={index === filtered.length - 1}
+                  onEdit={() => setEditCategory(category)}
+                  onDelete={() => setDeleteTarget(category)}
+                  onMoveUp={() => handleReorder(index, "up")}
+                  onMoveDown={() => handleReorder(index, "down")}
+                />
+              </div>
+              {category.children.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2 pl-6">
+                  {category.children.map((child) => (
+                    <CategoryCard
+                      key={child.id}
+                      category={child}
+                      canEdit={canEdit}
+                      onEdit={() => setEditCategory(child)}
+                      onDelete={() => setDeleteTarget(child)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
