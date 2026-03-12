@@ -171,20 +171,29 @@ export interface IconColour {
   fg: string;
 }
 
-/** 8 preset colour swatches following the Notion model. */
+/** 8 preset colour swatches using MCR brand colours with WCAG-compliant foregrounds. */
 export const ICON_COLOURS: IconColour[] = [
   { key: "default", label: "Default", bg: "bg-primary/10", fg: "text-primary" },
   { key: "grey", label: "Grey", bg: "bg-muted", fg: "text-muted-foreground" },
-  { key: "blue", label: "Blue", bg: "bg-blue-100 dark:bg-blue-950", fg: "text-blue-600 dark:text-blue-400" },
-  { key: "green", label: "Green", bg: "bg-emerald-100 dark:bg-emerald-950", fg: "text-emerald-600 dark:text-emerald-400" },
-  { key: "orange", label: "Orange", bg: "bg-orange-100 dark:bg-orange-950", fg: "text-orange-600 dark:text-orange-400" },
-  { key: "red", label: "Red", bg: "bg-rose-100 dark:bg-rose-950", fg: "text-rose-600 dark:text-rose-400" },
-  { key: "purple", label: "Purple", bg: "bg-purple-100 dark:bg-purple-950", fg: "text-purple-600 dark:text-purple-400" },
-  { key: "pink", label: "Pink", bg: "bg-pink-100 dark:bg-pink-950", fg: "text-pink-600 dark:text-pink-400" },
+  { key: "teal", label: "Teal", bg: "bg-mcr-teal/15 dark:bg-mcr-teal/15", fg: "text-icon-fg-teal" },
+  { key: "green", label: "Green", bg: "bg-mcr-green/15 dark:bg-mcr-green/15", fg: "text-icon-fg-green" },
+  { key: "orange", label: "Orange", bg: "bg-mcr-orange/15 dark:bg-mcr-orange/15", fg: "text-icon-fg-orange" },
+  { key: "wine", label: "Wine", bg: "bg-mcr-wine/15 dark:bg-mcr-wine/15", fg: "text-icon-fg-wine" },
+  { key: "light-blue", label: "Light Blue", bg: "bg-mcr-light-blue/15 dark:bg-mcr-light-blue/15", fg: "text-icon-fg-light-blue" },
+  { key: "pink", label: "Pink", bg: "bg-mcr-pink/15 dark:bg-mcr-pink/15", fg: "text-icon-fg-pink" },
 ];
+
+/** Maps old Tailwind-based colour keys to new MCR brand keys. */
+const LEGACY_COLOUR_KEY_MAP: Record<string, string> = {
+  blue: "teal",
+  red: "wine",
+  purple: "light-blue",
+};
+// "green", "orange", "pink" keep the same keys
 
 /** Resolve a stored colour key to classes, with fallback to default. */
 export function resolveIconColour(key: string | null | undefined): IconColour {
   if (!key || key === "default") return ICON_COLOURS[0];
-  return ICON_COLOURS.find((c) => c.key === key) ?? ICON_COLOURS[0];
+  const mapped = LEGACY_COLOUR_KEY_MAP[key] ?? key;
+  return ICON_COLOURS.find((c) => c.key === mapped) ?? ICON_COLOURS[0];
 }
