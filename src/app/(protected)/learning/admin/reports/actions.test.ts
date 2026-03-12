@@ -290,10 +290,10 @@ describe("exportReportCSV", () => {
     expect(mockFrom).toHaveBeenCalledTimes(5);
   });
 
-  it("pre-queries profiles when userType filter is set", async () => {
+  it("pre-queries profiles when isExternal filter is set", async () => {
     wireFilteredMocks({ matchedProfileIds: ["u1"] });
 
-    const result = await exportReportCSV({ userType: "staff" });
+    const result = await exportReportCSV({ isExternal: true });
 
     expect(result.success).toBe(true);
     expect(mockFrom).toHaveBeenCalledTimes(5);

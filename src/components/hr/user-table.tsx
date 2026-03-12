@@ -111,7 +111,6 @@ const statusLabels: Record<string, string> = {
 
 const roleLabels: Record<string, string> = {
   staff: "Staff",
-  pathways_coordinator: "Coordinator",
   new_user: "New User",
 };
 
@@ -440,7 +439,6 @@ export function UserTable({
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="staff">Staff</SelectItem>
-            <SelectItem value="pathways_coordinator">Coordinator</SelectItem>
             <SelectItem value="new_user">New User</SelectItem>
           </SelectContent>
         </Select>

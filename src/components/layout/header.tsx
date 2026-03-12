@@ -34,7 +34,7 @@ interface HeaderProps {
 }
 
 export function Header({ user, profile, initialNotifications, onMenuToggle, onSidebarToggle }: HeaderProps) {
-  const isStaff = profile?.user_type === "staff";
+  const isInternalStaff = profile?.user_type === "staff" && !profile?.is_external;
 
   const handleSignOut = async () => {
     try {
@@ -134,7 +134,7 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {isStaff && (
+              {isInternalStaff && (
                 <DropdownMenuItem asChild>
                   <Link href="/hr/profile" className="cursor-pointer">
                     <User className="h-4 w-4" />

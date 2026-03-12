@@ -136,9 +136,6 @@ export function ProfileEditDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="pathways_coordinator">
-                      Pathways Coordinator
-                    </SelectItem>
                     <SelectItem value="new_user">New User</SelectItem>
                   </SelectContent>
                 </Select>

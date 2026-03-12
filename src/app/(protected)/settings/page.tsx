@@ -16,7 +16,6 @@ import type { WeeklyPatternEntry } from "@/lib/sign-in";
 
 const USER_TYPE_LABELS: Record<string, string> = {
   staff: "Staff",
-  pathways_coordinator: "Pathways Coordinator",
   new_user: "New User",
 };
 

@@ -38,9 +38,12 @@ import { Plus, X, Users, UserCheck } from "lucide-react";
 import type { CourseAssignment, Team } from "@/types/database.types";
 
 const userTypeLabels: Record<string, string> = {
-  staff: "Staff",
-  pathways_coordinator: "Pathways Coordinator",
-  new_user: "New User",
+  staff: "All Staff",
+};
+
+const externalLabels: Record<string, string> = {
+  true: "External Staff Only",
+  false: "Internal Staff Only",
 };
 
 interface CourseAssignmentManagerProps {
@@ -106,6 +109,9 @@ export function CourseAssignmentManager({
     if (assignment.assign_type === "user_type") {
       return userTypeLabels[assignment.assign_value] || assignment.assign_value;
     }
+    if (assignment.assign_type === "is_external") {
+      return externalLabels[assignment.assign_value] || assignment.assign_value;
+    }
     const team = teams.find((t) => t.id === assignment.assign_value);
     return team?.name || "Unknown Team";
   };
@@ -148,7 +154,9 @@ export function CourseAssignmentManager({
                       <p className="text-xs text-muted-foreground capitalize">
                         {assignment.assign_type === "team"
                           ? "Team"
-                          : "User Type"}
+                          : assignment.assign_type === "is_external"
+                            ? "Classification"
+                            : "User Type"}
                       </p>
                     </div>
                   </div>
@@ -200,6 +208,7 @@ export function CourseAssignmentManager({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user_type">User Type</SelectItem>
+                    <SelectItem value="is_external">Classification</SelectItem>
                     <SelectItem value="team">Team</SelectItem>
                   </SelectContent>
                 </Select>
@@ -207,7 +216,11 @@ export function CourseAssignmentManager({
 
               <div className="grid gap-2">
                 <Label>
-                  {assignType === "team" ? "Select Team" : "Select User Type"}
+                  {assignType === "team"
+                    ? "Select Team"
+                    : assignType === "is_external"
+                      ? "Select Classification"
+                      : "Select User Type"}
                 </Label>
                 <Select value={assignValue} onValueChange={setAssignValue}>
                   <SelectTrigger>
@@ -215,17 +228,19 @@ export function CourseAssignmentManager({
                       placeholder={
                         assignType === "team"
                           ? "Choose a team..."
-                          : "Choose a user type..."
+                          : assignType === "is_external"
+                            ? "Choose a classification..."
+                            : "Choose a user type..."
                       }
                     />
                   </SelectTrigger>
                   <SelectContent>
                     {assignType === "user_type" ? (
+                      <SelectItem value="staff">All Staff</SelectItem>
+                    ) : assignType === "is_external" ? (
                       <>
-                        <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="pathways_coordinator">
-                          Pathways Coordinator
-                        </SelectItem>
+                        <SelectItem value="true">External Staff Only</SelectItem>
+                        <SelectItem value="false">Internal Staff Only</SelectItem>
                       </>
                     ) : (
                       teams.map((team) => (

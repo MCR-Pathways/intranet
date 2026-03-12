@@ -188,12 +188,14 @@ async function upsertCalendarEntry(
 export async function syncAllUsers(): Promise<SyncStats> {
   const supabase = createServiceClient();
 
-  // Get all active staff (they all have Google Workspace accounts via @mcrpathways.org)
+  // Get all active internal staff (they have Google Workspace accounts via @mcrpathways.org)
+  // External staff (PCs) are employed by schools — no MCR Google Workspace calendar
   const { data: users, error } = await supabase
     .from("profiles")
     .select("id, email, calendar_sync_token")
     .eq("status", "active")
     .in("user_type", ["staff"])
+    .eq("is_external", false)
     .not("email", "is", null);
 
   if (error || !users) {

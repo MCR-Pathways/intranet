@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 // Enum types
-export type UserType = "staff" | "pathways_coordinator" | "new_user";
+export type UserType = "staff" | "new_user";
 export type UserStatus = "active" | "inactive" | "pending_induction";
 export type LeaveType =
   | "annual"

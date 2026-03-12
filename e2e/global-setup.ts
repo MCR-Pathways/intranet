@@ -24,6 +24,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
 // Test user accounts (from seed migration 00043)
+// coordinator = external staff (is_external: true, user_type: staff)
 export const TEST_USERS = {
   hrAdmin: {
     id: "a0000000-0000-4000-8000-000000000001",

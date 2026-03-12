@@ -5,7 +5,7 @@ import { requireLDAdmin } from "@/lib/auth";
 interface ReportFilters {
   courseId?: string;
   teamId?: string;
-  userType?: string;
+  isExternal?: boolean;
   status?: string;
 }
 
@@ -14,12 +14,12 @@ export async function exportReportCSV(filters: ReportFilters) {
 
   // If profile-level filters exist, resolve matching user IDs at the DB level
   let userIdFilter: string[] | null = null;
-  if (filters.teamId || filters.userType) {
+  if (filters.teamId || filters.isExternal !== undefined) {
     let profileQuery = supabase.from("profiles").select("id");
     if (filters.teamId)
       profileQuery = profileQuery.eq("team_id", filters.teamId);
-    if (filters.userType)
-      profileQuery = profileQuery.eq("user_type", filters.userType);
+    if (filters.isExternal !== undefined)
+      profileQuery = profileQuery.eq("is_external", filters.isExternal);
     const { data: matchedProfiles } = await profileQuery;
     userIdFilter = matchedProfiles?.map((p) => p.id) ?? [];
     if (userIdFilter.length === 0) {
