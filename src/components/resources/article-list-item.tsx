@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
 interface ArticleListItemProps {
@@ -61,7 +61,7 @@ export function ArticleListItem({
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <Avatar className="h-4 w-4">
-            <AvatarImage src={article.author?.avatar_url ?? undefined} />
+            <AvatarImage src={filterAvatarUrl(article.author?.avatar_url)} />
             <AvatarFallback className={cn(getAvatarColour(authorName).bg, getAvatarColour(authorName).fg, "text-[8px]")}>
               {getInitials(authorName)}
             </AvatarFallback>

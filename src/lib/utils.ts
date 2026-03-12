@@ -125,7 +125,22 @@ export function formatDuration(
   return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
 }
 
-// ─── Avatar colours ─────────────────────────────────────────────────────────
+// ─── Avatar helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Returns undefined for Google's default letter avatars so our brand-coloured
+ * AvatarFallback renders instead. Google's OIDC doesn't expose an `isDefault`
+ * flag, so we filter all `lh3.googleusercontent.com` URLs — currently no users
+ * have custom Google photos. When real photo sync is added via the People API,
+ * replace this with a DB-level `is_default_avatar` flag.
+ */
+export function filterAvatarUrl(
+  url: string | null | undefined
+): string | undefined {
+  if (!url) return undefined;
+  if (url.includes("googleusercontent.com")) return undefined;
+  return url;
+}
 
 /** 3 MCR brand colours that pass WCAG AA (4.5:1) with white text. */
 const AVATAR_COLOURS = [

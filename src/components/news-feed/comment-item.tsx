@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { cn, timeAgo, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, timeAgo, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { Trash2, Loader2, Pencil, Check, X, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -172,7 +172,7 @@ export function CommentItem({
     <div className="flex gap-2 group">
       <Avatar className={cn(avatarSize, "shrink-0")}>
         <AvatarImage
-          src={comment.author.avatar_url || undefined}
+          src={filterAvatarUrl(comment.author.avatar_url)}
           alt={displayName}
         />
         <AvatarFallback className={cn(getAvatarColour(displayName).bg, getAvatarColour(displayName).fg, "text-xs")}>

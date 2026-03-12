@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn, getInitials, getAvatarColour } from "@/lib/utils";
+import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 
 export interface MentionUser {
   id: string;
@@ -89,7 +89,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
             onClick={() => selectItem(index)}
           >
             <Avatar className="h-6 w-6 shrink-0">
-              <AvatarImage src={item.avatar_url || undefined} alt={item.label} />
+              <AvatarImage src={filterAvatarUrl(item.avatar_url)} alt={item.label} />
               <AvatarFallback className={cn(getAvatarColour(item.label).bg, getAvatarColour(item.label).fg, "text-[10px]")}>
                 {getInitials(item.label)}
               </AvatarFallback>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/lib/utils";
+import { getInitials, filterAvatarUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { DEPARTMENT_CONFIG } from "@/lib/hr";
 import type { Department } from "@/lib/hr";
@@ -84,7 +84,7 @@ export function OrgChartPersonCard({
           {/* Avatar with status indicator */}
           <div className="relative shrink-0">
             <Avatar className="h-10 w-10 ring-2 ring-background">
-              <AvatarImage src={avatarUrl || undefined} alt={name} />
+              <AvatarImage src={filterAvatarUrl(avatarUrl)} alt={name} />
               <AvatarFallback
                 className="text-xs font-medium text-white"
                 style={{ backgroundColor: deptColour }}
