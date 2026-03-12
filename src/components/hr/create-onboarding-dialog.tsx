@@ -130,7 +130,7 @@ export function CreateOnboardingDialog({
             {templates.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 No active templates available.{" "}
-                <Link href="/hr/onboarding/templates" className="text-link underline">
+                <Link href="/hr/onboarding/templates" className="text-link underline hover:text-link/80">
                   Create a template
                 </Link>{" "}
                 first.
