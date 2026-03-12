@@ -3,6 +3,7 @@
 import { getCurrentUser, requireHRAdmin } from "@/lib/auth";
 import {
   REQUESTABLE_LEAVE_TYPES,
+  LEAVE_TYPE_CONFIG,
   calculateWorkingDays,
   getLeaveYearForDate,
   getHolidayCalendar,
@@ -396,6 +397,10 @@ export async function recordLeave(data: {
 
   if (!data.profile_id || !data.leave_type || !data.start_date || !data.end_date) {
     return { success: false, error: "Employee, leave type, and dates are required" };
+  }
+
+  if (!(data.leave_type in LEAVE_TYPE_CONFIG)) {
+    return { success: false, error: "Invalid leave type. Please select a valid option." };
   }
 
   if (data.end_date < data.start_date) {
