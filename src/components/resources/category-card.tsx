@@ -7,6 +7,8 @@ import {
   MoreHorizontal,
   ArrowUp,
   ArrowDown,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +73,16 @@ export function CategoryCard({
               {category.article_count}{" "}
               {category.article_count === 1 ? "article" : "articles"}
             </Badge>
+            {canEdit && (
+              <Badge variant="outline" className="shrink-0 text-xs gap-1">
+                {category.visibility === "all" ? (
+                  <Globe className="h-3 w-3" />
+                ) : (
+                  <Lock className="h-3 w-3" />
+                )}
+                {category.visibility === "all" ? "All" : "Internal"}
+              </Badge>
+            )}
           </div>
           {category.description && (
             <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
