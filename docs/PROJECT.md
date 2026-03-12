@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-11
+> **Last reviewed:** 2026-03-12
 > **Document updated during:** Periodic syncs
 
 ---
@@ -674,7 +674,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
-| 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (3 PRs): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C). 16 avatar files, 7 link files, 2 icon files + CSS tokens. `docs/design-system.md` updated with all tokens and WCAG contrast data. |
+| 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (4 PRs #121-123, #125): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C), Google default avatar filter (`filterAvatarUrl()`). 16 avatar files, 7 link files, 2 icon files + CSS tokens. 1112 tests, 50 files. |
 | 2026-03-12 | Abdul-Muiz Adaranijo | Input validation hardening (PRs #115-120): SVG upload removal + DB migration, CSS hex colour validation, leave type validation (LEAVE_TYPE_CONFIG), generic error messages (95 instances, 17 files), path traversal + UUID validation, 3-tier string length limits on all HR free-text fields. Shared `src/lib/validation.ts` (isValidHexColour, isValidUUID, validateTextLength). 37 client-side maxLength attributes. 1099 tests, 50 files. Design system doc created (`docs/design-system.md`). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Auto-save (PR #114): Notion-style debounced saves (5s), useAutoSave hook with state machine + concurrent save protection, SaveStatusIndicator, create→edit transition, beforeunload safety net. 15 tests, 1073 total. |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Editor tooltips + toolbar (PR #113): 25+ toolbar buttons with Google Docs-style tooltips, heading dropdown (H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11), highlight (9), undo/redo, clear formatting. 8 new Tiptap extensions, 3 new files. Post-merge fixes: checklist CSS, Vercel build, reactive indent/outdent + heading state. |

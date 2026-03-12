@@ -211,7 +211,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Accent hover contrast fix (PR #98, #101): Decoupled `--accent` from `--secondary` in both light and dark modes. Light: #E2E8F0, Dark: hsl(210,25%,22%).
 - [x] Tab bar redesign (PR #99, #101): Adopted Shadcn v4 `variant="line"` pattern. Replaced heavy navy `bg-primary` container with underline-style tabs. 9 consumer files migrated. Hover state on both variants. Nested tabs (working-location) use default (pill) for visual hierarchy.
 - [x] Date formatting consolidation (PR #100): Extracted `formatDate()` and consolidated `formatShortDate()` usage across 7 files. Eliminated inline `toLocaleDateString` duplication.
-- [ ] Brand colour refinement (3 PRs): Link colour token (`--link` = teal), icon palette (6 MCR brand swatches with darkened light-mode foregrounds), avatar hash (3-colour Navy/Teal/Wine deterministic), pink WCAG fix (#FF82B2 → #DA417C). See `.claude/plans/starry-wandering-wolf.md`.
+- [x] Brand colour refinement (PRs #121-123, #125): Link colour token (`--link` = teal), icon palette (6 MCR brand swatches), avatar hash (Navy/Teal/Wine), pink WCAG fix, Google default avatar filter (`filterAvatarUrl()`). 1112 tests.
 - [ ] Mobile responsiveness (currently desktop/laptop only)
 
 ---
