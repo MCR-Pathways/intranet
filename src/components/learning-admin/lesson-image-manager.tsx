@@ -101,7 +101,7 @@ export function LessonImageManager({
         <input
           id={`image-upload-${lessonId}`}
           type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+          accept="image/png,image/jpeg,image/gif,image/webp"
           className="hidden"
           onChange={handleUpload}
         />

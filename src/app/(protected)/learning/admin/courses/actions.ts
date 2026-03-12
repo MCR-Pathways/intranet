@@ -595,11 +595,11 @@ export async function uploadLessonImage(formData: FormData) {
     return { success: false, error: "File too large (max 5MB)", image: null };
   }
 
-  const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+  const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
     return {
       success: false,
-      error: "Invalid image type. Allowed: PNG, JPEG, GIF, WebP, SVG",
+      error: "Invalid image type. Allowed: PNG, JPEG, GIF, WebP",
       image: null,
     };
   }
