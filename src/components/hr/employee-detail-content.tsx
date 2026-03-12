@@ -397,6 +397,7 @@ export function EmployeeDetailContent({
         isHRAdmin={profile.is_hr_admin}
         isLDAdmin={profile.is_ld_admin}
         isSystemsAdmin={profile.is_systems_admin}
+        isContentEditor={profile.is_content_editor}
         isLineManager={profile.is_line_manager}
         open={permissionsDialogOpen}
         onOpenChange={setPermissionsDialogOpen}

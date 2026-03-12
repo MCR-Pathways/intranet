@@ -42,14 +42,14 @@ interface ArticleViewProps {
   article: ArticleWithAuthor;
   categoryId: string;
   categorySlug: string;
-  isHRAdmin: boolean;
+  canEdit: boolean;
 }
 
 export function ArticleView({
   article,
   categoryId,
   categorySlug,
-  isHRAdmin,
+  canEdit,
 }: ArticleViewProps) {
   const [isPending, startTransition] = useTransition();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -105,7 +105,7 @@ export function ArticleView({
   return (
     <div className="space-y-4">
       {/* Admin toolbar */}
-      {isHRAdmin && (
+      {canEdit && (
         <div className="flex items-center gap-2">
           {article.status === "draft" && (
             <Badge variant="outline">Draft</Badge>

@@ -19,7 +19,7 @@ import {
   ClipboardList,
   ShieldCheck,
 } from "lucide-react";
-import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
+import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective, isContentEditorEffective } from "@/lib/auth-helpers";
 import type { Profile, UserType } from "@/types/database.types";
 
 // =============================================
@@ -53,6 +53,7 @@ function getNavigation(
   isHRAdmin: boolean,
   isLDAdmin: boolean,
   isSystemsAdmin: boolean,
+  canEditResources: boolean,
   userType: UserType,
 ): NavigationResult {
   const isStaff = userType === "staff";
@@ -67,7 +68,7 @@ function getNavigation(
       ],
     },
   ];
-  if (isHRAdmin) {
+  if (canEditResources) {
     homeChildren[0].items.push({ name: "Bin", href: "/intranet/resources/bin" });
   }
 
@@ -209,8 +210,10 @@ export function Sidebar({ profile, collapsed = false, className, onNavClick }: S
   const hrAdmin = isHRAdminEffective(profile);
   const ldAdmin = isLDAdminEffective(profile);
   const systemsAdmin = isSystemsAdminEffective(profile);
+  const contentEditor = isContentEditorEffective(profile);
+  const canEditResources = hrAdmin || contentEditor;
 
-  const { mainNav, adminItem } = getNavigation(hrAdmin, ldAdmin, systemsAdmin, profile?.user_type ?? "new_user");
+  const { mainNav, adminItem } = getNavigation(hrAdmin, ldAdmin, systemsAdmin, canEditResources, profile?.user_type ?? "new_user");
   const filteredNav = mainNav.filter(
     (item) => !item.module || hasModuleAccess(item.module)
   );

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { timingSafeEqual } from "crypto";
 
 // Re-export client-safe helpers so server components can import everything from @/lib/auth
-export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective } from "@/lib/auth-helpers";
+export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective, isContentEditorEffective } from "@/lib/auth-helpers";
 
 /** Timing-safe string comparison to prevent timing attacks on token validation. */
 export function timingSafeTokenCompare(a: string, b: string): boolean {
@@ -13,14 +13,14 @@ export function timingSafeTokenCompare(a: string, b: string): boolean {
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, induction_completed_at, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, job_title, induction_completed_at, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
 
 /**
  * Extended profile select for HR admin views — includes employment details
  * but still excludes google_refresh_token and other auth-sensitive fields.
  */
 export const HR_EMPLOYEE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, created_at";
+  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, created_at";
 
 // =============================================
 // SERVER-SIDE AUTH FUNCTIONS
@@ -129,6 +129,33 @@ export async function requireSystemsAdmin() {
 
   if (!isAdmin) {
     throw new Error("Unauthorised: Systems admin access required");
+  }
+
+  return { supabase, user };
+}
+
+/**
+ * Require the current user to be an HR admin OR content editor.
+ * Used for resource CRUD — both roles have full resource access.
+ * Throws if not authenticated or not authorised.
+ */
+export async function requireContentEditor() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const [{ data: isHR }, { data: isEditor }] = await Promise.all([
+    supabase.rpc("is_hr_admin_effective", { p_user_id: user.id }),
+    supabase.rpc("is_content_editor_effective", { p_user_id: user.id }),
+  ]);
+
+  if (!isHR && !isEditor) {
+    throw new Error("Unauthorised: Content editor or HR admin access required");
   }
 
   return { supabase, user };

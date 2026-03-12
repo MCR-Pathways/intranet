@@ -49,6 +49,7 @@ export async function proxy(request: NextRequest) {
     is_hr_admin?: boolean;
     is_ld_admin?: boolean;
     is_systems_admin?: boolean;
+    is_content_editor?: boolean;
   };
 
   let profile: {

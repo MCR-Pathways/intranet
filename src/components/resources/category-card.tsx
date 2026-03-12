@@ -24,7 +24,7 @@ import type { CategoryWithCount } from "@/types/database.types";
 
 interface CategoryCardProps {
   category: CategoryWithCount;
-  isHRAdmin: boolean;
+  canEdit: boolean;
   isFirst?: boolean;
   isLast?: boolean;
   onEdit?: () => void;
@@ -35,7 +35,7 @@ interface CategoryCardProps {
 
 export function CategoryCard({
   category,
-  isHRAdmin,
+  canEdit,
   isFirst,
   isLast,
   onEdit,
@@ -78,7 +78,7 @@ export function CategoryCard({
             </p>
           )}
         </div>
-        {isHRAdmin && (
+        {canEdit && (
           <div className="relative z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
