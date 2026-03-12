@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-10
+> Last updated: 2026-03-12
 
 ---
 
@@ -182,6 +182,14 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Replace manual `<h1>` headers with shared PageHeader component (5 pages)
 - [x] Fix article editor: prepend "Home" root breadcrumb
 - [x] Visual refresh: `/` separator (GitHub/Linear/Notion style), `hover:underline` on links, removed ChevronRight icon
+
+### Resources Module Restructure (In Progress — 4 PRs)
+- [x] **Pre-req — Broaden Systems Admin Permissions** (PR #127): Migration 00052. Systems admins can grant `is_ld_admin`, `is_systems_admin`, `is_line_manager`, `is_content_editor`. HR Admin + department remain HR-admin-only. Updated `protect_admin_fields()` trigger and `PermissionsEditDialog`.
+- [x] **Pre-req — Remove Pathways Coordinator User Type** (PR #130): Migration 00053. `pathways_coordinator` → `staff` + `is_external = true`. `is_internal_staff()` DB function for visibility RLS. `has_module_access()` uses `is_external`. `is_external` added to JWT claims. Proxy redirect loop fix for new_user. 25 app files updated.
+- [x] **PR A — Content Editor Permission** (PR #128): Migration 00054. `is_content_editor` column, `requireContentEditor()` auth gate, updated RLS (8 policies), JWT claims sync, `protect_admin_fields`. All 16 resource actions migrated from `requireHRAdmin()` to `requireContentEditor()`. Permissions dialog adds Content Editor toggle.
+- [ ] **PR B — Subcategories + Visibility** (PR #131): Migration 00055. `parent_id` for 2-level hierarchy, `visibility` on categories and articles (`all` | `internal`), depth constraint, `VisibilityBadge` shared component, category form with parent selector and visibility toggle.
+- [ ] **PR C — Route Migration**: `/intranet/resources` → `/resources` (top-level sidebar module). Redirect in proxy.
+- [ ] **PR D — New Taxonomy + Polish**: 9-category taxonomy replacing flat 4-category structure. Seed data.
 
 ### Intranet Phase 6 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard

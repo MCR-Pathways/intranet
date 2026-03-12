@@ -293,7 +293,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**52 migration files** in `supabase/migrations/`, numbered `00001` through `00051` plus a combined migration.
+**55 migration files** in `supabase/migrations/`, numbered `00001` through `00054` plus a combined migration.
 
 **26+ tables** — key ones:
 
@@ -674,6 +674,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-12 | Abdul-Muiz Adaranijo | Resources restructure PRs #127, #130, #128 merged. Systems admin permissions broadened (migration 00052). PC user type removed — `pathways_coordinator` → `staff` + `is_external` (migration 00053). Content editor permission added (migration 00054). Proxy redirect loop fix for new_user after induction. Gemini review fixes across all 3 PRs (accessible switch tests, VisibilityBadge extraction, toggle mapping). PR #131 open for subcategories + visibility. 1118 tests, 50 files. |
 | 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (4 PRs #121-123, #125): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C), Google default avatar filter (`filterAvatarUrl()`). 16 avatar files, 7 link files, 2 icon files + CSS tokens. 1112 tests, 50 files. |
 | 2026-03-12 | Abdul-Muiz Adaranijo | Input validation hardening (PRs #115-120): SVG upload removal + DB migration, CSS hex colour validation, leave type validation (LEAVE_TYPE_CONFIG), generic error messages (95 instances, 17 files), path traversal + UUID validation, 3-tier string length limits on all HR free-text fields. Shared `src/lib/validation.ts` (isValidHexColour, isValidUUID, validateTextLength). 37 client-side maxLength attributes. 1099 tests, 50 files. Design system doc created (`docs/design-system.md`). |
 | 2026-03-11 | Abdul-Muiz Adaranijo | Auto-save (PR #114): Notion-style debounced saves (5s), useAutoSave hook with state machine + concurrent save protection, SaveStatusIndicator, create→edit transition, beforeunload safety net. 15 tests, 1073 total. |
