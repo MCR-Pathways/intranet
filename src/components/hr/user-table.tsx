@@ -121,6 +121,8 @@ interface UserTableProps {
   departments?: DepartmentOption[];
   /** Whether the current user is an HR admin (controls permission toggle visibility) */
   isCurrentUserHRAdmin?: boolean;
+  /** Whether the current user is a systems admin (can grant L&D Admin, Systems Admin) */
+  isCurrentUserSystemsAdmin?: boolean;
   people?: PersonOption[];
   teams?: TeamOption[];
 }
@@ -206,6 +208,7 @@ export function UserTable({
   currentUserId,
   departments = [],
   isCurrentUserHRAdmin = false,
+  isCurrentUserSystemsAdmin = false,
   people = [],
   teams = [],
 }: UserTableProps) {
@@ -485,6 +488,7 @@ export function UserTable({
           profileName={permissionsProfile.full_name}
           currentUserId={currentUserId}
           isCurrentUserHRAdmin={isCurrentUserHRAdmin}
+          isCurrentUserSystemsAdmin={isCurrentUserSystemsAdmin}
           isHRAdmin={permissionsProfile.is_hr_admin}
           isLDAdmin={permissionsProfile.is_ld_admin}
           isSystemsAdmin={permissionsProfile.is_systems_admin}
