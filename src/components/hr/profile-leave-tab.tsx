@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 import { LeaveBalanceCards } from "@/components/hr/leave-balance-cards";
 import { LeaveRequestTable } from "@/components/hr/leave-request-table";
 import { LeaveEntitlementDialog } from "@/components/hr/leave-entitlement-dialog";
 import { RecordLeaveDialog } from "@/components/hr/record-leave-dialog";
+import { HR_ONLY_LEAVE_TYPES } from "@/lib/hr";
 import type { LeaveBalance, LeaveRequest } from "@/types/hr";
 import { Plus, FileText } from "lucide-react";
 
@@ -35,6 +37,15 @@ export function ProfileLeaveTab({
   const [entitlementOpen, setEntitlementOpen] = useState(false);
   const [recordLeaveOpen, setRecordLeaveOpen] = useState(false);
 
+  // Hide HR-only leave types (sick, maternity, etc.) from non-admin views
+  const visibleBalances = useMemo(
+    () =>
+      isHRAdmin
+        ? balances
+        : balances.filter((b) => !HR_ONLY_LEAVE_TYPES.includes(b.leave_type)),
+    [balances, isHRAdmin],
+  );
+
   return (
     <div className="space-y-6">
       {/* HR Admin actions */}
@@ -54,7 +65,7 @@ export function ProfileLeaveTab({
       {/* Balances */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Leave Balances</h3>
-        <LeaveBalanceCards balances={balances} />
+        <LeaveBalanceCards balances={visibleBalances} />
       </div>
 
       {/* Request history */}

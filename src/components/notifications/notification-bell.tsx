@@ -147,7 +147,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
           )}
         </div>
         <DropdownMenuSeparator />
-        <ScrollArea className="max-h-[300px]">
+        <ScrollArea className="max-h-[400px]">
           {isLoading ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
               Loading...

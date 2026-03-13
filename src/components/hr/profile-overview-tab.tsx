@@ -54,6 +54,8 @@ interface ProfileOverviewTabProps {
   lineManagerName?: string | null;
   /** Optional: resolved team name for display */
   teamName?: string | null;
+  /** Whether the viewer is an admin — controls visibility of permission badges and card */
+  isViewerAdmin?: boolean;
 }
 
 /** Reusable detail item row for the overview grid. */
@@ -81,6 +83,7 @@ export function ProfileOverviewTab({
   profile,
   lineManagerName,
   teamName,
+  isViewerAdmin = false,
 }: ProfileOverviewTabProps) {
   const departmentLabel = profile.department
     ? DEPARTMENT_CONFIG[profile.department]?.label ?? profile.department
@@ -118,12 +121,14 @@ export function ProfileOverviewTab({
               {profile.job_title && (
                 <p className="text-sm font-medium">{profile.job_title}</p>
               )}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {profile.is_hr_admin && <Badge variant="default">HR Admin</Badge>}
-                {profile.is_ld_admin && <Badge variant="secondary">L&D Admin</Badge>}
-                {profile.is_systems_admin && <Badge variant="secondary">Systems Admin</Badge>}
-                {profile.is_line_manager && <Badge variant="outline">Line Manager</Badge>}
-              </div>
+              {isViewerAdmin && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {profile.is_hr_admin && <Badge variant="default">HR Admin</Badge>}
+                  {profile.is_ld_admin && <Badge variant="secondary">L&D Admin</Badge>}
+                  {profile.is_systems_admin && <Badge variant="secondary">Systems Admin</Badge>}
+                  {profile.is_line_manager && <Badge variant="outline">Line Manager</Badge>}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -218,20 +223,22 @@ export function ProfileOverviewTab({
         </Card>
       </div>
 
-      {/* System Permissions card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">System Permissions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <PermissionItem label="HR Admin" granted={profile.is_hr_admin} />
-            <PermissionItem label="L&D Admin" granted={profile.is_ld_admin} />
-            <PermissionItem label="Systems Admin" granted={profile.is_systems_admin} />
-            <PermissionItem label="Line Manager" granted={profile.is_line_manager} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* System Permissions card — only visible to admin viewers */}
+      {isViewerAdmin && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">System Permissions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PermissionItem label="HR Admin" granted={profile.is_hr_admin} />
+              <PermissionItem label="L&D Admin" granted={profile.is_ld_admin} />
+              <PermissionItem label="Systems Admin" granted={profile.is_systems_admin} />
+              <PermissionItem label="Line Manager" granted={profile.is_line_manager} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
