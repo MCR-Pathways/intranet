@@ -197,6 +197,29 @@ export async function fetchCategoryArticlesWithClient(
   };
 }
 
+export async function fetchSubcategoriesWithClient(
+  supabase: SupabaseClient,
+  parentId: string
+): Promise<CategoryWithCount[]> {
+  const { data, error } = await supabase
+    .from("resource_categories")
+    .select(`${CATEGORY_SELECT}, resource_articles(count)`)
+    .eq("parent_id", parentId)
+    .is("deleted_at", null)
+    .filter("resource_articles.deleted_at", "is", null)
+    .order("sort_order")
+    .order("name");
+
+  if (error || !data) return [];
+
+  return data.map((cat: Record<string, unknown>) => {
+    const articles = cat.resource_articles as [{ count: number }] | undefined;
+    const articleCount = articles?.[0]?.count ?? 0;
+    const { resource_articles: _, ...category } = cat;
+    return { ...category, article_count: articleCount } as CategoryWithCount;
+  });
+}
+
 export async function fetchArticleWithClient(
   supabase: SupabaseClient,
   categorySlug: string,
@@ -366,6 +389,20 @@ export async function deleteCategory(
 ): Promise<{ success: boolean; error?: string }> {
   const { supabase, user } = await requireContentEditor();
 
+  // Block deletion if category has non-deleted subcategories
+  const { count: childCount } = await supabase
+    .from("resource_categories")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", id)
+    .is("deleted_at", null);
+
+  if (childCount && childCount > 0) {
+    return {
+      success: false,
+      error: `Cannot delete category — it has ${childCount} subcategor${childCount === 1 ? "y" : "ies"}. Delete them first.`,
+    };
+  }
+
   // Block deletion if category still has non-deleted articles
   const { count } = await supabase
     .from("resource_articles")
@@ -437,6 +474,20 @@ export async function createArticle(
   const baseSlug = slugify(title);
   if (!baseSlug) {
     return { success: false, error: "Invalid article title" };
+  }
+
+  // Block creating articles directly on a parent that has subcategories
+  const { count: childCatCount } = await supabase
+    .from("resource_categories")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", categoryId)
+    .is("deleted_at", null);
+
+  if (childCatCount && childCatCount > 0) {
+    return {
+      success: false,
+      error: "Cannot create articles directly in a category that has subcategories. Add the article to a subcategory instead.",
+    };
   }
 
   const slug = await ensureUniqueArticleSlug(supabase, categoryId, baseSlug);
@@ -753,6 +804,19 @@ export async function permanentlyDeleteCategory(
 ): Promise<{ success: boolean; error?: string }> {
   const { supabase } = await requireContentEditor();
 
+  // Block if category has subcategories (including soft-deleted)
+  const { count: childCount } = await supabase
+    .from("resource_categories")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", id);
+
+  if (childCount && childCount > 0) {
+    return {
+      success: false,
+      error: "Cannot permanently delete category — it still has subcategories (including binned ones). Permanently delete those first.",
+    };
+  }
+
   // Only allow permanent delete of soft-deleted categories with no articles
   const { count } = await supabase
     .from("resource_articles")
@@ -950,6 +1014,20 @@ export async function moveArticle(
     return { success: false, error: "Target category not found" };
   }
 
+  // Block moving to a parent category that has subcategories
+  const { count: childCatCount } = await supabase
+    .from("resource_categories")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", targetCategoryId)
+    .is("deleted_at", null);
+
+  if (childCatCount && childCatCount > 0) {
+    return {
+      success: false,
+      error: "Cannot move articles to a category that has subcategories. Choose a subcategory instead.",
+    };
+  }
+
   // Ensure slug is unique in the target category
   const slug = await ensureUniqueArticleSlug(supabase, article.slug, targetCategoryId, articleId);
 
@@ -1088,24 +1166,39 @@ export async function autoSaveArticle(
 
 // ─── Fetch categories for move dialog ────────────────────────────────────────
 
+export type MoveCategoryOption = {
+  id: string;
+  name: string;
+  icon: string | null;
+  icon_colour: string | null;
+  parent_id: string | null;
+};
+
 export async function fetchCategoriesForMove(
   excludeCategoryId?: string
-): Promise<{ id: string; name: string; icon: string | null; icon_colour: string | null }[]> {
+): Promise<MoveCategoryOption[]> {
   const { supabase, user } = await getCurrentUser();
   if (!user) return [];
 
-  const query = supabase
+  // Fetch all non-deleted categories
+  const { data } = await supabase
     .from("resource_categories")
-    .select("id, name, icon, icon_colour")
+    .select("id, name, icon, icon_colour, parent_id")
     .is("deleted_at", null)
     .order("sort_order");
 
-  if (excludeCategoryId) {
-    query.neq("id", excludeCategoryId);
-  }
+  if (!data) return [];
 
-  const { data } = await query;
-  return (data ?? []) as { id: string; name: string; icon: string | null; icon_colour: string | null }[];
+  const all = data as MoveCategoryOption[];
+
+  // Find which categories are parents (have children)
+  const parentIds = new Set(all.filter((c) => c.parent_id).map((c) => c.parent_id!));
+
+  // Only return leaf categories (no children) — articles can't live on parents
+  // Also exclude the current category
+  return all.filter(
+    (c) => !parentIds.has(c.id) && c.id !== excludeCategoryId
+  );
 }
 
 // ─── Fetch top-level categories for parent picker ─────────────────────────────

@@ -297,17 +297,22 @@ describe("Intranet Resource Actions", () => {
   // =============================================
 
   describe("deleteCategory", () => {
-    it("soft-deletes a category with no articles", async () => {
-      const callLog: string[] = [];
+    it("soft-deletes a category with no subcategories or articles", async () => {
+      let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
-        callLog.push(table);
+        callCount++;
         const c = chainable();
-        if (table === "resource_articles") {
-          // article count check — returns 0
+        if (callCount === 1) {
+          // First call: subcategory count check (resource_categories) — returns 0
           c.is.mockReturnValue({ count: 0, error: null });
           return c;
         }
-        // soft-delete update
+        if (table === "resource_articles") {
+          // Second call: article count check — returns 0
+          c.is.mockReturnValue({ count: 0, error: null });
+          return c;
+        }
+        // Third call: soft-delete update
         c.single.mockResolvedValue({ data: { id: "cat-1" }, error: null });
         return c;
       });
@@ -317,11 +322,31 @@ describe("Intranet Resource Actions", () => {
       expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
     });
 
-    it("blocks deletion when category has articles", async () => {
+    it("blocks deletion when category has subcategories", async () => {
       const c = chainable();
-      // article count check — returns 3
+      // First call: subcategory count check — returns 3
       c.is.mockReturnValue({ count: 3, error: null });
       mockFrom.mockReturnValue(c);
+
+      const result = await deleteCategory("cat-1");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("3 subcategories");
+    });
+
+    it("blocks deletion when category has articles", async () => {
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          // First call: subcategory count check — returns 0
+          c.is.mockReturnValue({ count: 0, error: null });
+          return c;
+        }
+        // Second call: article count check — returns 3
+        c.is.mockReturnValue({ count: 3, error: null });
+        return c;
+      });
 
       const result = await deleteCategory("cat-1");
       expect(result.success).toBe(false);
@@ -329,10 +354,15 @@ describe("Intranet Resource Actions", () => {
     });
 
     it("returns error on DB failure", async () => {
-      const callLog: string[] = [];
+      let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
-        callLog.push(table);
+        callCount++;
         const c = chainable();
+        if (callCount === 1) {
+          // First call: subcategory count check — returns 0
+          c.is.mockReturnValue({ count: 0, error: null });
+          return c;
+        }
         if (table === "resource_articles") {
           c.is.mockReturnValue({ count: 0, error: null });
           return c;
