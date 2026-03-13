@@ -972,6 +972,15 @@ describe("HR Flexible Working Actions", () => {
       const result = await approveFlexibleWorkingRequest("req-1", {});
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to update employee's work pattern");
+
+      // Verify rollback was called with correct args
+      expect(rollbackChain.update).toHaveBeenCalledWith({
+        status: "under_review",
+        decided_by: null,
+        decided_at: null,
+        decision_notes: null,
+      });
+      expect(rollbackChain.eq).toHaveBeenCalledWith("id", "req-1");
     });
 
     it("rejects decision_notes that exceed max length", async () => {
@@ -1289,6 +1298,8 @@ describe("HR Flexible Working Actions", () => {
 
     it("rolls back request when profile update fails on confirmation", async () => {
       let callCount = 0;
+      const rollbackChain = chainable();
+
       mockFrom.mockImplementation(() => {
         callCount++;
         const c = chainable();
@@ -1320,15 +1331,26 @@ describe("HR Flexible Working Actions", () => {
             data: null,
             error: { message: "profile update failed" },
           });
+        } else if (callCount === 5) {
+          // Rollback request status
+          return rollbackChain;
         }
 
-        // Remaining calls are rollback — don't need specific mocking
         return c;
       });
 
       const result = await recordTrialOutcome("req-1", { outcome: "confirmed" });
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to update employee's work pattern");
+
+      // Verify rollback was called with correct args
+      expect(rollbackChain.update).toHaveBeenCalledWith({
+        status: "approved_trial",
+        trial_outcome: null,
+        trial_outcome_at: null,
+        trial_outcome_by: null,
+      });
+      expect(rollbackChain.eq).toHaveBeenCalledWith("id", "req-1");
     });
   });
 
@@ -1576,6 +1598,9 @@ describe("HR Flexible Working Actions", () => {
 
     it("rolls back appeal and request on profile update failure during overturn", async () => {
       let callCount = 0;
+      const rollbackRequestChain = chainable();
+      const rollbackAppealChain = chainable();
+
       mockFrom.mockImplementation(() => {
         callCount++;
         const c = chainable();
@@ -1607,9 +1632,14 @@ describe("HR Flexible Working Actions", () => {
             data: null,
             error: { message: "profile update failed" },
           });
+        } else if (callCount === 6) {
+          // Rollback request status
+          return rollbackRequestChain;
+        } else if (callCount === 7) {
+          // Rollback appeal
+          return rollbackAppealChain;
         }
 
-        // Calls 6-7 are rollback chains — use default chainable
         return c;
       });
 
@@ -1618,6 +1648,20 @@ describe("HR Flexible Working Actions", () => {
       });
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to update employee's work pattern");
+
+      // Verify both rollbacks were called
+      expect(rollbackRequestChain.update).toHaveBeenCalledWith({
+        status: "appealed",
+      });
+      expect(rollbackRequestChain.eq).toHaveBeenCalledWith("id", "req-1");
+
+      expect(rollbackAppealChain.update).toHaveBeenCalledWith({
+        outcome: null,
+        outcome_notes: null,
+        decided_by: null,
+        decided_at: null,
+      });
+      expect(rollbackAppealChain.eq).toHaveBeenCalledWith("id", "appeal-1");
     });
 
     it("returns error when appeal record not found", async () => {

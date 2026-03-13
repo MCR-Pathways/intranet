@@ -645,6 +645,8 @@ describe("HR Onboarding Actions", () => {
 
     it("rolls back checklist on item insertion failure", async () => {
       let callCount = 0;
+      const rollbackChain = chainable();
+
       mockFrom.mockImplementation(() => {
         callCount++;
         const c = chainable();
@@ -666,8 +668,10 @@ describe("HR Onboarding Actions", () => {
         } else if (callCount === 4) {
           // Items insert fails
           c.insert.mockResolvedValue({ error: { message: "insert failed" } });
+        } else if (callCount === 5) {
+          // Rollback: delete the checklist
+          return rollbackChain;
         }
-        // Call 5 is rollback delete
 
         return c;
       });
@@ -675,6 +679,10 @@ describe("HR Onboarding Actions", () => {
       const result = await createOnboardingChecklist(validData);
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to create checklist items");
+
+      // Verify rollback delete was called
+      expect(rollbackChain.delete).toHaveBeenCalled();
+      expect(rollbackChain.eq).toHaveBeenCalledWith("id", "cl-1");
     });
   });
 
