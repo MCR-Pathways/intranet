@@ -3,6 +3,7 @@ import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/
 import {
   fetchCategoryArticlesWithClient,
   fetchSubcategoriesWithClient,
+  fetchParentCategory,
 } from "../actions";
 import { PageHeader, type BreadcrumbItem } from "@/components/layout/page-header";
 import { ArticlesList } from "@/components/resources/articles-list";
@@ -37,13 +38,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   ];
 
   if (category.parent_id) {
-    // Fetch parent category name for breadcrumb
-    const { data: parent } = await supabase
-      .from("resource_categories")
-      .select("name, slug")
-      .eq("id", category.parent_id)
-      .single();
-
+    const parent = await fetchParentCategory(supabase, category.parent_id);
     if (parent) {
       breadcrumbs.push({
         label: parent.name,

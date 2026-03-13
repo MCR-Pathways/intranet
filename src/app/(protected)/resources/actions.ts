@@ -153,6 +153,19 @@ export async function fetchCategoryBySlugWithClient(
   return data as ResourceCategory;
 }
 
+export async function fetchParentCategory(
+  supabase: SupabaseClient,
+  parentId: string
+): Promise<{ name: string; slug: string } | null> {
+  const { data } = await supabase
+    .from("resource_categories")
+    .select("name, slug")
+    .eq("id", parentId)
+    .single();
+
+  return data;
+}
+
 export async function fetchCategoryArticlesWithClient(
   supabase: SupabaseClient,
   categorySlug: string,
