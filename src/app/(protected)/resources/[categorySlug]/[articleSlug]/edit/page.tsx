@@ -30,7 +30,7 @@ export default async function EditArticlePage({
 
   // Fetch parent category info for breadcrumbs if this is a subcategory
   const parentCategory = category.parent_id
-    ? (await fetchParentCategory(supabase, category.parent_id)) ?? undefined
+    ? await fetchParentCategory(supabase, category.parent_id)
     : undefined;
 
   return <ArticleEditorPage category={category} article={article} parentCategory={parentCategory} />;
