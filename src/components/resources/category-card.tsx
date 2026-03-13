@@ -50,7 +50,7 @@ export function CategoryCard({
   return (
     <Card className="group relative transition-colors hover:bg-muted/50">
       <Link
-        href={`/intranet/resources/${category.slug}`}
+        href={`/resources/${category.slug}`}
         className="absolute inset-0 z-0"
       >
         <span className="sr-only">View {category.name}</span>
@@ -73,7 +73,7 @@ export function CategoryCard({
               {category.article_count === 1 ? "article" : "articles"}
             </Badge>
             {canEdit && (
-              <VisibilityBadge visibility={category.visibility as "all" | "internal"} />
+              <VisibilityBadge visibility={category.visibility} />
             )}
           </div>
           {category.description && (

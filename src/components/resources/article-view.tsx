@@ -21,7 +21,7 @@ import {
   updateArticle,
   deleteArticle,
   toggleArticleFeatured,
-} from "@/app/(protected)/intranet/resources/actions";
+} from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import {
@@ -96,7 +96,7 @@ export function ArticleView({
       const result = await deleteArticle(article.id);
       if (result.success) {
         toast.success("Article moved to bin");
-        window.location.href = `/intranet/resources/${categorySlug}`;
+        window.location.href = `/resources/${categorySlug}`;
       } else {
         toast.error(result.error ?? "Failed to delete article");
       }
@@ -115,7 +115,7 @@ export function ArticleView({
             <Badge variant="secondary">Featured</Badge>
           )}
           {article.visibility && (
-            <VisibilityBadge visibility={article.visibility as "all" | "internal"} className="gap-1" />
+            <VisibilityBadge visibility={article.visibility} className="gap-1" />
           )}
           <div className="ml-auto">
             <DropdownMenu>
@@ -143,7 +143,7 @@ export function ArticleView({
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
+                    href={`/resources/${categorySlug}/${article.slug}/edit`}
                   >
                     <Pencil className="h-4 w-4" />
                     Edit
