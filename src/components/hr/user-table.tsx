@@ -98,9 +98,9 @@ export interface UserTableProfile {
   created_at: string;
 }
 
-const statusVariants: Record<string, "success" | "destructive" | "warning"> = {
+const statusVariants: Record<string, "success" | "muted" | "warning"> = {
   active: "success",
-  inactive: "destructive",
+  inactive: "muted",
   pending_induction: "warning",
 };
 

@@ -10,6 +10,7 @@ import {
   deleteTemplateItem,
 } from "@/app/(protected)/hr/onboarding/actions";
 import { ONBOARDING_SECTION_CONFIG, ONBOARDING_ASSIGNEE_CONFIG, ONBOARDING_SECTIONS } from "@/lib/hr";
+import { cn } from "@/lib/utils";
 import type {
   OnboardingTemplate,
   OnboardingTemplateItem,
@@ -306,7 +307,7 @@ export function OnboardingTemplateManagement({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{template.name}</span>
-                      <Badge variant={template.is_active ? "default" : "secondary"}>
+                      <Badge variant={template.is_active ? "success" : "muted"}>
                         {template.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </div>
@@ -654,8 +655,7 @@ function TemplateItemsList({
                   )}
                 </div>
                 <Badge
-                  variant="secondary"
-                  className={`text-xs ${ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour} ${ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].bgColour} border-0 shrink-0`}
+                  className={cn("text-xs border-0 shrink-0", ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].bgColour, ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour)}
                 >
                   {ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].label}
                 </Badge>

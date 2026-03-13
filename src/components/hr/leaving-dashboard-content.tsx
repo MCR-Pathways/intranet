@@ -130,7 +130,7 @@ export function LeavingDashboardContent({
       cell: ({ row }) => {
         const statusConfig = LEAVING_STATUS_CONFIG[row.original.status];
         return (
-          <Badge variant="outline" className={`${statusConfig.colour} ${statusConfig.bgColour} border-0`}>
+          <Badge variant={statusConfig.badgeVariant}>
             {statusConfig.label}
           </Badge>
         );

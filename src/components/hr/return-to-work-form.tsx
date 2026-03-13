@@ -260,7 +260,7 @@ export function ReturnToWorkForm({
         <SheetHeader>
           <div className="flex items-center gap-3">
             <SheetTitle>Return to Work — {employeeName}</SheetTitle>
-            <Badge className={`${statusConfig.bgColour} ${statusConfig.colour} border-0`}>
+            <Badge variant={statusConfig.badgeVariant}>
               {statusConfig.label}
             </Badge>
           </div>
@@ -295,7 +295,7 @@ export function ReturnToWorkForm({
               <div>
                 <span className="text-muted-foreground">Calendar days:</span> {calendarDays}
                 {absenceRecord.is_long_term && (
-                  <Badge variant="outline" className="ml-2 text-amber-700 border-amber-300">Long-term</Badge>
+                  <Badge variant="warning" className="ml-2">Long-term</Badge>
                 )}
               </div>
               {needsFitNote && (

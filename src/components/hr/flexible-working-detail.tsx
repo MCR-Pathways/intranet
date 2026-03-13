@@ -206,10 +206,7 @@ export function FlexibleWorkingDetail({
           <div className="flex items-center justify-between">
             <CardTitle>Request Summary</CardTitle>
             {statusConfig && (
-              <Badge
-                variant="outline"
-                className={cn(statusConfig.colour, statusConfig.bgColour, "border-0")}
-              >
+              <Badge className={cn(statusConfig.bgColour, statusConfig.colour, "border-0")}>
                 {statusConfig.label}
               </Badge>
             )}
@@ -361,10 +358,7 @@ export function FlexibleWorkingDetail({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Outcome</p>
                 {statusConfig && (
-                  <Badge
-                    variant="outline"
-                    className={cn(statusConfig.colour, statusConfig.bgColour, "border-0")}
-                  >
+                  <Badge className={cn(statusConfig.bgColour, statusConfig.colour, "border-0")}>
                     {statusConfig.label}
                   </Badge>
                 )}

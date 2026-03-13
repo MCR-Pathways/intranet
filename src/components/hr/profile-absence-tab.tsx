@@ -129,7 +129,7 @@ export function ProfileAbsenceTab({
               {formatHRDate(record.start_date)} – {formatHRDate(record.end_date)}
             </span>
             {record.is_long_term && (
-              <Badge variant="outline" className="text-amber-700 border-amber-300 text-xs">
+              <Badge variant="warning" className="text-xs">
                 Long-term
               </Badge>
             )}
@@ -183,7 +183,7 @@ export function ProfileAbsenceTab({
         const rtwStatus = row.original.rtw_status;
         const rtwConfig = rtwStatus ? RTW_STATUS_CONFIG[rtwStatus] : null;
         return rtwConfig ? (
-          <Badge className={`${rtwConfig.bgColour} ${rtwConfig.colour} border-0`}>
+          <Badge variant={rtwConfig.badgeVariant}>
             {rtwConfig.label}
           </Badge>
         ) : (
