@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ClipboardList,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective, isContentEditorEffective } from "@/lib/auth-helpers";
 import type { Profile, UserType } from "@/types/database.types";
@@ -60,27 +61,28 @@ function getNavigation(
   const hasAnyAdmin = isHRAdmin || isLDAdmin || isSystemsAdmin;
 
   // Home — all users
-  const homeChildren: NavGroup[] = [
-    {
-      label: null,
-      items: [
-        { name: "Resources", href: "/intranet/resources" },
-      ],
-    },
-  ];
-  if (canEditResources) {
-    homeChildren[0].items.push({ name: "Bin", href: "/intranet/resources/bin" });
-  }
-
   const mainNav: NavItem[] = [
     {
       name: "Home",
       href: "/intranet",
       icon: Home,
       module: "intranet",
-      children: homeChildren,
     },
   ];
+
+  // Resources — all users (top-level knowledge base)
+  mainNav.push({
+    name: "Resources",
+    href: "/resources",
+    icon: BookOpen,
+    module: "intranet",
+    children: canEditResources ? [{
+      label: null,
+      items: [
+        { name: "Bin", href: "/resources/bin" },
+      ],
+    }] : undefined,
+  });
 
   // Me — staff only (personal HR items)
   if (isStaff) {
@@ -162,15 +164,17 @@ const internalOnlyModules = new Set(["hr", "sign-in"]);
 
 function isItemActive(pathname: string, item: NavItem): boolean {
   if (pathname === item.href) return true;
-  // For items with children, match via child paths only
-  // This resolves Me (/hr/profile) vs Admin (/hr) conflict on shared /hr/ prefix
+  // Try child paths first (precise match), then fall back to prefix matching.
+  // The Me/Admin /hr prefix conflict is safe because Admin uses exact match
+  // in the utility zone and doesn't go through isItemActive.
   if (item.children) {
-    return item.children.some((group) =>
+    const childMatch = item.children.some((group) =>
       group.items.some(
         (child) =>
           pathname === child.href || pathname.startsWith(child.href + "/")
       )
     );
+    if (childMatch) return true;
   }
   return pathname.startsWith(item.href + "/");
 }

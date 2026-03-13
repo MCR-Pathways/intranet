@@ -255,14 +255,15 @@ Internal communications — news feed, resources/knowledge base, and induction.
 | Feature | Route |
 |---|---|
 | News Feed | `/intranet` |
-| Guides (redirect) | `/intranet/guides` → `/intranet/resources` |
-| Policies (redirect) | `/intranet/policies` → `/intranet/resources` |
+| Guides (redirect) | `/intranet/guides` → `/resources/guides` |
+| Policies (redirect) | `/intranet/policies` → `/resources/policies` |
 | Weekly Roundup | `/intranet/weekly-roundup` |
-| Resources | `/intranet/resources` |
-| Resource Category | `/intranet/resources/[categorySlug]` |
-| Article View | `/intranet/resources/[categorySlug]/[articleSlug]` |
-| New Article (admin) | `/intranet/resources/[categorySlug]/new` |
-| Edit Article (admin) | `/intranet/resources/[categorySlug]/[articleSlug]/edit` |
+| Resources | `/resources` (top-level module) |
+| Resource Category | `/resources/[categorySlug]` |
+| Article View | `/resources/[categorySlug]/[articleSlug]` |
+| New Article (editor) | `/resources/[categorySlug]/new` |
+| Edit Article (editor) | `/resources/[categorySlug]/[articleSlug]/edit` |
+| Resource Bin (editor) | `/resources/bin` |
 | Induction Hub | `/intranet/induction` (9 sub-pages) |
 
 **Key features:** Rich text posts (Tiptap), @mentions with notifications, reactions, comments, link previews with SSRF protection, image lightbox, file attachments, pin/unpin (HR admin), weekly roundup.

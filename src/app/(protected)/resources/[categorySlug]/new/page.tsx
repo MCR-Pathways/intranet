@@ -14,7 +14,7 @@ export default async function NewArticlePage({ params }: NewArticlePageProps) {
 
   // Only editors (HR admins or content editors) can create articles
   if (!isHRAdminEffective(profile) && !isContentEditorEffective(profile)) {
-    redirect(`/intranet/resources/${categorySlug}`);
+    redirect(`/resources/${categorySlug}`);
   }
 
   const category = await fetchCategoryBySlugWithClient(supabase, categorySlug);

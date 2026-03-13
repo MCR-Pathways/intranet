@@ -13,10 +13,10 @@ import {
   moveArticle,
   fetchCategoriesForMove,
   fetchTopLevelCategories,
-} from "@/app/(protected)/intranet/resources/actions";
+} from "@/app/(protected)/resources/actions";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { toast } from "sonner";
-import type { MoveCategoryOption } from "@/app/(protected)/intranet/resources/actions";
+import type { MoveCategoryOption } from "@/app/(protected)/resources/actions";
 
 interface MoveArticleDialogProps {
   articleId: string;

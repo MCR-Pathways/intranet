@@ -33,7 +33,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   // Build breadcrumbs — if this is a subcategory, include the parent
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Home", href: "/intranet" },
-    { label: "Resources", href: "/intranet/resources" },
+    { label: "Resources", href: "/resources" },
   ];
 
   if (category.parent_id) {
@@ -47,7 +47,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     if (parent) {
       breadcrumbs.push({
         label: parent.name,
-        href: `/intranet/resources/${parent.slug}`,
+        href: `/resources/${parent.slug}`,
       });
     }
   }

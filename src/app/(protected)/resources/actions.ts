@@ -89,7 +89,7 @@ async function ensureUniqueArticleSlug(
 }
 
 function revalidate() {
-  revalidatePath("/intranet/resources", "layout");
+  revalidatePath("/resources", "layout");
 }
 
 // ─── Read helpers (*WithClient) ──────────────────────────────────────────────

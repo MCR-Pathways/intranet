@@ -25,7 +25,7 @@ import {
   createCategory,
   updateCategory,
   fetchTopLevelCategories,
-} from "@/app/(protected)/intranet/resources/actions";
+} from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import type { ResourceCategory } from "@/types/database.types";
 
