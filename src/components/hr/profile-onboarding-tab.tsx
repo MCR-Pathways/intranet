@@ -94,8 +94,8 @@ export function ProfileOnboardingTab({
                             {checklist.template_name ?? "Onboarding"}
                           </span>
                           <Badge
-                            variant="secondary"
-                            className={cn("text-xs border-0", statusConfig?.colour, statusConfig?.bgColour)}
+                            variant={statusConfig?.badgeVariant ?? "muted"}
+                            className="text-xs"
                           >
                             {statusConfig?.label ?? checklist.status}
                           </Badge>
@@ -147,10 +147,7 @@ function ActiveChecklistCard({ checklist }: { checklist: OnboardingChecklistWith
               <h3 className="text-base font-semibold">
                 {checklist.template_name ?? "Onboarding Checklist"}
               </h3>
-              <Badge
-                variant="secondary"
-                className={cn("border-0", statusConfig?.colour, statusConfig?.bgColour)}
-              >
+              <Badge variant={statusConfig?.badgeVariant ?? "muted"}>
                 {statusConfig?.label ?? checklist.status}
               </Badge>
             </div>

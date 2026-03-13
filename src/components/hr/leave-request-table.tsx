@@ -83,9 +83,9 @@ function getTeamOverlap(
   );
 }
 
-const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
   pending: "secondary",
-  approved: "default",
+  approved: "success",
   rejected: "destructive",
   cancelled: "outline",
   withdrawn: "outline",

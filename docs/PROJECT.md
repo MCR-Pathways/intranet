@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-12
+> **Last reviewed:** 2026-03-13
 > **Document updated during:** Periodic syncs
 
 ---
@@ -38,8 +38,8 @@ The MCR Pathways Intranet is an internal web application that replaces BreatheHR
 - Hosted on Vercel, database on Supabase (PostgreSQL)
 
 **Who uses it:**
-- **Staff** — full access to all modules (HR, Sign-In, Learning, Intranet)
-- **Pathways Coordinators** — access to Learning and Intranet modules only
+- **Staff (internal)** — full access to all modules (HR, Sign-In, Learning, Intranet, Resources)
+- **Staff (external / Pathways Coordinators)** — `is_external = true`, access to Learning, Intranet, and Resources only
 - **New Users** — induction flow only until completed
 
 ---
@@ -352,12 +352,13 @@ The proxy (`src/proxy.ts`) runs on every request:
 
 ### User Types & Module Access
 
-| Module | `staff` | `pathways_coordinator` | `new_user` |
+| Module | `staff` (internal) | `staff` (external/PC) | `new_user` |
 |---|---|---|---|
 | `/hr` | Yes | No | No |
 | `/sign-in` | Yes | No | No |
 | `/learning` | Yes | Yes | No |
 | `/intranet` | Yes | Yes | No |
+| `/resources` | Yes | Yes | No |
 | Induction | Yes | Yes | Yes (redirected) |
 
 ### Auth Helpers (`src/lib/auth.ts`)
@@ -426,14 +427,14 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 50 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1099 tests across 50 files
+- **Files:** 52 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1251 tests across 52 files
 
 ### Test Categories
 
 | Category | Count | Examples |
 |---|---|---|
-| Action tests | 19 | Server action validation, auth gating |
+| Action tests | 21 | Server action validation, auth gating |
 | HR component tests | 8 | Dialogs, tables, forms |
 | News feed tests | 6 | Composer, reactions, comments |
 | Lib tests | 8 | Utilities, sanitisation, URL handling |
@@ -455,8 +456,6 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- `flexible-working/actions.ts` (1167 lines, 12 actions) — zero tests
-- `onboarding/actions.ts` (1140 lines, 18 actions) — zero tests
 - No E2E tests for multi-step HR workflows
 
 ---
@@ -491,7 +490,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | File | Purpose |
 |---|---|
-| `next.config.ts` | Next.js config, security headers, CSP, image remotes |
+| `next.config.ts` | Next.js config, React Compiler, Turbopack FS caching, security headers, CSP, image remotes |
 | `tsconfig.json` | TypeScript config, path aliases |
 | `vitest.config.ts` | Test runner config |
 | `supabase/config.toml` | Local Supabase config |
@@ -623,8 +622,6 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 ### High Priority
 
-- **Missing tests for flexible working** — `flexible-working/actions.ts` (1167 lines, 12 actions) has zero tests. This module has statutory compliance requirements (Employment Rights Act 1996).
-- **Missing tests for onboarding** — `onboarding/actions.ts` (1140 lines, 18 actions) has zero tests.
 - **No error monitoring** — `src/lib/logger.ts` is a console stub. No Sentry/Datadog integration.
 - **No rate limiting** — API endpoints have no request throttling. Requires Upstash Redis for Vercel serverless (in-memory limiters don't persist across cold starts).
 
@@ -639,11 +636,11 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 ### Low Priority / UX
 
-- Maternity leave showing for regular employees (filter `HR_ONLY_LEAVE_TYPES`)
-- Notification dropdown has no scroll for many notifications
 - Weekend calendar cells nearly invisible (`bg-muted/30` on `bg-background`)
 - ~~"HR" sidebar naming unintuitive for employees~~ (addressed by sidebar declutter, PR #111)
-- System Permissions visible on non-admin Profile view
+- ~~Maternity leave showing for regular employees~~ (fixed in PR #137)
+- ~~Notification dropdown scroll~~ (fixed in PR #137)
+- ~~System Permissions visible on non-admin Profile view~~ (fixed in PR #137)
 
 ### Won't Fix
 
@@ -675,6 +672,8 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-13 | Abdul-Muiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
+| 2026-03-13 | Abdul-Muiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | Resources restructure PR D: 9-category taxonomy (migration 00056). Soft-deleted old 3 categories (Policies, Guides, Templates), seeded 9 top-level + 43 subcategories with icons, colours, visibility. Fixed article/editor breadcrumbs for subcategories (parent chain). Updated legacy redirect pages. Route promotion (PR C): `/intranet/resources` → `/resources` top-level sidebar with BookOpen icon. Gemini review fixes: removed 3 redundant type casts. 1119 tests, 50 files. |
 | 2026-03-12 | Abdul-Muiz Adaranijo | Resources restructure PRs #127, #130, #128 merged. Systems admin permissions broadened (migration 00052). PC user type removed — `pathways_coordinator` → `staff` + `is_external` (migration 00053). Content editor permission added (migration 00054). Proxy redirect loop fix for new_user after induction. Gemini review fixes across all 3 PRs (accessible switch tests, VisibilityBadge extraction, toggle mapping). PR #131 open for subcategories + visibility. 1118 tests, 50 files. |
 | 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (4 PRs #121-123, #125): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C), Google default avatar filter (`filterAvatarUrl()`). 16 avatar files, 7 link files, 2 icon files + CSS tokens. 1112 tests, 50 files. |

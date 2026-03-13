@@ -103,7 +103,7 @@ Defined in `src/app/globals.css` `:root`:
 | Sidebar active | `bg-primary text-primary-foreground` (dark blue) |
 | Tab bar (line) | `border-b` underline variant with `hover:text-foreground` |
 | Tab bar (pill) | `bg-muted` rounded pill |
-| Badges | `bg-primary` (dark blue), `bg-secondary` (grey), `bg-destructive` (red), `bg-status-*` |
+| Badges (tonal) | `bg-{colour}-50 text-{colour}-700` — subtle tonal fills matching industry standard (Atlassian, Stripe, Shopify). See §1.8 |
 | Links | `text-link underline hover:text-link/80` — teal light mode, light blue dark mode. Underlines mandatory (link-to-body 1.83:1 fails 3:1 without underline) |
 | Avatar fallbacks | `getAvatarColour(name)` from `src/lib/utils.ts` — deterministic Navy/Teal/Wine hash. Org chart excluded (uses department colours) |
 | Icon swatches | `bg-mcr-{colour}/15` background + `text-icon-fg-{colour}` foreground. 8 preset swatches via `ICON_COLOURS` in `src/lib/resource-icons.ts` |
@@ -122,6 +122,30 @@ Status badges throughout the app use **Tailwind utility colours**, not MCR brand
 | Special (appealed, trial) | `purple-50/700`, `teal-50/700` |
 
 This is consistent with industry practice — semantic status colours should be universal and not brand-specific.
+
+### 1.8 Badge Design Pattern (Tonal Pills)
+
+Badges use **subtle/tonal fills** — light coloured background (`-50`) with darker text (`-700`). This is the industry standard used by Atlassian (Lozenge), Stripe, Shopify (Polaris), and Material Design 3. Solid fills are NOT used — they create visual noise in dense table views.
+
+**Core badge variants** (`src/components/ui/badge.tsx`):
+
+| Variant | Classes | Use for |
+|---------|---------|---------|
+| `default` | `bg-blue-50 text-blue-700` | Info, general labels (Published, HR Admin, New) |
+| `success` | `bg-green-50 text-green-700` | Positive states (Approved, Active, Completed, Verified) |
+| `warning` | `bg-amber-50 text-amber-700` | Attention needed (Pending, Due soon, Required, Draft) |
+| `destructive` | `bg-red-50 text-red-700` | Negative states (Declined, Overdue, Inactive, Expired) |
+| `secondary` | `bg-secondary text-secondary-foreground` | Neutral/low emphasis (Pinned, secondary categories) |
+| `outline` | `text-foreground` + border | Minimal (Cancelled, Withdrawn, visibility labels) |
+| `muted` | `bg-muted text-muted-foreground` | Very low emphasis (Staff, Draft in some contexts) |
+
+**HR config-driven badges** (defined in `src/lib/hr.ts`) apply tonal colours via className overrides on the Badge component: `bgColour: "bg-{colour}-50"` + `colour: "text-{colour}-700"`. These bypass the variant system but follow the same tonal pattern.
+
+**Rules:**
+- Always use semantic variants — `success` for positive, `destructive` for negative, `warning` for attention
+- Never use solid fills (`bg-green-500 text-white`) — tonal fills are the standard
+- Badge text should be 1-2 words maximum
+- Use Tailwind's built-in colour scales (`-50` for bg, `-700` for text) — do not create custom hex values
 
 ---
 

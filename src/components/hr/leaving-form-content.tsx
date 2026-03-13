@@ -195,7 +195,7 @@ export function LeavingFormContent({
       <Card>
         <CardContent className="flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <Badge className={`${statusConfig.colour} ${statusConfig.bgColour} border-0 text-sm`}>
+            <Badge variant={statusConfig.badgeVariant} className="text-sm">
               {statusConfig.label}
             </Badge>
             {form.completed_at && (
@@ -547,7 +547,7 @@ export function LeavingFormContent({
               />
               <Label htmlFor="equipment-returned" className="font-medium">Equipment returned</Label>
               {outstandingAssets.length > 0 && !equipmentReturned && (
-                <Badge variant="outline" className="text-amber-700 bg-amber-50 border-0 text-xs">
+                <Badge variant="warning" className="text-xs">
                   {outstandingAssets.length} outstanding
                 </Badge>
               )}

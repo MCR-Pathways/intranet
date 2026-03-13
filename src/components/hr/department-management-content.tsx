@@ -387,7 +387,7 @@ export function DepartmentManagementContent({
       accessorKey: "is_active",
       header: "Status",
       cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? "success" : "destructive"}>
+        <Badge variant={row.original.is_active ? "success" : "muted"}>
           {row.original.is_active ? "Active" : "Inactive"}
         </Badge>
       ),

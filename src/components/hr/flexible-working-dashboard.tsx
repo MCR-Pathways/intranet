@@ -106,10 +106,7 @@ function getColumns(showEmployee: boolean): ColumnDef<FlexibleWorkingRequestWith
         const statusConfig = FWR_STATUS_CONFIG[row.original.status as FWRStatus];
         if (!statusConfig) return null;
         return (
-          <Badge
-            variant="outline"
-            className={cn(statusConfig.colour, statusConfig.bgColour, "border-0")}
-          >
+          <Badge className={cn(statusConfig.bgColour, statusConfig.colour, "border-0")}>
             {statusConfig.label}
           </Badge>
         );

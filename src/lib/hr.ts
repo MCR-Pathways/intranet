@@ -238,11 +238,11 @@ export type AbsenceType = keyof typeof ABSENCE_TYPE_CONFIG;
 // RTW FORM STATUS CONFIG
 // =============================================
 
-export const RTW_STATUS_CONFIG: Record<RTWStatus, { label: string; colour: string; bgColour: string }> = {
-  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-50" },
-  submitted: { label: "Awaiting Confirmation", colour: "text-amber-700", bgColour: "bg-amber-50" },
-  confirmed: { label: "Confirmed", colour: "text-blue-700", bgColour: "bg-blue-50" },
-  locked: { label: "Locked", colour: "text-green-700", bgColour: "bg-green-50" },
+export const RTW_STATUS_CONFIG: Record<RTWStatus, { label: string; colour: string; bgColour: string; badgeVariant: "default" | "destructive" | "success" | "warning" | "muted" }> = {
+  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-50", badgeVariant: "muted" },
+  submitted: { label: "Awaiting Confirmation", colour: "text-amber-700", bgColour: "bg-amber-50", badgeVariant: "warning" },
+  confirmed: { label: "Confirmed", colour: "text-blue-700", bgColour: "bg-blue-50", badgeVariant: "default" },
+  locked: { label: "Locked", colour: "text-green-700", bgColour: "bg-green-50", badgeVariant: "success" },
 };
 
 // =============================================
@@ -381,11 +381,11 @@ export type LeavingReason = keyof typeof LEAVING_REASON_CONFIG;
 // =============================================
 
 export const LEAVING_STATUS_CONFIG = {
-  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-100", dotColour: "bg-gray-500" },
-  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", dotColour: "bg-blue-500" },
-  in_progress: { label: "In Progress", colour: "text-amber-700", bgColour: "bg-amber-50", dotColour: "bg-amber-500" },
-  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
-  cancelled: { label: "Cancelled", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
+  draft: { label: "Draft", colour: "text-gray-700", bgColour: "bg-gray-100", dotColour: "bg-gray-500", badgeVariant: "muted" as const },
+  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", dotColour: "bg-blue-500", badgeVariant: "default" as const },
+  in_progress: { label: "In Progress", colour: "text-amber-700", bgColour: "bg-amber-50", dotColour: "bg-amber-500", badgeVariant: "warning" as const },
+  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500", badgeVariant: "success" as const },
+  cancelled: { label: "Cancelled", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500", badgeVariant: "destructive" as const },
 } as const;
 
 export type LeavingFormStatus = keyof typeof LEAVING_STATUS_CONFIG;
@@ -883,10 +883,10 @@ export const ONBOARDING_ASSIGNEE_CONFIG: Record<OnboardingAssigneeRole, { label:
   other: { label: "Other", colour: "text-slate-700", bgColour: "bg-slate-50" },
 };
 
-export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; colour: string; bgColour: string }> = {
-  active: { label: "Active", colour: "text-blue-700", bgColour: "bg-blue-50" },
-  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50" },
-  cancelled: { label: "Cancelled", colour: "text-slate-700", bgColour: "bg-slate-50" },
+export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; colour: string; bgColour: string; badgeVariant: "default" | "success" | "muted" }> = {
+  active: { label: "Active", colour: "text-blue-700", bgColour: "bg-blue-50", badgeVariant: "default" },
+  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", badgeVariant: "success" },
+  cancelled: { label: "Cancelled", colour: "text-slate-700", bgColour: "bg-slate-50", badgeVariant: "muted" },
 };
 
 export const ONBOARDING_SECTIONS: OnboardingSection[] = [
