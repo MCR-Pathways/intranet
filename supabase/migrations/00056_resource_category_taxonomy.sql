@@ -12,15 +12,15 @@ UPDATE public.resource_articles
 SET deleted_at = NOW()
 WHERE category_id IN (
   SELECT id FROM public.resource_categories
-  WHERE slug IN ('policies', 'guides', 'templates')
+  WHERE slug IN ('policies', 'guides', 'templates', 'how-to')
     AND deleted_at IS NULL
 )
 AND deleted_at IS NULL;
 
--- Soft-delete old categories
+-- Soft-delete old categories ('how-to' was renamed from 'guides' by migration 00050)
 UPDATE public.resource_categories
 SET deleted_at = NOW()
-WHERE slug IN ('policies', 'guides', 'templates')
+WHERE slug IN ('policies', 'guides', 'templates', 'how-to')
   AND deleted_at IS NULL;
 
 -- ============================================================================
