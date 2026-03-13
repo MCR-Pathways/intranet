@@ -41,7 +41,7 @@ export function ArticleListItem({
   return (
     <div className="group relative flex items-center gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
       <Link
-        href={`/intranet/resources/${categorySlug}/${article.slug}`}
+        href={`/resources/${categorySlug}/${article.slug}`}
         className="absolute inset-0 z-0"
       >
         <span className="sr-only">Read {article.title}</span>
@@ -60,7 +60,7 @@ export function ArticleListItem({
             </Badge>
           )}
           {canEdit && article.visibility && (
-            <VisibilityBadge visibility={article.visibility as "all" | "internal"} />
+            <VisibilityBadge visibility={article.visibility} />
           )}
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -99,7 +99,7 @@ export function ArticleListItem({
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
                 <Link
-                  href={`/intranet/resources/${categorySlug}/${article.slug}/edit`}
+                  href={`/resources/${categorySlug}/${article.slug}/edit`}
                 >
                   <Pencil className="h-4 w-4" />
                   Edit
