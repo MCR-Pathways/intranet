@@ -64,7 +64,7 @@ export function ProfileLeavingTab({
         <div className="flex items-start justify-between">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className={`${statusConfig.colour} ${statusConfig.bgColour} border-0`}>
+              <Badge variant={statusConfig.badgeVariant}>
                 {statusConfig.label}
               </Badge>
             </div>

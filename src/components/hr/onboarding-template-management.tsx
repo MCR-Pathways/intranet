@@ -10,6 +10,7 @@ import {
   deleteTemplateItem,
 } from "@/app/(protected)/hr/onboarding/actions";
 import { ONBOARDING_SECTION_CONFIG, ONBOARDING_ASSIGNEE_CONFIG, ONBOARDING_SECTIONS } from "@/lib/hr";
+import { cn } from "@/lib/utils";
 import type {
   OnboardingTemplate,
   OnboardingTemplateItem,
@@ -654,8 +655,7 @@ function TemplateItemsList({
                   )}
                 </div>
                 <Badge
-                  variant="secondary"
-                  className={`text-xs ${ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour} ${ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].bgColour} border-0 shrink-0`}
+                  className={cn("text-xs border-0 shrink-0", ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].bgColour, ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour)}
                 >
                   {ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].label}
                 </Badge>

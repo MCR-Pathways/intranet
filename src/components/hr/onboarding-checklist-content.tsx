@@ -192,10 +192,7 @@ export function OnboardingChecklistContent({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-semibold">{checklist.employee_name}</h2>
-                <Badge
-                  variant="secondary"
-                  className={cn("border-0", statusConfig?.colour, statusConfig?.bgColour)}
-                >
+                <Badge variant={statusConfig?.badgeVariant ?? "muted"}>
                   {statusConfig?.label ?? checklist.status}
                 </Badge>
               </div>

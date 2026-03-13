@@ -126,7 +126,7 @@ export function AbsenceDashboardContent({
               {formatHRDate(record.start_date)} – {formatHRDate(record.end_date)}
             </span>
             {record.is_long_term && (
-              <Badge variant="outline" className="text-amber-700 border-amber-300 text-xs">
+              <Badge variant="warning" className="text-xs">
                 Long-term
               </Badge>
             )}
@@ -179,7 +179,7 @@ export function AbsenceDashboardContent({
       cell: ({ row }) => {
         const rtwConfig = row.original.rtw_status ? RTW_STATUS_CONFIG[row.original.rtw_status] : null;
         return rtwConfig ? (
-          <Badge className={`${rtwConfig.bgColour} ${rtwConfig.colour} border-0`}>
+          <Badge variant={rtwConfig.badgeVariant}>
             {rtwConfig.label}
           </Badge>
         ) : (
@@ -245,7 +245,7 @@ export function AbsenceDashboardContent({
       cell: ({ row }) => {
         const statusConfig = RTW_STATUS_CONFIG[row.original.status];
         return (
-          <Badge className={`${statusConfig.bgColour} ${statusConfig.colour} border-0`}>
+          <Badge variant={statusConfig.badgeVariant}>
             {statusConfig.label}
           </Badge>
         );

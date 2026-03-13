@@ -107,7 +107,7 @@ export function RTWConfirmationContent({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Badge className={`${statusConfig.bgColour} ${statusConfig.colour} border-0`}>
+        <Badge variant={statusConfig.badgeVariant}>
           {statusConfig.label}
         </Badge>
       </div>
