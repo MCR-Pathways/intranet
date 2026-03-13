@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
 import { fetchArticleWithClient } from "../../actions";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader, type BreadcrumbItem } from "@/components/layout/page-header";
 import { ArticleView } from "@/components/resources/article-view";
 
 interface ArticlePageProps {
@@ -23,16 +23,31 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!category || !article) notFound();
 
+  // Build breadcrumbs — if category is a subcategory, include parent
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "Home", href: "/intranet" },
+    { label: "Resources", href: "/resources" },
+  ];
+
+  if (category.parent_id) {
+    const { data: parent } = await supabase
+      .from("resource_categories")
+      .select("name, slug")
+      .eq("id", category.parent_id)
+      .single();
+    if (parent) {
+      breadcrumbs.push({ label: parent.name, href: `/resources/${parent.slug}` });
+    }
+  }
+
+  breadcrumbs.push({ label: category.name, href: `/resources/${category.slug}` });
+  breadcrumbs.push({ label: article.title });
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={article.title}
-        breadcrumbs={[
-          { label: "Home", href: "/intranet" },
-          { label: "Resources", href: "/resources" },
-          { label: category.name, href: `/resources/${category.slug}` },
-          { label: article.title },
-        ]}
+        breadcrumbs={breadcrumbs}
       />
 
       <ArticleView

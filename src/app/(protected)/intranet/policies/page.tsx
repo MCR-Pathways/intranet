@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function PoliciesPage() {
-  redirect("/resources/policies");
+  redirect("/resources");
 }

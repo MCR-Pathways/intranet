@@ -28,5 +28,16 @@ export default async function EditArticlePage({
 
   if (!category || !article) notFound();
 
-  return <ArticleEditorPage category={category} article={article} />;
+  // Fetch parent category info for breadcrumbs if this is a subcategory
+  let parentCategory: { name: string; slug: string } | undefined;
+  if (category.parent_id) {
+    const { data: parent } = await supabase
+      .from("resource_categories")
+      .select("name, slug")
+      .eq("id", category.parent_id)
+      .single();
+    if (parent) parentCategory = parent;
+  }
+
+  return <ArticleEditorPage category={category} article={article} parentCategory={parentCategory} />;
 }

@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-12
+> Last updated: 2026-03-13
 
 ---
 
@@ -149,7 +149,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] `/resources` top-level module (promoted from `/intranet/resources`)
 - [x] Two-level hierarchy: Categories → Articles (Tiptap editor reused from Phase 2)
 - [x] HR admins + Content Editors create/edit/publish/delete; all users read published content
-- [x] Old `/intranet/guides` and `/intranet/policies` redirect to `/resources/*`
+- [x] Old `/intranet/guides` and `/intranet/policies` redirect to `/resources`
 - [x] Sidebar: top-level Resources item with BookOpen icon (between Home and Me)
 - **Resources Editor Overhaul (PRs #102–105):**
   - [x] Fix double border in article editor, install 9 Tiptap extension packages (PR #102)
@@ -183,15 +183,15 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Fix article editor: prepend "Home" root breadcrumb
 - [x] Visual refresh: `/` separator (GitHub/Linear/Notion style), `hover:underline` on links, removed ChevronRight icon
 
-### Resources Module Restructure (In Progress — 4 PRs)
-- [x] **Pre-req — Broaden Systems Admin Permissions** (PR #127): Migration 00052. Systems admins can grant `is_ld_admin`, `is_systems_admin`, `is_line_manager`, `is_content_editor`. HR Admin + department remain HR-admin-only. Updated `protect_admin_fields()` trigger and `PermissionsEditDialog`.
-- [x] **Pre-req — Remove Pathways Coordinator User Type** (PR #130): Migration 00053. `pathways_coordinator` → `staff` + `is_external = true`. `is_internal_staff()` DB function for visibility RLS. `has_module_access()` uses `is_external`. `is_external` added to JWT claims. Proxy redirect loop fix for new_user. 25 app files updated.
-- [x] **PR A — Content Editor Permission** (PR #128): Migration 00054. `is_content_editor` column, `requireContentEditor()` auth gate, updated RLS (8 policies), JWT claims sync, `protect_admin_fields`. All 16 resource actions migrated from `requireHRAdmin()` to `requireContentEditor()`. Permissions dialog adds Content Editor toggle.
-- [ ] **PR B — Subcategories + Visibility** (PR #131): Migration 00055. `parent_id` for 2-level hierarchy, `visibility` on categories and articles (`all` | `internal`), depth constraint, `VisibilityBadge` shared component, category form with parent selector and visibility toggle.
-- [ ] **PR C — Route Migration**: `/intranet/resources` → `/resources` (top-level sidebar module). Redirect in proxy.
-- [ ] **PR D — New Taxonomy + Polish**: 9-category taxonomy replacing flat 4-category structure. Seed data.
+### Intranet Phase 6 — Resources Restructure ✅ (PRs #127–132)
+- [x] **PR A — Systems Admin Permissions** (PR #127): Migration 00052. Systems admins can toggle `is_ld_admin`, `is_systems_admin`, `is_line_manager`, `is_content_editor`. HR Admin + department remain HR-admin-only.
+- [x] **PR — Remove Pathways Coordinator** (PR #130): Migration 00053. `pathways_coordinator` → `staff` + `is_external = true`. `is_internal_staff()` DB function. Proxy redirect loop fix.
+- [x] **PR — Content Editor Permission** (PR #128): Migration 00054. `is_content_editor` column, DB functions, 8 RLS policies updated, JWT claims sync. `requireContentEditor()` gate.
+- [x] **PR B — Subcategories + Visibility** (PR #131): Migration 00055. `parent_id` self-referential FK with depth trigger, `visibility` on categories/articles, `resolve_article_visibility()` for RLS, `VisibilityBadge` component.
+- [x] **PR C — Route Promotion** (PR #131): Routes `/intranet/resources` → `/resources`. Top-level sidebar item. 308 redirects in `next.config.ts`. 11 component + 8 route files.
+- [x] **PR D — 9-Category Taxonomy** (PR #131): Migration 00056. Soft-delete old 3 placeholder categories, seed 9 top-level + 43 subcategories organised by function. Article breadcrumb parent chain fix. Legacy redirect fix (`/intranet/guides`, `/intranet/policies` → `/resources`).
 
-### Intranet Phase 6 — Surveys + Universal Search
+### Intranet Phase 7 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
 - [ ] Cmd+K universal search palette: posts + resources + people (PostgreSQL FTS)
 
