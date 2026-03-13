@@ -30,11 +30,14 @@ interface ArticleEditorPageProps {
   category: ResourceCategory;
   /** Pass existing article for edit mode; omit for create mode */
   article?: ArticleWithAuthor;
+  /** Parent category info for subcategory breadcrumbs */
+  parentCategory?: { name: string; slug: string };
 }
 
 export function ArticleEditorPage({
   category,
   article,
+  parentCategory,
 }: ArticleEditorPageProps) {
   const [isPending, startTransition] = useTransition();
   const titleRef = useRef<HTMLInputElement>(null);
@@ -169,6 +172,9 @@ export function ArticleEditorPage({
   const breadcrumbs = [
     { label: "Home", href: "/intranet" },
     { label: "Resources", href: "/resources" },
+    ...(parentCategory
+      ? [{ label: parentCategory.name, href: `/resources/${parentCategory.slug}` }]
+      : []),
     { label: category.name, href: `/resources/${category.slug}` },
     ...(isEdit
       ? [
