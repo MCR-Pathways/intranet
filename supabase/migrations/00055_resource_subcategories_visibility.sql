@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration: 00054_resource_subcategories_visibility.sql
+-- Migration: 00055_resource_subcategories_visibility.sql
 -- Description: Add subcategory support (parent_id) and visibility controls
 --   to resource_categories and resource_articles.
 --
