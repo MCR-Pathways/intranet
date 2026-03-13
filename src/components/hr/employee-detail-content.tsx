@@ -204,6 +204,7 @@ export function EmployeeDetailContent({
             profile={profile}
             lineManagerName={lineManagerName}
             teamName={teamName}
+            isViewerAdmin={isHRAdmin}
           />
           <ProfileKeyDatesSection
             profileId={profile.id}
