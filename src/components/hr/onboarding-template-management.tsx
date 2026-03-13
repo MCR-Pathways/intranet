@@ -306,7 +306,7 @@ export function OnboardingTemplateManagement({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{template.name}</span>
-                      <Badge variant={template.is_active ? "default" : "secondary"}>
+                      <Badge variant={template.is_active ? "success" : "muted"}>
                         {template.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </div>

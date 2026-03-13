@@ -17,23 +17,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2, ExternalLink, Clock, Calendar } from "lucide-react";
 import { ExternalCourseDialog } from "./external-course-dialog";
-import type { ExternalCourse } from "@/types/database.types";
+import { categoryConfig } from "@/lib/learning";
+import type { ExternalCourse, CourseCategory } from "@/types/database.types";
 
 interface ExternalCourseCardProps {
   course: ExternalCourse;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-  compliance: "Compliance",
-  upskilling: "Upskilling",
-  soft_skills: "Soft Skills",
-};
-
-const CATEGORY_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
-  compliance: "default",
-  upskilling: "secondary",
-  soft_skills: "outline",
-};
 
 export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
   const [isPending, startTransition] = useTransition();
@@ -65,9 +54,9 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
             )}
 
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {course.category && (
-                <Badge variant={CATEGORY_VARIANTS[course.category] ?? "outline"} className="text-xs">
-                  {CATEGORY_LABELS[course.category] ?? course.category}
+              {course.category && categoryConfig[course.category as CourseCategory] && (
+                <Badge variant={categoryConfig[course.category as CourseCategory].badgeVariant} className="text-xs">
+                  {categoryConfig[course.category as CourseCategory].label}
                 </Badge>
               )}
               <span className="flex items-center gap-1">
