@@ -114,7 +114,7 @@ Largest untested action file (966 lines, 12 functions):
 ## Phase 4: Intranet Resources + Notifications (branch: `test/phase-4-intranet-resources-notifications`) DONE
 **Tests: 51 actual | Effort: 1 session | Priority: MEDIUM | Status: COMPLETE (PR #57)**
 
-### `src/app/(protected)/intranet/resources/actions.test.ts` (~40 tests)
+### `src/app/(protected)/resources/actions.test.ts` (~40 tests)
 - Category CRUD (~15) — slug generation, unique slug dedup, delete-with-articles guard
 - Article CRUD (~18) — slug generation, Tiptap JSON extraction, draft/published
 - `getCategoryArticleCount` (~3)
@@ -281,7 +281,7 @@ New components from PRs #68 and #69 — department management, split dialogs, se
 ## Areas Not in the User's Original List
 
 1. **`src/lib/notifications.ts`** — `createNotification` + `dismissSignInReminders` (service role client, untested)
-2. **`src/app/(protected)/intranet/resources/actions.ts`** — 7 functions for knowledge base CRUD (slug generation, unique enforcement)
+2. **`src/app/(protected)/resources/actions.ts`** — 7 functions for knowledge base CRUD (slug generation, unique enforcement)
 3. **`verifyAbsenceAuthority` / `verifyLeavingAuthority`** — security-critical helper functions checking line-manager-or-HR-admin
 4. **`calculateDocumentStatus`** in compliance — pure date logic exported from a `"use server"` file
 5. **`mapToLeaveRequestWithEmployee`** in `src/lib/hr.ts` — data transformation with null-safe fallbacks

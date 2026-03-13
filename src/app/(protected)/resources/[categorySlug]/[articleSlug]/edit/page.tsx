@@ -16,7 +16,7 @@ export default async function EditArticlePage({
 
   // Only editors (HR admins or content editors) can edit articles
   if (!isHRAdminEffective(profile) && !isContentEditorEffective(profile)) {
-    redirect(`/intranet/resources/${categorySlug}/${articleSlug}`);
+    redirect(`/resources/${categorySlug}/${articleSlug}`);
   }
 
   const { category, article } = await fetchArticleWithClient(

@@ -21,7 +21,7 @@ import {
   createArticle,
   updateArticle,
   autoSaveArticle,
-} from "@/app/(protected)/intranet/resources/actions";
+} from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
@@ -52,8 +52,8 @@ export function ArticleEditorPage({
 
   const isEdit = !!article;
   const backHref = isEdit
-    ? `/intranet/resources/${category.slug}/${article.slug}`
-    : `/intranet/resources/${category.slug}`;
+    ? `/resources/${category.slug}/${article.slug}`
+    : `/resources/${category.slug}`;
 
   // ── Auto-save callback ───────────────────────────────────────────────────
 
@@ -152,9 +152,9 @@ export function ArticleEditorPage({
               ? resultArticle.slug
               : null;
           if (slug) {
-            window.location.href = `/intranet/resources/${category.slug}/${slug}`;
+            window.location.href = `/resources/${category.slug}/${slug}`;
           } else {
-            window.location.href = `/intranet/resources/${category.slug}`;
+            window.location.href = `/resources/${category.slug}`;
           }
         }
       } else {
@@ -168,13 +168,13 @@ export function ArticleEditorPage({
 
   const breadcrumbs = [
     { label: "Home", href: "/intranet" },
-    { label: "Resources", href: "/intranet/resources" },
-    { label: category.name, href: `/intranet/resources/${category.slug}` },
+    { label: "Resources", href: "/resources" },
+    { label: category.name, href: `/resources/${category.slug}` },
     ...(isEdit
       ? [
           {
             label: article.title,
-            href: `/intranet/resources/${category.slug}/${article.slug}`,
+            href: `/resources/${category.slug}/${article.slug}`,
           },
           { label: "Edit" },
         ]

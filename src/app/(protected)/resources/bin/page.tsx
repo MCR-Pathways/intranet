@@ -9,7 +9,7 @@ export default async function ResourceBinPage() {
   if (!user || !profile) redirect("/login");
 
   const canEdit = isHRAdminEffective(profile) || isContentEditorEffective(profile);
-  if (!canEdit) redirect("/intranet/resources");
+  if (!canEdit) redirect("/resources");
 
   const { articles, categories } = await fetchTrashedItems();
 
@@ -20,7 +20,7 @@ export default async function ResourceBinPage() {
         subtitle="Deleted resources — items are automatically removed after 30 days"
         breadcrumbs={[
           { label: "Home", href: "/intranet" },
-          { label: "Resources", href: "/intranet/resources" },
+          { label: "Resources", href: "/resources" },
           { label: "Bin" },
         ]}
       />

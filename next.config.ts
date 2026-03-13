@@ -14,6 +14,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/intranet/resources/:path*",
+        destination: "/resources/:path*",
+        permanent: true,
+      },
+      {
+        source: "/intranet/resources",
+        destination: "/resources",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ArticleListItem } from "./article-list-item";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
-import { deleteArticle } from "@/app/(protected)/intranet/resources/actions";
+import { deleteArticle } from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
@@ -68,7 +68,7 @@ export function ArticlesList({
         )}
         {canEdit && (
           <Button size="sm" asChild>
-            <Link href={`/intranet/resources/${categorySlug}/new`}>
+            <Link href={`/resources/${categorySlug}/new`}>
               <Plus className="h-4 w-4 mr-1" />
               New Article
             </Link>

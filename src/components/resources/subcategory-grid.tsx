@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryCard } from "./category-card";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
-import { deleteCategory } from "@/app/(protected)/intranet/resources/actions";
+import { deleteCategory } from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import type { CategoryWithCount, ResourceCategory } from "@/types/database.types";
 

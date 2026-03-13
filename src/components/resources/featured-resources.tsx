@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
-import type { FeaturedArticle } from "@/app/(protected)/intranet/resources/actions";
+import type { FeaturedArticle } from "@/app/(protected)/resources/actions";
 
 interface FeaturedResourcesProps {
   articles: FeaturedArticle[];
@@ -25,7 +25,7 @@ export function FeaturedResources({ articles }: FeaturedResourcesProps) {
           return (
             <Link
               key={article.id}
-              href={`/intranet/resources/${article.category_slug}/${article.slug}`}
+              href={`/resources/${article.category_slug}/${article.slug}`}
               className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-primary/50 hover:shadow-sm"
             >
               <div

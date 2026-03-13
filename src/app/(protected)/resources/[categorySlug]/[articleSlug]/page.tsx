@@ -29,8 +29,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         title={article.title}
         breadcrumbs={[
           { label: "Home", href: "/intranet" },
-          { label: "Resources", href: "/intranet/resources" },
-          { label: category.name, href: `/intranet/resources/${category.slug}` },
+          { label: "Resources", href: "/resources" },
+          { label: category.name, href: `/resources/${category.slug}` },
           { label: article.title },
         ]}
       />

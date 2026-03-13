@@ -21,7 +21,7 @@ import {
   restoreCategory,
   permanentlyDeleteArticle,
   permanentlyDeleteCategory,
-} from "@/app/(protected)/intranet/resources/actions";
+} from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/utils";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";

@@ -173,7 +173,7 @@ describe("Intranet Resource Actions", () => {
       const result = await createCategory({ name: "My Test Category" });
       expect(result.success).toBe(true);
       expect(result.category).toBeDefined();
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
+      expect(revalidatePath).toHaveBeenCalledWith("/resources", "layout");
     });
 
     it("returns error for empty name", async () => {
@@ -319,7 +319,7 @@ describe("Intranet Resource Actions", () => {
 
       const result = await deleteCategory("cat-1");
       expect(result.success).toBe(true);
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
+      expect(revalidatePath).toHaveBeenCalledWith("/resources", "layout");
     });
 
     it("blocks deletion when category has subcategories", async () => {
@@ -661,7 +661,7 @@ describe("Intranet Resource Actions", () => {
       expect(c.update).toHaveBeenCalledWith(
         expect.objectContaining({ is_featured: false })
       );
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet/resources", "layout");
+      expect(revalidatePath).toHaveBeenCalledWith("/resources", "layout");
     });
 
     it("returns error on DB failure", async () => {

@@ -146,11 +146,11 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Inline polls in feed posts (2-4 options, vote changing, optional expiry, CSS bar results)
 
 ### Intranet Phase 4 — Resources / Knowledge Base ✅
-- [x] `/intranet/resources` replaces Guides + Policies stubs
+- [x] `/resources` top-level module (promoted from `/intranet/resources`)
 - [x] Two-level hierarchy: Categories → Articles (Tiptap editor reused from Phase 2)
-- [x] HR admins create/edit/publish/delete; all users read published content
-- [x] Old `/intranet/guides` and `/intranet/policies` redirect to resources
-- [x] Sidebar updated: single "Resources" nav item replaces "Guides" + "Policies"
+- [x] HR admins + Content Editors create/edit/publish/delete; all users read published content
+- [x] Old `/intranet/guides` and `/intranet/policies` redirect to `/resources/*`
+- [x] Sidebar: top-level Resources item with BookOpen icon (between Home and Me)
 - **Resources Editor Overhaul (PRs #102–105):**
   - [x] Fix double border in article editor, install 9 Tiptap extension packages (PR #102)
   - [x] Full formatting suite: links, images, tables, callouts, code blocks, underline, strikethrough (PR #103). Custom callout extension (`tiptap-callout.ts`), link popover, shared `CALLOUT_CONFIG`, centralised `isValidHttpUrl()`.
