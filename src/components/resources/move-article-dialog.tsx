@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -12,9 +12,11 @@ import { LoadingButton } from "@/components/ui/loading-button";
 import {
   moveArticle,
   fetchCategoriesForMove,
+  fetchTopLevelCategories,
 } from "@/app/(protected)/intranet/resources/actions";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { toast } from "sonner";
+import type { MoveCategoryOption } from "@/app/(protected)/intranet/resources/actions";
 
 interface MoveArticleDialogProps {
   articleId: string;
@@ -24,11 +26,9 @@ interface MoveArticleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface CategoryOption {
+interface ParentInfo {
   id: string;
   name: string;
-  icon: string | null;
-  icon_colour: string | null;
 }
 
 export function MoveArticleDialog({
@@ -38,7 +38,8 @@ export function MoveArticleDialog({
   open,
   onOpenChange,
 }: MoveArticleDialogProps) {
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categories, setCategories] = useState<MoveCategoryOption[]>([]);
+  const [parents, setParents] = useState<ParentInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
@@ -48,10 +49,14 @@ export function MoveArticleDialog({
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronous loading state for data-fetching UX
     setLoading(true);
-    fetchCategoriesForMove(currentCategoryId)
-      .then((data) => {
+    Promise.all([
+      fetchCategoriesForMove(currentCategoryId),
+      fetchTopLevelCategories(),
+    ])
+      .then(([cats, topLevel]) => {
         if (!cancelled) {
-          setCategories(data);
+          setCategories(cats);
+          setParents(topLevel);
           setSelectedId(null);
         }
       })
@@ -60,6 +65,39 @@ export function MoveArticleDialog({
       });
     return () => { cancelled = true; };
   }, [open, currentCategoryId]);
+
+  // Group categories: top-level (no parent) + grouped under parent names
+  const grouped = useMemo(() => {
+    const parentMap = new Map(parents.map((p) => [p.id, p.name]));
+    const topLevel: MoveCategoryOption[] = [];
+    const byParent = new Map<string, MoveCategoryOption[]>();
+
+    for (const cat of categories) {
+      if (cat.parent_id) {
+        const group = byParent.get(cat.parent_id) ?? [];
+        group.push(cat);
+        byParent.set(cat.parent_id, group);
+      } else {
+        topLevel.push(cat);
+      }
+    }
+
+    // Build ordered list: top-level first, then each parent group
+    const result: { label?: string; items: MoveCategoryOption[] }[] = [];
+
+    if (topLevel.length > 0) {
+      result.push({ items: topLevel });
+    }
+
+    for (const [parentId, items] of byParent) {
+      result.push({
+        label: parentMap.get(parentId) ?? "Unknown",
+        items,
+      });
+    }
+
+    return result;
+  }, [categories, parents]);
 
   function handleMove() {
     if (!selectedId) return;
@@ -94,37 +132,48 @@ export function MoveArticleDialog({
             No other categories available.
           </div>
         ) : (
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {categories.map((cat) => {
-              const Icon = resolveIcon(cat.icon);
-              const colour = resolveIconColour(cat.icon_colour);
-              const isSelected = selectedId === cat.id;
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-                    isSelected
-                      ? "bg-primary/10 ring-1 ring-primary/30"
-                      : "hover:bg-muted"
-                  )}
-                  onClick={() => setSelectedId(cat.id)}
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-                      colour.bg,
-                      colour.fg
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
+          <div className="max-h-64 overflow-y-auto">
+            {grouped.map((group, gi) => (
+              <div key={group.label ?? `top-${gi}`}>
+                {group.label && (
+                  <div className="px-3 pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {group.label}
                   </div>
-                  <span className="font-medium">{cat.name}</span>
-                </button>
-              );
-            })}
+                )}
+                <div className="space-y-1 p-1">
+                  {group.items.map((cat) => {
+                    const Icon = resolveIcon(cat.icon);
+                    const colour = resolveIconColour(cat.icon_colour);
+                    const isSelected = selectedId === cat.id;
+
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                          isSelected
+                            ? "bg-primary/10 ring-1 ring-primary/30"
+                            : "hover:bg-muted"
+                        )}
+                        onClick={() => setSelectedId(cat.id)}
+                      >
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                            colour.bg,
+                            colour.fg
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">{cat.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
