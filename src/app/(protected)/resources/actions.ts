@@ -156,14 +156,14 @@ export async function fetchCategoryBySlugWithClient(
 export async function fetchParentCategory(
   supabase: SupabaseClient,
   parentId: string
-): Promise<{ name: string; slug: string } | null> {
+): Promise<{ name: string; slug: string } | undefined> {
   const { data } = await supabase
     .from("resource_categories")
     .select("name, slug")
     .eq("id", parentId)
     .single();
 
-  return data;
+  return data ?? undefined;
 }
 
 export async function fetchCategoryArticlesWithClient(
