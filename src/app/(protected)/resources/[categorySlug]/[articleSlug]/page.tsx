@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser, isHRAdminEffective, isContentEditorEffective } from "@/lib/auth";
-import { fetchArticleWithClient } from "../../actions";
+import { fetchArticleWithClient, fetchParentCategory } from "../../actions";
 import { PageHeader, type BreadcrumbItem } from "@/components/layout/page-header";
 import { ArticleView } from "@/components/resources/article-view";
 
@@ -30,11 +30,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   ];
 
   if (category.parent_id) {
-    const { data: parent } = await supabase
-      .from("resource_categories")
-      .select("name, slug")
-      .eq("id", category.parent_id)
-      .single();
+    const parent = await fetchParentCategory(supabase, category.parent_id);
     if (parent) {
       breadcrumbs.push({ label: parent.name, href: `/resources/${parent.slug}` });
     }
