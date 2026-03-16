@@ -113,7 +113,7 @@ export function PostCreateDialog({
           attachmentEditorRef.current?.triggerDocumentUpload();
           break;
         case "poll":
-          onPollChange({ question: "", options: ["", ""], duration: "3d", customCloseDate: undefined });
+          onPollChange({ question: "", options: ["", ""], duration: "3d", customCloseDate: undefined, allowMultiple: false });
           break;
       }
       onClearPendingAction();
@@ -267,7 +267,7 @@ export function PostCreateDialog({
               onPhotoClick={() => attachmentEditorRef.current?.triggerImageUpload()}
               onDocumentClick={() => attachmentEditorRef.current?.triggerDocumentUpload()}
               onPollClick={() =>
-                onPollChange({ question: "", options: ["", ""], duration: "3d" })
+                onPollChange({ question: "", options: ["", ""], duration: "3d", customCloseDate: undefined, allowMultiple: false })
               }
               pollActive={pollData !== null}
               disabled={isPending}
