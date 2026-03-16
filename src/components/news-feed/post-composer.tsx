@@ -78,6 +78,16 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         setError("Poll needs a question and at least 2 options");
         return;
       }
+      if (pollData.duration === "custom") {
+        if (!pollData.customCloseDate) {
+          setError("Please select a date and time for the poll to close");
+          return;
+        }
+        if (new Date(pollData.customCloseDate) <= new Date()) {
+          setError("Poll close date must be in the future");
+          return;
+        }
+      }
     }
 
     setError(null);
@@ -97,7 +107,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
               poll: {
                 question: pollData.question,
                 options: pollData.options.filter((o) => o.trim().length > 0),
-                closes_at: computePollClosesAt(pollData.duration),
+                closes_at: computePollClosesAt(pollData.duration, pollData.customCloseDate),
               },
             }
           : {}),

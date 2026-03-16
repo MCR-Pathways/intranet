@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,18 +15,22 @@ import { Plus, X, Trash2 } from "lucide-react";
 export interface PollData {
   question: string;
   options: string[];
-  duration: string; // "1d" | "3d" | "1w" | "none"
+  duration: string; // "1d" | "3d" | "1w" | "2w" | "1m" | "none" | "custom"
+  customCloseDate?: string;
 }
 
 const DURATION_OPTIONS = [
   { value: "1d", label: "1 day" },
   { value: "3d", label: "3 days" },
   { value: "1w", label: "1 week" },
+  { value: "2w", label: "2 weeks" },
+  { value: "1m", label: "1 month" },
   { value: "none", label: "No expiry" },
+  { value: "custom", label: "Custom" },
 ] as const;
 
 const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 4;
+const MAX_OPTIONS = 6;
 const MAX_OPTION_LENGTH = 100;
 
 interface PollComposerProps {
@@ -66,9 +70,30 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
   );
 
   const updateDuration = useCallback(
-    (duration: string) => onChange({ ...poll, duration }),
+    (duration: string) => {
+      // Clear custom date when switching away from custom
+      if (duration !== "custom") {
+        onChange({ ...poll, duration, customCloseDate: undefined });
+      } else {
+        onChange({ ...poll, duration });
+      }
+    },
     [poll, onChange]
   );
+
+  const updateCustomCloseDate = useCallback(
+    (customCloseDate: string) => onChange({ ...poll, customCloseDate }),
+    [poll, onChange]
+  );
+
+  /** Minimum value for the custom date-time picker (next minute, to avoid validation race). */
+  const minDateTime = useMemo(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    now.setMinutes(now.getMinutes() + 1);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, []);
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
@@ -145,7 +170,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Poll duration:</span>
         <Select value={poll.duration} onValueChange={updateDuration} disabled={disabled}>
-          <SelectTrigger className="w-32 h-8 bg-background">
+          <SelectTrigger className="w-36 h-8 bg-background">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -157,6 +182,21 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
           </SelectContent>
         </Select>
       </div>
+
+      {/* Custom date-time picker (shown when "Custom" duration selected) */}
+      {poll.duration === "custom" && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Closes:</span>
+          <input
+            type="datetime-local"
+            value={poll.customCloseDate ?? ""}
+            onChange={(e) => updateCustomCloseDate(e.target.value)}
+            min={minDateTime}
+            disabled={disabled}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -165,15 +205,26 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
  * Compute the closes_at ISO string from a duration code.
  * Returns null for "none" (no expiry).
  */
-export function computePollClosesAt(duration: string): string | null {
+export function computePollClosesAt(duration: string, customCloseDate?: string): string | null {
   const now = new Date();
+  const DAY = 24 * 60 * 60 * 1000;
   switch (duration) {
     case "1d":
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+      return new Date(now.getTime() + DAY).toISOString();
     case "3d":
-      return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+      return new Date(now.getTime() + 3 * DAY).toISOString();
     case "1w":
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      return new Date(now.getTime() + 7 * DAY).toISOString();
+    case "2w":
+      return new Date(now.getTime() + 14 * DAY).toISOString();
+    case "1m": {
+      const oneMonthLater = new Date(now);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+      return oneMonthLater.toISOString();
+    }
+    case "custom":
+      if (!customCloseDate) return null;
+      return new Date(customCloseDate).toISOString();
     default:
       return null;
   }
