@@ -431,7 +431,7 @@ async function enrichPosts(
             vote_count: voteCounts.get(o.id) ?? 0,
           })),
           total_votes: allowMultiple ? uniqueVoters : votes.length,
-          user_vote_option_id: userVotes.length > 0 ? userVotes[0].option_id : null,
+          user_vote_option_id: !allowMultiple && userVotes.length > 0 ? userVotes[0].option_id : null,
           user_vote_option_ids: userVotes.map((v) => v.option_id),
           closes_at: p.poll_closes_at,
           is_closed: p.poll_closes_at ? new Date(p.poll_closes_at) < new Date() : false,
