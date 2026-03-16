@@ -7,25 +7,8 @@ import { Download, Building2, Home, Split, CheckCircle2 } from "lucide-react";
 import { getTeamSchedule } from "@/app/(protected)/sign-in/actions";
 import { LOCATION_CONFIG, getLocationLabel } from "@/lib/sign-in";
 import type { TeamMemberSchedule } from "@/lib/sign-in";
+import { sanitiseCSVCell, buildCSVContent, downloadCSV } from "@/lib/csv";
 import { toast } from "sonner";
-
-// =============================================
-// CSV SANITISATION
-// =============================================
-
-/**
- * Sanitise a cell value for CSV export to prevent CSV injection.
- * Prefixes cells that start with formula-triggering characters
- * with a single quote to force plain-text rendering in Excel/Sheets.
- */
-function sanitiseCSVCell(value: string | null | undefined): string {
-  if (!value) return "";
-  const trimmed = value.trim();
-  if (/^[=+\-@\t\r\n]/.test(trimmed)) {
-    return `'${trimmed}`;
-  }
-  return trimmed;
-}
 
 // =============================================
 // STATS
@@ -95,7 +78,7 @@ function computeStats(members: TeamMemberSchedule[]): ReportStats {
 // CSV EXPORT
 // =============================================
 
-function exportCSV(members: TeamMemberSchedule[], startDate: string, endDate: string) {
+function exportLocationCSV(members: TeamMemberSchedule[], startDate: string, endDate: string) {
   const headers = ["Name", "Date", "Time Slot", "Location", "Other Location", "Source", "Confirmed", "Confirmed At"];
   const rows: string[][] = [];
 
@@ -114,20 +97,7 @@ function exportCSV(members: TeamMemberSchedule[], startDate: string, endDate: st
     }
   }
 
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) =>
-      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
-    ),
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `working-locations-${startDate}-to-${endDate}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadCSV(buildCSVContent(headers, rows), `working-locations-${startDate}-to-${endDate}.csv`);
 }
 
 // =============================================
@@ -174,7 +144,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
       toast.error("No data to export");
       return;
     }
-    exportCSV(members, dateRange.start, dateRange.end);
+    exportLocationCSV(members, dateRange.start, dateRange.end);
     toast.success("CSV exported");
   };
 
