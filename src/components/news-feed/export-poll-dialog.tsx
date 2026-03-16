@@ -329,6 +329,8 @@ async function exportAsXLSX(
 const MCR_DARK_BLUE: [number, number, number] = [33, 51, 80];
 const MCR_TEAL: [number, number, number] = [42, 96, 117];
 const LIGHT_GREY_BG: [number, number, number] = [242, 244, 247];
+const ALT_ROW_BG: [number, number, number] = [248, 249, 250];
+const SEPARATOR_GREY: [number, number, number] = [220, 220, 220];
 const WHITE: [number, number, number] = [255, 255, 255];
 
 /** Convert the MCR SVG logo to a PNG data URL via an offscreen canvas. */
@@ -481,7 +483,7 @@ async function exportAsPDF(
     }
 
     y += 2;
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(...SEPARATOR_GREY);
     doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
@@ -509,13 +511,13 @@ async function exportAsPDF(
       ],
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
-      alternateRowStyles: { fillColor: [248, 249, 250] },
+      alternateRowStyles: { fillColor: ALT_ROW_BG },
       margin: { left: margin, right: margin },
     });
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
     y += 6;
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(...SEPARATOR_GREY);
     doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
@@ -537,7 +539,7 @@ async function exportAsPDF(
       body: d.options.map((opt) => [opt.text, String(opt.voteCount), `${opt.percentage}%`]),
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
-      alternateRowStyles: { fillColor: [248, 249, 250] },
+      alternateRowStyles: { fillColor: ALT_ROW_BG },
       margin: { left: margin, right: margin },
       columnStyles: {
         1: { halign: "right" },
@@ -552,7 +554,7 @@ async function exportAsPDF(
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
     y += 6;
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(...SEPARATOR_GREY);
     doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
@@ -576,7 +578,7 @@ async function exportAsPDF(
       ]),
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
-      alternateRowStyles: { fillColor: [248, 249, 250] },
+      alternateRowStyles: { fillColor: ALT_ROW_BG },
       margin: { left: margin, right: margin },
     });
   }
