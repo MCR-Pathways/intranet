@@ -330,6 +330,7 @@ const MCR_DARK_BLUE: [number, number, number] = [33, 51, 80];
 const MCR_TEAL: [number, number, number] = [42, 96, 117];
 const LIGHT_GREY_BG: [number, number, number] = [242, 244, 247];
 const ALT_ROW_BG: [number, number, number] = [248, 249, 250];
+const BAR_TRACK_GREY: [number, number, number] = [230, 232, 236];
 const SEPARATOR_GREY: [number, number, number] = [220, 220, 220];
 const WHITE: [number, number, number] = [255, 255, 255];
 
@@ -337,27 +338,29 @@ const WHITE: [number, number, number] = [255, 255, 255];
 async function loadLogoAsDataUrl(): Promise<string | null> {
   try {
     const response = await fetch("/MCR_LOGO-1.svg");
+    if (!response.ok) return null;
+
     const svgText = await response.text();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
 
-    return new Promise((resolve) => {
+    try {
       const img = new Image();
-      img.onload = () => {
-        const scale = 2; // retina quality
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(null); return; }
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
       img.src = url;
-    });
+      await img.decode();
+
+      const scale = 2; // retina quality
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      return canvas.toDataURL("image/png");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   } catch {
     return null;
   }
@@ -463,7 +466,7 @@ async function exportAsPDF(
 
       // Bar track
       const barX = margin + labelWidth;
-      doc.setFillColor(230, 232, 236);
+      doc.setFillColor(...BAR_TRACK_GREY);
       doc.roundedRect(barX, y, barAreaWidth, barHeight, 1.5, 1.5, "F");
 
       // Bar fill
@@ -473,7 +476,7 @@ async function exportAsPDF(
         doc.roundedRect(barX, y, fillWidth, barHeight, 1.5, 1.5, "F");
       }
 
-      // Percentage + vote count
+      // Percentage label
       doc.setFontSize(8);
       doc.setFont("helvetica", isWinner ? "bold" : "normal");
       doc.setTextColor(100, 100, 100);
