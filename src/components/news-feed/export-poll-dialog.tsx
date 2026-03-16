@@ -183,6 +183,7 @@ interface ExportData {
   closedAt: string | null;
   options: { text: string; voteCount: number; percentage: number }[];
   totalVoters: number;
+  totalActiveStaff: number;
   votes: { voterName: string; optionText: string; votedAt: string }[];
 }
 
@@ -224,6 +225,8 @@ function exportAsCSV(
           ["Question", sanitiseCSVCell(d.question)],
           ["Type", d.allowMultiple ? "Multi-select" : "Single choice"],
           ["Total Voters", String(d.totalVoters)],
+          ["Active Staff", String(d.totalActiveStaff)],
+          ["Participation", d.totalActiveStaff > 0 ? `${Math.round((d.totalVoters / d.totalActiveStaff) * 100)}%` : "N/A"],
           ["Created", new Date(d.createdAt).toLocaleDateString("en-GB")],
           ["Closed", d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A"],
         ]
@@ -274,6 +277,8 @@ async function exportAsXLSX(
       ["Question", d.question],
       ["Type", d.allowMultiple ? "Multi-select" : "Single choice"],
       ["Total Voters", d.totalVoters],
+      ["Active Staff", d.totalActiveStaff],
+      ["Participation", d.totalActiveStaff > 0 ? `${Math.round((d.totalVoters / d.totalActiveStaff) * 100)}%` : "N/A"],
       ["Created", new Date(d.createdAt).toLocaleDateString("en-GB")],
       ["Closed", d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A"],
     ];
@@ -320,6 +325,13 @@ async function exportAsXLSX(
 
 // ─── PDF ─────────────────────────────────────────────────────────────────────
 
+// MCR brand colours as RGB arrays
+const MCR_DARK_BLUE: [number, number, number] = [33, 51, 80];
+const MCR_LIGHT_BLUE: [number, number, number] = [91, 198, 233];
+const MCR_TEAL: [number, number, number] = [42, 96, 117];
+const LIGHT_GREY_BG: [number, number, number] = [242, 244, 247];
+const WHITE: [number, number, number] = [255, 255, 255];
+
 async function exportAsPDF(
   d: ExportData,
   slug: string,
@@ -334,33 +346,114 @@ async function exportAsPDF(
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 20;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentWidth = pageWidth - margin * 2;
 
-  // Title
-  doc.setFontSize(16);
-  doc.text("Poll Results", 14, y);
-  y += 8;
+  // ─── 1. Header banner (dark blue strip) ─────────────────────────────
+  doc.setFillColor(...MCR_DARK_BLUE);
+  doc.rect(0, 0, pageWidth, 40, "F");
 
-  // Question
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  const questionLines = doc.splitTextToSize(d.question, pageWidth - 28);
-  doc.text(questionLines, 14, y);
-  y += questionLines.length * 5 + 4;
+  // "MCR Pathways" branding in the banner
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("MCR Pathways", margin, 12);
 
-  // Meta line
+  // "Poll Results" title in the banner
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("Poll Results", margin, 25);
+
+  // Question in the banner (white, smaller)
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const questionLines = doc.splitTextToSize(d.question, contentWidth);
+  doc.text(questionLines[0] + (questionLines.length > 1 ? "..." : ""), margin, 34);
+
+  let y = 50;
+
+  // ─── 2. Meta line + participation callout ───────────────────────────
+  doc.setTextColor(...MCR_DARK_BLUE);
   doc.setFontSize(9);
-  doc.setTextColor(150);
-  const metaLine = `${d.totalVoters} ${d.totalVoters === 1 ? "voter" : "voters"} · ${d.allowMultiple ? "Multi-select" : "Single choice"} · Closed ${d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A"}`;
-  doc.text(metaLine, 14, y);
-  y += 10;
+  doc.setFont("helvetica", "normal");
+  const closedDate = d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A";
+  const metaLine = `${d.totalVoters} ${d.totalVoters === 1 ? "voter" : "voters"} · ${d.allowMultiple ? "Multi-select" : "Single choice"} · Closed ${closedDate}`;
+  doc.text(metaLine, margin, y);
+  y += 6;
 
-  doc.setTextColor(0);
+  // Participation callout box
+  if (d.totalActiveStaff > 0) {
+    const participationPct = Math.round((d.totalVoters / d.totalActiveStaff) * 100);
+    doc.setFillColor(...LIGHT_GREY_BG);
+    doc.roundedRect(margin, y, contentWidth, 14, 2, 2, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(...MCR_TEAL);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${d.totalVoters} of ${d.totalActiveStaff} staff voted (${participationPct}% participation)`, margin + 4, y + 9);
+    y += 20;
+  } else {
+    y += 4;
+  }
 
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "normal");
+
+  // ─── 3. Horizontal bar chart (if summary included) ──────────────────
+  if (includeSummary && d.options.length > 0) {
+    const maxPercentage = Math.max(...d.options.map((o) => o.percentage), 1);
+    const barHeight = 10;
+    const barGap = 4;
+    const labelWidth = 70;
+    const barAreaWidth = contentWidth - labelWidth - 35;
+    const winningVotes = Math.max(...d.options.map((o) => o.voteCount));
+
+    for (const opt of d.options) {
+      const isWinner = opt.voteCount === winningVotes && opt.voteCount > 0;
+
+      // Option label
+      doc.setFontSize(8);
+      doc.setFont("helvetica", isWinner ? "bold" : "normal");
+      doc.setTextColor(...MCR_DARK_BLUE);
+      const label = doc.splitTextToSize(opt.text, labelWidth - 2)[0];
+      doc.text(label, margin, y + 7);
+
+      // Bar track (light grey)
+      const barX = margin + labelWidth;
+      doc.setFillColor(...LIGHT_GREY_BG);
+      doc.roundedRect(barX, y, barAreaWidth, barHeight, 2, 2, "F");
+
+      // Bar fill (dark blue for winner, teal for others)
+      const fillWidth = Math.max((opt.percentage / maxPercentage) * barAreaWidth, 0);
+      if (fillWidth > 0) {
+        doc.setFillColor(...(isWinner ? MCR_DARK_BLUE : MCR_TEAL));
+        doc.roundedRect(barX, y, fillWidth, barHeight, 2, 2, "F");
+      }
+
+      // Percentage label
+      doc.setFontSize(8);
+      doc.setFont("helvetica", isWinner ? "bold" : "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${opt.percentage}%`, barX + barAreaWidth + 3, y + 7);
+
+      y += barHeight + barGap;
+    }
+
+    // ─── 4. Separator line ─────────────────────────────────────────────
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+  }
+
+  // ─── 5. Metadata table ──────────────────────────────────────────────
   if (includeMetadata) {
-    doc.setFontSize(12);
-    doc.text("Metadata", 14, y);
-    y += 2;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MCR_DARK_BLUE);
+    doc.text("Metadata", margin, y);
+    y += 4;
 
     autoTable(doc, {
       startY: y,
@@ -369,44 +462,74 @@ async function exportAsPDF(
         ["Question", d.question],
         ["Type", d.allowMultiple ? "Multi-select" : "Single choice"],
         ["Total Voters", String(d.totalVoters)],
+        ["Active Staff", String(d.totalActiveStaff)],
+        ["Participation", d.totalActiveStaff > 0 ? `${Math.round((d.totalVoters / d.totalActiveStaff) * 100)}%` : "N/A"],
         ["Created", new Date(d.createdAt).toLocaleDateString("en-GB")],
-        ["Closed", d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A"],
+        ["Closed", closedDate],
       ],
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [33, 51, 80] },
-      margin: { left: 14 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      margin: { left: margin, right: margin },
     });
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
-    y += 10;
+
+    // Separator line
+    y += 6;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
   }
 
+  // ─── 6. Summary table ───────────────────────────────────────────────
   if (includeSummary) {
-    doc.setFontSize(12);
-    doc.text("Summary", 14, y);
-    y += 2;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MCR_DARK_BLUE);
+    doc.text("Summary", margin, y);
+    y += 4;
+
+    const winningVotes = Math.max(...d.options.map((o) => o.voteCount));
 
     autoTable(doc, {
       startY: y,
       head: [["Option", "Votes", "Percentage"]],
       body: d.options.map((opt) => [opt.text, String(opt.voteCount), `${opt.percentage}%`]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [33, 51, 80] },
-      margin: { left: 14 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      margin: { left: margin, right: margin },
       columnStyles: {
         1: { halign: "right" },
         2: { halign: "right" },
       },
+      // Highlight winning option(s) with bold
+      didParseCell: (data: { section: string; row: { index: number }; cell: { styles: { fontStyle: string } } }) => {
+        if (data.section === "body" && d.options[data.row.index]?.voteCount === winningVotes && winningVotes > 0) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
     });
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
-    y += 10;
+
+    // Separator line
+    y += 6;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
   }
 
+  // ─── 7. Individual responses table ──────────────────────────────────
   if (includeIndividual) {
-    doc.setFontSize(12);
-    doc.text("Individual Responses", 14, y);
-    y += 2;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MCR_DARK_BLUE);
+    doc.text("Individual Responses", margin, y);
+    y += 4;
 
     autoTable(doc, {
       startY: y,
@@ -416,10 +539,23 @@ async function exportAsPDF(
         v.optionText,
         new Date(v.votedAt).toLocaleString("en-GB"),
       ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [33, 51, 80] },
-      margin: { left: 14 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: MCR_DARK_BLUE, textColor: WHITE },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      margin: { left: margin, right: margin },
     });
+  }
+
+  // ─── 8. Footer (every page) ─────────────────────────────────────────
+  const totalPages = doc.getNumberOfPages();
+  const exportedAt = new Date().toLocaleString("en-GB");
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Exported on ${exportedAt}`, margin, pageHeight - 8);
+    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: "right" });
   }
 
   doc.save(`poll-results-${slug}.pdf`);
