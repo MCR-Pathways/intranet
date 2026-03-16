@@ -113,7 +113,7 @@ export function PostCreateDialog({
           attachmentEditorRef.current?.triggerDocumentUpload();
           break;
         case "poll":
-          onPollChange({ question: "", options: ["", ""], duration: "3d" });
+          onPollChange({ question: "", options: ["", ""], duration: "3d", customCloseDate: undefined });
           break;
       }
       onClearPendingAction();
