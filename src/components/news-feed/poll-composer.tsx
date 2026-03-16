@@ -83,19 +83,28 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
     [poll, onChange]
   );
 
-  const updateCustomCloseDate = useCallback(
-    (customCloseDate: string) => onChange({ ...poll, customCloseDate }),
+  /** Minimum date for the custom date picker (today). */
+  const minDate = useMemo(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  }, []);
+
+  /** Split customCloseDate (ISO or "YYYY-MM-DDTHH:MM") into separate date and time values. */
+  const customDate = poll.customCloseDate?.split("T")[0] ?? "";
+  const customTime = poll.customCloseDate?.split("T")[1]?.slice(0, 5) ?? "";
+
+  const handleCustomDateChange = useCallback(
+    (date: string, time: string) => {
+      if (!date) {
+        onChange({ ...poll, customCloseDate: undefined });
+        return;
+      }
+      const combined = `${date}T${time || "17:00"}`;
+      onChange({ ...poll, customCloseDate: combined });
+    },
     [poll, onChange]
   );
-
-  /** Minimum value for the custom date-time picker (next minute, to avoid validation race). */
-  const minDateTime = useMemo(() => {
-    const now = new Date();
-    now.setSeconds(0, 0);
-    now.setMinutes(now.getMinutes() + 1);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  }, []);
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
@@ -185,17 +194,25 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
         </Select>
       </div>
 
-      {/* Custom date-time picker (shown when "Custom" duration selected) */}
+      {/* Custom date + time picker (shown when "Custom" duration selected) */}
       {poll.duration === "custom" && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Closes:</span>
-          <input
-            type="datetime-local"
-            value={poll.customCloseDate ?? ""}
-            onChange={(e) => updateCustomCloseDate(e.target.value)}
-            min={minDateTime}
+          <Input
+            type="date"
+            value={customDate}
+            onChange={(e) => handleCustomDateChange(e.target.value, customTime)}
+            min={minDate}
             disabled={disabled}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+            className="h-8 w-auto bg-card"
+          />
+          <span className="text-sm text-muted-foreground">at</span>
+          <Input
+            type="time"
+            value={customTime}
+            onChange={(e) => handleCustomDateChange(customDate, e.target.value)}
+            disabled={disabled}
+            className="h-8 w-auto bg-card"
           />
         </div>
       )}
