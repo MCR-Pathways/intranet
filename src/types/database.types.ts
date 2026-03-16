@@ -1142,8 +1142,11 @@ export interface PostPoll {
   options: PostPollOption[];
   total_votes: number;
   user_vote_option_id: string | null;
+  /** All option IDs the current user voted for (multi-select polls may have multiple). */
+  user_vote_option_ids: string[];
   closes_at: string | null;
   is_closed: boolean;
+  allow_multiple: boolean;
 }
 
 export interface PostWithRelations extends Post {

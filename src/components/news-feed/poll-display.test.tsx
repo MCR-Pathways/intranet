@@ -35,8 +35,10 @@ function makePoll(overrides?: Partial<PostPoll>): PostPoll {
     ],
     total_votes: 10,
     user_vote_option_id: null,
+    user_vote_option_ids: [],
     closes_at: null,
     is_closed: false,
+    allow_multiple: false,
     ...overrides,
   };
 }
@@ -94,7 +96,7 @@ describe("PollDisplay", () => {
   // =============================================
 
   it("shows results with percentages when user has voted", () => {
-    const poll = makePoll({ user_vote_option_id: "opt-1" });
+    const poll = makePoll({ user_vote_option_id: "opt-1", user_vote_option_ids: ["opt-1"] });
     render(<PollDisplay postId="p1" poll={poll} />);
 
     // Should show percentages, not vote buttons
@@ -105,13 +107,13 @@ describe("PollDisplay", () => {
   });
 
   it("shows 'Change vote' button when user has voted and poll is open", () => {
-    const poll = makePoll({ user_vote_option_id: "opt-1" });
+    const poll = makePoll({ user_vote_option_id: "opt-1", user_vote_option_ids: ["opt-1"] });
     render(<PollDisplay postId="p1" poll={poll} />);
     expect(screen.getByText("Change vote")).toBeInTheDocument();
   });
 
   it("hides 'Change vote' when poll is closed", () => {
-    const poll = makePoll({ user_vote_option_id: "opt-1", is_closed: true });
+    const poll = makePoll({ user_vote_option_id: "opt-1", user_vote_option_ids: ["opt-1"], is_closed: true });
     render(<PollDisplay postId="p1" poll={poll} />);
     expect(screen.queryByText("Change vote")).not.toBeInTheDocument();
   });

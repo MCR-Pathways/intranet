@@ -22,7 +22,7 @@ import type {
 } from "@/types/database.types";
 
 const POST_SELECT =
-  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, created_at, updated_at";
+  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
   "id, post_id, attachment_type, file_url, file_name, file_size, mime_type, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
@@ -389,7 +389,7 @@ async function enrichPosts(
   }
 
   return postRows.map((post) => {
-    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; created_at: string; updated_at: string; author: unknown };
+    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
@@ -414,12 +414,14 @@ async function enrichPosts(
       poll: p.poll_question ? (() => {
         const options = pollOptionsByPost.get(p.id) ?? [];
         const votes = pollVotesByPost.get(p.id) ?? [];
-        const totalVotes = votes.length;
-        const userVote = votes.find((v) => v.user_id === userId);
+        const allowMultiple = p.poll_allow_multiple ?? false;
+        const userVotes = votes.filter((v) => v.user_id === userId);
         const voteCounts = new Map<string, number>();
         for (const v of votes) {
           voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
         }
+        // For multi-select: total_votes = unique voters, not total vote rows
+        const uniqueVoters = new Set(votes.map((v) => v.user_id)).size;
         return {
           question: p.poll_question!,
           options: options.map((o) => ({
@@ -428,10 +430,12 @@ async function enrichPosts(
             display_order: o.display_order,
             vote_count: voteCounts.get(o.id) ?? 0,
           })),
-          total_votes: totalVotes,
-          user_vote_option_id: userVote?.option_id ?? null,
+          total_votes: allowMultiple ? uniqueVoters : votes.length,
+          user_vote_option_id: userVotes.length > 0 ? userVotes[0].option_id : null,
+          user_vote_option_ids: userVotes.map((v) => v.option_id),
           closes_at: p.poll_closes_at,
           is_closed: p.poll_closes_at ? new Date(p.poll_closes_at) < new Date() : false,
+          allow_multiple: allowMultiple,
         };
       })() : null,
     };
@@ -594,6 +598,7 @@ export async function createPost(data: {
     question: string;
     options: string[];
     closes_at?: string | null;
+    allow_multiple?: boolean;
   };
 }): Promise<{ success: boolean; error: string | null; postId?: string; warning?: string }> {
   const { supabase, user, profile } = await getCurrentUser();
@@ -620,6 +625,7 @@ export async function createPost(data: {
   }
   if (data.poll?.question) {
     postInsert.poll_question = data.poll.question;
+    postInsert.poll_allow_multiple = data.poll.allow_multiple ?? false;
     if (data.poll.closes_at) {
       postInsert.poll_closes_at = data.poll.closes_at;
     }
@@ -1534,15 +1540,17 @@ export async function getNewPostCount(
 
 export async function votePoll(
   postId: string,
-  optionId: string
+  optionIds: string[]
 ): Promise<{ success: boolean; error: string | null }> {
   const { supabase, user } = await getCurrentUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
-  // Check poll is still open
+  if (optionIds.length === 0) return { success: false, error: "No options selected" };
+
+  // Check poll is still open and get multi-select flag
   const { data: post } = await supabase
     .from("posts")
-    .select("poll_question, poll_closes_at")
+    .select("poll_question, poll_closes_at, poll_allow_multiple")
     .eq("id", postId)
     .single();
 
@@ -1551,28 +1559,39 @@ export async function votePoll(
     return { success: false, error: "This poll has closed" };
   }
 
-  // Verify the option belongs to this post
-  const { data: option } = await supabase
+  // Single-select: only one option allowed
+  if (!post.poll_allow_multiple && optionIds.length > 1) {
+    return { success: false, error: "This poll only allows a single selection" };
+  }
+
+  // Verify all options belong to this post
+  const { data: validOptions } = await supabase
     .from("poll_options")
     .select("id")
-    .eq("id", optionId)
     .eq("post_id", postId)
-    .single();
+    .in("id", optionIds);
 
-  if (!option) return { success: false, error: "Invalid poll option" };
+  const validIds = new Set((validOptions ?? []).map((o) => o.id));
+  const filteredIds = optionIds.filter((id) => validIds.has(id));
+  if (filteredIds.length === 0) return { success: false, error: "Invalid poll option" };
 
-  // Upsert the vote — atomic, handles both new votes and vote changes
-  const { error } = await supabase.from("poll_votes").upsert(
-    {
+  // Delete existing votes then insert new ones (works for both single and multi-select)
+  await supabase
+    .from("poll_votes")
+    .delete()
+    .eq("post_id", postId)
+    .eq("user_id", user.id);
+
+  const { error } = await supabase.from("poll_votes").insert(
+    filteredIds.map((optionId) => ({
       post_id: postId,
       option_id: optionId,
       user_id: user.id,
-    },
-    { onConflict: "post_id,user_id" }
+    }))
   );
 
   if (error) {
-    logger.error("Failed to upsert poll vote", { error });
+    logger.error("Failed to insert poll vote(s)", { error });
     return { success: false, error: "Failed to submit vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 

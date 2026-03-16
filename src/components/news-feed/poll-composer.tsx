@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Plus, X, Trash2 } from "lucide-react";
 
 export interface PollData {
@@ -17,6 +18,7 @@ export interface PollData {
   options: string[];
   duration: string; // "1d" | "3d" | "1w" | "2w" | "1m" | "none" | "custom"
   customCloseDate?: string;
+  allowMultiple: boolean;
 }
 
 const DURATION_OPTIONS = [
@@ -197,6 +199,19 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
           />
         </div>
       )}
+
+      {/* Multi-select toggle */}
+      <div className="flex items-center gap-2">
+        <Switch
+          id="poll-multi-select"
+          checked={poll.allowMultiple}
+          onCheckedChange={(checked: boolean) => onChange({ ...poll, allowMultiple: checked })}
+          disabled={disabled}
+        />
+        <label htmlFor="poll-multi-select" className="text-sm text-muted-foreground cursor-pointer">
+          Allow multiple selections
+        </label>
+      </div>
     </div>
   );
 }
