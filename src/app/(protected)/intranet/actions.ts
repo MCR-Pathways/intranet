@@ -1663,3 +1663,109 @@ export async function closePoll(
   revalidatePath("/intranet");
   return { success: true, error: null };
 }
+
+export async function exportPollResults(
+  postId: string
+): Promise<{
+  success: boolean;
+  error: string | null;
+  data?: {
+    question: string;
+    allowMultiple: boolean;
+    createdAt: string;
+    closedAt: string | null;
+    options: { text: string; voteCount: number; percentage: number }[];
+    totalVoters: number;
+    votes: { voterName: string; optionText: string; votedAt: string }[];
+  };
+}> {
+  const { supabase, user, profile } = await getCurrentUser();
+  if (!user || !profile) return { success: false, error: "Not authenticated" };
+
+  // Fetch post
+  const { data: post } = await supabase
+    .from("posts")
+    .select("id, author_id, poll_question, poll_closes_at, poll_allow_multiple, created_at")
+    .eq("id", postId)
+    .single();
+
+  if (!post || !post.poll_question) {
+    return { success: false, error: "Poll not found" };
+  }
+
+  // Check poll is closed
+  const isClosed = post.poll_closes_at ? new Date(post.poll_closes_at) < new Date() : false;
+  if (!isClosed) {
+    return { success: false, error: "Poll must be closed before exporting results" };
+  }
+
+  // Permission: author or systems admin
+  const isAuthor = post.author_id === user.id;
+  const isSysAdmin = isSystemsAdminEffective(profile);
+  if (!isAuthor && !isSysAdmin) {
+    return { success: false, error: "You do not have permission to export this poll" };
+  }
+
+  // Fetch options and votes in parallel
+  const [optionsResult, votesResult] = await Promise.all([
+    supabase
+      .from("poll_options")
+      .select("id, option_text, display_order")
+      .eq("post_id", postId)
+      .order("display_order"),
+    supabase
+      .from("poll_votes")
+      .select("option_id, user_id, created_at")
+      .eq("post_id", postId)
+      .order("created_at"),
+  ]);
+
+  const optionList = optionsResult.data ?? [];
+  const voteList = votesResult.data ?? [];
+
+  // Fetch voter profiles
+  const voterIds = [...new Set(voteList.map((v) => v.user_id))];
+  const voterMap = new Map<string, string>();
+  if (voterIds.length > 0) {
+    const { data: voters } = await supabase
+      .from("profiles")
+      .select("id, full_name, preferred_name")
+      .in("id", voterIds);
+    for (const v of voters ?? []) {
+      voterMap.set(v.id, v.preferred_name ?? v.full_name ?? "Unknown");
+    }
+  }
+
+  // Compute vote counts per option
+  const voteCounts = new Map<string, number>();
+  for (const v of voteList) {
+    voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
+  }
+
+  const totalVoters = voterIds.length;
+  const optionMap = new Map(optionList.map((o) => [o.id, o.option_text]));
+
+  return {
+    success: true,
+    error: null,
+    data: {
+      question: post.poll_question,
+      allowMultiple: post.poll_allow_multiple ?? false,
+      createdAt: post.created_at,
+      closedAt: post.poll_closes_at,
+      options: optionList.map((o) => ({
+        text: o.option_text,
+        voteCount: voteCounts.get(o.id) ?? 0,
+        percentage: totalVoters > 0
+          ? Math.round(((voteCounts.get(o.id) ?? 0) / totalVoters) * 100)
+          : 0,
+      })),
+      totalVoters,
+      votes: voteList.map((v) => ({
+        voterName: voterMap.get(v.user_id) ?? "Unknown",
+        optionText: optionMap.get(v.option_id) ?? "Unknown option",
+        votedAt: v.created_at,
+      })),
+    },
+  };
+}
