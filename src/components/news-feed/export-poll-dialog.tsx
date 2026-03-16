@@ -15,7 +15,7 @@ import { Loader2, Download, FileText, FileSpreadsheet, File } from "lucide-react
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { exportPollResults } from "@/app/(protected)/intranet/actions";
-import { sanitiseCSVCell, buildCSVContent, downloadCSV } from "@/lib/csv";
+import { sanitiseCSVCell, buildCSVContent, downloadCSV, downloadBlob } from "@/lib/csv";
 
 type ExportFormat = "csv" | "xlsx" | "pdf";
 
@@ -35,7 +35,8 @@ const FORMAT_OPTIONS: { value: ExportFormat; label: string; ext: string; icon: t
 ];
 
 function generateSlug(question: string): string {
-  return question.slice(0, 30).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const slug = question.slice(0, 30).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "export";
 }
 
 export function ExportPollDialog({
@@ -284,10 +285,15 @@ async function exportAsXLSX(
   if (includeSummary) {
     const summaryData = [
       ["Option", "Votes", "Percentage"],
-      ...d.options.map((opt) => [opt.text, opt.voteCount, `${opt.percentage}%`]),
+      ...d.options.map((opt) => [opt.text, opt.voteCount, opt.percentage / 100]),
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     summarySheet["!cols"] = [{ wch: 30 }, { wch: 10 }, { wch: 12 }];
+    // Format percentage column as % (rows start at index 1 since row 0 is header)
+    for (let i = 0; i < d.options.length; i++) {
+      const cell = summarySheet[XLSX.utils.encode_cell({ r: i + 1, c: 2 })];
+      if (cell) cell.z = "0%";
+    }
     XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
   }
 
@@ -306,13 +312,10 @@ async function exportAsXLSX(
   }
 
   const wbOut = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([wbOut], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `poll-results-${slug}.xlsx`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(
+    new Blob([wbOut], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+    `poll-results-${slug}.xlsx`
+  );
 }
 
 // ─── PDF ─────────────────────────────────────────────────────────────────────
@@ -326,6 +329,8 @@ async function exportAsPDF(
 ) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
+
+  interface jsPDFWithAutoTable { lastAutoTable: { finalY: number } }
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -372,7 +377,7 @@ async function exportAsPDF(
       margin: { left: 14 },
     });
 
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable.finalY + 10;
   }
 
   if (includeSummary) {
@@ -393,7 +398,7 @@ async function exportAsPDF(
       },
     });
 
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable.finalY + 10;
   }
 
   if (includeIndividual) {
