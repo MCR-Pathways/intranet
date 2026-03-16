@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock } from "lucide-react";
 import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
 import { cn, timeAgo, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { CommentSection } from "./comment-section";
 import { PollDisplay } from "./poll-display";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
+import { ClosePollDialog } from "./close-poll-dialog";
 import type { MentionUser } from "./mention-list";
 import type {
   PostWithRelations,
@@ -35,6 +36,7 @@ interface PostCardProps {
   currentUserId: string;
   currentUserProfile: PostAuthor;
   isHRAdmin: boolean;
+  isSystemsAdmin?: boolean;
   mentionUsers?: MentionUser[];
 }
 
@@ -43,10 +45,12 @@ export function PostCard({
   currentUserId,
   currentUserProfile,
   isHRAdmin,
+  isSystemsAdmin = false,
   mentionUsers = [],
 }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showClosePollDialog, setShowClosePollDialog] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [isPinPending, startPinTransition] = useTransition();
 
@@ -177,6 +181,9 @@ export function PostCard({
 
   const isAuthor = post.author_id === currentUserId;
   const canModify = isAuthor || isHRAdmin;
+  const pollIsOpen = !!post.poll && !post.poll.is_closed;
+  const canClosePoll = pollIsOpen && (isAuthor || isSystemsAdmin);
+  const showKebab = canModify || canClosePoll;
 
   const displayName =
     post.author.preferred_name || post.author.full_name || "User";
@@ -228,7 +235,7 @@ export function PostCard({
                 </div>
               </div>
 
-              {canModify && (
+              {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -268,13 +275,23 @@ export function PostCard({
                         {post.is_pinned ? "Unpin Post" : "Pin Post"}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() => setShowDeleteDialog(true)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Post
-                    </DropdownMenuItem>
+                    {canClosePoll && (
+                      <DropdownMenuItem
+                        onSelect={() => setShowClosePollDialog(true)}
+                      >
+                        <Lock className="h-4 w-4" />
+                        Close Poll
+                      </DropdownMenuItem>
+                    )}
+                    {canModify && (
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Post
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -332,6 +349,11 @@ export function PostCard({
         postId={post.id}
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
+      />
+      <ClosePollDialog
+        postId={post.id}
+        open={showClosePollDialog}
+        onOpenChange={setShowClosePollDialog}
       />
     </>
   );
