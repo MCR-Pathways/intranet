@@ -13,26 +13,30 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { deletePost } from "@/app/(protected)/intranet/actions";
+import { closePoll } from "@/app/(protected)/intranet/actions";
 
-interface PostDeleteDialogProps {
+interface ClosePollDialogProps {
   postId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PostDeleteDialog({
+export function ClosePollDialog({
   postId,
   open,
   onOpenChange,
-}: PostDeleteDialogProps) {
+}: ClosePollDialogProps) {
   const [isPending, startTransition] = useTransition();
 
-  const handleDelete = () => {
+  const handleClose = () => {
     startTransition(async () => {
-      await deletePost(postId);
-      toast.success("Post deleted");
-      onOpenChange(false);
+      const result = await closePoll(postId);
+      if (result.success) {
+        toast.success("Poll closed");
+        onOpenChange(false);
+      } else {
+        toast.error(result.error ?? "Failed to close poll");
+      }
     });
   };
 
@@ -40,10 +44,9 @@ export function PostDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Post</AlertDialogTitle>
+          <AlertDialogTitle>Close this poll?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this post? This action cannot be
-            undone. All comments, reactions, and poll data will also be removed.
+            Voting will end immediately. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -54,16 +57,16 @@ export function PostDeleteDialog({
           </AlertDialogClose>
           <Button
             variant="destructive"
-            onClick={handleDelete}
+            onClick={handleClose}
             disabled={isPending}
           >
             {isPending ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                Deleting...
+                Closing...
               </>
             ) : (
-              "Delete"
+              "Close Poll"
             )}
           </Button>
         </AlertDialogFooter>

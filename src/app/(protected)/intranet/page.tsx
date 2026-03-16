@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
@@ -17,6 +17,7 @@ export default async function IntranetPage() {
   const isStaff = profile.user_type === "staff";
   const canPost = profile.user_type === "staff";
   const isHRAdmin = isHRAdminEffective(profile);
+  const isSystemsAdmin = isSystemsAdminEffective(profile);
 
   const currentUserProfile: PostAuthor = {
     id: profile.id,
@@ -56,6 +57,7 @@ export default async function IntranetPage() {
         currentUserProfile={currentUserProfile}
         isStaff={isStaff}
         isHRAdmin={isHRAdmin}
+        isSystemsAdmin={isSystemsAdmin}
         initialHasMore={postsResult.hasMore}
         mentionUsers={mentionUsers}
       />

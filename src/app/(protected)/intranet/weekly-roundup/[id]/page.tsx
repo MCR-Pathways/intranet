@@ -32,6 +32,7 @@ export default async function RoundupDetailPage({
   }
 
   const isHRAdmin = profile.is_hr_admin ?? false;
+  const isSystemsAdmin = profile.is_systems_admin ?? false;
 
   const currentUserProfile: PostAuthor = {
     id: profile.id,
@@ -75,6 +76,7 @@ export default async function RoundupDetailPage({
               currentUserId={user.id}
               currentUserProfile={currentUserProfile}
               isHRAdmin={isHRAdmin}
+              isSystemsAdmin={isSystemsAdmin}
             />
           ))}
         </div>
