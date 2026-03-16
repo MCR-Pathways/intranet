@@ -1706,22 +1706,22 @@ export async function exportPollResults(
     return { success: false, error: "You do not have permission to export this poll" };
   }
 
-  // Fetch options
-  const { data: options } = await supabase
-    .from("poll_options")
-    .select("id, option_text, display_order")
-    .eq("post_id", postId)
-    .order("display_order");
+  // Fetch options and votes in parallel
+  const [optionsResult, votesResult] = await Promise.all([
+    supabase
+      .from("poll_options")
+      .select("id, option_text, display_order")
+      .eq("post_id", postId)
+      .order("display_order"),
+    supabase
+      .from("poll_votes")
+      .select("option_id, user_id, created_at")
+      .eq("post_id", postId)
+      .order("created_at"),
+  ]);
 
-  // Fetch votes
-  const { data: votes } = await supabase
-    .from("poll_votes")
-    .select("option_id, user_id, created_at")
-    .eq("post_id", postId)
-    .order("created_at");
-
-  const optionList = options ?? [];
-  const voteList = votes ?? [];
+  const optionList = optionsResult.data ?? [];
+  const voteList = votesResult.data ?? [];
 
   // Fetch voter profiles
   const voterIds = [...new Set(voteList.map((v) => v.user_id))];
@@ -1742,7 +1742,7 @@ export async function exportPollResults(
     voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1);
   }
 
-  const totalVoters = new Set(voteList.map((v) => v.user_id)).size;
+  const totalVoters = voterIds.length;
   const optionMap = new Map(optionList.map((o) => [o.id, o.option_text]));
 
   return {
