@@ -12,9 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock, Download } from "lucide-react";
-import { togglePinPost, exportPollResults } from "@/app/(protected)/intranet/actions";
+import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
-import { sanitiseCSVCell, buildCSVContent, downloadCSV } from "@/lib/csv";
 import { cn, timeAgo, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { TiptapRenderer } from "./tiptap-renderer";
 import { AttachmentDisplay } from "./attachment-display";
@@ -24,6 +23,7 @@ import { PollDisplay } from "./poll-display";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
 import { ClosePollDialog } from "./close-poll-dialog";
+import { ExportPollDialog } from "./export-poll-dialog";
 import type { MentionUser } from "./mention-list";
 import type {
   PostWithRelations,
@@ -178,47 +178,7 @@ export function PostCard({
     []
   );
 
-  const handleExportPollResults = useCallback(() => {
-    startPinTransition(async () => {
-      const result = await exportPollResults(post.id);
-      if (!result.success || !result.data) {
-        toast.error(result.error ?? "Failed to export results");
-        return;
-      }
-
-      const d = result.data;
-      const summaryHeaders = ["Question", "Option", "Votes", "Percentage", "Total Voters", "Status", "Created", "Closed"];
-      const summaryRows = d.options.map((opt, i) => [
-        i === 0 ? sanitiseCSVCell(d.question) : "",
-        sanitiseCSVCell(opt.text),
-        String(opt.voteCount),
-        `${opt.percentage}%`,
-        i === 0 ? String(d.totalVoters) : "",
-        i === 0 ? "Closed" : "",
-        i === 0 ? new Date(d.createdAt).toLocaleDateString("en-GB") : "",
-        i === 0 && d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "",
-      ]);
-
-      const individualHeaders = ["Voter", "Option Chosen", "Voted At"];
-      const individualRows = d.votes.map((v) => [
-        sanitiseCSVCell(v.voterName),
-        sanitiseCSVCell(v.optionText),
-        new Date(v.votedAt).toLocaleString("en-GB"),
-      ]);
-
-      const content = [
-        "SUMMARY",
-        buildCSVContent(summaryHeaders, summaryRows),
-        "",
-        "INDIVIDUAL RESPONSES",
-        buildCSVContent(individualHeaders, individualRows),
-      ].join("\n");
-
-      const slug = d.question.slice(0, 30).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "export";
-      downloadCSV(content, `poll-results-${slug}.csv`);
-      toast.success("Poll results exported");
-    });
-  }, [post.id]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // ─── Derived values ────────────────────────────────────────────────
 
@@ -330,8 +290,7 @@ export function PostCard({
                     )}
                     {canExportPoll && (
                       <DropdownMenuItem
-                        onSelect={handleExportPollResults}
-                        disabled={isPinPending}
+                        onSelect={() => setShowExportDialog(true)}
                       >
                         <Download className="h-4 w-4" />
                         Export Results
@@ -409,6 +368,16 @@ export function PostCard({
         open={showClosePollDialog}
         onOpenChange={setShowClosePollDialog}
       />
+      {post.poll && (
+        <ExportPollDialog
+          postId={post.id}
+          pollQuestion={post.poll.question}
+          totalVotes={post.poll.total_votes}
+          closedAt={post.poll.closes_at}
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+        />
+      )}
     </>
   );
 }
