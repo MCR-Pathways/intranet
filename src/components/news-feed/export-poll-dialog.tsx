@@ -327,10 +327,39 @@ async function exportAsXLSX(
 
 // MCR brand colours as RGB arrays
 const MCR_DARK_BLUE: [number, number, number] = [33, 51, 80];
-const MCR_LIGHT_BLUE: [number, number, number] = [91, 198, 233];
 const MCR_TEAL: [number, number, number] = [42, 96, 117];
 const LIGHT_GREY_BG: [number, number, number] = [242, 244, 247];
 const WHITE: [number, number, number] = [255, 255, 255];
+
+/** Convert the MCR SVG logo to a PNG data URL via an offscreen canvas. */
+async function loadLogoAsDataUrl(): Promise<string | null> {
+  try {
+    const response = await fetch("/MCR_LOGO-1.svg");
+    const svgText = await response.text();
+    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = 2; // retina quality
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(null); return; }
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  } catch {
+    return null;
+  }
+}
 
 async function exportAsPDF(
   d: ExportData,
@@ -349,63 +378,75 @@ async function exportAsPDF(
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
   const contentWidth = pageWidth - margin * 2;
+  const closedDate = d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A";
 
-  // ─── 1. Header banner (dark blue strip) ─────────────────────────────
-  doc.setFillColor(...MCR_DARK_BLUE);
-  doc.rect(0, 0, pageWidth, 40, "F");
+  // ─── 1. Logo (top-right, matching MCR official documents) ───────────
+  const logoDataUrl = await loadLogoAsDataUrl();
+  if (logoDataUrl) {
+    // Original SVG is 168x50 — scale to fit nicely in top-right
+    const logoW = 50;
+    const logoH = 15;
+    doc.addImage(logoDataUrl, "PNG", pageWidth - margin - logoW, margin, logoW, logoH);
+  }
 
-  // "MCR Pathways" branding in the banner
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("MCR Pathways", margin, 12);
+  // ─── 2. Title area (white background, left-aligned) ─────────────────
+  let y = margin + 8;
 
-  // "Poll Results" title in the banner
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("Poll Results", margin, 25);
-
-  // Question in the banner (white, smaller)
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  const questionLines = doc.splitTextToSize(d.question, contentWidth);
-  doc.text(questionLines[0] + (questionLines.length > 1 ? "..." : ""), margin, 34);
-
-  let y = 50;
-
-  // ─── 2. Meta line + participation callout ───────────────────────────
   doc.setTextColor(...MCR_DARK_BLUE);
+  doc.text("Poll Results", margin, y);
+  y += 10;
+
+  // Question
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80, 80, 80);
+  const questionLines = doc.splitTextToSize(d.question, contentWidth - 60);
+  doc.text(questionLines, margin, y);
+  y += questionLines.length * 5.5 + 4;
+
+  // Thin dark blue line under title area
+  doc.setDrawColor(...MCR_DARK_BLUE);
+  doc.setLineWidth(0.8);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  // ─── 3. Meta line ──────────────────────────────────────────────────
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  const closedDate = d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A";
-  const metaLine = `${d.totalVoters} ${d.totalVoters === 1 ? "voter" : "voters"} · ${d.allowMultiple ? "Multi-select" : "Single choice"} · Closed ${closedDate}`;
+  doc.setTextColor(120, 120, 120);
+  const metaLine = `${d.totalVoters} ${d.totalVoters === 1 ? "voter" : "voters"}  ·  ${d.allowMultiple ? "Multi-select" : "Single choice"}  ·  Closed ${closedDate}`;
   doc.text(metaLine, margin, y);
-  y += 6;
+  y += 8;
 
-  // Participation callout box
+  // ─── 4. Participation callout box ──────────────────────────────────
   if (d.totalActiveStaff > 0) {
     const participationPct = Math.round((d.totalVoters / d.totalActiveStaff) * 100);
     doc.setFillColor(...LIGHT_GREY_BG);
-    doc.roundedRect(margin, y, contentWidth, 14, 2, 2, "F");
+    doc.roundedRect(margin, y, contentWidth, 12, 2, 2, "F");
+    // Left accent stripe
+    doc.setFillColor(...MCR_TEAL);
+    doc.rect(margin, y, 3, 12, "F");
     doc.setFontSize(9);
     doc.setTextColor(...MCR_TEAL);
     doc.setFont("helvetica", "bold");
-    doc.text(`${d.totalVoters} of ${d.totalActiveStaff} staff voted (${participationPct}% participation)`, margin + 4, y + 9);
-    y += 20;
+    doc.text(`${d.totalVoters} of ${d.totalActiveStaff} staff voted (${participationPct}% participation)`, margin + 8, y + 8);
+    y += 18;
   } else {
-    y += 4;
+    y += 2;
   }
 
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "normal");
 
-  // ─── 3. Horizontal bar chart (if summary included) ──────────────────
+  // ─── 5. Horizontal bar chart ───────────────────────────────────────
   if (includeSummary && d.options.length > 0) {
     const maxPercentage = Math.max(...d.options.map((o) => o.percentage), 1);
-    const barHeight = 10;
-    const barGap = 4;
-    const labelWidth = 70;
-    const barAreaWidth = contentWidth - labelWidth - 35;
+    const barHeight = 8;
+    const barGap = 5;
+    const labelWidth = 65;
+    const barAreaWidth = contentWidth - labelWidth - 30;
     const winningVotes = Math.max(...d.options.map((o) => o.voteCount));
 
     for (const opt of d.options) {
@@ -415,39 +456,38 @@ async function exportAsPDF(
       doc.setFontSize(8);
       doc.setFont("helvetica", isWinner ? "bold" : "normal");
       doc.setTextColor(...MCR_DARK_BLUE);
-      const label = doc.splitTextToSize(opt.text, labelWidth - 2)[0];
-      doc.text(label, margin, y + 7);
+      const label = doc.splitTextToSize(opt.text, labelWidth - 4)[0];
+      doc.text(label, margin, y + 5.5);
 
-      // Bar track (light grey)
+      // Bar track
       const barX = margin + labelWidth;
-      doc.setFillColor(...LIGHT_GREY_BG);
-      doc.roundedRect(barX, y, barAreaWidth, barHeight, 2, 2, "F");
+      doc.setFillColor(230, 232, 236);
+      doc.roundedRect(barX, y, barAreaWidth, barHeight, 1.5, 1.5, "F");
 
-      // Bar fill (dark blue for winner, teal for others)
+      // Bar fill
       const fillWidth = Math.max((opt.percentage / maxPercentage) * barAreaWidth, 0);
       if (fillWidth > 0) {
         doc.setFillColor(...(isWinner ? MCR_DARK_BLUE : MCR_TEAL));
-        doc.roundedRect(barX, y, fillWidth, barHeight, 2, 2, "F");
+        doc.roundedRect(barX, y, fillWidth, barHeight, 1.5, 1.5, "F");
       }
 
-      // Percentage label
+      // Percentage + vote count
       doc.setFontSize(8);
       doc.setFont("helvetica", isWinner ? "bold" : "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text(`${opt.percentage}%`, barX + barAreaWidth + 3, y + 7);
+      doc.text(`${opt.percentage}%`, barX + barAreaWidth + 3, y + 5.5);
 
       y += barHeight + barGap;
     }
 
-    // ─── 4. Separator line ─────────────────────────────────────────────
-    y += 4;
+    y += 2;
     doc.setDrawColor(220, 220, 220);
     doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
   }
 
-  // ─── 5. Metadata table ──────────────────────────────────────────────
+  // ─── 6. Metadata table ─────────────────────────────────────────────
   if (includeMetadata) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -474,8 +514,6 @@ async function exportAsPDF(
     });
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
-
-    // Separator line
     y += 6;
     doc.setDrawColor(220, 220, 220);
     doc.setLineWidth(0.3);
@@ -483,7 +521,7 @@ async function exportAsPDF(
     y += 8;
   }
 
-  // ─── 6. Summary table ───────────────────────────────────────────────
+  // ─── 7. Summary table ──────────────────────────────────────────────
   if (includeSummary) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -505,7 +543,6 @@ async function exportAsPDF(
         1: { halign: "right" },
         2: { halign: "right" },
       },
-      // Highlight winning option(s) with bold
       didParseCell: (data: { section: string; row: { index: number }; cell: { styles: { fontStyle: string } } }) => {
         if (data.section === "body" && d.options[data.row.index]?.voteCount === winningVotes && winningVotes > 0) {
           data.cell.styles.fontStyle = "bold";
@@ -514,8 +551,6 @@ async function exportAsPDF(
     });
 
     y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
-
-    // Separator line
     y += 6;
     doc.setDrawColor(220, 220, 220);
     doc.setLineWidth(0.3);
@@ -523,7 +558,7 @@ async function exportAsPDF(
     y += 8;
   }
 
-  // ─── 7. Individual responses table ──────────────────────────────────
+  // ─── 8. Individual responses table ─────────────────────────────────
   if (includeIndividual) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -546,7 +581,7 @@ async function exportAsPDF(
     });
   }
 
-  // ─── 8. Footer (every page) ─────────────────────────────────────────
+  // ─── 9. Footer (every page) ──────────────────────────────────────────
   const totalPages = doc.getNumberOfPages();
   const exportedAt = new Date().toLocaleString("en-GB");
   for (let i = 1; i <= totalPages; i++) {
