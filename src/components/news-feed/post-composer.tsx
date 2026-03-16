@@ -108,6 +108,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
                 question: pollData.question,
                 options: pollData.options.filter((o) => o.trim().length > 0),
                 closes_at: computePollClosesAt(pollData.duration, pollData.customCloseDate),
+                allow_multiple: pollData.allowMultiple,
               },
             }
           : {}),
