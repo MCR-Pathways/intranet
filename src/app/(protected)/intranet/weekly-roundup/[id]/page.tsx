@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
 import { fetchRoundupPostsWithClient } from "../../actions";
 import { formatShortDate } from "@/lib/utils";
 import { PostCard } from "@/components/news-feed/post-card";
@@ -31,8 +31,8 @@ export default async function RoundupDetailPage({
     notFound();
   }
 
-  const isHRAdmin = profile.is_hr_admin ?? false;
-  const isSystemsAdmin = profile.is_systems_admin ?? false;
+  const isHRAdmin = isHRAdminEffective(profile);
+  const isSystemsAdmin = isSystemsAdminEffective(profile);
 
   const currentUserProfile: PostAuthor = {
     id: profile.id,
