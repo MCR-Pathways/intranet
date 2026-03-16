@@ -1571,9 +1571,11 @@ export async function votePoll(
     .eq("post_id", postId)
     .in("id", optionIds);
 
-  const validIds = new Set((validOptions ?? []).map((o) => o.id));
-  const filteredIds = optionIds.filter((id) => validIds.has(id));
-  if (filteredIds.length === 0) return { success: false, error: "Invalid poll option" };
+  const uniqueOptionIds = new Set(optionIds);
+  if (!validOptions || validOptions.length !== uniqueOptionIds.size) {
+    return { success: false, error: "One or more poll options are invalid" };
+  }
+  const filteredIds = Array.from(uniqueOptionIds);
 
   // Delete existing votes then insert new ones (works for both single and multi-select)
   await supabase
