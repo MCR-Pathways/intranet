@@ -1676,6 +1676,7 @@ export async function exportPollResults(
     closedAt: string | null;
     options: { text: string; voteCount: number; percentage: number }[];
     totalVoters: number;
+    totalActiveStaff: number;
     votes: { voterName: string; optionText: string; votedAt: string }[];
   };
 }> {
@@ -1706,8 +1707,8 @@ export async function exportPollResults(
     return { success: false, error: "You do not have permission to export this poll" };
   }
 
-  // Fetch options and votes in parallel
-  const [optionsResult, votesResult] = await Promise.all([
+  // Fetch options, votes, and active staff count in parallel
+  const [optionsResult, votesResult, staffCountResult] = await Promise.all([
     supabase
       .from("poll_options")
       .select("id, option_text, display_order")
@@ -1718,10 +1719,15 @@ export async function exportPollResults(
       .select("option_id, user_id, created_at")
       .eq("post_id", postId)
       .order("created_at"),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
   ]);
 
   const optionList = optionsResult.data ?? [];
   const voteList = votesResult.data ?? [];
+  const totalActiveStaff = staffCountResult.count ?? 0;
 
   // Fetch voter profiles
   const voterIds = [...new Set(voteList.map((v) => v.user_id))];
@@ -1761,6 +1767,7 @@ export async function exportPollResults(
           : 0,
       })),
       totalVoters,
+      totalActiveStaff,
       votes: voteList.map((v) => ({
         voterName: voterMap.get(v.user_id) ?? "Unknown",
         optionText: optionMap.get(v.option_id) ?? "Unknown option",
