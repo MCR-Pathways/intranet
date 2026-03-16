@@ -377,7 +377,8 @@ async function exportAsPDF(
       margin: { left: 14 },
     });
 
-    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable.finalY + 10;
+    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
+    y += 10;
   }
 
   if (includeSummary) {
@@ -398,7 +399,8 @@ async function exportAsPDF(
       },
     });
 
-    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable.finalY + 10;
+    y = (doc as unknown as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
+    y += 10;
   }
 
   if (includeIndividual) {
