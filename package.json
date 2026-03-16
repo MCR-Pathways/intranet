@@ -60,6 +60,8 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "googleapis": "^171.4.0",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
@@ -69,7 +71,8 @@
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
