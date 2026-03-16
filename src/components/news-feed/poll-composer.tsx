@@ -86,11 +86,11 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
     [poll, onChange]
   );
 
-  /** Minimum value for the custom date-time picker (current time, rounded to the minute). */
+  /** Minimum value for the custom date-time picker (next minute, to avoid validation race). */
   const minDateTime = useMemo(() => {
     const now = new Date();
     now.setSeconds(0, 0);
-    // Format as YYYY-MM-DDTHH:MM for datetime-local input
+    now.setMinutes(now.getMinutes() + 1);
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   }, []);
@@ -217,8 +217,11 @@ export function computePollClosesAt(duration: string, customCloseDate?: string):
       return new Date(now.getTime() + 7 * DAY).toISOString();
     case "2w":
       return new Date(now.getTime() + 14 * DAY).toISOString();
-    case "1m":
-      return new Date(now.getTime() + 30 * DAY).toISOString();
+    case "1m": {
+      const oneMonthLater = new Date(now);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+      return oneMonthLater.toISOString();
+    }
     case "custom":
       if (!customCloseDate) return null;
       return new Date(customCloseDate).toISOString();
