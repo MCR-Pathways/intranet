@@ -1694,7 +1694,7 @@ export async function exportPollResults(
   }
 
   // Check poll is closed
-  const isClosed = post.poll_closes_at && new Date(post.poll_closes_at) < new Date();
+  const isClosed = post.poll_closes_at ? new Date(post.poll_closes_at) < new Date() : false;
   if (!isClosed) {
     return { success: false, error: "Poll must be closed before exporting results" };
   }
