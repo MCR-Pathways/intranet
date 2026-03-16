@@ -214,7 +214,7 @@ export function PostCard({
         buildCSVContent(individualHeaders, individualRows),
       ].join("\n");
 
-      const slug = d.question.slice(0, 30).replace(/[^a-z0-9]/gi, "-").toLowerCase();
+      const slug = d.question.slice(0, 30).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       downloadCSV(content, `poll-results-${slug}.csv`);
       toast.success("Poll results exported");
     });
