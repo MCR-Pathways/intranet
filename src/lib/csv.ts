@@ -31,14 +31,20 @@ export function buildCSVContent(headers: string[], rows: string[][]): string {
 }
 
 /**
- * Trigger a browser CSV download via a programmatic link click.
+ * Trigger a browser file download from a Blob via a programmatic link click.
  */
-export function downloadCSV(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Trigger a browser CSV download via a programmatic link click.
+ */
+export function downloadCSV(content: string, filename: string): void {
+  downloadBlob(new Blob([content], { type: "text/csv;charset=utf-8;" }), filename);
 }
