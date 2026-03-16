@@ -14,6 +14,7 @@ interface PostFeedProps {
   currentUserProfile: PostAuthor;
   isStaff: boolean;
   isHRAdmin: boolean;
+  isSystemsAdmin?: boolean;
   initialHasMore: boolean;
   mentionUsers?: MentionUser[];
 }
@@ -24,6 +25,7 @@ export function PostFeed({
   currentUserProfile,
   isStaff,
   isHRAdmin,
+  isSystemsAdmin = false,
   initialHasMore,
   mentionUsers = [],
 }: PostFeedProps) {
@@ -76,6 +78,7 @@ export function PostFeed({
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
           isHRAdmin={isHRAdmin}
+          isSystemsAdmin={isSystemsAdmin}
           mentionUsers={mentionUsers}
         />
       ))}

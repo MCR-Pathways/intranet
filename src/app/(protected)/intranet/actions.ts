@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isSystemsAdminEffective } from "@/lib/auth";
 import {
   POST_MAX_LENGTH,
   ATTACHMENT_MAX_COUNT,
@@ -1616,6 +1616,48 @@ export async function removeVote(
   if (error) {
     logger.error("Failed to remove poll vote", { error });
     return { success: false, error: "Failed to remove vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  }
+
+  revalidatePath("/intranet");
+  return { success: true, error: null };
+}
+
+export async function closePoll(
+  postId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user, profile } = await getCurrentUser();
+  if (!user || !profile) return { success: false, error: "Not authenticated" };
+
+  // Fetch the post to check ownership and poll status
+  const { data: post } = await supabase
+    .from("posts")
+    .select("id, author_id, poll_question, poll_closes_at")
+    .eq("id", postId)
+    .single();
+
+  if (!post) return { success: false, error: "Post not found" };
+  if (!post.poll_question) return { success: false, error: "This post does not have a poll" };
+
+  // Check if already closed
+  if (post.poll_closes_at && new Date(post.poll_closes_at) < new Date()) {
+    return { success: false, error: "This poll is already closed" };
+  }
+
+  // Permission: post author OR systems admin
+  const isAuthor = post.author_id === user.id;
+  const isSysAdmin = isSystemsAdminEffective(profile);
+  if (!isAuthor && !isSysAdmin) {
+    return { success: false, error: "You do not have permission to close this poll" };
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ poll_closes_at: new Date().toISOString() })
+    .eq("id", postId);
+
+  if (error) {
+    logger.error("Failed to close poll", { error });
+    return { success: false, error: "Failed to close poll" };
   }
 
   revalidatePath("/intranet");
