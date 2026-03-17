@@ -1,5 +1,3 @@
-"use server";
-
 /**
  * Google Drive API client for Resources module.
  *

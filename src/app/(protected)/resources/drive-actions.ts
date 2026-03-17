@@ -209,7 +209,10 @@ export async function getRegisteredFolders(): Promise<
     }
 
     return data ?? [];
-  } catch {
+  } catch (error) {
+    logger.error("Failed to get registered folders", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 }
@@ -443,15 +446,8 @@ export async function unlinkGoogleDoc(
       return { success: false, error: "This article is not a linked Google Doc" };
     }
 
-    // Stop the watch channel (non-critical)
-    try {
-      const channelId = `resource-${articleId}`;
-      // We don't store resourceId, so we can't stop the channel precisely
-      // The channel will expire naturally (7 days max)
-      await stopWatchChannel(channelId, "");
-    } catch {
-      // Non-critical — channel expires naturally
-    }
+    // Watch channel expires naturally (7 days max).
+    // We don't store resourceId, so we can't stop it precisely.
 
     // Hard-delete the article
     const { error: deleteError } = await supabase
