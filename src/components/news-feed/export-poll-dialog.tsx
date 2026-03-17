@@ -388,7 +388,8 @@ async function loadLogoAsDataUrl(): Promise<string | null> {
     } finally {
       URL.revokeObjectURL(url);
     }
-  } catch {
+  } catch (error) {
+    console.warn("Failed to load logo for PDF export:", error);
     return null;
   }
 }
