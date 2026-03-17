@@ -270,38 +270,65 @@ async function exportAsXLSX(
 ) {
   const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
+  const closedDate = d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A";
+  const participationPct = d.totalActiveStaff > 0 ? `${Math.round((d.totalVoters / d.totalActiveStaff) * 100)}%` : "N/A";
 
-  if (includeMetadata) {
-    const metaData = [
-      ["Field", "Value"],
-      ["Question", d.question],
-      ["Type", d.allowMultiple ? "Multi-select" : "Single choice"],
-      ["Total Voters", d.totalVoters],
-      ["Active Staff", d.totalActiveStaff],
-      ["Participation", d.totalActiveStaff > 0 ? `${Math.round((d.totalVoters / d.totalActiveStaff) * 100)}%` : "N/A"],
-      ["Created", new Date(d.createdAt).toLocaleDateString("en-GB")],
-      ["Closed", d.closedAt ? new Date(d.closedAt).toLocaleDateString("en-GB") : "N/A"],
-    ];
-    const metaSheet = XLSX.utils.aoa_to_sheet(metaData);
-    metaSheet["!cols"] = [{ wch: 15 }, { wch: 40 }];
-    XLSX.utils.book_append_sheet(wb, metaSheet, "Metadata");
-  }
+  // ─── Overview sheet (metadata + summary combined) ─────────────────
+  if (includeMetadata || includeSummary) {
+    const rows: (string | number)[][] = [];
 
-  if (includeSummary) {
-    const summaryData = [
-      ["Option", "Votes", "Percentage"],
-      ...d.options.map((opt) => [opt.text, opt.voteCount, opt.percentage / 100]),
-    ];
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    summarySheet["!cols"] = [{ wch: 30 }, { wch: 10 }, { wch: 12 }];
-    // Format percentage column as % (rows start at index 1 since row 0 is header)
-    for (let i = 0; i < d.options.length; i++) {
-      const cell = summarySheet[XLSX.utils.encode_cell({ r: i + 1, c: 2 })];
-      if (cell) cell.z = "0%";
+    // Title block
+    rows.push(["Poll Results"]);
+    rows.push([d.question]);
+    rows.push([`${d.totalVoters} ${d.totalVoters === 1 ? "voter" : "voters"} · ${d.allowMultiple ? "Multi-select" : "Single choice"} · Closed ${closedDate}`]);
+    rows.push([]); // blank row
+
+    // Participation
+    if (d.totalActiveStaff > 0) {
+      rows.push([`${d.totalVoters} of ${d.totalActiveStaff} staff voted (${participationPct} participation)`]);
+      rows.push([]); // blank row
     }
-    XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
+
+    // Metadata section
+    if (includeMetadata) {
+      rows.push(["METADATA"]);
+      rows.push(["Question", d.question]);
+      rows.push(["Type", d.allowMultiple ? "Multi-select" : "Single choice"]);
+      rows.push(["Total Voters", d.totalVoters]);
+      rows.push(["Active Staff", d.totalActiveStaff]);
+      rows.push(["Participation", participationPct]);
+      rows.push(["Created", new Date(d.createdAt).toLocaleDateString("en-GB")]);
+      rows.push(["Closed", closedDate]);
+      rows.push([]); // blank row
+    }
+
+    // Summary section
+    if (includeSummary) {
+      rows.push(["RESULTS"]);
+      rows.push(["Option", "Votes", "Percentage"]);
+      const summaryStartRow = rows.length;
+      for (const opt of d.options) {
+        rows.push([opt.text, opt.voteCount, opt.percentage / 100]);
+      }
+
+      const overviewSheet = XLSX.utils.aoa_to_sheet(rows);
+      overviewSheet["!cols"] = [{ wch: 35 }, { wch: 15 }, { wch: 14 }];
+
+      // Format percentage cells
+      for (let i = 0; i < d.options.length; i++) {
+        const cell = overviewSheet[XLSX.utils.encode_cell({ r: summaryStartRow + i, c: 2 })];
+        if (cell) cell.z = "0%";
+      }
+
+      XLSX.utils.book_append_sheet(wb, overviewSheet, "Overview");
+    } else {
+      const overviewSheet = XLSX.utils.aoa_to_sheet(rows);
+      overviewSheet["!cols"] = [{ wch: 35 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(wb, overviewSheet, "Overview");
+    }
   }
 
+  // ─── Individual Responses sheet ───────────────────────────────────
   if (includeIndividual) {
     const individualData = [
       ["Voter", "Option Chosen", "Voted At"],
