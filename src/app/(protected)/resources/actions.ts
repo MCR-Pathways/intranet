@@ -9,8 +9,8 @@ import type {
   ArticleWithAuthor,
   CategoryWithCount,
   CategoryWithChildren,
+  CategoryTreeNode,
   ResourceCategory,
-  ResourceArticle,
 } from "@/types/database.types";
 
 // ─── SELECT constants ────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ const CATEGORY_SELECT =
   "id, name, slug, description, icon, icon_colour, sort_order, parent_id, visibility, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
-  "id, category_id, title, slug, content, content_json, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order, visibility";
+  "id, category_id, title, slug, content, content_json, content_type, google_doc_id, google_doc_url, synced_html, last_synced_at, component_name, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order, visibility";
 
 const MAX_FEATURED_ARTICLES = 3;
 
@@ -138,21 +138,6 @@ export async function fetchCategoriesWithClient(
   return topLevel;
 }
 
-export async function fetchCategoryBySlugWithClient(
-  supabase: SupabaseClient,
-  categorySlug: string
-): Promise<ResourceCategory | null> {
-  const { data, error } = await supabase
-    .from("resource_categories")
-    .select(CATEGORY_SELECT)
-    .eq("slug", categorySlug)
-    .is("deleted_at", null)
-    .single();
-
-  if (error || !data) return null;
-  return data as ResourceCategory;
-}
-
 export async function fetchParentCategory(
   supabase: SupabaseClient,
   parentId: string
@@ -233,49 +218,231 @@ export async function fetchSubcategoriesWithClient(
   });
 }
 
-export async function fetchArticleWithClient(
-  supabase: SupabaseClient,
-  categorySlug: string,
-  articleSlug: string,
-  isHRAdmin: boolean
-): Promise<{
-  category: ResourceCategory | null;
-  article: ArticleWithAuthor | null;
-}> {
-  // Fetch category by slug (non-deleted only)
-  const { data: category, error: catError } = await supabase
-    .from("resource_categories")
-    .select(CATEGORY_SELECT)
-    .eq("slug", categorySlug)
-    .is("deleted_at", null)
-    .single();
+// ─── Tree + flat article helpers (for resources redesign) ────────────────────
 
-  if (catError || !category) {
-    return { category: null, article: null };
+/**
+ * Build a 3-level category tree with slug paths for the sidebar tree.
+ * Each node includes its full hierarchical slug path (e.g. "policies/employment").
+ */
+export async function fetchCategoryTreeWithClient(
+  supabase: SupabaseClient
+): Promise<CategoryTreeNode[]> {
+  const { data, error } = await supabase
+    .from("resource_categories")
+    .select(`${CATEGORY_SELECT}, resource_articles(count)`)
+    .is("deleted_at", null)
+    .filter("resource_articles.deleted_at", "is", null)
+    .order("sort_order")
+    .order("name");
+
+  if (error || !data) return [];
+
+  const flat = data.map((cat: Record<string, unknown>) => {
+    const articles = cat.resource_articles as [{ count: number }] | undefined;
+    const articleCount = articles?.[0]?.count ?? 0;
+    const { resource_articles: _, ...category } = cat;
+    return { ...category, article_count: articleCount } as CategoryWithCount;
+  });
+
+  // Build parent→children map
+  const childMap = new Map<string, CategoryWithCount[]>();
+  const slugMap = new Map<string, string>(); // id → slug
+
+  for (const cat of flat) {
+    slugMap.set(cat.id, cat.slug);
+    if (cat.parent_id) {
+      const siblings = childMap.get(cat.parent_id) ?? [];
+      siblings.push(cat);
+      childMap.set(cat.parent_id, siblings);
+    }
   }
 
-  // Fetch single non-deleted article
+  // Recursive tree builder
+  function buildNode(
+    cat: CategoryWithCount,
+    parentSlugPath: string
+  ): CategoryTreeNode {
+    const slugPath = parentSlugPath
+      ? `${parentSlugPath}/${cat.slug}`
+      : cat.slug;
+    const children = (childMap.get(cat.id) ?? []).map((child) =>
+      buildNode(child, slugPath)
+    );
+    return { ...cat, children, slugPath };
+  }
+
+  return flat
+    .filter((cat) => !cat.parent_id)
+    .map((cat) => buildNode(cat, ""));
+}
+
+/**
+ * Fetch a single article by slug only (no category slug needed).
+ * Used by the flat article route /resources/article/[slug].
+ */
+export async function fetchArticleBySlugOnly(
+  supabase: SupabaseClient,
+  articleSlug: string,
+  canEdit: boolean
+): Promise<{
+  article: ArticleWithAuthor | null;
+  category: ResourceCategory | null;
+  parentCategory: { name: string; slug: string } | null;
+}> {
   let query = supabase
     .from("resource_articles")
-    .select(`${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`)
-    .eq("category_id", category.id)
+    .select(
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT})`
+    )
     .eq("slug", articleSlug)
     .is("deleted_at", null);
 
-  if (!isHRAdmin) {
+  if (!canEdit) {
     query = query.eq("status", "published");
   }
 
-  const { data: article, error: artError } = await query.single();
+  const { data, error } = await query.single();
 
-  if (artError || !article) {
-    return { category: category as ResourceCategory, article: null };
+  if (error || !data) {
+    return { article: null, category: null, parentCategory: null };
+  }
+
+  const { category: categoryData, ...articleData } = data as Record<
+    string,
+    unknown
+  >;
+  const category = categoryData as ResourceCategory | null;
+
+  // Fetch parent category for breadcrumbs
+  let parentCategory: { name: string; slug: string } | null = null;
+  if (category?.parent_id) {
+    const parent = await fetchParentCategory(supabase, category.parent_id);
+    parentCategory = parent ? { name: parent.name, slug: parent.slug } : null;
   }
 
   return {
-    category: category as ResourceCategory,
-    article: article as unknown as ArticleWithAuthor,
+    article: articleData as unknown as ArticleWithAuthor,
+    category,
+    parentCategory,
   };
+}
+
+/**
+ * Fetch recently updated published articles for the landing page.
+ */
+export async function fetchRecentlyUpdatedArticles(
+  supabase: SupabaseClient,
+  limit = 5
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    slug: string;
+    updated_at: string;
+    category_name: string;
+    category_slug: string;
+  }>
+> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select(
+      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug)"
+    )
+    .is("deleted_at", null)
+    .eq("status", "published")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    const cat = row.category as { name: string; slug: string } | null;
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      slug: row.slug as string,
+      updated_at: row.updated_at as string,
+      category_name: cat?.name ?? "",
+      category_slug: cat?.slug ?? "",
+    };
+  });
+}
+
+/**
+ * Resolve a slug path array (e.g. ["policies", "employment"]) to a category.
+ * Walks the tree from root, scoping each segment to its parent.
+ * Returns the target category and ancestor chain for breadcrumbs.
+ * If resolution fails and slug has 2 segments, checks for old-format article URL.
+ */
+export async function fetchCategoryBySlugPath(
+  supabase: SupabaseClient,
+  slugs: string[]
+): Promise<{
+  category: ResourceCategory | null;
+  ancestors: Array<{ name: string; slug: string; slugPath: string }>;
+  articleRedirectSlug?: string;
+}> {
+  const ancestors: Array<{ name: string; slug: string; slugPath: string }> = [];
+  let parentId: string | null = null;
+  let category: ResourceCategory | null = null;
+  let slugPath = "";
+
+  for (let i = 0; i < slugs.length; i++) {
+    const currentSlug = slugs[i];
+    slugPath = slugPath ? `${slugPath}/${currentSlug}` : currentSlug;
+
+    const query = supabase
+      .from("resource_categories")
+      .select(CATEGORY_SELECT)
+      .eq("slug", currentSlug)
+      .is("deleted_at", null);
+
+    if (parentId) {
+      query.eq("parent_id", parentId);
+    } else {
+      query.is("parent_id", null);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error || !data) {
+      // If the final segment failed and we have exactly 2 segments,
+      // check if it's an old article URL (category/article pattern)
+      if (slugs.length === 2 && i === 1 && category) {
+        const { data: article } = await supabase
+          .from("resource_articles")
+          .select("slug")
+          .eq("category_id", category.id)
+          .eq("slug", currentSlug)
+          .is("deleted_at", null)
+          .single();
+
+        if (article) {
+          return {
+            category: null,
+            ancestors,
+            articleRedirectSlug: article.slug,
+          };
+        }
+      }
+
+      return { category: null, ancestors };
+    }
+
+    // If not the last segment, add to ancestors
+    if (i < slugs.length - 1) {
+      ancestors.push({
+        name: data.name as string,
+        slug: data.slug as string,
+        slugPath,
+      });
+    }
+
+    parentId = data.id as string;
+    category = data as ResourceCategory;
+  }
+
+  return { category, ancestors };
 }
 
 // ─── Category mutations ──────────────────────────────────────────────────────
@@ -447,104 +614,7 @@ export async function deleteCategory(
   return { success: true };
 }
 
-export async function getCategoryArticleCount(
-  id: string
-): Promise<number> {
-  const { supabase, user, profile } = await getCurrentUser();
-  if (!user || !profile) return 0;
-
-  const { count } = await supabase
-    .from("resource_articles")
-    .select("id", { count: "exact", head: true })
-    .eq("category_id", id)
-    .is("deleted_at", null);
-
-  return count ?? 0;
-}
-
 // ─── Article mutations ───────────────────────────────────────────────────────
-
-export async function createArticle(
-  categoryId: string,
-  data: {
-    title: string;
-    content_json?: TiptapDocument;
-    status?: "draft" | "published";
-    visibility?: "all" | "internal" | null;
-  }
-): Promise<{
-  success: boolean;
-  error?: string;
-  article?: ResourceArticle;
-}> {
-  const { supabase, user } = await requireContentEditor();
-
-  const title = data.title?.trim();
-  if (!title) {
-    return { success: false, error: "Article title is required" };
-  }
-
-  const baseSlug = slugify(title);
-  if (!baseSlug) {
-    return { success: false, error: "Invalid article title" };
-  }
-
-  // Block creating articles directly on a parent that has subcategories
-  const { count: childCatCount } = await supabase
-    .from("resource_categories")
-    .select("id", { count: "exact", head: true })
-    .eq("parent_id", categoryId)
-    .is("deleted_at", null);
-
-  if (childCatCount && childCatCount > 0) {
-    return {
-      success: false,
-      error: "Cannot create articles directly in a category that has subcategories. Add the article to a subcategory instead.",
-    };
-  }
-
-  const slug = await ensureUniqueArticleSlug(supabase, categoryId, baseSlug);
-
-  // Extract plain text from Tiptap JSON for search indexing
-  const content = data.content_json
-    ? extractPlainText(data.content_json)
-    : "";
-
-  const status = data.status ?? "draft";
-
-  const insert: Record<string, unknown> = {
-    category_id: categoryId,
-    title,
-    slug,
-    content,
-    author_id: user.id,
-    status,
-  };
-
-  if (data.content_json) {
-    insert.content_json = data.content_json;
-  }
-  if (data.visibility !== undefined) {
-    insert.visibility = data.visibility;
-  }
-
-  if (status === "published") {
-    insert.published_at = new Date().toISOString();
-  }
-
-  const { data: article, error } = await supabase
-    .from("resource_articles")
-    .insert(insert)
-    .select(ARTICLE_SELECT)
-    .single();
-
-  if (error) {
-    return { success: false, error: "Failed to create article" };
-  }
-
-  revalidate();
-  return { success: true, article: article as ResourceArticle };
-}
 
 export async function updateArticle(
   id: string,
@@ -654,209 +724,6 @@ export async function deleteArticle(
   return { success: true };
 }
 
-// ─── Bulk article deletion ──────────────────────────────────────────────────
-
-export async function bulkDeleteArticles(
-  articleIds: string[]
-): Promise<{ success: boolean; error?: string; deletedCount?: number }> {
-  const { supabase, user } = await requireContentEditor();
-
-  if (!articleIds.length) {
-    return { success: false, error: "No articles selected" };
-  }
-
-  const { data, error } = await supabase
-    .from("resource_articles")
-    .update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: user.id,
-      is_featured: false,
-    })
-    .in("id", articleIds)
-    .is("deleted_at", null)
-    .select("id");
-
-  if (error) {
-    return { success: false, error: "Failed to delete articles" };
-  }
-
-  revalidate();
-  return { success: true, deletedCount: data?.length ?? 0 };
-}
-
-// ─── Bin (soft-deleted items) ───────────────────────────────────────────────
-
-export async function fetchTrashedItems(): Promise<{
-  articles: (ArticleWithAuthor & { category_name?: string })[];
-  categories: ResourceCategory[];
-}> {
-  const { supabase } = await requireContentEditor();
-
-  // Fetch soft-deleted articles and categories in parallel
-  const [articlesResult, categoriesResult] = await Promise.all([
-    supabase
-      .from("resource_articles")
-      .select(
-        `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(name)`
-      )
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false }),
-    supabase
-      .from("resource_categories")
-      .select(CATEGORY_SELECT)
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false }),
-  ]);
-
-  const { data: articles } = articlesResult;
-  const { data: categories } = categoriesResult;
-
-  // Map category name onto articles for display
-  const mappedArticles = (articles ?? []).map(
-    (a: Record<string, unknown>) => {
-      const cat = a.category as { name: string } | null;
-      const { category: _, ...rest } = a;
-      return { ...rest, category_name: cat?.name ?? "Unknown" };
-    }
-  ) as (ArticleWithAuthor & { category_name?: string })[];
-
-  return {
-    articles: mappedArticles,
-    categories: (categories ?? []) as ResourceCategory[],
-  };
-}
-
-export async function restoreArticle(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  // Ensure the parent category is not deleted
-  const { data: article } = await supabase
-    .from("resource_articles")
-    .select("category_id")
-    .eq("id", id)
-    .single();
-
-  if (!article) {
-    return { success: false, error: "Article not found" };
-  }
-
-  const { data: category } = await supabase
-    .from("resource_categories")
-    .select("id, deleted_at")
-    .eq("id", article.category_id)
-    .single();
-
-  if (category?.deleted_at) {
-    return {
-      success: false,
-      error: "Cannot restore article — its category is also in the bin. Restore the category first.",
-    };
-  }
-
-  const { error } = await supabase
-    .from("resource_articles")
-    .update({ deleted_at: null, deleted_by: null })
-    .eq("id", id)
-    .not("deleted_at", "is", null)
-    .select("id")
-    .single();
-
-  if (error) {
-    return { success: false, error: "Failed to restore article" };
-  }
-
-  revalidate();
-  return { success: true };
-}
-
-export async function restoreCategory(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  const { error } = await supabase
-    .from("resource_categories")
-    .update({ deleted_at: null, deleted_by: null })
-    .eq("id", id)
-    .not("deleted_at", "is", null)
-    .select("id")
-    .single();
-
-  if (error) {
-    return { success: false, error: "Failed to restore category" };
-  }
-
-  revalidate();
-  return { success: true };
-}
-
-export async function permanentlyDeleteArticle(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  // Only allow permanent delete of soft-deleted articles
-  const { error } = await supabase
-    .from("resource_articles")
-    .delete()
-    .eq("id", id)
-    .not("deleted_at", "is", null);
-
-  if (error) {
-    return { success: false, error: "Failed to permanently delete article" };
-  }
-
-  revalidate();
-  return { success: true };
-}
-
-export async function permanentlyDeleteCategory(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  // Block if category has subcategories (including soft-deleted)
-  const { count: childCount } = await supabase
-    .from("resource_categories")
-    .select("id", { count: "exact", head: true })
-    .eq("parent_id", id);
-
-  if (childCount && childCount > 0) {
-    return {
-      success: false,
-      error: "Cannot permanently delete category — it still has subcategories (including binned ones). Permanently delete those first.",
-    };
-  }
-
-  // Only allow permanent delete of soft-deleted categories with no articles
-  const { count } = await supabase
-    .from("resource_articles")
-    .select("id", { count: "exact", head: true })
-    .eq("category_id", id);
-
-  if (count && count > 0) {
-    return {
-      success: false,
-      error: "Cannot permanently delete category — it still has articles (including binned ones). Permanently delete those first.",
-    };
-  }
-
-  const { error } = await supabase
-    .from("resource_categories")
-    .delete()
-    .eq("id", id)
-    .not("deleted_at", "is", null);
-
-  if (error) {
-    return { success: false, error: "Failed to permanently delete category" };
-  }
-
-  revalidate();
-  return { success: true };
-}
-
 // ─── Featured articles ──────────────────────────────────────────────────────
 
 export type FeaturedArticle = ArticleWithAuthor & {
@@ -893,6 +760,96 @@ export async function fetchFeaturedArticles(
       category_icon_colour: cat?.icon_colour ?? null,
     };
   }) as FeaturedArticle[];
+}
+
+/** Fetch ALL featured articles (no limit) for settings management. */
+export async function fetchFeaturedArticlesAll(): Promise<
+  Array<{
+    id: string;
+    title: string;
+    slug: string;
+    featured_sort_order: number;
+    category_name: string;
+  }>
+> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("resource_articles")
+    .select(
+      "id, title, slug, featured_sort_order, category:resource_categories!category_id(name)"
+    )
+    .eq("is_featured", true)
+    .is("deleted_at", null)
+    .order("featured_sort_order");
+
+  if (!data) return [];
+
+  return data.map((a: Record<string, unknown>) => {
+    const cat = a.category as { name: string } | null;
+    return {
+      id: a.id as string,
+      title: a.title as string,
+      slug: a.slug as string,
+      featured_sort_order: a.featured_sort_order as number,
+      category_name: cat?.name ?? "",
+    };
+  });
+}
+
+/** Reorder a featured article up or down by swapping sort orders. */
+export async function reorderFeaturedArticle(
+  articleId: string,
+  direction: "up" | "down"
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireContentEditor();
+
+  // Get all featured articles ordered
+  const { data: featured } = await supabase
+    .from("resource_articles")
+    .select("id, featured_sort_order")
+    .eq("is_featured", true)
+    .is("deleted_at", null)
+    .order("featured_sort_order");
+
+  if (!featured) return { success: false, error: "Failed to load featured articles" };
+
+  const index = featured.findIndex((f) => f.id === articleId);
+  if (index === -1) return { success: false, error: "Article not found" };
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= featured.length) {
+    return { success: false, error: "Cannot move further" };
+  }
+
+  // Swap sort orders — sequential to avoid partial failure
+  const current = featured[index];
+  const swap = featured[swapIndex];
+
+  const { error: err1 } = await supabase
+    .from("resource_articles")
+    .update({ featured_sort_order: swap.featured_sort_order })
+    .eq("id", current.id);
+
+  if (err1) return { success: false, error: "Failed to update sort order" };
+
+  const { error: err2 } = await supabase
+    .from("resource_articles")
+    .update({ featured_sort_order: current.featured_sort_order })
+    .eq("id", swap.id);
+
+  if (err2) {
+    // Attempt rollback of first update
+    await supabase
+      .from("resource_articles")
+      .update({ featured_sort_order: current.featured_sort_order })
+      .eq("id", current.id);
+    return { success: false, error: "Failed to update sort order" };
+  }
+
+  revalidate();
+  return { success: true };
 }
 
 export async function toggleArticleFeatured(
@@ -1059,122 +1016,74 @@ export async function moveArticle(
   return { success: true };
 }
 
-// ─── Reorder categories ──────────────────────────────────────────────────────
-
-export async function reorderCategories(
-  orderedIds: string[]
+/** Swap a category's sort_order with its neighbour (up or down). */
+export async function swapCategoryOrder(
+  categoryId: string,
+  direction: "up" | "down"
 ): Promise<{ success: boolean; error?: string }> {
   const { supabase } = await requireContentEditor();
 
-  if (!orderedIds.length) {
-    return { success: false, error: "No categories provided" };
+  // Get the category to find its parent_id and sort_order
+  const { data: cat } = await supabase
+    .from("resource_categories")
+    .select("id, sort_order, parent_id")
+    .eq("id", categoryId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!cat) return { success: false, error: "Category not found" };
+
+  // Get siblings (same parent)
+  const query = supabase
+    .from("resource_categories")
+    .select("id, sort_order")
+    .is("deleted_at", null)
+    .order("sort_order");
+
+  if (cat.parent_id) {
+    query.eq("parent_id", cat.parent_id);
+  } else {
+    query.is("parent_id", null);
   }
 
-  // Batch update sort_order for all categories in parallel
-  const results = await Promise.all(
-    orderedIds.map((id, i) =>
-      supabase.from("resource_categories").update({ sort_order: i }).eq("id", id)
-    )
-  );
+  const { data: siblings } = await query;
+  if (!siblings) return { success: false, error: "Failed to load categories" };
 
-  const failedResult = results.find((r) => r.error);
-  if (failedResult) {
-    return { success: false, error: "Failed to reorder categories" };
+  const index = siblings.findIndex((s) => s.id === categoryId);
+  if (index === -1) return { success: false, error: "Category not found in siblings" };
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= siblings.length) {
+    return { success: false, error: "Cannot move further" };
+  }
+
+  const current = siblings[index];
+  const swap = siblings[swapIndex];
+
+  // Sequential with rollback to avoid partial failure
+  const { error: err1 } = await supabase
+    .from("resource_categories")
+    .update({ sort_order: swap.sort_order })
+    .eq("id", current.id);
+
+  if (err1) return { success: false, error: "Failed to update sort order" };
+
+  const { error: err2 } = await supabase
+    .from("resource_categories")
+    .update({ sort_order: current.sort_order })
+    .eq("id", swap.id);
+
+  if (err2) {
+    // Attempt rollback of first update
+    await supabase
+      .from("resource_categories")
+      .update({ sort_order: current.sort_order })
+      .eq("id", current.id);
+    return { success: false, error: "Failed to update sort order" };
   }
 
   revalidate();
   return { success: true };
-}
-
-// ─── Auto-save (silent background save) ──────────────────────────────────────
-
-export async function autoSaveArticle(
-  params:
-    | {
-        mode: "create";
-        categoryId: string;
-        title: string;
-        content_json: TiptapDocument | null;
-      }
-    | {
-        mode: "update";
-        articleId: string;
-        title: string;
-        content_json: TiptapDocument | null;
-      }
-): Promise<{ success: boolean; error?: string; articleId?: string }> {
-  const { supabase, user } = await requireContentEditor();
-
-  // Common title validation (shared across create + update)
-  const title = params.title?.trim();
-  if (!title) {
-    return { success: false, error: "Title is required" };
-  }
-
-  if (params.mode === "create") {
-    const baseSlug = slugify(title);
-    if (!baseSlug) {
-      return { success: false, error: "Invalid title" };
-    }
-
-    const slug = await ensureUniqueArticleSlug(
-      supabase,
-      params.categoryId,
-      baseSlug
-    );
-
-    const content = params.content_json
-      ? extractPlainText(params.content_json)
-      : "";
-
-    const insert: Record<string, unknown> = {
-      category_id: params.categoryId,
-      title,
-      slug,
-      content,
-      author_id: user.id,
-      status: "draft",
-    };
-
-    if (params.content_json) {
-      insert.content_json = params.content_json;
-    }
-
-    const { data: article, error } = await supabase
-      .from("resource_articles")
-      .insert(insert)
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: "Failed to save" };
-    }
-
-    // No revalidatePath — silent background save
-    return { success: true, articleId: article.id };
-  }
-
-  // mode: "update"
-  const update: Record<string, unknown> = { title };
-
-  if (params.content_json !== null) {
-    update.content_json = params.content_json;
-    update.content = extractPlainText(params.content_json);
-  }
-
-  const { error } = await supabase
-    .from("resource_articles")
-    .update(update)
-    .eq("id", params.articleId)
-    .select("id")
-    .single();
-
-  if (error) {
-    return { success: false, error: "Failed to save" };
-  }
-
-  // No revalidatePath — silent background save, no slug regeneration
-  return { success: true, articleId: params.articleId };
 }
 
 // ─── Fetch categories for move dialog ────────────────────────────────────────
@@ -1236,3 +1145,15 @@ export async function fetchTopLevelCategories(
   const { data } = await query;
   return (data ?? []) as { id: string; name: string }[];
 }
+
+/** Server action wrapper for fetchCategoriesWithClient — callable from client components. */
+export async function fetchAllCategoriesAction(): Promise<CategoryWithChildren[]> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+  return fetchCategoriesWithClient(supabase);
+}
+
+// ─── Search ─────────────────────────────────────────────────────────────────
+// Full-text search is handled client-side via Algolia React InstantSearch.
+// See src/components/resources/resource-search.tsx and src/lib/algolia.ts.
+// Indexing happens server-side in drive-actions.ts (link/sync/unlink).

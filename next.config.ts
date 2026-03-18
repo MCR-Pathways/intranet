@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
         destination: "/resources",
         permanent: true,
       },
+      {
+        source: "/hr/org-chart",
+        destination: "/resources/article/org-chart",
+        permanent: true,
+      },
     ];
   },
   async headers() {

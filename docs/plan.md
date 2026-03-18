@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-13
+> Last updated: 2026-03-18
 
 ---
 
@@ -145,25 +145,16 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Comment/reply notifications via `notify_post_comment` RPC (mention dedup, self-exclusion)
 - [x] Inline polls in feed posts (2-4 options, vote changing, optional expiry, CSS bar results)
 
-### Intranet Phase 4 — Resources / Knowledge Base ✅
+### Intranet Phase 4 — Resources / Knowledge Base ✅ (superseded by Phase 7 Redesign)
 - [x] `/resources` top-level module (promoted from `/intranet/resources`)
-- [x] Two-level hierarchy: Categories → Articles (Tiptap editor reused from Phase 2)
+- [x] Two-level hierarchy: Categories → Articles (Tiptap editor — later replaced by Google Docs)
 - [x] HR admins + Content Editors create/edit/publish/delete; all users read published content
 - [x] Old `/intranet/guides` and `/intranet/policies` redirect to `/resources`
 - [x] Sidebar: top-level Resources item with BookOpen icon (between Home and Me)
-- **Resources Editor Overhaul (PRs #102–105):**
-  - [x] Fix double border in article editor, install 9 Tiptap extension packages (PR #102)
-  - [x] Full formatting suite: links, images, tables, callouts, code blocks, underline, strikethrough (PR #103). Custom callout extension (`tiptap-callout.ts`), link popover, shared `CALLOUT_CONFIG`, centralised `isValidHttpUrl()`.
-  - [x] Full-page editor routes replacing dialog: `/[categorySlug]/new` and `/[articleSlug]/edit` (PR #104). Deleted `article-form-dialog.tsx`. Reserved "new"/"edit" slugs.
-  - [x] Article outline sidebar (table of contents): `extractHeadings()`, `slugifyHeading()`, IntersectionObserver active tracking, two-column reading view (PR #105)
 
-### Intranet Phase 5 — Resources Overhaul (5 PRs)
-- [x] **PR 1 — Soft-Delete + Kebab Menus + Featured Articles** (PR #109): Migration 00049, soft-delete with 30-day bin, "..." kebab menus on all resource components, featured articles section (max 3, horizontal cards), `/resources/bin` route, auto-purge scheduled task. 1058 tests.
-- [x] **PR 2 — Category Restructuring + Move Articles + Icon Picker + Landing Page** (PR #110): Migration 00050, merge "How-to Guides" → "Guides", `icon_colour` column, Notion-style icon picker popover (46 curated Lucide icons, 8 colour swatches, search, categorised grid), redesigned category form dialog, Bin relocated from toolbar to sidebar (Notion/Google Drive pattern), move article between categories, category reordering
-- [x] **PR 3 — Editor Tooltips + Toolbar Enhancements** (PR #113): Google Docs-style dark pill tooltips on all 25+ buttons, heading dropdown (Normal text + H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11 colours), highlight (9 colours), undo/redo, clear formatting, 8 new Tiptap extensions, renderer support for all new node types/marks. Post-merge fixes: checklist CSS (Tiptap v3 DOM attributes), Vercel build (optional props for useEditorState null), reactive indent/outdent disabled state, reactive heading dropdown.
-- [x] **PR 3a — Auto-Save for Article Editor** (PR #114): Notion-style debounced auto-save (5s after last change). `useAutoSave` hook with state machine + concurrent save protection + `savePromiseRef` for flushSave race condition fix. `SaveStatusIndicator` (unsaved/saving/saved/error). Create→edit transition (first save creates draft, subsequent saves update). `beforeunload` safety net. 15 new tests. 1073 total.
-- [ ] **PR 4 — Image Upload via Supabase Storage**: File upload + drag-and-drop + clipboard paste, URL fallback, `resource-images` bucket
-- [ ] **PR 5 — File Attachments**: `resource_article_attachments` table, downloadable files at bottom of articles, MIME type icon mapping
+### Intranet Phase 5 — Resources Overhaul ✅ (superseded by Phase 7 Redesign)
+- [x] Soft-delete, kebab menus, featured articles, category management, icon picker, editor tooltips, auto-save
+- [x] Tiptap editor code later removed in Phase 7 redesign (Google Docs integration replaced it)
 
 ### Sidebar Declutter — Semantic Regrouping + Admin Separation ✅ (PR #111)
 - [x] Rewrite `sidebar.tsx` navigation data model: rename Intranet → Home, HR → Me, Working Location → Location
@@ -183,7 +174,7 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] Fix article editor: prepend "Home" root breadcrumb
 - [x] Visual refresh: `/` separator (GitHub/Linear/Notion style), `hover:underline` on links, removed ChevronRight icon
 
-### Intranet Phase 6 — Resources Restructure ✅ (PRs #127–132)
+### Intranet Phase 6 — Resources Restructure ✅ (PRs #127–134)
 - [x] **PR A — Systems Admin Permissions** (PR #127): Migration 00052. Systems admins can toggle `is_ld_admin`, `is_systems_admin`, `is_line_manager`, `is_content_editor`. HR Admin + department remain HR-admin-only.
 - [x] **PR — Remove Pathways Coordinator** (PR #130): Migration 00053. `pathways_coordinator` → `staff` + `is_external = true`. `is_internal_staff()` DB function. Proxy redirect loop fix.
 - [x] **PR — Content Editor Permission** (PR #128): Migration 00054. `is_content_editor` column, DB functions, 8 RLS policies updated, JWT claims sync. `requireContentEditor()` gate.
@@ -191,9 +182,18 @@ Full plan in `.claude/plans/synthetic-launching-raccoon.md`. All 8 phases + qual
 - [x] **PR C — Route Promotion** (PR #131): Routes `/intranet/resources` → `/resources`. Top-level sidebar item. 308 redirects in `next.config.ts`. 11 component + 8 route files.
 - [x] **PR D — 9-Category Taxonomy** (PR #131): Migration 00056. Soft-delete old 3 placeholder categories, seed 9 top-level + 43 subcategories organised by function. Article breadcrumb parent chain fix. Legacy redirect fix (`/intranet/guides`, `/intranet/policies` → `/resources`).
 
-### Intranet Phase 7 — Surveys + Universal Search
+### Intranet Phase 7 — Resources Redesign ✅ (PR #157, 6 sub-PRs)
+Complete redesign of the Resources module. Tiptap article editor replaced with Google Docs integration. Category grid replaced with sidebar tree navigation. Component page system added.
+- [x] **Sub-PR 1 — Schema + Google Drive Backend** (PR #151): Migration 00058. 6 new columns on resource_articles, drive_folders table, Drive API client, HTML export + sanitisation, webhook endpoint, 7 server actions, 35 tests.
+- [x] **Sub-PR 2 — Sidebar Tree + Resources Layout** (PR #152): 3-level collapsible tree, dual-action click, icon-only collapse, resources shell, category content view, flat article route (`/resources/article/[slug]`), catch-all category route (`/resources/[...slug]`).
+- [x] **Sub-PR 3 — Google Doc Integration UI** (PR #153): Editor mode context + pencil toggle, admin bar (New dropdown, Settings), link Google Doc dialog, Google Doc article view (prose rendering, sync status, Open in Docs, Supabase Realtime live updates), unlink dialog.
+- [x] **Sub-PR 4 — Component Pages + Org Chart** (PR #154): Component registry (`resource-components.ts`), dynamic import rendering, org chart relocated from `/hr/org-chart` to Resources (308 redirect). Migration 00059 seeds org chart.
+- [x] **Sub-PR 5 — Settings + Algolia Search** (PR #155): Settings page (folder registration, featured curation, category management), Algolia InstantSearch (section-level indexing with deep links), `html-react-parser` for heading IDs, article outline sidebar restored.
+- [x] **Sub-PR 6 — Cleanup** (PR #156): Deleted 9 files + 12 dead server actions (3,081 lines of Tiptap editor code removed).
+
+### Intranet Phase 8 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
-- [ ] Cmd+K universal search palette: posts + resources + people (PostgreSQL FTS)
+- [ ] Cmd+K universal search palette: posts + resources + people
 
 ---
 

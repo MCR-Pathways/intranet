@@ -921,6 +921,12 @@ export interface Database {
           slug: string;
           content: string;
           content_json: Record<string, unknown> | null;
+          content_type: "google_doc" | "component";
+          google_doc_id: string | null;
+          google_doc_url: string | null;
+          synced_html: string | null;
+          last_synced_at: string | null;
+          component_name: string | null;
           status: ArticleStatus;
           author_id: string;
           published_at: string | null;
@@ -939,6 +945,12 @@ export interface Database {
           slug: string;
           content?: string;
           content_json?: Record<string, unknown> | null;
+          content_type?: "google_doc" | "component";
+          google_doc_id?: string | null;
+          google_doc_url?: string | null;
+          synced_html?: string | null;
+          last_synced_at?: string | null;
+          component_name?: string | null;
           status?: ArticleStatus;
           author_id: string;
           published_at?: string | null;
@@ -957,6 +969,12 @@ export interface Database {
           slug?: string;
           content?: string;
           content_json?: Record<string, unknown> | null;
+          content_type?: "google_doc" | "component";
+          google_doc_id?: string | null;
+          google_doc_url?: string | null;
+          synced_html?: string | null;
+          last_synced_at?: string | null;
+          component_name?: string | null;
           status?: ArticleStatus;
           author_id?: string;
           published_at?: string | null;
@@ -1179,4 +1197,11 @@ export interface CategoryWithCount extends ResourceCategory {
 
 export interface CategoryWithChildren extends CategoryWithCount {
   children: CategoryWithCount[];
+}
+
+/** Recursive tree node for the resources sidebar tree (supports 3-level depth). */
+export interface CategoryTreeNode extends CategoryWithCount {
+  children: CategoryTreeNode[];
+  /** Full slug path from root, e.g. "policies/employment-policies" */
+  slugPath: string;
 }

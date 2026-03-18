@@ -76,12 +76,6 @@ function getNavigation(
     href: "/resources",
     icon: BookOpen,
     module: "intranet",
-    children: canEditResources ? [{
-      label: null,
-      items: [
-        { name: "Bin", href: "/resources/bin" },
-      ],
-    }] : undefined,
   });
 
   // Me — staff only (personal HR items)
@@ -100,7 +94,6 @@ function getNavigation(
             { name: "Assets", href: "/hr/assets" },
             { name: "Flexible Working", href: "/hr/flexible-working" },
             { name: "My Team", href: "/hr/team" },
-            { name: "Org Chart", href: "/hr/org-chart" },
           ],
         },
       ],
