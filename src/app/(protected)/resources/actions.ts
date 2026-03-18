@@ -1123,6 +1123,86 @@ export async function fetchFeaturedArticles(
   }) as FeaturedArticle[];
 }
 
+/** Fetch ALL featured articles (no limit) for settings management. */
+export async function fetchFeaturedArticlesAll(): Promise<
+  Array<{
+    id: string;
+    title: string;
+    slug: string;
+    featured_sort_order: number;
+    category_name: string;
+  }>
+> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("resource_articles")
+    .select(
+      "id, title, slug, featured_sort_order, category:resource_categories!category_id(name)"
+    )
+    .eq("is_featured", true)
+    .is("deleted_at", null)
+    .order("featured_sort_order");
+
+  if (!data) return [];
+
+  return data.map((a: Record<string, unknown>) => {
+    const cat = a.category as { name: string } | null;
+    return {
+      id: a.id as string,
+      title: a.title as string,
+      slug: a.slug as string,
+      featured_sort_order: a.featured_sort_order as number,
+      category_name: cat?.name ?? "",
+    };
+  });
+}
+
+/** Reorder a featured article up or down by swapping sort orders. */
+export async function reorderFeaturedArticle(
+  articleId: string,
+  direction: "up" | "down"
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireContentEditor();
+
+  // Get all featured articles ordered
+  const { data: featured } = await supabase
+    .from("resource_articles")
+    .select("id, featured_sort_order")
+    .eq("is_featured", true)
+    .is("deleted_at", null)
+    .order("featured_sort_order");
+
+  if (!featured) return { success: false, error: "Failed to load featured articles" };
+
+  const index = featured.findIndex((f) => f.id === articleId);
+  if (index === -1) return { success: false, error: "Article not found" };
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= featured.length) {
+    return { success: false, error: "Cannot move further" };
+  }
+
+  // Swap sort orders
+  const current = featured[index];
+  const swap = featured[swapIndex];
+
+  await Promise.all([
+    supabase
+      .from("resource_articles")
+      .update({ featured_sort_order: swap.featured_sort_order })
+      .eq("id", current.id),
+    supabase
+      .from("resource_articles")
+      .update({ featured_sort_order: current.featured_sort_order })
+      .eq("id", swap.id),
+  ]);
+
+  revalidate();
+  return { success: true };
+}
+
 export async function toggleArticleFeatured(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -1314,6 +1394,65 @@ export async function reorderCategories(
   return { success: true };
 }
 
+/** Swap a category's sort_order with its neighbour (up or down). */
+export async function swapCategoryOrder(
+  categoryId: string,
+  direction: "up" | "down"
+): Promise<{ success: boolean; error?: string }> {
+  const { supabase } = await requireContentEditor();
+
+  // Get the category to find its parent_id and sort_order
+  const { data: cat } = await supabase
+    .from("resource_categories")
+    .select("id, sort_order, parent_id")
+    .eq("id", categoryId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!cat) return { success: false, error: "Category not found" };
+
+  // Get siblings (same parent)
+  const query = supabase
+    .from("resource_categories")
+    .select("id, sort_order")
+    .is("deleted_at", null)
+    .order("sort_order");
+
+  if (cat.parent_id) {
+    query.eq("parent_id", cat.parent_id);
+  } else {
+    query.is("parent_id", null);
+  }
+
+  const { data: siblings } = await query;
+  if (!siblings) return { success: false, error: "Failed to load categories" };
+
+  const index = siblings.findIndex((s) => s.id === categoryId);
+  if (index === -1) return { success: false, error: "Category not found in siblings" };
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= siblings.length) {
+    return { success: false, error: "Cannot move further" };
+  }
+
+  const current = siblings[index];
+  const swap = siblings[swapIndex];
+
+  await Promise.all([
+    supabase
+      .from("resource_categories")
+      .update({ sort_order: swap.sort_order })
+      .eq("id", current.id),
+    supabase
+      .from("resource_categories")
+      .update({ sort_order: current.sort_order })
+      .eq("id", swap.id),
+  ]);
+
+  revalidate();
+  return { success: true };
+}
+
 // ─── Auto-save (silent background save) ──────────────────────────────────────
 
 export async function autoSaveArticle(
@@ -1463,4 +1602,44 @@ export async function fetchTopLevelCategories(
 
   const { data } = await query;
   return (data ?? []) as { id: string; name: string }[];
+}
+
+/** Server action wrapper for fetchCategoriesWithClient — callable from client components. */
+export async function fetchAllCategoriesAction(): Promise<CategoryWithChildren[]> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+  return fetchCategoriesWithClient(supabase);
+}
+
+// ─── Full-text search ────────────────────────────────────────────────────────
+
+export interface SearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  content_type: string;
+  category_name: string;
+  category_slug: string;
+  snippet: string;
+  updated_at: string;
+}
+
+export async function searchArticles(
+  query: string
+): Promise<SearchResult[]> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return [];
+
+  const trimmed = query.trim();
+  if (!trimmed || trimmed.length < 2) return [];
+
+  // Use PostgreSQL full-text search with ts_headline for snippets
+  const { data, error } = await supabase.rpc("search_resource_articles", {
+    search_query: trimmed,
+    result_limit: 20,
+  });
+
+  if (error || !data) return [];
+
+  return data as SearchResult[];
 }
