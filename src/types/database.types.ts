@@ -1180,3 +1180,10 @@ export interface CategoryWithCount extends ResourceCategory {
 export interface CategoryWithChildren extends CategoryWithCount {
   children: CategoryWithCount[];
 }
+
+/** Recursive tree node for the resources sidebar tree (supports 3-level depth). */
+export interface CategoryTreeNode extends CategoryWithCount {
+  children: CategoryTreeNode[];
+  /** Full slug path from root, e.g. "policies/employment-policies" */
+  slugPath: string;
+}

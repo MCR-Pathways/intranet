@@ -9,6 +9,7 @@ import type {
   ArticleWithAuthor,
   CategoryWithCount,
   CategoryWithChildren,
+  CategoryTreeNode,
   ResourceCategory,
   ResourceArticle,
 } from "@/types/database.types";
@@ -276,6 +277,233 @@ export async function fetchArticleWithClient(
     category: category as ResourceCategory,
     article: article as unknown as ArticleWithAuthor,
   };
+}
+
+// ─── Tree + flat article helpers (for resources redesign) ────────────────────
+
+/**
+ * Build a 3-level category tree with slug paths for the sidebar tree.
+ * Each node includes its full hierarchical slug path (e.g. "policies/employment").
+ */
+export async function fetchCategoryTreeWithClient(
+  supabase: SupabaseClient
+): Promise<CategoryTreeNode[]> {
+  const { data, error } = await supabase
+    .from("resource_categories")
+    .select(`${CATEGORY_SELECT}, resource_articles(count)`)
+    .is("deleted_at", null)
+    .filter("resource_articles.deleted_at", "is", null)
+    .order("sort_order")
+    .order("name");
+
+  if (error || !data) return [];
+
+  const flat = data.map((cat: Record<string, unknown>) => {
+    const articles = cat.resource_articles as [{ count: number }] | undefined;
+    const articleCount = articles?.[0]?.count ?? 0;
+    const { resource_articles: _, ...category } = cat;
+    return { ...category, article_count: articleCount } as CategoryWithCount;
+  });
+
+  // Build parent→children map
+  const childMap = new Map<string, CategoryWithCount[]>();
+  const slugMap = new Map<string, string>(); // id → slug
+
+  for (const cat of flat) {
+    slugMap.set(cat.id, cat.slug);
+    if (cat.parent_id) {
+      const siblings = childMap.get(cat.parent_id) ?? [];
+      siblings.push(cat);
+      childMap.set(cat.parent_id, siblings);
+    }
+  }
+
+  // Recursive tree builder
+  function buildNode(
+    cat: CategoryWithCount,
+    parentSlugPath: string
+  ): CategoryTreeNode {
+    const slugPath = parentSlugPath
+      ? `${parentSlugPath}/${cat.slug}`
+      : cat.slug;
+    const children = (childMap.get(cat.id) ?? []).map((child) =>
+      buildNode(child, slugPath)
+    );
+    return { ...cat, children, slugPath };
+  }
+
+  return flat
+    .filter((cat) => !cat.parent_id)
+    .map((cat) => buildNode(cat, ""));
+}
+
+/**
+ * Fetch a single article by slug only (no category slug needed).
+ * Used by the flat article route /resources/article/[slug].
+ */
+export async function fetchArticleBySlugOnly(
+  supabase: SupabaseClient,
+  articleSlug: string,
+  canEdit: boolean
+): Promise<{
+  article: ArticleWithAuthor | null;
+  category: ResourceCategory | null;
+  parentCategory: { name: string; slug: string } | null;
+}> {
+  let query = supabase
+    .from("resource_articles")
+    .select(
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT})`
+    )
+    .eq("slug", articleSlug)
+    .is("deleted_at", null);
+
+  if (!canEdit) {
+    query = query.eq("status", "published");
+  }
+
+  const { data, error } = await query.single();
+
+  if (error || !data) {
+    return { article: null, category: null, parentCategory: null };
+  }
+
+  const { category: categoryData, ...articleData } = data as Record<
+    string,
+    unknown
+  >;
+  const category = categoryData as ResourceCategory | null;
+
+  // Fetch parent category for breadcrumbs
+  let parentCategory: { name: string; slug: string } | null = null;
+  if (category?.parent_id) {
+    const parent = await fetchParentCategory(supabase, category.parent_id);
+    parentCategory = parent ? { name: parent.name, slug: parent.slug } : null;
+  }
+
+  return {
+    article: articleData as unknown as ArticleWithAuthor,
+    category,
+    parentCategory,
+  };
+}
+
+/**
+ * Fetch recently updated published articles for the landing page.
+ */
+export async function fetchRecentlyUpdatedArticles(
+  supabase: SupabaseClient,
+  limit = 5
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    slug: string;
+    updated_at: string;
+    category_name: string;
+    category_slug: string;
+  }>
+> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select(
+      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug)"
+    )
+    .is("deleted_at", null)
+    .eq("status", "published")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    const cat = row.category as { name: string; slug: string } | null;
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      slug: row.slug as string,
+      updated_at: row.updated_at as string,
+      category_name: cat?.name ?? "",
+      category_slug: cat?.slug ?? "",
+    };
+  });
+}
+
+/**
+ * Resolve a slug path array (e.g. ["policies", "employment"]) to a category.
+ * Walks the tree from root, scoping each segment to its parent.
+ * Returns the target category and ancestor chain for breadcrumbs.
+ * If resolution fails and slug has 2 segments, checks for old-format article URL.
+ */
+export async function fetchCategoryBySlugPath(
+  supabase: SupabaseClient,
+  slugs: string[]
+): Promise<{
+  category: ResourceCategory | null;
+  ancestors: Array<{ name: string; slug: string; slugPath: string }>;
+  articleRedirectSlug?: string;
+}> {
+  const ancestors: Array<{ name: string; slug: string; slugPath: string }> = [];
+  let parentId: string | null = null;
+  let category: ResourceCategory | null = null;
+  let slugPath = "";
+
+  for (let i = 0; i < slugs.length; i++) {
+    const currentSlug = slugs[i];
+    slugPath = slugPath ? `${slugPath}/${currentSlug}` : currentSlug;
+
+    const query = supabase
+      .from("resource_categories")
+      .select(CATEGORY_SELECT)
+      .eq("slug", currentSlug)
+      .is("deleted_at", null);
+
+    if (parentId) {
+      query.eq("parent_id", parentId);
+    } else {
+      query.is("parent_id", null);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error || !data) {
+      // If the final segment failed and we have exactly 2 segments,
+      // check if it's an old article URL (category/article pattern)
+      if (slugs.length === 2 && i === 1 && category) {
+        const { data: article } = await supabase
+          .from("resource_articles")
+          .select("slug")
+          .eq("category_id", category.id)
+          .eq("slug", currentSlug)
+          .is("deleted_at", null)
+          .single();
+
+        if (article) {
+          return {
+            category: null,
+            ancestors,
+            articleRedirectSlug: article.slug,
+          };
+        }
+      }
+
+      return { category: null, ancestors };
+    }
+
+    // If not the last segment, add to ancestors
+    if (i < slugs.length - 1) {
+      ancestors.push({
+        name: data.name as string,
+        slug: data.slug as string,
+        slugPath,
+      });
+    }
+
+    parentId = data.id as string;
+    category = data as ResourceCategory;
+  }
+
+  return { category, ancestors };
 }
 
 // ─── Category mutations ──────────────────────────────────────────────────────

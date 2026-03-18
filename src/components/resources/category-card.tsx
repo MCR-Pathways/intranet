@@ -25,6 +25,7 @@ import type { CategoryWithCount } from "@/types/database.types";
 
 interface CategoryCardProps {
   category: CategoryWithCount;
+  slugPath?: string;
   canEdit: boolean;
   isFirst?: boolean;
   isLast?: boolean;
@@ -36,6 +37,7 @@ interface CategoryCardProps {
 
 export function CategoryCard({
   category,
+  slugPath,
   canEdit,
   isFirst,
   isLast,
@@ -50,7 +52,7 @@ export function CategoryCard({
   return (
     <Card className="group relative transition-colors hover:bg-muted/50">
       <Link
-        href={`/resources/${category.slug}`}
+        href={`/resources/${slugPath ?? category.slug}`}
         className="absolute inset-0 z-0"
       >
         <span className="sr-only">View {category.name}</span>

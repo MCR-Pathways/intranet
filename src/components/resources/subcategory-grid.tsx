@@ -1,93 +1,33 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { FolderOpen } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CategoryCard } from "./category-card";
-import { CategoryFormDialog } from "./category-form-dialog";
-import { DeleteResourceDialog } from "./delete-resource-dialog";
-import { deleteCategory } from "@/app/(protected)/resources/actions";
-import { toast } from "sonner";
-import type { CategoryWithCount, ResourceCategory } from "@/types/database.types";
+import Link from "next/link";
+import type { CategoryWithCount } from "@/types/database.types";
 
 interface SubcategoryGridProps {
   subcategories: CategoryWithCount[];
-  canEdit: boolean;
+  parentSlugPath?: string;
 }
 
-export function SubcategoryGrid({ subcategories, canEdit }: SubcategoryGridProps) {
-  const [editCategory, setEditCategory] = useState<ResourceCategory | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CategoryWithCount | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleDelete() {
-    if (!deleteTarget) return;
-    startTransition(async () => {
-      const result = await deleteCategory(deleteTarget.id);
-      if (result.success) {
-        toast.success("Subcategory moved to bin");
-        setDeleteTarget(null);
-      } else {
-        toast.error(result.error ?? "Failed to delete subcategory");
-      }
-    });
-  }
-
-  if (subcategories.length === 0) {
-    return (
-      <EmptyState
-        icon={FolderOpen}
-        title="No subcategories yet"
-        description={
-          canEdit
-            ? "Create subcategories to organise articles within this category."
-            : "Subcategories will appear here once created."
-        }
-      />
-    );
-  }
+export function SubcategoryGrid({
+  subcategories,
+  parentSlugPath,
+}: SubcategoryGridProps) {
+  if (subcategories.length === 0) return null;
 
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {subcategories.map((sub) => (
-          <CategoryCard
-            key={sub.id}
-            category={sub}
-            canEdit={canEdit}
-            onEdit={() => setEditCategory(sub)}
-            onDelete={() => setDeleteTarget(sub)}
-          />
-        ))}
-      </div>
-
-      {/* Edit dialog */}
-      {editCategory && (
-        <CategoryFormDialog
-          key={editCategory.id}
-          category={editCategory}
-          open={!!editCategory}
-          onOpenChange={(open) => {
-            if (!open) setEditCategory(null);
-          }}
-        />
-      )}
-
-      {/* Delete confirmation */}
-      <DeleteResourceDialog
-        itemName={deleteTarget?.name ?? ""}
-        warningText={
-          deleteTarget && deleteTarget.article_count > 0
-            ? `This subcategory has ${deleteTarget.article_count} ${deleteTarget.article_count === 1 ? "article" : "articles"}. Move or delete them first.`
-            : undefined
-        }
-        onConfirm={handleDelete}
-        disabled={isPending}
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      />
-    </>
+    <div className="grid gap-2.5 grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+      {subcategories.map((sub) => (
+        <Link
+          key={sub.id}
+          href={`/resources/${parentSlugPath ? `${parentSlugPath}/${sub.slug}` : sub.slug}`}
+          className="block rounded-[10px] border border-border bg-card px-4 py-3.5 transition-all hover:border-foreground/20 hover:shadow-sm"
+        >
+          <div className="text-[13px] font-semibold truncate">{sub.name}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {sub.article_count} {sub.article_count === 1 ? "article" : "articles"}
+          </div>
+        </Link>
+      ))}
+    </div>
   );
 }
