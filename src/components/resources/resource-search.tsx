@@ -77,10 +77,10 @@ function SearchResults() {
   const { hits } = useHits<AlgoliaResourceRecord>();
   const { status, error } = useInstantSearch();
 
-  if (!query || query.length < 2) return null;
-
-  // Algolia RetryError is async — ErrorBoundary can't catch it.
-  // Detect via useInstantSearch() status instead.
+  // Algolia errors (RetryError, ApiError) are async — ErrorBoundary can't
+  // catch them. When InstantSearch enters error state, it stops processing
+  // all subsequent queries, so the search is fully broken regardless of
+  // what the user types. Show the error immediately.
   if (status === "error" || error) {
     return (
       <p className="text-sm text-muted-foreground py-4">
@@ -88,6 +88,8 @@ function SearchResults() {
       </p>
     );
   }
+
+  if (!query || query.length < 2) return null;
 
   return (
     <section className="mt-4">
