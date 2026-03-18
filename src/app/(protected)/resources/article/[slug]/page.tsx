@@ -5,10 +5,7 @@ import {
   isContentEditorEffective,
 } from "@/lib/auth";
 import { fetchArticleBySlugOnly } from "../../actions";
-import {
-  PageHeader,
-  type BreadcrumbItem,
-} from "@/components/layout/page-header";
+import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
 import { ArticleView } from "@/components/resources/article-view";
 
 interface ArticlePageProps {
@@ -28,34 +25,25 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!article || !category) notFound();
 
-  // Build breadcrumbs
-  const breadcrumbs: BreadcrumbItem[] = [
-    { label: "Home", href: "/intranet" },
-    { label: "Resources", href: "/resources" },
-  ];
-
-  if (parentCategory) {
-    breadcrumbs.push({
-      label: parentCategory.name,
-      href: `/resources/${parentCategory.slug}`,
-    });
-  }
-
-  breadcrumbs.push({
-    label: category.name,
-    href: `/resources/${category.slug}`,
-  });
-  breadcrumbs.push({ label: article.title });
-
-  return (
-    <div className="space-y-6">
-      <PageHeader title={article.title} breadcrumbs={breadcrumbs} />
-      <ArticleView
+  // Google Doc articles use the new view with sync controls
+  if (article.content_type === "google_doc") {
+    return (
+      <GoogleDocArticleView
         article={article}
-        categoryId={category.id}
-        categorySlug={category.slug}
+        category={category}
+        parentCategory={parentCategory}
         canEdit={canEdit}
       />
-    </div>
+    );
+  }
+
+  // Component pages and legacy articles use the existing view
+  return (
+    <ArticleView
+      article={article}
+      categoryId={category.id}
+      categorySlug={category.slug}
+      canEdit={canEdit}
+    />
   );
 }
