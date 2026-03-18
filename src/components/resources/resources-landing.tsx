@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Search, FileText } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { FileText } from "lucide-react";
 import { FeaturedResources } from "./featured-resources";
 import { AdminBar } from "./admin-bar";
+import { ResourceSearch } from "./resource-search";
 import { formatDate } from "@/lib/utils";
 import type { FeaturedArticle } from "@/app/(protected)/resources/actions";
 
@@ -31,16 +31,8 @@ export function ResourcesLanding({
       {/* Admin bar — visible when editor mode on */}
       <AdminBar />
 
-      {/* Hero search — visual only, wired in Sub-PR 5 */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search resources..."
-          className="pl-12 py-6 text-[15px] bg-background"
-          readOnly
-        />
-      </div>
+      {/* Algolia-powered search + results */}
+      <ResourceSearch />
 
       {/* Featured articles */}
       {featuredArticles.length > 0 && (
