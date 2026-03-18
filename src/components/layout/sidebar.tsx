@@ -94,7 +94,6 @@ function getNavigation(
             { name: "Assets", href: "/hr/assets" },
             { name: "Flexible Working", href: "/hr/flexible-working" },
             { name: "My Team", href: "/hr/team" },
-            { name: "Org Chart", href: "/hr/org-chart" },
           ],
         },
       ],
