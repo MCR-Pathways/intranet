@@ -162,7 +162,7 @@ export function GoogleDocArticleView({
         )}
         <span className="text-muted-foreground/50 select-none">/</span>
         <Link
-          href={`/resources/${category.slug}`}
+          href={`/resources/${parentCategory ? `${parentCategory.slug}/${category.slug}` : category.slug}`}
           className="hover:text-foreground hover:underline underline-offset-4"
         >
           {category.name}
