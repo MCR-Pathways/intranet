@@ -4,7 +4,13 @@ import { Component, type ReactNode } from "react";
 import Link from "next/link";
 import { FileText, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { InstantSearch, SearchBox, useHits, useSearchBox } from "react-instantsearch";
+import {
+  InstantSearch,
+  SearchBox,
+  useHits,
+  useInstantSearch,
+  useSearchBox,
+} from "react-instantsearch";
 import { getSearchClient, RESOURCES_INDEX } from "@/lib/algolia";
 import type { AlgoliaResourceRecord } from "@/lib/algolia";
 
@@ -69,8 +75,19 @@ function SearchInput() {
 function SearchResults() {
   const { query } = useSearchBox();
   const { hits } = useHits<AlgoliaResourceRecord>();
+  const { status, error } = useInstantSearch();
 
   if (!query || query.length < 2) return null;
+
+  // Algolia RetryError is async — ErrorBoundary can't catch it.
+  // Detect via useInstantSearch() status instead.
+  if (status === "error" || error) {
+    return (
+      <p className="text-sm text-muted-foreground py-4">
+        Search is temporarily unavailable. Please browse categories instead.
+      </p>
+    );
+  }
 
   return (
     <section className="mt-4">
