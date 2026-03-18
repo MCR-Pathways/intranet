@@ -32,12 +32,12 @@ const { ResourceSearch } = await import("./resource-search");
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("ResourceSearch", () => {
-  it("shows error message when Algolia is unreachable and user is searching", () => {
-    mockUseSearchBox.mockReturnValue({ query: "policy" });
+  it("shows error message when Algolia is in error state", () => {
+    mockUseSearchBox.mockReturnValue({ query: "" });
     mockUseHits.mockReturnValue({ hits: [] });
     mockUseInstantSearch.mockReturnValue({
       status: "error",
-      error: new Error("Unreachable hosts"),
+      error: new Error("Index resources_articles does not exist"),
     });
 
     render(<ResourceSearch />);
@@ -56,25 +56,18 @@ describe("ResourceSearch", () => {
 
     render(<ResourceSearch />);
 
-    expect(
-      screen.getByText(/no articles match/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no articles match/i)).toBeInTheDocument();
   });
 
-  it("does not show error or results when query is too short", () => {
+  it("shows nothing when query is too short and no error", () => {
     mockUseSearchBox.mockReturnValue({ query: "a" });
     mockUseHits.mockReturnValue({ hits: [] });
-    mockUseInstantSearch.mockReturnValue({
-      status: "error",
-      error: new Error("Unreachable"),
-    });
+    mockUseInstantSearch.mockReturnValue({ status: "idle", error: undefined });
 
     render(<ResourceSearch />);
 
-    // Error message should NOT appear — user hasn't typed enough to search
-    expect(
-      screen.queryByText(/temporarily unavailable/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/result/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/temporarily unavailable/i)).not.toBeInTheDocument();
   });
 
   it("renders search results when hits are returned", () => {
