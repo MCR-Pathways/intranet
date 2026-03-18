@@ -699,7 +699,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ### Infrastructure
 
-- Rate limiting on API endpoints (Upstash Redis for Vercel serverless). Priority: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`
+- Rate limiting on API endpoints (Upstash Redis for Vercel serverless). Priority: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`, `/api/drive/webhook`
 - Error monitoring integration (Sentry or Datadog)
 - CI/CD pipeline (GitHub Actions)
 - Scheduled notification jobs (daily digest for HR)
