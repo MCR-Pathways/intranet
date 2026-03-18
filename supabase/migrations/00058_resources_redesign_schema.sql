@@ -71,6 +71,16 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Google Drive watch channel resource ID (for stopping webhook channels)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'resource_articles' AND column_name = 'google_watch_resource_id'
+  ) THEN
+    ALTER TABLE public.resource_articles ADD COLUMN google_watch_resource_id TEXT;
+  END IF;
+END $$;
+
 -- =============================================
 -- 2. CREATE drive_folders TABLE
 -- =============================================

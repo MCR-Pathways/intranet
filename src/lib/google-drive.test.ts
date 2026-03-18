@@ -234,17 +234,16 @@ describe("extractPlainTextFromHtml", () => {
     ).toBe("Hello world");
   });
 
-  it("handles headings and paragraphs", () => {
-    // textContent concatenates without spaces between block elements
+  it("separates text from headings and paragraphs", () => {
     expect(
       extractPlainTextFromHtml("<h1>Title</h1><p>Content here.</p>")
-    ).toBe("TitleContent here.");
+    ).toBe("Title Content here.");
   });
 
-  it("handles list items", () => {
+  it("separates list items with spaces", () => {
     expect(
       extractPlainTextFromHtml("<ul><li>One</li><li>Two</li></ul>")
-    ).toBe("OneTwo");
+    ).toBe("One Two");
   });
 
   it("normalises whitespace", () => {

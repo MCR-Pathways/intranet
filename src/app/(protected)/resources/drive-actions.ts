@@ -247,6 +247,10 @@ export async function listRegisteredFolderDocs(driveFolderId: string): Promise<
     // List docs from Google Drive
     const docs = await listFolderDocuments(folder.folder_id);
 
+    if (!docs) {
+      return [];
+    }
+
     // Check which docs are already linked
     const docIds = docs.map((d) => d.id);
     const { data: linkedArticles } = await supabase
@@ -396,12 +400,20 @@ export async function linkGoogleDoc(
 
       if (webhookUrl && webhookSecret) {
         const channelId = `resource-${article.id}`;
-        await watchFile(
+        const watchResult = await watchFile(
           docId,
           channelId,
           webhookUrl,
           `${webhookSecret}:${docId}`
         );
+
+        // Store the resourceId so we can stop the channel on unlink
+        if (watchResult?.resourceId) {
+          await serviceClient
+            .from("resource_articles")
+            .update({ google_watch_resource_id: watchResult.resourceId })
+            .eq("id", article.id);
+        }
       }
     } catch (watchError) {
       logger.warn("Failed to set up Drive watch — manual sync still works", {
@@ -434,7 +446,7 @@ export async function unlinkGoogleDoc(
     // Get article to verify it's a Google Doc
     const { data: article } = await supabase
       .from("resource_articles")
-      .select("id, google_doc_id, content_type")
+      .select("id, google_doc_id, content_type, google_watch_resource_id")
       .eq("id", articleId)
       .single();
 
@@ -446,8 +458,18 @@ export async function unlinkGoogleDoc(
       return { success: false, error: "This article is not a linked Google Doc" };
     }
 
-    // Watch channel expires naturally (7 days max).
-    // We don't store resourceId, so we can't stop it precisely.
+    // Stop the Drive watch channel if we have the resourceId
+    if (article.google_watch_resource_id) {
+      try {
+        const channelId = `resource-${articleId}`;
+        await stopWatchChannel(channelId, article.google_watch_resource_id);
+      } catch (watchError) {
+        logger.warn("Failed to stop Drive watch channel during unlink", {
+          articleId,
+          error: watchError instanceof Error ? watchError.message : String(watchError),
+        });
+      }
+    }
 
     // Hard-delete the article
     const { error: deleteError } = await supabase

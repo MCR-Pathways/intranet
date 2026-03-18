@@ -117,7 +117,7 @@ export interface DriveDocument {
  */
 export async function listFolderDocuments(
   folderId: string
-): Promise<DriveDocument[]> {
+): Promise<DriveDocument[] | null> {
   const drive = getDriveClient();
   const documents: DriveDocument[] = [];
   let pageToken: string | undefined;
@@ -154,14 +154,12 @@ export async function listFolderDocuments(
   } catch (error) {
     const apiError = error as { code?: number; message?: string };
 
-    if (apiError.code === 404) {
-      logger.warn("Drive folder not found", { folderId });
-      return [];
-    }
-
-    if (apiError.code === 403) {
-      logger.warn("Drive access denied for folder", { folderId });
-      return [];
+    if (apiError.code === 404 || apiError.code === 403) {
+      logger.warn("Drive folder not found or access denied", {
+        folderId,
+        code: apiError.code,
+      });
+      return null;
     }
 
     throw error;
@@ -271,15 +269,13 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
       }
     }
 
-    // Sanitise href values — whitelist http/https only
+    // Sanitise href values — remove dangerous protocols and protocol-relative URLs
     if (el.tagName === "A") {
       const href = el.getAttribute("href");
-      if (href && !/^https?:\/\//i.test(href)) {
-        // Remove dangerous protocols (javascript:, data:, etc.)
-        // Keep relative URLs and valid protocols
+      if (href) {
         if (
           /^(javascript|data|vbscript):/i.test(href) ||
-          (href.startsWith("/") && href.startsWith("//"))
+          href.startsWith("//")
         ) {
           el.removeAttribute("href");
         }
@@ -326,12 +322,22 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
 
 /**
  * Extract plain text from HTML for full-text search indexing.
- * Strips all tags and normalises whitespace.
+ * Strips all tags and normalises whitespace. Inserts spaces between
+ * block-level elements so headings/paragraphs don't merge.
  */
 export function extractPlainTextFromHtml(html: string): string {
+  if (!html) return "";
   const dom = new JSDOM(html);
-  const text = dom.window.document.body?.textContent ?? "";
-  // Normalise whitespace: collapse multiple spaces/newlines into single space
+  const body = dom.window.document.body;
+  if (!body) return "";
+
+  // Append a space after block elements so textContent doesn't merge words
+  const blockTags = "p, h1, h2, h3, h4, h5, h6, li, div, tr, br, blockquote, pre";
+  body.querySelectorAll(blockTags).forEach((el: Element) => {
+    el.append(" ");
+  });
+
+  const text = body.textContent ?? "";
   return text.replace(/\s+/g, " ").trim();
 }
 
