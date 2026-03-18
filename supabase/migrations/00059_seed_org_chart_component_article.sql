@@ -5,7 +5,15 @@ DO $$
 DECLARE
   v_category_id UUID;
   v_existing_id UUID;
+  v_author_id UUID;
 BEGIN
+  -- Find a valid author (first user in the system)
+  SELECT id INTO v_author_id FROM auth.users LIMIT 1;
+  IF v_author_id IS NULL THEN
+    RAISE NOTICE 'No users found in auth.users — skipping org chart seed';
+    RETURN;
+  END IF;
+
   -- Find the Organisation category (seeded in migration 00056)
   SELECT id INTO v_category_id
   FROM public.resource_categories
@@ -47,7 +55,7 @@ BEGIN
     'component',
     'org-chart',
     'published',
-    (SELECT id FROM auth.users LIMIT 1), -- Use first user as author
+    v_author_id,
     'all' -- Visible to all staff including external
   );
 
