@@ -25,10 +25,16 @@ export function SettingsFeatured() {
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    fetchFeaturedArticlesAll().then((data) => {
-      setItems(data);
-      setLoading(false);
-    });
+    fetchFeaturedArticlesAll()
+      .then((data) => {
+        setItems(data);
+      })
+      .catch(() => {
+        toast.error("Could not load featured articles.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   function handleRemove(id: string) {

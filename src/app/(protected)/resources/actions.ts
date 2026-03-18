@@ -1184,20 +1184,30 @@ export async function reorderFeaturedArticle(
     return { success: false, error: "Cannot move further" };
   }
 
-  // Swap sort orders
+  // Swap sort orders — sequential to avoid partial failure
   const current = featured[index];
   const swap = featured[swapIndex];
 
-  await Promise.all([
-    supabase
-      .from("resource_articles")
-      .update({ featured_sort_order: swap.featured_sort_order })
-      .eq("id", current.id),
-    supabase
+  const { error: err1 } = await supabase
+    .from("resource_articles")
+    .update({ featured_sort_order: swap.featured_sort_order })
+    .eq("id", current.id);
+
+  if (err1) return { success: false, error: "Failed to update sort order" };
+
+  const { error: err2 } = await supabase
+    .from("resource_articles")
+    .update({ featured_sort_order: current.featured_sort_order })
+    .eq("id", swap.id);
+
+  if (err2) {
+    // Attempt rollback of first update
+    await supabase
       .from("resource_articles")
       .update({ featured_sort_order: current.featured_sort_order })
-      .eq("id", swap.id),
-  ]);
+      .eq("id", current.id);
+    return { success: false, error: "Failed to update sort order" };
+  }
 
   revalidate();
   return { success: true };
@@ -1438,16 +1448,27 @@ export async function swapCategoryOrder(
   const current = siblings[index];
   const swap = siblings[swapIndex];
 
-  await Promise.all([
-    supabase
-      .from("resource_categories")
-      .update({ sort_order: swap.sort_order })
-      .eq("id", current.id),
-    supabase
+  // Sequential with rollback to avoid partial failure
+  const { error: err1 } = await supabase
+    .from("resource_categories")
+    .update({ sort_order: swap.sort_order })
+    .eq("id", current.id);
+
+  if (err1) return { success: false, error: "Failed to update sort order" };
+
+  const { error: err2 } = await supabase
+    .from("resource_categories")
+    .update({ sort_order: current.sort_order })
+    .eq("id", swap.id);
+
+  if (err2) {
+    // Attempt rollback of first update
+    await supabase
       .from("resource_categories")
       .update({ sort_order: current.sort_order })
-      .eq("id", swap.id),
-  ]);
+      .eq("id", current.id);
+    return { success: false, error: "Failed to update sort order" };
+  }
 
   revalidate();
   return { success: true };
