@@ -1,15 +1,43 @@
 "use client";
 
+import { Component, type ReactNode } from "react";
 import Link from "next/link";
 import { FileText, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { InstantSearch, SearchBox, useHits, useSearchBox } from "react-instantsearch";
 import { getSearchClient, RESOURCES_INDEX } from "@/lib/algolia";
 import type { AlgoliaResourceRecord } from "@/lib/algolia";
 
-const searchClient = getSearchClient();
+const APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
+const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY;
 
 /** Algolia-powered search for the Resources landing page. */
 export function ResourceSearch() {
+  // If Algolia isn't configured, show a static search input
+  if (!APP_ID || !SEARCH_KEY) {
+    return (
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search all resources..."
+          className="pl-12 py-6 text-[15px] bg-background"
+          disabled
+        />
+      </div>
+    );
+  }
+
+  return (
+    <SearchErrorBoundary>
+      <AlgoliaSearch />
+    </SearchErrorBoundary>
+  );
+}
+
+function AlgoliaSearch() {
+  const searchClient = getSearchClient();
+
   return (
     <InstantSearch searchClient={searchClient} indexName={RESOURCES_INDEX}>
       <SearchInput />
@@ -75,11 +103,14 @@ function SearchResults() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {hit.categoryName}
                 </p>
-                {(hit._snippetResult?.content as { value?: string } | undefined)?.value && (
+                {(hit._snippetResult?.content as { value?: string } | undefined)
+                  ?.value && (
                   <p
                     className="text-xs text-muted-foreground mt-1 line-clamp-2 [&_mark]:bg-amber-100 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
                     dangerouslySetInnerHTML={{
-                      __html: (hit._snippetResult!.content as { value: string }).value,
+                      __html: (
+                        hit._snippetResult!.content as { value: string }
+                      ).value,
                     }}
                   />
                 )}
@@ -90,4 +121,41 @@ function SearchResults() {
       )}
     </section>
   );
+}
+
+// ─── Error boundary — graceful fallback if Algolia is unreachable ────────────
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SearchErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search all resources..."
+            className="pl-12 py-6 text-[15px] bg-background"
+            disabled
+          />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
