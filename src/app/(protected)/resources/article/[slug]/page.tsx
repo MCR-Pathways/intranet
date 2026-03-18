@@ -5,7 +5,9 @@ import {
   isContentEditorEffective,
 } from "@/lib/auth";
 import { fetchArticleBySlugOnly } from "../../actions";
+import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
+import { ComponentArticleView } from "@/components/resources/component-article-view";
 import { ArticleView } from "@/components/resources/article-view";
 
 interface ArticlePageProps {
@@ -25,7 +27,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!article || !category) notFound();
 
-  // Google Doc articles use the new view with sync controls
+  // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
     return (
       <GoogleDocArticleView
@@ -37,7 +39,29 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     );
   }
 
-  // Component pages and legacy articles use the existing view
+  // Component pages — renders registered React component with fetched data
+  if (
+    article.content_type === "component" &&
+    article.component_name &&
+    COMPONENT_REGISTRY[article.component_name]
+  ) {
+    const entry = COMPONENT_REGISTRY[article.component_name];
+    const componentData = (await entry.getData(
+      supabase,
+      user.id
+    )) as Record<string, unknown>;
+
+    return (
+      <ComponentArticleView
+        article={article}
+        category={category}
+        parentCategory={parentCategory}
+        componentData={componentData}
+      />
+    );
+  }
+
+  // Legacy Tiptap articles (fallback)
   return (
     <ArticleView
       article={article}
