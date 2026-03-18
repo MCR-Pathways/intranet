@@ -65,17 +65,19 @@ export async function fetchOrgChartData(
 export interface ComponentRegistryEntry {
   /** Async function to fetch component data (runs server-side in the page route) */
   getData: (supabase: SupabaseClient, userId: string) => Promise<unknown>;
-  /** Path to the component module (for dynamic import in the renderer) */
-  componentPath: string;
 }
 
 /**
  * Maps component_name (stored in DB) to its registry entry.
- * Add new component pages here + seed a migration to create the article record.
+ *
+ * To add a new component page:
+ * 1. Add an entry here with a getData function
+ * 2. Add a dynamic import + entry in COMPONENT_MAP in component-article-view.tsx
+ *    (Next.js requires static import paths for code splitting)
+ * 3. Seed a migration to create the article record
  */
 export const COMPONENT_REGISTRY: Record<string, ComponentRegistryEntry> = {
   "org-chart": {
     getData: fetchOrgChartData,
-    componentPath: "@/components/hr/org-chart-content",
   },
 };
