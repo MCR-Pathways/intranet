@@ -53,10 +53,10 @@ function SearchInput() {
       <SearchBox
         placeholder="Search all resources..."
         classNames={{
-          root: "",
-          form: "relative",
+          root: "[&_.ais-SearchBox-form]:relative [&_.ais-SearchBox-form]:border-0 [&_.ais-SearchBox-form]:shadow-none [&_.ais-SearchBox-form]:bg-transparent",
+          form: "relative !border-0 !shadow-none",
           input:
-            "w-full rounded-lg border border-input bg-background pl-12 pr-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "w-full rounded-lg border border-input bg-background pl-12 pr-4 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring !outline-none",
           submit: "hidden",
           reset: "hidden",
           loadingIndicator: "hidden",
