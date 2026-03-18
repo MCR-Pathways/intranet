@@ -14,14 +14,14 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Find the Organisation category (seeded in migration 00056)
+  -- Find the Org Structure subcategory (under Organisation, seeded in migration 00056)
   SELECT id INTO v_category_id
   FROM public.resource_categories
-  WHERE slug = 'organisation' AND deleted_at IS NULL
+  WHERE slug = 'org-structure' AND deleted_at IS NULL
   LIMIT 1;
 
   IF v_category_id IS NULL THEN
-    RAISE NOTICE 'Organisation category not found — skipping org chart seed';
+    RAISE NOTICE 'Org Structure category not found — skipping org chart seed';
     RETURN;
   END IF;
 
