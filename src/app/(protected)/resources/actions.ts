@@ -1611,35 +1611,7 @@ export async function fetchAllCategoriesAction(): Promise<CategoryWithChildren[]
   return fetchCategoriesWithClient(supabase);
 }
 
-// ─── Full-text search ────────────────────────────────────────────────────────
-
-export interface SearchResult {
-  id: string;
-  title: string;
-  slug: string;
-  content_type: string;
-  category_name: string;
-  category_slug: string;
-  snippet: string;
-  updated_at: string;
-}
-
-export async function searchArticles(
-  query: string
-): Promise<SearchResult[]> {
-  const { supabase, user } = await getCurrentUser();
-  if (!user) return [];
-
-  const trimmed = query.trim();
-  if (!trimmed || trimmed.length < 2) return [];
-
-  // Use PostgreSQL full-text search with ts_headline for snippets
-  const { data, error } = await supabase.rpc("search_resource_articles", {
-    search_query: trimmed,
-    result_limit: 20,
-  });
-
-  if (error || !data) return [];
-
-  return data as SearchResult[];
-}
+// ─── Search ─────────────────────────────────────────────────────────────────
+// Full-text search is handled client-side via Algolia React InstantSearch.
+// See src/components/resources/resource-search.tsx and src/lib/algolia.ts.
+// Indexing happens server-side in drive-actions.ts (link/sync/unlink).

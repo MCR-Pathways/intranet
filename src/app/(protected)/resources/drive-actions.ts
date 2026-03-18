@@ -22,6 +22,8 @@ import {
   stopWatchChannel,
 } from "@/lib/google-drive";
 import { logger } from "@/lib/logger";
+import { indexArticleSections, removeArticleFromIndex } from "@/lib/algolia";
+import { parseHtmlIntoSections } from "@/lib/html-sections";
 
 // =============================================
 // CONSTANTS
@@ -322,7 +324,7 @@ export async function linkGoogleDoc(
     // Verify the category exists and is a leaf (no subcategories)
     const { data: category } = await supabase
       .from("resource_categories")
-      .select("id, name")
+      .select("id, name, slug")
       .eq("id", categoryId)
       .single();
 
@@ -422,6 +424,21 @@ export async function linkGoogleDoc(
       });
     }
 
+    // Index sections in Algolia (non-critical)
+    if (html) {
+      const sections = parseHtmlIntoSections(html);
+      await indexArticleSections(
+        article.id,
+        article.slug as string,
+        title,
+        "google_doc",
+        category.name as string,
+        category.slug as string,
+        sections,
+        new Date().toISOString()
+      );
+    }
+
     revalidate();
     return { success: true, articleId: article.id, slug: article.slug as string };
   } catch (error) {
@@ -471,6 +488,9 @@ export async function unlinkGoogleDoc(
       }
     }
 
+    // Remove from Algolia index (non-critical, before DB delete)
+    await removeArticleFromIndex(articleId);
+
     // Hard-delete the article
     const { error: deleteError } = await supabase
       .from("resource_articles")
@@ -508,10 +528,10 @@ export async function syncArticle(
     await requireContentEditor();
     const supabase = createServiceClient();
 
-    // Get article
+    // Get article with category info for Algolia indexing
     const { data: article } = await supabase
       .from("resource_articles")
-      .select("id, slug, google_doc_id, content_type")
+      .select("id, slug, title, google_doc_id, content_type, category:resource_categories!category_id(name, slug)")
       .eq("id", articleId)
       .single();
 
@@ -540,6 +560,23 @@ export async function syncArticle(
     if (updateError) {
       logger.error("Failed to sync article", { error: updateError.message });
       return { success: false, error: "Failed to sync article" };
+    }
+
+    // Re-index sections in Algolia (non-critical)
+    const catData = article.category as unknown;
+    const cat = (Array.isArray(catData) ? catData[0] : catData) as { name: string; slug: string } | null;
+    if (cat) {
+      const sections = parseHtmlIntoSections(html);
+      await indexArticleSections(
+        article.id as string,
+        article.slug as string,
+        article.title as string,
+        "google_doc",
+        cat.name,
+        cat.slug,
+        sections,
+        new Date().toISOString()
+      );
     }
 
     revalidatePath(`/resources/article/${article.slug}`);

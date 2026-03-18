@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { createElement, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import parse, { type DOMNode, type Element, domToReact } from "html-react-parser";
 import {
   ExternalLink,
   RefreshCw,
@@ -55,6 +56,48 @@ export function GoogleDocArticleView({
   useEffect(() => {
     setArticle(initialArticle);
   }, [initialArticle]);
+
+  // ─── Parse HTML into React elements with heading IDs ───────────────────────
+
+  const { parsedContent, headings } = useMemo(() => {
+    if (!article.synced_html) return { parsedContent: null, headings: [] as { text: string; slug: string; level: number }[] };
+
+    const extractedHeadings: { text: string; slug: string; level: number }[] = [];
+    const slugCounts = new Map<string, number>();
+
+    function slugify(text: string): string {
+      const base = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const count = slugCounts.get(base) ?? 0;
+      slugCounts.set(base, count + 1);
+      return count > 0 ? `${base}-${count}` : base;
+    }
+
+    const content = parse(article.synced_html, {
+      replace: (domNode) => {
+        if (domNode.type !== "tag") return;
+        const el = domNode as Element;
+        const tagName = el.name?.toLowerCase();
+
+        // Add IDs to headings for deep linking + TOC
+        if (/^h[1-4]$/.test(tagName)) {
+          const text = getTextContent(el);
+          if (text) {
+            const level = parseInt(tagName[1], 10);
+            const slug = slugify(text);
+            extractedHeadings.push({ text, slug, level });
+
+            return createElement(
+              tagName,
+              { ...el.attribs, id: slug, key: slug },
+              domToReact(el.children as DOMNode[])
+            );
+          }
+        }
+      },
+    });
+
+    return { parsedContent: content, headings: extractedHeadings };
+  }, [article.synced_html]);
 
   // ─── Supabase Realtime: live updates when synced_html changes ──────────────
 
@@ -280,12 +323,35 @@ export function GoogleDocArticleView({
         </div>
       </div>
 
-      {/* Article body — sanitised HTML rendered with prose */}
+      {/* Article body — two-column: content + outline sidebar */}
       {article.synced_html ? (
-        <article
-          className="prose prose-sm max-w-[720px] prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80"
-          dangerouslySetInnerHTML={{ __html: article.synced_html }}
-        />
+        <div className="flex gap-8">
+          <article className="prose prose-sm max-w-[720px] flex-1 min-w-0 prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80">
+            {parsedContent}
+          </article>
+
+          {/* Article outline sidebar (table of contents) */}
+          {headings.length > 1 && (
+            <nav className="hidden lg:block w-48 shrink-0 sticky top-6 self-start">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                On this page
+              </h4>
+              <ul className="space-y-1.5">
+                {headings.map((h) => (
+                  <li key={h.slug}>
+                    <a
+                      href={`#${h.slug}`}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors block truncate"
+                      style={h.level > 2 ? { paddingLeft: `${(h.level - 2) * 12}px` } : undefined}
+                    >
+                      {h.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </div>
       ) : (
         <div className="text-sm text-muted-foreground italic py-8">
           This document has no content yet. Click &ldquo;Sync now&rdquo; to fetch content from Google Docs.
@@ -313,4 +379,19 @@ export function GoogleDocArticleView({
       )}
     </div>
   );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Extract text content from an html-react-parser Element node. */
+function getTextContent(el: Element): string {
+  let text = "";
+  for (const child of el.children) {
+    if (child.type === "text") {
+      text += (child as unknown as { data: string }).data;
+    } else if (child.type === "tag") {
+      text += getTextContent(child as Element);
+    }
+  }
+  return text.trim();
 }
