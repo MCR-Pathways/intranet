@@ -21,19 +21,24 @@ import { logger } from "@/lib/logger";
 // =============================================
 
 /**
- * Create an authenticated Google Drive client using service account
- * with domain-wide delegation. Uses a default admin email for
- * impersonation since we only need read access to shared folders.
+ * Create an authenticated Google Drive client using service account.
+ *
+ * Two modes:
+ * 1. With domain-wide delegation (impersonateEmail or GOOGLE_DRIVE_ADMIN_EMAIL set):
+ *    Can access any file in the organisation's Drive.
+ * 2. Without delegation (no admin email):
+ *    Can only access files explicitly shared with the service account.
  */
 function getDriveClient(impersonateEmail?: string): drive_v3.Drive {
   const keyJson = getServiceAccountKey();
+  const subject = impersonateEmail ?? process.env.GOOGLE_DRIVE_ADMIN_EMAIL;
 
   const auth = new google.auth.JWT({
     email: keyJson.client_email,
     key: keyJson.private_key,
     scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-    // Impersonate an admin user for domain-wide delegation
-    subject: impersonateEmail ?? process.env.GOOGLE_DRIVE_ADMIN_EMAIL,
+    // Only impersonate if domain-wide delegation is configured
+    ...(subject ? { subject } : {}),
   });
 
   return google.drive({ version: "v3", auth });
