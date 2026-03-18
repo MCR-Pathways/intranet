@@ -921,6 +921,12 @@ export interface Database {
           slug: string;
           content: string;
           content_json: Record<string, unknown> | null;
+          content_type: "google_doc" | "component";
+          google_doc_id: string | null;
+          google_doc_url: string | null;
+          synced_html: string | null;
+          last_synced_at: string | null;
+          component_name: string | null;
           status: ArticleStatus;
           author_id: string;
           published_at: string | null;
@@ -939,6 +945,12 @@ export interface Database {
           slug: string;
           content?: string;
           content_json?: Record<string, unknown> | null;
+          content_type?: "google_doc" | "component";
+          google_doc_id?: string | null;
+          google_doc_url?: string | null;
+          synced_html?: string | null;
+          last_synced_at?: string | null;
+          component_name?: string | null;
           status?: ArticleStatus;
           author_id: string;
           published_at?: string | null;
@@ -957,6 +969,12 @@ export interface Database {
           slug?: string;
           content?: string;
           content_json?: Record<string, unknown> | null;
+          content_type?: "google_doc" | "component";
+          google_doc_id?: string | null;
+          google_doc_url?: string | null;
+          synced_html?: string | null;
+          last_synced_at?: string | null;
+          component_name?: string | null;
           status?: ArticleStatus;
           author_id?: string;
           published_at?: string | null;

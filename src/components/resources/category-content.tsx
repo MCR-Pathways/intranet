@@ -6,6 +6,7 @@ import { Folder, FolderOpen } from "lucide-react";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { SubcategoryGrid } from "./subcategory-grid";
 import { ArticlesList } from "./articles-list";
+import { AdminBar } from "./admin-bar";
 import type {
   ResourceCategory,
   CategoryWithCount,
@@ -67,6 +68,9 @@ export function CategoryContent({
         <span className="text-muted-foreground/50 select-none">/</span>
         <span className="text-foreground font-medium">{category.name}</span>
       </nav>
+
+      {/* Admin bar — visible when editor mode on */}
+      <AdminBar />
 
       {/* Category header */}
       <div className="flex items-center gap-4">

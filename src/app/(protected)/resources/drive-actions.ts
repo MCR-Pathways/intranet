@@ -291,7 +291,7 @@ export async function linkGoogleDoc(
   docUrl: string,
   categoryId: string,
   customTitle?: string
-): Promise<{ success: boolean; error?: string; articleId?: string }> {
+): Promise<{ success: boolean; error?: string; articleId?: string; slug?: string }> {
   try {
     const { supabase, user } = await requireContentEditor();
 
@@ -383,7 +383,7 @@ export async function linkGoogleDoc(
         author_id: user.id,
         visibility: null, // Inherit from category
       })
-      .select("id")
+      .select("id, slug")
       .single();
 
     if (insertError || !article) {
@@ -423,7 +423,7 @@ export async function linkGoogleDoc(
     }
 
     revalidate();
-    return { success: true, articleId: article.id };
+    return { success: true, articleId: article.id, slug: article.slug as string };
   } catch (error) {
     logger.error("linkGoogleDoc error", {
       error: error instanceof Error ? error.message : String(error),
