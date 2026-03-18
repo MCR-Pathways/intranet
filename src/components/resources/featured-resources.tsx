@@ -25,7 +25,7 @@ export function FeaturedResources({ articles }: FeaturedResourcesProps) {
           return (
             <Link
               key={article.id}
-              href={`/resources/${article.category_slug}/${article.slug}`}
+              href={`/resources/article/${article.slug}`}
               className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-primary/50 hover:shadow-sm"
             >
               <div

@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-13
+> **Last reviewed:** 2026-03-18
 > **Document updated during:** Periodic syncs
 
 ---
@@ -60,7 +60,9 @@ The MCR Pathways Intranet is an internal web application that replaces BreatheHR
 | Data Tables | TanStack React Table | 8.21.3 |
 | Charts | Recharts | 3.7.0 |
 | Org Chart | react-d3-tree | 3.6.6 |
-| Google APIs | googleapis (Calendar integration) | 171.4.0 |
+| Google APIs | googleapis (Calendar + Drive integration) | 171.4.0 |
+| Search | Algolia (algoliasearch + react-instantsearch) | — |
+| HTML Parsing | html-react-parser | — |
 | Toasts | Sonner | 2.0.7 |
 | Command Palette | cmdk | 1.1.1 |
 | Testing | Vitest + React Testing Library + jsdom | Vitest 4.x |
@@ -113,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (57 files, `00001` through `00056` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (60 files, `00001` through `00059` plus a combined migration).
 
 ### Local Supabase
 
@@ -217,7 +219,7 @@ The largest module. Provides employee self-service and HR admin functionality.
 | Flexible Working | `/hr/flexible-working` | Statutory FWR requests |
 | Leaving | `/hr/leaving` | Offboarding checklists |
 | Onboarding | `/hr/onboarding` | New starter checklists |
-| Org Chart | `/hr/org-chart` | Visual tree (react-d3-tree) |
+| Org Chart | `/resources/article/org-chart` | Visual tree (react-d3-tree), relocated to Resources as component page. 308 redirect from `/hr/org-chart`. |
 | My Team | `/hr/team` | Line manager team view |
 
 **Server Actions:** 11 action files, 84+ server actions total
@@ -250,25 +252,21 @@ Course management with admin dashboard, progress tracking, and compliance traini
 
 Internal communications — news feed, resources/knowledge base, and induction.
 
-**Routes:** 16 pages under `/intranet`
+**Routes:** 12 pages under `/intranet` + `/resources`
 
 | Feature | Route |
 |---|---|
 | News Feed | `/intranet` |
-| Guides (redirect) | `/intranet/guides` → `/resources/guides` |
-| Policies (redirect) | `/intranet/policies` → `/resources/policies` |
 | Weekly Roundup | `/intranet/weekly-roundup` |
-| Resources | `/resources` (top-level module) |
-| Resource Category | `/resources/[categorySlug]` |
-| Article View | `/resources/[categorySlug]/[articleSlug]` |
-| New Article (editor) | `/resources/[categorySlug]/new` |
-| Edit Article (editor) | `/resources/[categorySlug]/[articleSlug]/edit` |
-| Resource Bin (editor) | `/resources/bin` |
 | Induction Hub | `/intranet/induction` (9 sub-pages) |
+| Resources Landing | `/resources` |
+| Category View | `/resources/[...slug]` (1-3 level catch-all) |
+| Article View | `/resources/article/[slug]` (flat, globally unique) |
+| Settings (editor) | `/resources/settings` |
 
 **Key features:** Rich text posts (Tiptap), @mentions with notifications, reactions, comments, link previews with SSRF protection, image lightbox, file attachments, pin/unpin (HR admin), weekly roundup.
 
-**Resources/Knowledge Base:** Full-page editor (Confluence-style) with fixed toolbar, full formatting suite (headings, inline styles, lists, blockquotes, links, images, tables, callouts, code blocks with syntax highlighting, horizontal rules). Custom callout extension (info/tip/warning/danger). Article outline sidebar (table of contents) with IntersectionObserver-based active heading tracking. Two-column reading view (content + outline). 12 component files, `tiptap-callout.ts` custom extension, shared `CALLOUT_CONFIG`.
+**Resources/Knowledge Base (redesigned — PR #157):** Google Docs integration replaces Tiptap article editor. Content editors link Google Docs from Drive, HTML synced via webhooks, rendered with Tailwind `prose` classes. Sidebar tree navigation (3-level, collapsible to icon-only). Component page system for developer-created pages (e.g. org chart). Editor mode pencil toggle shows/hides admin controls. Settings page for folder registration, featured article curation, and category management. Algolia search with section-level indexing and deep links. Supabase Realtime for live content updates while viewing.
 
 ### Sign-In / Working Location Module (v2 complete)
 
@@ -294,7 +292,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**57 migration files** in `supabase/migrations/`, numbered `00001` through `00056` plus a combined migration.
+**60 migration files** in `supabase/migrations/`, numbered `00001` through `00059` plus a combined migration.
 
 **26+ tables** — key ones:
 
@@ -428,7 +426,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 52 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1251 tests across 52 files
+- **Coverage:** 1257 tests across 52 files
 
 ### Test Categories
 
@@ -482,6 +480,14 @@ Allowed domains for `next/image`: `*.googleusercontent.com`, `*.supabase.co`.
 
 Domain-wide delegation via Google service account. Setup documented in `docs/google-calendar-setup.md`. Webhook endpoint at `/api/calendar/webhook`.
 
+### Google Drive Integration (Resources)
+
+Service account accesses files shared with it directly (domain-wide delegation not yet configured for Drive — requires Super Admin). Webhook endpoint at `/api/drive/webhook` with timing-safe token verification. Watch channels expire after 7 days — renewal cron needed. Shared auth in `src/lib/google-auth.ts`. Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_DRIVE_WEBHOOK_SECRET`.
+
+### Algolia Search (Resources)
+
+Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for deep linking into articles. Indexing happens server-side in `drive-actions.ts` during link/sync/unlink. Env vars: `NEXT_PUBLIC_ALGOLIA_APP_ID`, `NEXT_PUBLIC_ALGOLIA_SEARCH_KEY` (public), `ALGOLIA_ADMIN_KEY` (server-only). App ID: `CFRPCC52U5`.
+
 ---
 
 ## Key Files Reference
@@ -519,6 +525,11 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 | `src/lib/tiptap.ts` | Tiptap rich text utilities (extractPlainText, extractMentionIds, extractHeadings, slugifyHeading) |
 | `src/lib/tiptap-callout.ts` | Custom Tiptap callout extension + shared CALLOUT_CONFIG |
 | `src/lib/url.ts` | URL utilities (isValidHttpUrl, extractUrls, linkifyText, proxyImageUrl, sanitizeRedirectPath) |
+| `src/lib/google-drive.ts` | Google Drive API client, HTML export, sanitisation, plaintext extraction |
+| `src/lib/google-auth.ts` | Shared Google service account auth (Calendar + Drive) |
+| `src/lib/algolia.ts` | Algolia admin + search clients, section-level indexing |
+| `src/lib/resource-components.ts` | Component page registry (maps component_name → React component + data fetcher) |
+| `src/lib/html-sections.ts` | Parse Google Doc HTML into sections for Algolia indexing |
 | `src/lib/ssrf.ts` | SSRF protection for link preview fetching |
 | `src/lib/notifications.ts` | Notification helpers |
 
@@ -608,13 +619,40 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 **Consequences:** Reliable mutations, consistent auth handling. Trade-off: every mutation requires a Server Action, even simple ones.
 
-### ADR-009: Full-page editor over dialog for articles
+### ADR-009: Full-page editor over dialog for articles (superseded by ADR-010)
+
+> **Note:** This ADR was superseded by ADR-010. The Tiptap full-page editor was replaced by Google Docs integration in the Resources Redesign (PR #157).
+
 
 **Context:** The original Resources module used a Dialog (modal) for creating/editing articles. Research across Notion, Confluence, GitBook, Guru, Slite, BreatheHR, CharlieHR, BambooHR, Personio, and HiBob confirmed every serious knowledge base platform uses a full-page editor, not a modal.
 
 **Decision:** Replace the article form dialog with dedicated full-page editor routes (`/new` and `/edit`). Use a fixed toolbar (Confluence-style) rather than bubble menu or slash commands, since HR admins are not tech-savvy. Reserve "new" and "edit" as forbidden article slugs to prevent route collisions.
 
 **Consequences:** Better editing experience with more screen space, Confluence-familiar toolbar for non-technical users. Trade-off: two new route files instead of a single dialog component. The dialog approach was deleted entirely (`article-form-dialog.tsx`).
+
+### ADR-010: Google Docs integration over Tiptap editor for Resources
+
+**Context:** The Tiptap article editor required content editors to learn a new tool. MCR Pathways already uses Google Workspace — staff create documents in Google Docs. Research across Guru, Tettra, Slite, and SharePoint confirmed that convert-and-store (export HTML from Google Docs) is the industry standard for organisations already on Google Workspace.
+
+**Decision:** Replace the Tiptap article editor with Google Docs integration. Content editors link existing Google Docs, which are synced via Drive API webhooks. HTML is sanitised, cached in the DB (`synced_html`), and rendered with Tailwind `prose` classes. Editing stays in Google Docs — the intranet is read-only with live updates via Supabase Realtime.
+
+**Consequences:** Zero learning curve for content editors (they already use Google Docs). Live sync via webhooks (~4-10s). Trade-offs: dependency on Google Drive API (7-day webhook expiry needs renewal cron), base64 images in exported HTML can make large docs heavy, requires Google service account setup.
+
+### ADR-011: Algolia over PostgreSQL FTS for search
+
+**Context:** Manager directive (2026-03-18). PostgreSQL full-text search works but lacks section-level results and deep linking. Algolia provides instant search with section-level indexing (DocSearch pattern).
+
+**Decision:** Use Algolia for Resources search. Section-level indexing (heading + content pairs) enables deep linking to specific sections within articles. Client-side React InstantSearch for the search UI. Indexing happens server-side during link/sync/unlink operations.
+
+**Consequences:** Superior search UX with section-level results and deep links. Trade-off: external service dependency, requires env vars for API keys, free tier sufficient for current scale.
+
+### ADR-012: Component pages via registry pattern
+
+**Context:** Some resources (e.g. org chart) are interactive React components, not documents. Needed a way for developers to create component pages that content editors can manage (metadata, category, visibility).
+
+**Decision:** Component registry pattern (`src/lib/resource-components.ts`). Maps `component_name` → `{ component, getData }`. Content editors see component pages in the tree and can manage metadata. Developers create the React component + register it.
+
+**Consequences:** Clean separation: developers own the code, editors own the metadata. Org chart relocated from `/hr/org-chart` to Resources as the first component page. Trade-off: adding new component pages requires a code change + migration.
 
 ---
 
@@ -672,6 +710,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-18 | Abdul-Muiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | Resources restructure PR D: 9-category taxonomy (migration 00056). Soft-deleted old 3 categories (Policies, Guides, Templates), seeded 9 top-level + 43 subcategories with icons, colours, visibility. Fixed article/editor breadcrumbs for subcategories (parent chain). Updated legacy redirect pages. Route promotion (PR C): `/intranet/resources` → `/resources` top-level sidebar with BookOpen icon. Gemini review fixes: removed 3 redundant type casts. 1119 tests, 50 files. |

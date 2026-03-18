@@ -44,6 +44,10 @@ supabase/.temp/
 # claude code
 .claude/
 
+# service account keys
+*-service-key.json
+mcr-pathways-*.json
+
 # vercel
 .vercel
 
