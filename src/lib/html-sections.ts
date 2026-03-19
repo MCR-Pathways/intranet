@@ -8,7 +8,7 @@
  * Used by the sync pipeline to create section-level Algolia records.
  */
 
-import { JSDOM } from "jsdom";
+import { parseHTML } from "linkedom";
 
 export interface HtmlSection {
   /** Heading text (null for intro content before first heading) */
@@ -35,8 +35,8 @@ export function slugifyHeading(text: string): string {
 export function parseHtmlIntoSections(html: string): HtmlSection[] {
   if (!html) return [];
 
-  const dom = new JSDOM(html);
-  const body = dom.window.document.body;
+  const { document } = parseHTML(html);
+  const body = document.body;
   if (!body) return [];
 
   const sections: HtmlSection[] = [];

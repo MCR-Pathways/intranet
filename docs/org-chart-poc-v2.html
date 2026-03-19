@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Org Chart PoC v2 — Always Vertical from Depth 2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #F2F4F7; color: #213350; padding: 1.5rem;
+  }
+  h1 { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem; }
+  .sub { font-size: 0.75rem; color: #6b7280; text-align: center; margin-bottom: 1rem; }
+  .toolbar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; }
+  .tool-btn { padding: 0.35rem 0.7rem; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.75rem; background: white; cursor: pointer; color: #6b7280; font-weight: 500; font-family: inherit; }
+  .tool-btn:hover { background: #f3f4f6; color: #213350; }
+
+  .canvas {
+    background: white; border-radius: 12px; border: 1px solid #e5e7eb;
+    position: relative; overflow: auto; min-height: 500px;
+  }
+  .canvas svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  .card {
+    position: absolute;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem;
+    border-radius: 10px; border: 1px solid #e5e7eb; background: white;
+    width: 210px; height: 44px; cursor: pointer; transition: box-shadow 0.15s;
+    border-left-width: 4px;
+  }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .av {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 0.45rem; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .ci { flex: 1; min-width: 0; }
+  .cn { font-size: 0.7rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct { font-size: 0.57rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cb { display: flex; gap: 3px; margin-top: 1px; }
+  .bs { font-size: 0.48rem; font-weight: 500; padding: 1px 4px; border-radius: 999px; line-height: 1.3; }
+  .br { background: rgba(33,51,80,0.08); color: #213350; }
+  .bf { background: #f3f4f6; color: #6b7280; }
+
+  .exp {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center; gap: 2px;
+    padding: 2px 7px; border-radius: 999px; font-size: 0.5rem; font-weight: 600;
+    border: 1px solid; cursor: pointer; font-family: inherit;
+    white-space: nowrap; z-index: 2;
+  }
+  .exp.c { background: #213350; color: white; border-color: #213350; }
+  .exp.c:hover { background: #2d4568; }
+  .exp.e { background: white; color: #6b7280; border-color: #e5e7eb; }
+  .exp.e:hover { background: #f3f4f6; }
+</style>
+</head>
+<body>
+
+<h1>Option 2 — Always Vertical from Depth 2+</h1>
+<p class="sub">CEO → Directors horizontal. Everything below directors stacks vertically. No collision issues.</p>
+<div class="toolbar">
+  <button class="tool-btn" onclick="collapseAll()">Collapse All</button>
+  <button class="tool-btn" onclick="expandAll()">Expand All</button>
+</div>
+
+<div class="canvas" id="canvas"></div>
+
+<script>
+const CARD_W = 210;
+const CARD_H = 44;
+const H_GAP = 20;
+const V_GAP = 12;
+const LEVEL_GAP = 50;
+const INDENT = 26;
+const TICK_W = 14;
+const PAD = 40;
+
+const DC = {
+  executive:"#334155", people:"#a855f7", finance:"#22c55e",
+  delivery:"#f97316", development:"#06b6d4", engagement:"#ec4899",
+  systems:"#64748b", fundraising:"#f59e0b", communications:"#f43f5e",
+  learning_development:"#6366f1", hr:"#10b981",
+};
+
+// Full MCR org data
+const org = {
+  id:"ceo", name:"Eleanor MacGregor", title:"Chief Executive", dept:"executive",
+  children: [
+    { id:"fh", name:"Fiona Henderson", title:"People Director", dept:"people", children:[
+      { id:"jc", name:"Jane Campbell", title:"HR Manager", dept:"hr", children:[
+        { id:"kl", name:"Katie Lewis", title:"People Partner", dept:"people" },
+        { id:"rm", name:"Ruth Murray", title:"People Advisor", dept:"people" },
+        { id:"lw", name:"Laura Wilson", title:"People Admin", dept:"people" },
+      ]},
+      { id:"th2", name:"Tom Henderson", title:"L&D Coordinator", dept:"learning_development" },
+      { id:"sk", name:"Sarah Kirk", title:"L&D Officer", dept:"learning_development" },
+      { id:"am2", name:"Angela Murray", title:"Wellbeing Lead", dept:"people" },
+      { id:"db", name:"Dawn Brown", title:"Admin Officer", dept:"people" },
+      { id:"mm", name:"Maria Martinez", title:"People Assistant", dept:"people" },
+      { id:"rk2", name:"Rebecca Kelly", title:"Recruitment Lead", dept:"people" },
+    ]},
+    { id:"gn", name:"Graham Nicholson", title:"Finance Director", dept:"finance", fte:0.6, children:[
+      { id:"st", name:"Sarah Thomson", title:"Finance Officer", dept:"finance" },
+    ]},
+    { id:"mc", name:"Margaret Campbell", title:"Development Director", dept:"development", children:[
+      { id:"ws", name:"Wendy Sutherland", title:"Head of Schools", dept:"development", children:[
+        { id:"ed3", name:"Ewan Douglas", title:"Programme Manager", dept:"delivery", children:[
+          { id:"ae", name:"Andrea Ellis", title:"MS Coordinator", dept:"development" },
+          { id:"ghx", name:"Gordon Hutton", title:"Pathways Coordinator", dept:"development" },
+          { id:"kdx", name:"Keith Dougall", title:"Pathways Coordinator", dept:"development" },
+          { id:"pdx", name:"Priti De Silva", title:"Pathways Coordinator", dept:"development" },
+        ]},
+        { id:"jm", name:"Jenny MacDonald", title:"Schools Officer", dept:"development" },
+        { id:"ct2", name:"Claire Taylor", title:"Schools Officer", dept:"development" },
+        { id:"rb2", name:"Ross Brown", title:"Pathways Coordinator", dept:"development" },
+        { id:"mk", name:"Mark Kelly", title:"Pathways Coordinator", dept:"development" },
+        { id:"sw", name:"Sophie Walker", title:"Pathways Coordinator", dept:"development" },
+        { id:"al", name:"Amy Lawrence", title:"Pathways Coordinator", dept:"development" },
+        { id:"dwx", name:"Daniel White", title:"Pathways Coordinator", dept:"development" },
+        { id:"nc2x", name:"Natalie Clark", title:"Pathways Coordinator", dept:"development" },
+        { id:"jpx", name:"James Patterson", title:"Pathways Coordinator", dept:"development" },
+        { id:"em2x", name:"Emma Mitchell", title:"Schools Admin", dept:"development" },
+        { id:"lm", name:"Lisa Moore", title:"Schools Admin", dept:"development" },
+      ]},
+      { id:"vg", name:"Victoria Grant", title:"Head of Fundraising", dept:"fundraising", children:[
+        { id:"af", name:"Aileen Fraser", title:"Strategic Partnerships Lead", dept:"fundraising" },
+        { id:"jk", name:"Jennifer Kerr", title:"Senior Fundraising Officer", dept:"fundraising" },
+        { id:"ra", name:"Robyn Anderson", title:"Fundraising Officer", dept:"fundraising" },
+      ]},
+      { id:"ps", name:"Priya Sharma", title:"Head of Engagement", dept:"engagement", children:[
+        { id:"cr", name:"Callum Reid", title:"Mentor & YP Engagement Officer", dept:"engagement" },
+        { id:"hd", name:"Hannah Douglas", title:"Mentor & YP Engagement Officer", dept:"engagement" },
+        { id:"nc", name:"Neil Crawford", title:"Strategic Comms Lead", dept:"communications", children:[
+          { id:"ab", name:"Aisha Begum", title:"Policy & Public Affairs Officer", dept:"communications" },
+          { id:"lb", name:"Lucy Brennan", title:"Policy & Public Affairs Officer", dept:"communications" },
+          { id:"ms", name:"Megan Scott", title:"Senior Marketing Officer", dept:"communications" },
+        ]},
+        { id:"af2x", name:"Aileen Fraser", title:"Strategic Partnerships Lead", dept:"fundraising" },
+        { id:"dm", name:"David Mitchell", title:"Events Coordinator", dept:"engagement" },
+        { id:"rhx", name:"Rachel Hill", title:"Engagement Officer", dept:"engagement" },
+      ]},
+      { id:"ed", name:"Ewan Douglas", title:"Programme Manager", dept:"delivery", children:[
+        { id:"ae2x", name:"Andrea Ellis", title:"MS Coordinator", dept:"development" },
+        { id:"gh2x", name:"Gordon Hutton", title:"Pathways Coordinator", dept:"development" },
+        { id:"kd2x", name:"Keith Dougall", title:"Pathways Coordinator", dept:"development" },
+        { id:"pd2x", name:"Priti De Silva", title:"Pathways Coordinator", dept:"development" },
+      ]},
+    ]},
+    { id:"rd", name:"Rachel Donaldson", title:"Delivery Director", dept:"delivery", children:[
+      { id:"jw", name:"Julie Watson", title:"Head of Delivery (West)", dept:"delivery", children:[
+        { id:"sm", name:"Scott Murray", title:"Delivery Manager", dept:"delivery" },
+        { id:"kp", name:"Karen Park", title:"Delivery Coordinator", dept:"delivery" },
+        { id:"ag", name:"Alan Grant", title:"Delivery Officer", dept:"delivery" },
+      ]},
+      { id:"dpx", name:"David Park", title:"Head of Delivery (East)", dept:"delivery", children:[
+        { id:"sb", name:"Sarah Burns", title:"Delivery Manager", dept:"delivery" },
+        { id:"lt", name:"Lisa Taylor", title:"Delivery Coordinator", dept:"delivery" },
+      ]},
+      { id:"nb", name:"Nicola Black", title:"Head of Delivery (England)", dept:"delivery", children:[
+        { id:"rj", name:"Rebecca Jones", title:"Delivery Manager", dept:"delivery" },
+        { id:"cmx", name:"Chris Martin", title:"Delivery Officer", dept:"delivery" },
+        { id:"ew", name:"Emily Watson", title:"Delivery Officer", dept:"delivery" },
+      ]},
+    ]},
+  ],
+};
+
+const expanded = new Set(["ceo"]);
+
+function tog(id) { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
+function collapseAll() { expanded.clear(); expanded.add("ceo"); render(); }
+function expandAll() { (function a(n) { if(n.children?.length) { expanded.add(n.id); n.children.forEach(a); } })(org); render(); }
+function cnt(n) { if(!n.children?.length) return 0; let c=n.children.length; for(const x of n.children) c+=cnt(x); return c; }
+function ini(n) { return n.split(" ").map(w=>w[0]).join("").slice(0,2); }
+
+// ─── Layout: two modes only ────────────────────────────────────────────────
+// depth 0→1 (CEO→Directors): horizontal
+// depth 2+: always vertical with indentation
+
+function layoutVertical(node, depth) {
+  // Vertical tree layout — each child stacks below, indented
+  const dc = node.children?.length || 0;
+  const has = dc > 0;
+  const exp = expanded.has(node.id);
+
+  const result = { node, x: 0, y: 0, w: CARD_W, h: CARD_H, totalW: CARD_W, totalH: CARD_H, children: [], expBtn: null, depth };
+
+  if (!has) return result;
+
+  if (!exp) {
+    result.expBtn = { collapsed: true, count: dc };
+    result.totalH = CARD_H + 14;
+    return result;
+  }
+
+  result.expBtn = { collapsed: false, count: dc };
+
+  const childLayouts = [];
+  for (const c of node.children) {
+    childLayouts.push(layoutVertical(c, depth + 1));
+  }
+
+  let totalChildH = 0;
+  let maxChildW = 0;
+  for (let i = 0; i < childLayouts.length; i++) {
+    totalChildH += childLayouts[i].totalH;
+    if (i < childLayouts.length - 1) totalChildH += V_GAP;
+    maxChildW = Math.max(maxChildW, childLayouts[i].totalW);
+  }
+
+  let cy = CARD_H + 18;
+  for (const cl of childLayouts) {
+    cl.x = INDENT;
+    cl.y = cy;
+    result.children.push(cl);
+    cy += cl.totalH + V_GAP;
+  }
+
+  result.totalW = Math.max(CARD_W, INDENT + maxChildW);
+  result.totalH = CARD_H + 18 + totalChildH;
+
+  return result;
+}
+
+function layoutRoot(node) {
+  // CEO → Directors horizontal, then everything below vertical
+  const dc = node.children?.length || 0;
+  const exp = expanded.has(node.id);
+
+  const result = { node, x: 0, y: 0, w: CARD_W, h: CARD_H, totalW: CARD_W, totalH: CARD_H, children: [], expBtn: null, depth: 0, isRoot: true };
+
+  if (dc === 0) return result;
+
+  if (!exp) {
+    result.expBtn = { collapsed: true, count: dc };
+    result.totalH = CARD_H + 14;
+    return result;
+  }
+
+  result.expBtn = { collapsed: false, count: dc };
+
+  // Layout each director as a vertical subtree
+  const directorLayouts = [];
+  for (const c of node.children) {
+    directorLayouts.push(layoutVertical(c, 1));
+  }
+
+  // Position directors horizontally
+  let totalDirW = 0;
+  let maxDirH = 0;
+  for (let i = 0; i < directorLayouts.length; i++) {
+    totalDirW += directorLayouts[i].totalW;
+    if (i < directorLayouts.length - 1) totalDirW += H_GAP;
+    maxDirH = Math.max(maxDirH, directorLayouts[i].totalH);
+  }
+
+  const startX = (Math.max(CARD_W, totalDirW) - totalDirW) / 2;
+  let cx = startX;
+  const dirY = CARD_H + LEVEL_GAP;
+
+  for (const dl of directorLayouts) {
+    dl.x = cx;
+    dl.y = dirY;
+    result.children.push(dl);
+    cx += dl.totalW + H_GAP;
+  }
+
+  // Centre CEO above directors
+  result.cardOffsetX = Math.max(0, (totalDirW - CARD_W) / 2);
+  result.totalW = Math.max(CARD_W, totalDirW);
+  result.totalH = CARD_H + LEVEL_GAP + maxDirH;
+
+  return result;
+}
+
+// ─── Render ─────────────────────────────────────────────────────────────────
+
+function renderNode(layout, ox, oy, svgLines, cards) {
+  const col = DC[layout.node.dept] || "#94a3b8";
+  const tot = cnt(layout.node);
+  const cardX = ox + (layout.cardOffsetX || 0);
+  const cardY = oy;
+
+  let badges = "";
+  if (layout.node.fte && layout.node.fte !== 1) badges += `<span class="bs bf">${layout.node.fte} FTE</span>`;
+  if (tot > 0) badges += `<span class="bs br">${tot} ${tot===1?"report":"reports"}</span>`;
+
+  cards.push(`<div class="card" style="left:${cardX}px;top:${cardY}px;border-left-color:${col}">
+    <div class="av" style="background:${col}">${ini(layout.node.name)}</div>
+    <div class="ci"><div class="cn">${layout.node.name}</div><div class="ct">${layout.node.title}</div>${badges?`<div class="cb">${badges}</div>`:""}</div>
+  </div>`);
+
+  // Expand button
+  if (layout.expBtn) {
+    const btn = layout.expBtn;
+    const bx = cardX + CARD_W / 2 - 14;
+    const by = cardY + CARD_H + 1;
+    const cls = btn.collapsed ? "c" : "e";
+    const label = btn.collapsed ? `&#8964; ${btn.count}` : `&#8963;`;
+    cards.push(`<div class="exp ${cls}" style="left:${bx}px;top:${by}px" onclick="tog('${layout.node.id}')">${label}</div>`);
+  }
+
+  // Connector lines + recurse children
+  if (layout.isRoot && layout.children.length > 0) {
+    // CEO → Directors: curved connectors
+    const parentCX = cardX + CARD_W / 2;
+    const parentBottom = cardY + CARD_H;
+
+    for (const child of layout.children) {
+      const cx2 = ox + child.x + (child.cardOffsetX || 0) + CARD_W / 2;
+      const cy2 = oy + child.y;
+      const midY = parentBottom + (cy2 - parentBottom) / 2;
+      svgLines.push(`<path d="M${parentCX},${parentBottom} C${parentCX},${midY} ${cx2},${midY} ${cx2},${cy2}" stroke="#94a3b8" stroke-width="2" fill="none" stroke-linecap="round"/>`);
+      renderNode(child, ox + child.x, oy + child.y, svgLines, cards);
+    }
+  } else if (layout.children.length > 0) {
+    // Vertical tree: trunk line + horizontal ticks
+    const trunkX = cardX + INDENT / 2 + 1;
+    const firstChildCY = oy + layout.children[0].y + CARD_H / 2;
+    const lastChildCY = oy + layout.children[layout.children.length - 1].y + CARD_H / 2;
+
+    // Vertical trunk from below parent to last child
+    svgLines.push(`<line x1="${trunkX}" y1="${cardY + CARD_H}" x2="${trunkX}" y2="${lastChildCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+
+    // Horizontal ticks to each child
+    for (const child of layout.children) {
+      const childX = ox + child.x + (child.cardOffsetX || 0);
+      const childCY = oy + child.y + CARD_H / 2;
+      svgLines.push(`<line x1="${trunkX}" y1="${childCY}" x2="${childX}" y2="${childCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+      renderNode(child, ox + child.x, oy + child.y, svgLines, cards);
+    }
+  }
+}
+
+function render() {
+  const layout = layoutRoot(org);
+  const canvasW = layout.totalW + PAD * 2;
+  const canvasH = layout.totalH + PAD * 2;
+
+  const svgLines = [];
+  const cards = [];
+  renderNode(layout, PAD, PAD, svgLines, cards);
+
+  const el = document.getElementById("canvas");
+  el.style.width = Math.max(canvasW, 800) + "px";
+  el.style.height = canvasH + "px";
+  el.innerHTML = `<svg width="${Math.max(canvasW, 800)}" height="${canvasH}">${svgLines.join("")}</svg>` + cards.join("");
+}
+
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCR Pathways — Brand Colour Swatch Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #F2F4F7;
+    color: #213350;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .subtitle { color: #6b7280; margin-bottom: 2rem; font-size: 0.95rem; }
+  h2 { font-size: 1.25rem; font-weight: 600; margin: 2rem 0 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+
+  .legend {
+    display: flex; gap: 1.5rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #6b7280; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .swatch-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .swatch-card.differs { border: 2px solid #F09336; }
+  .swatch-card.missing { border: 2px dashed #ef4444; }
+  .swatch-card.matches { border: 2px solid #22c55e; }
+
+  .swatch-pair {
+    display: flex;
+    height: 100px;
+  }
+  .swatch-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    position: relative;
+  }
+  .swatch-half .label {
+    position: absolute;
+    top: 6px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .swatch-half .hex {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .swatch-half.light-text { color: white; }
+  .swatch-half.light-text .label { background: rgba(255,255,255,0.2); color: white; }
+  .swatch-half.dark-text { color: #213350; }
+  .swatch-half.dark-text .label { background: rgba(33,51,80,0.1); color: #213350; }
+
+  .swatch-only {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    position: relative;
+  }
+  .swatch-only .label {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .swatch-info {
+    padding: 0.75rem 1rem;
+  }
+  .swatch-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .swatch-name .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-matches { background: #dcfce7; color: #166534; }
+  .badge-differs { background: #fff7ed; color: #9a3412; }
+  .badge-missing { background: #fef2f2; color: #991b1b; }
+  .badge-extra { background: #eff6ff; color: #1e40af; }
+  .badge-unused { background: #f3f4f6; color: #6b7280; }
+
+  .swatch-detail {
+    font-size: 0.8rem;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+  .swatch-detail strong { color: #374151; }
+
+  .delta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .delta-table th {
+    background: #E4E7EC;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .delta-table td {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid #f0f0f0;
+  }
+  .delta-table tr:hover { background: #f9fafb; }
+
+  .inline-swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  .notes {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .notes ul { padding-left: 1.25rem; }
+  .notes li { margin-bottom: 0.3rem; }
+
+  .colour-contrast {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+    flex-wrap: wrap;
+  }
+  .contrast-sample {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<h1>MCR Pathways — Brand Colour Swatch Comparison</h1>
+<p class="subtitle">Codebase values vs Official Brand Guidelines (Aug 2025). Generated 12 Mar 2026.</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Matches</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F09336"></div> Differs</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444; border: 1px dashed #ef4444;"></div> Missing from codebase</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Codebase-only (not in guidelines)</div>
+</div>
+
+<h2>Side-by-Side Swatches</h2>
+
+<div class="comparison-grid">
+
+  <!-- Dark Blue — MATCHES -->
+  <div class="swatch-card matches">
+    <div class="swatch-pair">
+      <div class="swatch-half light-text" style="background:#213350">
+        <span class="label">Guidelines</span>
+        <span class="hex">#213350</span>
+      </div>
+      <div class="swatch-half light-text" style="background:#213350">
+        <span class="label">Codebase</span>
+        <span class="hex">#213350</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Dark Blue <span class="badge badge-matches">Matches</span></div>
+      <div class="swatch-detail">Token: <strong>--mcr-dark-blue</strong>. Used as <strong>--primary</strong>, <strong>--foreground</strong>, <strong>--ring</strong>. Navigation, buttons, text.</div>
+    </div>
+  </div>
+
+  <!-- Orange — MATCHES -->
+  <div class="swatch-card matches">
+    <div class="swatch-pair">
+      <div class="swatch-half dark-text" style="background:#F09336">
+        <span class="label">Guidelines</span>
+        <span class="hex">#F09336</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#F09336">
+        <span class="label">Codebase</span>
+        <span class="hex">#F09336</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Orange <span class="badge badge-matches">Matches</span></div>
+      <div class="swatch-detail">Token: <strong>--mcr-orange</strong>. Sidebar induction prompt, learning warnings, kiosk accents.</div>
+    </div>
+  </div>
+
+  <!-- Light Blue — MATCHES -->
+  <div class="swatch-card matches">
+    <div class="swatch-pair">
+      <div class="swatch-half dark-text" style="background:#5BC6E9">
+        <span class="label">Guidelines</span>
+        <span class="hex">#5BC6E9</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#5BC6E9">
+        <span class="label">Codebase</span>
+        <span class="hex">#5BC6E9</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Light Blue <span class="badge badge-matches">Matches</span></div>
+      <div class="swatch-detail">Token: <strong>--mcr-light-blue</strong>. Focus ring in dark mode only.</div>
+    </div>
+  </div>
+
+  <!-- Yellow — MATCHES -->
+  <div class="swatch-card matches">
+    <div class="swatch-pair">
+      <div class="swatch-half dark-text" style="background:#F8D45B">
+        <span class="label">Guidelines</span>
+        <span class="hex">#F8D45B</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#F8D45B">
+        <span class="label">Codebase</span>
+        <span class="hex">#F8D45B</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Yellow <span class="badge badge-matches">Matches</span></div>
+      <div class="swatch-detail">Token: <strong>--mcr-yellow</strong>. Pending status badge via <strong>--status-pending</strong>.</div>
+    </div>
+  </div>
+
+  <!-- Pink — DIFFERS -->
+  <div class="swatch-card differs">
+    <div class="swatch-pair">
+      <div class="swatch-half light-text" style="background:#DA417C">
+        <span class="label">Guidelines</span>
+        <span class="hex">#DA417C</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#FF82B2">
+        <span class="label">Codebase</span>
+        <span class="hex">#FF82B2</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Pink <span class="badge badge-differs">Differs</span></div>
+      <div class="swatch-detail">
+        Token: <strong>--mcr-pink</strong>. Used as <strong>--action</strong> (sign-out, special CTAs).<br>
+        Codebase version is <strong>significantly lighter and more saturated</strong>. Guidelines pink is deeper/richer.
+      </div>
+    </div>
+  </div>
+
+  <!-- Light Green — DIFFERS -->
+  <div class="swatch-card differs">
+    <div class="swatch-pair">
+      <div class="swatch-half dark-text" style="background:#AFDA44">
+        <span class="label">Guidelines</span>
+        <span class="hex">#AFDA44</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#B5E046">
+        <span class="label">Codebase</span>
+        <span class="hex">#B5E046</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Light Green <span class="badge badge-differs">Differs</span> <span class="badge badge-unused">Unused</span></div>
+      <div class="swatch-detail">
+        Token: <strong>--mcr-green</strong>. <strong>Not used in any component.</strong><br>
+        Minor difference — codebase is slightly brighter/more yellow. Low impact since unused.
+      </div>
+    </div>
+  </div>
+
+  <!-- Ivory — DIFFERS -->
+  <div class="swatch-card differs">
+    <div class="swatch-pair">
+      <div class="swatch-half dark-text" style="background:#FFFFE3">
+        <span class="label">Guidelines</span>
+        <span class="hex">#FFFFE3</span>
+      </div>
+      <div class="swatch-half dark-text" style="background:#FDF9EA">
+        <span class="label">Codebase</span>
+        <span class="hex">#FDF9EA</span>
+      </div>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Ivory <span class="badge badge-differs">Differs</span> <span class="badge badge-unused">Unused</span></div>
+      <div class="swatch-detail">
+        Token: <strong>--mcr-ivory</strong>. <strong>Not used in any component.</strong><br>
+        Guidelines version is greener/cooler. Codebase version is warmer/more cream. Low impact since unused.
+      </div>
+    </div>
+  </div>
+
+  <!-- Mid Blue — MISSING -->
+  <div class="swatch-card missing">
+    <div class="swatch-only light-text" style="background:#347791">
+      <span class="label" style="background:rgba(255,255,255,0.2);color:white;">Guidelines only</span>
+      <span class="hex" style="color:white">#347791</span>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Mid Blue <span class="badge badge-missing">Missing</span></div>
+      <div class="swatch-detail">
+        Not defined in codebase. Codebase has <strong>--mcr-teal</strong> (#2A6075) which may be a darker approximation.<br>
+        <div class="colour-contrast">
+          <span class="contrast-sample" style="background:#347791;color:white">Mid Blue #347791</span>
+          <span class="contrast-sample" style="background:#2A6075;color:white">Teal #2A6075</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dark Pink — MISSING -->
+  <div class="swatch-card missing">
+    <div class="swatch-only light-text" style="background:#892055">
+      <span class="label" style="background:rgba(255,255,255,0.2);color:white;">Guidelines only</span>
+      <span class="hex" style="color:white">#892055</span>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Dark Pink <span class="badge badge-missing">Missing</span></div>
+      <div class="swatch-detail">
+        Not defined in codebase. Codebase has <strong>--mcr-wine</strong> (#751B48) which may be a darker approximation.<br>
+        <div class="colour-contrast">
+          <span class="contrast-sample" style="background:#892055;color:white">Dark Pink #892055</span>
+          <span class="contrast-sample" style="background:#751B48;color:white">Wine #751B48</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teal — CODEBASE ONLY -->
+  <div class="swatch-card" style="border:2px solid #3b82f6">
+    <div class="swatch-only light-text" style="background:#2A6075">
+      <span class="label" style="background:rgba(255,255,255,0.2);color:white;">Codebase only</span>
+      <span class="hex" style="color:white">#2A6075</span>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Teal <span class="badge badge-extra">Codebase-only</span> <span class="badge badge-unused">Unused</span></div>
+      <div class="swatch-detail">
+        Token: <strong>--mcr-teal</strong>. Not in brand guidelines. Likely a darker variant of Mid Blue (#347791). <strong>Not used in any component.</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wine — CODEBASE ONLY -->
+  <div class="swatch-card" style="border:2px solid #3b82f6">
+    <div class="swatch-only light-text" style="background:#751B48">
+      <span class="label" style="background:rgba(255,255,255,0.2);color:white;">Codebase only</span>
+      <span class="hex" style="color:white">#751B48</span>
+    </div>
+    <div class="swatch-info">
+      <div class="swatch-name">Wine <span class="badge badge-extra">Codebase-only</span> <span class="badge badge-unused">Unused</span></div>
+      <div class="swatch-detail">
+        Token: <strong>--mcr-wine</strong>. Not in brand guidelines. Likely a darker variant of Dark Pink (#892055). <strong>Not used in any component.</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h2>Summary Delta Table</h2>
+
+<table class="delta-table">
+  <thead>
+    <tr>
+      <th>Colour</th>
+      <th>Guidelines</th>
+      <th>Codebase</th>
+      <th>Status</th>
+      <th>Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Dark Blue</td>
+      <td><span class="inline-swatch" style="background:#213350"></span>#213350</td>
+      <td><span class="inline-swatch" style="background:#213350"></span>#213350</td>
+      <td><span class="badge badge-matches">Matches</span></td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Orange</td>
+      <td><span class="inline-swatch" style="background:#F09336"></span>#F09336</td>
+      <td><span class="inline-swatch" style="background:#F09336"></span>#F09336</td>
+      <td><span class="badge badge-matches">Matches</span></td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Light Blue</td>
+      <td><span class="inline-swatch" style="background:#5BC6E9"></span>#5BC6E9</td>
+      <td><span class="inline-swatch" style="background:#5BC6E9"></span>#5BC6E9</td>
+      <td><span class="badge badge-matches">Matches</span></td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Yellow</td>
+      <td><span class="inline-swatch" style="background:#F8D45B"></span>#F8D45B</td>
+      <td><span class="inline-swatch" style="background:#F8D45B"></span>#F8D45B</td>
+      <td><span class="badge badge-matches">Matches</span></td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td><strong>Pink</strong></td>
+      <td><span class="inline-swatch" style="background:#DA417C"></span>#DA417C</td>
+      <td><span class="inline-swatch" style="background:#FF82B2"></span>#FF82B2</td>
+      <td><span class="badge badge-differs">Differs</span></td>
+      <td><strong>High</strong> — used in --action token (sign-out, CTAs). Visible difference.</td>
+    </tr>
+    <tr>
+      <td>Light Green</td>
+      <td><span class="inline-swatch" style="background:#AFDA44"></span>#AFDA44</td>
+      <td><span class="inline-swatch" style="background:#B5E046"></span>#B5E046</td>
+      <td><span class="badge badge-differs">Differs</span></td>
+      <td>None — colour is unused in any component</td>
+    </tr>
+    <tr>
+      <td>Ivory</td>
+      <td><span class="inline-swatch" style="background:#FFFFE3"></span>#FFFFE3</td>
+      <td><span class="inline-swatch" style="background:#FDF9EA"></span>#FDF9EA</td>
+      <td><span class="badge badge-differs">Differs</span></td>
+      <td>None — colour is unused in any component</td>
+    </tr>
+    <tr>
+      <td><strong>Mid Blue</strong></td>
+      <td><span class="inline-swatch" style="background:#347791"></span>#347791</td>
+      <td>—</td>
+      <td><span class="badge badge-missing">Missing</span></td>
+      <td>Medium — potential use for secondary interactive elements</td>
+    </tr>
+    <tr>
+      <td><strong>Dark Pink</strong></td>
+      <td><span class="inline-swatch" style="background:#892055"></span>#892055</td>
+      <td>—</td>
+      <td><span class="badge badge-missing">Missing</span></td>
+      <td>Low — could replace --mcr-wine (#751B48) if that colour is ever used</td>
+    </tr>
+    <tr>
+      <td>Teal</td>
+      <td>—</td>
+      <td><span class="inline-swatch" style="background:#2A6075"></span>#2A6075</td>
+      <td><span class="badge badge-extra">Codebase-only</span></td>
+      <td>None — unused. Consider replacing with Mid Blue (#347791)</td>
+    </tr>
+    <tr>
+      <td>Wine</td>
+      <td>—</td>
+      <td><span class="inline-swatch" style="background:#751B48"></span>#751B48</td>
+      <td><span class="badge badge-extra">Codebase-only</span></td>
+      <td>None — unused. Consider replacing with Dark Pink (#892055)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Recommendations</h2>
+
+<div class="notes">
+  <h3>Priority 1: Pink discrepancy (the only one that matters right now)</h3>
+  <ul>
+    <li><strong>Codebase:</strong> #FF82B2 — a light, bubblegum pink</li>
+    <li><strong>Guidelines:</strong> #DA417C — a deep, rich magenta-pink</li>
+    <li>This is the <strong>only discrepancy that affects live UI</strong> — it powers the <code>--action</code> token (sign-out button, special CTAs)</li>
+    <li>The guidelines version (#DA417C) has better contrast ratios against white text (4.04:1 vs 2.38:1 for #FF82B2)</li>
+    <li><strong>Decision needed:</strong> Adopt guidelines pink or keep current?</li>
+  </ul>
+  <div style="margin-top:0.75rem">
+    <strong>Contrast comparison on white text:</strong>
+    <div class="colour-contrast" style="margin-top:0.5rem">
+      <span class="contrast-sample" style="background:#DA417C;color:white;padding:0.6rem 1.5rem;font-size:0.95rem">Sign Out (Guidelines #DA417C) — 4.04:1</span>
+      <span class="contrast-sample" style="background:#FF82B2;color:white;padding:0.6rem 1.5rem;font-size:0.95rem">Sign Out (Codebase #FF82B2) — 2.38:1 FAIL</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:1.5rem">Priority 2: Align unused tokens (low effort, no visual change)</h3>
+  <ul>
+    <li>Replace <code>--mcr-green</code> #B5E046 → #AFDA44 (guidelines value)</li>
+    <li>Replace <code>--mcr-ivory</code> #FDF9EA → #FFFFE3 (guidelines value)</li>
+    <li>Replace <code>--mcr-teal</code> #2A6075 → add <code>--mcr-mid-blue</code> #347791 (official name)</li>
+    <li>Replace <code>--mcr-wine</code> #751B48 → add <code>--mcr-dark-pink</code> #892055 (official name)</li>
+    <li>These are all unused so there's zero visual impact, but aligns the palette with brand guidelines for future use</li>
+  </ul>
+
+  <h3 style="margin-top:1.5rem">Priority 3: No action needed</h3>
+  <ul>
+    <li>Dark Blue, Orange, Light Blue, Yellow all match perfectly</li>
+    <li>These are the 4 most-used brand colours — good foundation</li>
+  </ul>
+</div>
+
+<h2>Accessibility: WCAG Contrast Check</h2>
+
+<div class="notes">
+  <p>White text on brand colour backgrounds — WCAG AA requires 4.5:1 for normal text, 3:1 for large text (18px+ or 14px+ bold).</p>
+  <table class="delta-table" style="margin-top:1rem">
+    <thead>
+      <tr><th>Colour</th><th>Hex</th><th>Ratio vs White</th><th>AA Normal</th><th>AA Large</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="inline-swatch" style="background:#213350"></span>Dark Blue</td>
+        <td>#213350</td><td>12.4:1</td><td style="color:#166534">Pass</td><td style="color:#166534">Pass</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#F09336"></span>Orange</td>
+        <td>#F09336</td><td>2.28:1</td><td style="color:#991b1b">Fail</td><td style="color:#991b1b">Fail</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#5BC6E9"></span>Light Blue</td>
+        <td>#5BC6E9</td><td>1.66:1</td><td style="color:#991b1b">Fail</td><td style="color:#991b1b">Fail</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#F8D45B"></span>Yellow</td>
+        <td>#F8D45B</td><td>1.45:1</td><td style="color:#991b1b">Fail</td><td style="color:#991b1b">Fail</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#DA417C"></span>Pink (Guidelines)</td>
+        <td>#DA417C</td><td>4.04:1</td><td style="color:#991b1b">Fail (barely)</td><td style="color:#166534">Pass</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#FF82B2"></span>Pink (Codebase)</td>
+        <td>#FF82B2</td><td>2.38:1</td><td style="color:#991b1b">Fail</td><td style="color:#991b1b">Fail</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#347791"></span>Mid Blue</td>
+        <td>#347791</td><td>4.52:1</td><td style="color:#166534">Pass</td><td style="color:#166534">Pass</td>
+      </tr>
+      <tr>
+        <td><span class="inline-swatch" style="background:#892055"></span>Dark Pink</td>
+        <td>#892055</td><td>8.28:1</td><td style="color:#166534">Pass</td><td style="color:#166534">Pass</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.75rem"><strong>Key insight:</strong> Only Dark Blue, Mid Blue, and Dark Pink pass WCAG AA for white text. Orange, Light Blue, Yellow, and the codebase Pink all fail — they must use dark text on those backgrounds. The guidelines Pink (#DA417C) passes at large text size but barely fails normal text.</p>
+</div>
+
+</body>
+</html>

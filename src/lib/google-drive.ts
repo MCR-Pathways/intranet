@@ -12,7 +12,7 @@
  */
 
 import { google, drive_v3 } from "googleapis";
-import { JSDOM } from "jsdom";
+import { parseHTML } from "linkedom";
 import { getServiceAccountKey } from "@/lib/google-auth";
 import { logger } from "@/lib/logger";
 
@@ -236,8 +236,7 @@ export async function exportDocAsHtml(docId: string): Promise<string> {
  * 8. Sanitises href values (XSS prevention)
  */
 export function sanitiseGoogleDocsHtml(rawHtml: string): string {
-  const dom = new JSDOM(rawHtml);
-  const doc = dom.window.document;
+  const { document: doc } = parseHTML(rawHtml);
 
   // Get body content (Google exports full HTML document)
   const body = doc.body;
@@ -327,8 +326,8 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
  */
 export function extractPlainTextFromHtml(html: string): string {
   if (!html) return "";
-  const dom = new JSDOM(html);
-  const body = dom.window.document.body;
+  const { document } = parseHTML(html);
+  const body = document.body;
   if (!body) return "";
 
   // Append a space after block elements so textContent doesn't merge words
