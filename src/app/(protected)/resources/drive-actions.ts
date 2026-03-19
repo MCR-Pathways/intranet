@@ -321,7 +321,7 @@ export async function linkGoogleDoc(
       };
     }
 
-    // Verify the category exists and is a leaf (no subcategories)
+    // Verify the category exists
     const { data: category } = await supabase
       .from("resource_categories")
       .select("id, name, slug")
