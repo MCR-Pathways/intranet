@@ -1103,11 +1103,16 @@ export async function fetchCategoriesForMove(
   if (!user) return [];
 
   // Fetch all non-deleted categories
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("resource_categories")
     .select("id, name, icon, icon_colour, parent_id")
     .is("deleted_at", null)
     .order("sort_order");
+
+  if (error) {
+    logger.error("fetchCategoriesForMove: Supabase error", { error: error.message, code: error.code });
+    return [];
+  }
 
   if (!data) return [];
 
