@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,18 +42,71 @@ interface CategoryOption {
   parent_id: string | null;
 }
 
+/**
+ * Resolve a category ID to its full parent chain.
+ * Returns [majorId, subcategoryId?, subSubcategoryId?] depending on depth.
+ */
+function resolveParentChain(
+  categoryId: string,
+  categories: CategoryOption[]
+): { majorId: string; subId: string; subSubId: string } {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const chain: string[] = [];
+  let currentId: string | null | undefined = categoryId;
+
+  while (currentId) {
+    const cat = byId.get(currentId);
+    if (!cat) break;
+    chain.unshift(cat.id);
+    currentId = cat.parent_id;
+  }
+
+  return {
+    majorId: chain[0] ?? "",
+    subId: chain[1] ?? "",
+    subSubId: chain[2] ?? "",
+  };
+}
+
 export function LinkGoogleDocDialog({
   open,
   onOpenChange,
   defaultCategoryId,
 }: LinkGoogleDocDialogProps) {
   const [docUrl, setDocUrl] = useState("");
-  const [categoryId, setCategoryId] = useState(defaultCategoryId ?? "");
+  const [majorCategoryId, setMajorCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
+  const [subSubcategoryId, setSubSubcategoryId] = useState("");
   const [customTitle, setCustomTitle] = useState("");
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [allCategories, setAllCategories] = useState<CategoryOption[]>([]);
   const [urlError, setUrlError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // Derived category lists
+  const topLevelCategories = useMemo(
+    () => allCategories.filter((c) => c.parent_id === null),
+    [allCategories]
+  );
+
+  const subcategories = useMemo(
+    () =>
+      majorCategoryId
+        ? allCategories.filter((c) => c.parent_id === majorCategoryId)
+        : [],
+    [allCategories, majorCategoryId]
+  );
+
+  const subSubcategories = useMemo(
+    () =>
+      subcategoryId
+        ? allCategories.filter((c) => c.parent_id === subcategoryId)
+        : [],
+    [allCategories, subcategoryId]
+  );
+
+  // Final category ID = most specific selection
+  const categoryId = subSubcategoryId || subcategoryId || majorCategoryId;
 
   // Fetch categories when dialog opens
   useEffect(() => {
@@ -61,7 +114,16 @@ export function LinkGoogleDocDialog({
     setLoadingCategories(true);
     fetchCategoriesForMove()
       .then((cats) => {
-        setCategories(cats as CategoryOption[]);
+        const options = cats as CategoryOption[];
+        setAllCategories(options);
+
+        // Resolve defaultCategoryId to pre-select the cascade
+        if (defaultCategoryId) {
+          const chain = resolveParentChain(defaultCategoryId, options);
+          setMajorCategoryId(chain.majorId);
+          setSubcategoryId(chain.subId);
+          setSubSubcategoryId(chain.subSubId);
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch categories:", err);
@@ -70,17 +132,30 @@ export function LinkGoogleDocDialog({
       .finally(() => {
         setLoadingCategories(false);
       });
-  }, [open]);
+  }, [open, defaultCategoryId]);
 
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       setDocUrl("");
-      setCategoryId(defaultCategoryId ?? "");
+      setMajorCategoryId("");
+      setSubcategoryId("");
+      setSubSubcategoryId("");
       setCustomTitle("");
       setUrlError("");
     }
-  }, [open, defaultCategoryId]);
+  }, [open]);
+
+  function handleMajorCategoryChange(value: string) {
+    setMajorCategoryId(value);
+    setSubcategoryId("");
+    setSubSubcategoryId("");
+  }
+
+  function handleSubcategoryChange(value: string) {
+    setSubcategoryId(value);
+    setSubSubcategoryId("");
+  }
 
   function handleUrlChange(value: string) {
     setDocUrl(value);
@@ -116,7 +191,7 @@ export function LinkGoogleDocDialog({
     });
   }
 
-  const canSubmit = docUrl && categoryId && !urlError && !isPending;
+  const canSubmit = docUrl && majorCategoryId && !urlError && !isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,15 +223,15 @@ export function LinkGoogleDocDialog({
             )}
           </div>
 
-          {/* Category */}
+          {/* Major Category (required) */}
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="major-category">Category</Label>
             <Select
-              value={categoryId}
-              onValueChange={setCategoryId}
+              value={majorCategoryId}
+              onValueChange={handleMajorCategoryChange}
               disabled={isPending || loadingCategories}
             >
-              <SelectTrigger id="category">
+              <SelectTrigger id="major-category">
                 <SelectValue
                   placeholder={
                     loadingCategories ? "Loading..." : "Select a category"
@@ -164,7 +239,7 @@ export function LinkGoogleDocDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {topLevelCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
@@ -172,6 +247,62 @@ export function LinkGoogleDocDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Subcategory (optional — only shown if major category has children) */}
+          {subcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">
+                Subcategory{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Select
+                value={subcategoryId}
+                onValueChange={handleSubcategoryChange}
+                disabled={isPending}
+              >
+                <SelectTrigger id="subcategory">
+                  <SelectValue placeholder="Select a subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Sub-subcategory (optional — only shown if subcategory has children) */}
+          {subSubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="sub-subcategory">
+                Folder{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Select
+                value={subSubcategoryId}
+                onValueChange={setSubSubcategoryId}
+                disabled={isPending}
+              >
+                <SelectTrigger id="sub-subcategory">
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subSubcategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Custom title (optional) */}
           <div className="space-y-2">
