@@ -9,15 +9,13 @@
 
 ## Completed Modules
 
-### Learning & Development ✅
-- Course catalogue with category filtering (`/learning/courses`)
-- Course detail pages with enrolment
-- My courses page (enrolled/completed)
-- Progress tracking and completion status
-- Compliance training due date alerts
-- Tool Shed page (`/learning/tool-shed`)
-- **Admin features:** Course CRUD, admin reports (`/learning/admin/`)
-- Notification system for course publishing (RPC + UI)
+### Learning & Development 🔄 (Overhaul in progress — replacing LearnDash)
+- **Original V1** (complete): Course catalogue, enrolment, progress tracking, compliance alerts, admin CRUD/reports
+- **Overhaul** (in progress): Full LMS rebuild. See `docs/learning-overhaul.md` for comprehensive handover.
+  - Phase 1 ✅: Migrations (00060-00064), shared utilities (learning.ts, algolia.ts, certificates.ts, email.ts), section CRUD actions
+  - Phase 2 ⬜: Admin UI, learner UI, certificates, feedback, Tool Shed, global search, integrations, dashboard
+  - Branch: `feature/learning-overhaul-migrations`
+  - Key changes: Course→Sections→Lessons, section quizzes, certificates (PDF), Tool Shed social learning, global Cmd+K search, private course feedback, email notifications (Resend)
 
 ### Sign-In / Working Location ✅ (v2 complete)
 - Schedule-based weekly working location planner (replaced daily sign-in)
@@ -198,6 +196,7 @@ Complete redesign of the Resources module. Tiptap article editor replaced with G
 - [x] **Prose rendering fix** (PR #160): `@tailwindcss/typography` was never installed. Added dependency + `@plugin` directive in globals.css.
 - [x] **6 google-drive tests**: Now passing — fixed by linkedom HTML fragment wrapping commit on main.
 - [x] **Cascading category selection** (PR #161): Link Google Doc dialog now uses progressive cascading selects (Category → Subcategory → Folder). Articles can live at any level. Leaf-only constraint removed from `fetchCategoriesForMove()` and `moveArticle()`.
+- [x] **Google Docs formatting preservation** (PR #162): HTML sanitiser now preserves semantic formatting from Google Docs inline styles. Bold spans → `<strong>`, italic → `<em>`, first-row `<td>` → `<th>` for proper prose header styling, column widths extracted from pixel values and converted to responsive percentages. 5 new tests.
 - [ ] **Algolia index creation**: `resources_articles` index auto-creates on first successful Google Doc link.
 
 ### Intranet Phase 8 — Surveys + Universal Search

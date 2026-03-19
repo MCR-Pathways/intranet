@@ -4,7 +4,9 @@
 > **Author:** Abdulmuiz Adaranijo + Claude Code
 > **Branch:** `feature/learning-overhaul`
 > **Plan file:** `.claude/plans/virtual-splashing-hippo.md`
-> **Status:** Planning complete, implementation starting
+> **Status:** Implementation in progress (Phase 1 complete — schema + utilities + actions)
+> **Branch:** `feature/learning-overhaul-migrations`
+> **Commits:** 2 commits (3,168 lines added)
 
 ---
 
@@ -36,7 +38,7 @@ The L&D team manages **50+ courses** for all ~60 staff (internal staff + externa
 - Quiz at the **end of each section**, not per-lesson
 - Quiz **gates progression** to the next section until passed
 - Admin sets passing score per quiz (default 80%)
-- Existing quiz-as-lesson-type data will be migrated to section quizzes
+- Clean slate — no real users exist, so old quiz data was deleted (not migrated)
 
 ### 3. Certificate System
 - Auto-generated **PDF certificate** when a course is completed
@@ -164,27 +166,109 @@ Interactive HTML mockups were created during planning:
 - `courses` — ADD `feedback_avg` NUMERIC(3,2), `feedback_count` INT
 - `course_assignments` — ALTER CHECK to include 'user'
 
-### Migrations (00060–00067)
-Must run in order. Key data migrations in 00060 (create default sections for existing courses, move lessons into them) and 00061 (migrate quiz lessons to section quizzes).
+### Migrations (00060–00064)
+5 migration files (consolidated from original 8). Clean slate — all old learning seed data deleted since no real users exist. No backward compatibility migration needed.
+
+| Migration | File | Contents |
+|-----------|------|----------|
+| 00060 | `learning_overhaul_sections.sql` | Clean up old data, course_sections table, section_id on lessons, remove 'quiz' from lesson_type CHECK, section quiz tables (quizzes/questions/options/attempts), all RLS |
+| 00061 | `learning_overhaul_certificates_feedback.sql` | Certificates table + number generator function, course_feedback table, feedback aggregate trigger, feedback columns on courses, certificates storage bucket, all RLS |
+| 00062 | `learning_overhaul_tool_shed.sql` | tool_shed_entries table with JSONB content, GIN index on tags, all RLS |
+| 00063 | `learning_overhaul_email_and_assignments.sql` | email_notifications queue table, ALTER course_assignments CHECK to add 'user', rewrite auto_enroll_from_assignment trigger for 'user' type |
+| 00064 | `learning_overhaul_rpcs.sql` | Rewrite complete_lesson_and_update_progress for sections, new submit_section_quiz_attempt RPC, generate_certificate_on_completion trigger |
 
 ---
 
-## Implementation Order
+## Implementation Progress
 
+### COMPLETED (Phase 1 — Foundation)
 ```
-1.  Migrations (schema foundation)
-2.  Shared utilities (learning.ts, algolia.ts, certificates.ts, email.ts)
-3.  Section-based course builder (admin)
-4.  Section-based learner experience (sidebar, accordion, quiz player)
-5.  Certificates (PDF generation, wall page)
-6.  Course feedback (dialog, admin dashboard)
-7.  Tool Shed rewrite (feed, create form, admin)
-8.  Individual assignment + Algolia course search
-9.  Global search (header Cmd+K overlay)
-10. Profile + Manager integration
-11. Notifications + email (Resend)
-12. Dashboard redesign + navigation updates (final polish)
+✅ 1. Migrations (00060-00064) — 5 files, all schema + RLS + RPCs + triggers
+✅ 2. Shared utilities:
+      - learning.ts — expanded: section types, Tool Shed format config, section-aware
+        progress logic (getLockedSectionIds, calculateSectionProgress), lesson type
+        config, duration formatting, notification type config, postcard field config
+      - algolia.ts — extended: COURSES_INDEX, AlgoliaCourseRecord, indexCourse(),
+        removeCourseFromIndex()
+      - certificates.ts — NEW: CertificateDocument component, generateCertificatePdf()
+        using @react-pdf/renderer
+      - email.ts — NEW: Resend client, MCR-branded email templates
+        (course assigned, overdue, certificate earned), sendEmail()
+✅ 3. Section server actions:
+      - section-actions.ts — NEW: full CRUD for sections, section quizzes, quiz
+        questions, quiz options (with reorder support)
+      - actions.ts — MODIFIED: createLesson now requires section_id, publishCourse
+        validates sections + section quizzes instead of quiz-as-lesson
 ```
+
+### REMAINING (Phase 2 — UI Components, need new session)
+```
+⬜ 4. Admin UI components:
+      - section-manager.tsx — CRUD sections with drag-reorder
+      - section-lesson-manager.tsx — manage lessons within a section
+      - section-quiz-editor.tsx — section quiz question/option editor
+      - Update admin course detail page to use sections layout
+
+⬜ 5. Learner UI components:
+      - section-accordion.tsx — expandable sections in course detail
+      - section-quiz-player.tsx — section quiz UI (adapted from quiz-player)
+      - lesson-sidebar.tsx — REWRITE: section-grouped, collapsible, LinkedIn-style
+        checkmarks (green check done, blue dot current, grey circle pending)
+      - section-progress-indicator.tsx
+      - Update course detail page, lesson player page
+      - New route: /learning/courses/[id]/sections/[sectionId]/quiz
+
+⬜ 6. Certificate system:
+      - certificate-card.tsx, certificate-download-button.tsx
+      - /learning/certificates page (certificate wall)
+      - /learning/certificates/[id] page
+      - /api/certificates/[id]/pdf API route
+      - certificates/actions.ts
+
+⬜ 7. Course feedback:
+      - course-feedback-dialog.tsx (5 structured fields, X close + "Maybe later")
+      - feedback-dashboard.tsx (admin: aggregates + anonymous comments + CSV)
+      - Show dialog once after course completion, never nag
+
+⬜ 8. Tool Shed rewrite:
+      - tool-shed-entry-card.tsx, tool-shed-filter-bar.tsx
+      - tool-shed-create-form.tsx + postcard/321/takeover sub-forms
+      - tool-shed-entry-detail.tsx
+      - /learning/tool-shed page (complete rewrite: social feed)
+      - /learning/tool-shed/new, /[id], /[id]/edit pages
+      - tool-shed/actions.ts
+      - Admin: tool-shed-admin-table.tsx + /learning/admin/tool-shed page
+
+⬜ 9. Algolia course search:
+      - course-search.tsx (InstantSearch for catalogue)
+      - Update /learning/courses page to include search bar above tabs
+      - Index courses on publish, remove on unpublish
+
+⬜ 10. Global Cmd+K search:
+      - global-search.tsx (multi-index overlay in header)
+      - Update header.tsx to add search icon
+
+⬜ 11. Integrations:
+      - sidebar.tsx — update Learning children
+      - Profile page — add Learning tab
+      - Team page — add compliance summary
+      - Notification RPCs for learning events
+
+⬜ 12. Dashboard redesign:
+      - /learning page — list-first layout
+      - Final polish, consistency pass
+```
+
+### PR Strategy (Small PRs)
+- **PR 1:** ✅ Migrations + utilities + section actions (DONE, on branch `feature/learning-overhaul-migrations`)
+- **PR 2:** Admin UI (section manager, quiz editor, course detail page)
+- **PR 3:** Learner UI (section accordion, sidebar rewrite, quiz player)
+- **PR 4:** Certificates (pages, PDF, actions)
+- **PR 5:** Feedback (dialog, admin dashboard)
+- **PR 6:** Tool Shed (full rewrite)
+- **PR 7:** Algolia search + global Cmd+K
+- **PR 8:** Integrations (profile, team, sidebar, notifications)
+- **PR 9:** Dashboard redesign + polish
 
 Steps 5–8 can be parallelised after step 4.
 
@@ -245,12 +329,53 @@ Steps 5–8 can be parallelised after step 4.
 
 ---
 
+## Key Implementation Details
+
+### Clean Slate Decision
+- **No real users exist** — all learning data is seed/test data
+- Migration 00060 DELETEs all rows from learning tables before restructuring
+- No backward compatibility migration needed (no default sections, no quiz migration)
+- Old quiz tables (`quiz_questions`, `quiz_options`, `quiz_attempts`) still exist structurally but are empty and unused
+- `lesson_type` CHECK changed from `('video', 'text', 'quiz')` to `('video', 'text')` — quizzes now section-level only
+
+### Files Created/Modified So Far
+**New files:**
+- `supabase/migrations/00060_learning_overhaul_sections.sql`
+- `supabase/migrations/00061_learning_overhaul_certificates_feedback.sql`
+- `supabase/migrations/00062_learning_overhaul_tool_shed.sql`
+- `supabase/migrations/00063_learning_overhaul_email_and_assignments.sql`
+- `supabase/migrations/00064_learning_overhaul_rpcs.sql`
+- `src/lib/certificates.ts`
+- `src/lib/email.ts`
+- `src/app/(protected)/learning/admin/courses/section-actions.ts`
+- `docs/learning-overhaul.md`
+
+**Modified files:**
+- `src/lib/learning.ts` (55→250 lines: added section logic, Tool Shed config, duration formatting)
+- `src/lib/algolia.ts` (162→250 lines: added COURSES_INDEX, course indexing)
+- `src/app/(protected)/learning/admin/courses/actions.ts` (createLesson now requires section_id, publishCourse validates sections)
+- `package.json` (added @react-pdf/renderer, resend)
+
+### Existing Files That Still Need Modification (for new session)
+- `src/components/layout/header.tsx` — add search icon
+- `src/components/layout/sidebar.tsx` (lines 103-122) — update Learning children
+- `src/components/learning/lesson-sidebar.tsx` — full rewrite for sections
+- `src/components/learning/quiz-player.tsx` — adapt for section quizzes (or create new)
+- `src/components/learning-admin/lesson-manager.tsx` — section-grouped view
+- `src/app/(protected)/learning/page.tsx` — dashboard redesign
+- `src/app/(protected)/learning/courses/page.tsx` — add Algolia search
+- `src/app/(protected)/learning/courses/[id]/page.tsx` — sections accordion
+- `src/app/(protected)/learning/courses/[id]/lessons/[lessonId]/page.tsx` — section context
+- `src/app/(protected)/learning/tool-shed/page.tsx` — complete rewrite
+- `src/app/(protected)/learning/my-courses/page.tsx` — add Certificates tab
+- `src/app/(protected)/learning/admin/courses/[id]/page.tsx` — section manager UI
+- `src/app/(protected)/learning/admin/reports/page.tsx` — add feedback/certs/tool shed tabs
+- `src/app/(protected)/hr/profile/page.tsx` — add Learning tab
+- `src/app/(protected)/hr/team/page.tsx` — add compliance summary
+
 ## Verification Checklist
 
-- [ ] All 8 migrations run successfully on local Supabase
-- [ ] Existing courses have "Default Section" with all lessons migrated
-- [ ] Quiz lessons migrated to section quizzes, old data preserved
-- [ ] Existing progress_percent values unchanged
+- [ ] All 5 migrations run successfully on local Supabase
 - [ ] Create course with multiple sections + quizzes (admin)
 - [ ] Enrol, complete sections, verify quiz gates progression
 - [ ] Complete course → certificate auto-generates
@@ -263,6 +388,13 @@ Steps 5–8 can be parallelised after step 4.
 - [ ] Certificate wall shows internal + external certs
 - [ ] Profile Learning tab shows data
 - [ ] Manager team compliance view works
-- [ ] Existing courses still work (backward compatibility)
 - [ ] All components keyboard-navigable
 - [ ] WCAG AA contrast passes
+
+## Lessons Learned During This Session
+
+1. **No real users simplifies everything.** Migration complexity dropped by 60% when we confirmed no real users exist — no backward compat, no data migration, clean slate.
+2. **Separate action files for large features.** Created `section-actions.ts` alongside `actions.ts` rather than growing the 888-line file further.
+3. **Mockups must mirror the real app.** Standalone HTML mockups were rejected — had to use the real intranet's sidebar, header, and design tokens for the user to evaluate direction.
+4. **Consistency audit before implementation.** Found 6 inconsistencies across mockups (mixed text/badge status, broken emoji icons, naming mismatches). Catching these during design prevented code rework.
+5. **The user wants research-backed decisions.** Don't present options without explaining what top platforms do. Always cite LinkedIn Learning, Coursera, etc. when recommending UI patterns.
