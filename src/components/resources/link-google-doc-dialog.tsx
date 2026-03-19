@@ -59,10 +59,17 @@ export function LinkGoogleDocDialog({
   useEffect(() => {
     if (!open) return;
     setLoadingCategories(true);
-    fetchCategoriesForMove().then((cats) => {
-      setCategories(cats as CategoryOption[]);
-      setLoadingCategories(false);
-    });
+    fetchCategoriesForMove()
+      .then((cats) => {
+        setCategories(cats as CategoryOption[]);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch categories:", err);
+        toast.error("Failed to load categories");
+      })
+      .finally(() => {
+        setLoadingCategories(false);
+      });
   }, [open]);
 
   // Reset form when dialog closes
