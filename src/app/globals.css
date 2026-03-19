@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* MCR Pathways Design System */
 /* TT Commons Pro font from Adobe Fonts */
