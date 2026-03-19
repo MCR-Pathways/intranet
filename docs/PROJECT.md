@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-18
+> **Last reviewed:** 2026-03-19
 > **Document updated during:** Periodic syncs
 
 ---
@@ -425,8 +425,8 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 52 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1257 tests across 52 files
+- **Files:** 53 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1261 tests across 53 files
 
 ### Test Categories
 
@@ -710,7 +710,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
-| 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes: jsdom→linkedom migration (Vercel serverless ERR_REQUIRE_ESM), category dropdown .catch()/.finally() error handling, error logging for fetchCategoriesForMove. PR #159 merged + direct main commits. Prose rendering bug discovered (headings/tables unstyled). |
+| 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes + enhancements. PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). PR #161: cascading category selection for Link Google Doc dialog (Category → Subcategory → Folder, progressive disclosure, articles can live at any hierarchy level, leaf-only constraint removed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,261 tests, 53 files. |
 | 2026-03-18 | Abdul-Muiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
