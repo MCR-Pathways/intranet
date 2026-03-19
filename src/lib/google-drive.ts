@@ -332,9 +332,10 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
     if (el.tagName === "TH" || el.tagName === "TD") {
       const style = el.getAttribute("style") ?? "";
       const widthMatch = style.match(/width:\s*\d+%/);
-      el.removeAttribute("style");
       if (widthMatch) {
         el.setAttribute("style", widthMatch[0]);
+      } else {
+        el.removeAttribute("style");
       }
     } else {
       el.removeAttribute("style");
