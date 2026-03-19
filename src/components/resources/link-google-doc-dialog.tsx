@@ -51,28 +51,21 @@ function resolveParentChain(
   categories: CategoryOption[]
 ): { majorId: string; subId: string; subSubId: string } {
   const byId = new Map(categories.map((c) => [c.id, c]));
-  const cat = byId.get(categoryId);
-  if (!cat) return { majorId: "", subId: "", subSubId: "" };
+  const chain: string[] = [];
+  let currentId: string | null | undefined = categoryId;
 
-  // Walk up the parent chain
-  if (!cat.parent_id) {
-    // It's a top-level category
-    return { majorId: cat.id, subId: "", subSubId: "" };
+  while (currentId) {
+    const cat = byId.get(currentId);
+    if (!cat) break;
+    chain.unshift(cat.id);
+    currentId = cat.parent_id;
   }
 
-  const parent = byId.get(cat.parent_id);
-  if (!parent) return { majorId: cat.id, subId: "", subSubId: "" };
-
-  if (!parent.parent_id) {
-    // cat is a subcategory (level 1)
-    return { majorId: parent.id, subId: cat.id, subSubId: "" };
-  }
-
-  // cat is a sub-subcategory (level 2)
-  const grandparent = byId.get(parent.parent_id);
-  if (!grandparent) return { majorId: parent.id, subId: cat.id, subSubId: "" };
-
-  return { majorId: grandparent.id, subId: parent.id, subSubId: cat.id };
+  return {
+    majorId: chain[0] ?? "",
+    subId: chain[1] ?? "",
+    subSubId: chain[2] ?? "",
+  };
 }
 
 export function LinkGoogleDocDialog({
