@@ -985,20 +985,6 @@ export async function moveArticle(
     return { success: false, error: "Target category not found" };
   }
 
-  // Block moving to a parent category that has subcategories
-  const { count: childCatCount } = await supabase
-    .from("resource_categories")
-    .select("id", { count: "exact", head: true })
-    .eq("parent_id", targetCategoryId)
-    .is("deleted_at", null);
-
-  if (childCatCount && childCatCount > 0) {
-    return {
-      success: false,
-      error: "Cannot move articles to a category that has subcategories. Choose a subcategory instead.",
-    };
-  }
-
   // Ensure slug is unique in the target category
   const slug = await ensureUniqueArticleSlug(supabase, article.slug, targetCategoryId, articleId);
 
@@ -1119,14 +1105,9 @@ export async function fetchCategoriesForMove(
 
   const all = data as MoveCategoryOption[];
 
-  // Find which categories are parents (have children)
-  const parentIds = new Set(all.filter((c) => c.parent_id).map((c) => c.parent_id!));
-
-  // Only return leaf categories (no children) — articles can't live on parents
-  // Also exclude the current category
-  return all.filter(
-    (c) => !parentIds.has(c.id) && c.id !== excludeCategoryId
-  );
+  // Return all categories (articles can live at any level)
+  // Exclude the optionally specified category (e.g. current category when moving)
+  return all.filter((c) => c.id !== excludeCategoryId);
 }
 
 // ─── Fetch top-level categories for parent picker ─────────────────────────────
