@@ -255,3 +255,26 @@ body {
 .animate-accordion-up {
   animation: accordion-up 200ms ease-out;
 }
+
+/* ── Prose table styling for Google Docs content ──────────────────────── */
+/* Google Docs tables need visible structure since the source uses dashed
+   borders and distinct header rows. Default prose tables only have bottom
+   borders which makes content look misaligned. */
+.prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.prose th {
+  background-color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 0.625rem 0.75rem;
+  vertical-align: top;
+}

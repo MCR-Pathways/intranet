@@ -3,7 +3,7 @@
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
 > For intranet overhaul roadmap, see plan in `.claude/plans/encapsulated-doodling-wigderson.md`.
-> Last updated: 2026-03-18
+> Last updated: 2026-03-19
 
 ---
 
@@ -195,8 +195,9 @@ Complete redesign of the Resources module. Tiptap article editor replaced with G
 - [x] **jsdom → linkedom migration** (PR #159 + main commits): jsdom v28 failed with ERR_REQUIRE_ESM on Vercel serverless. Replaced with linkedom in `html-sections.ts` and `google-drive.ts`. jsdom kept in devDependencies for Vitest.
 - [x] **Category dropdown error handling**: Added `.catch()`/`.finally()` to `fetchCategoriesForMove()` in link dialog.
 - [x] **Error logging**: Added `logger.error` to `fetchCategoriesForMove` for Supabase query failures.
-- [ ] **Prose rendering bug**: Tailwind `prose` heading/table styles not applying to synced Google Doc HTML. See `memory/prose-rendering-investigation.md`.
-- [ ] **6 failing google-drive tests**: Whitespace differences between jsdom (test) and linkedom (production).
+- [x] **Prose rendering fix** (PR #160): `@tailwindcss/typography` was never installed. Added dependency + `@plugin` directive in globals.css.
+- [x] **6 google-drive tests**: Now passing — fixed by linkedom HTML fragment wrapping commit on main.
+- [x] **Cascading category selection** (PR #161): Link Google Doc dialog now uses progressive cascading selects (Category → Subcategory → Folder). Articles can live at any level. Leaf-only constraint removed from `fetchCategoriesForMove()` and `moveArticle()`.
 - [ ] **Algolia index creation**: `resources_articles` index auto-creates on first successful Google Doc link.
 
 ### Intranet Phase 8 — Surveys + Universal Search

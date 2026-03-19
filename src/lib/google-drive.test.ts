@@ -204,11 +204,44 @@ describe("sanitiseGoogleDocsHtml", () => {
     expect(result).toContain("<li>Item 2</li>");
   });
 
-  it("preserves table elements", () => {
-    const input = '<html><body><table style="width:100%"><tr><td style="border:1px solid">Cell</td></tr></table></body></html>';
+  it("preserves table elements and promotes first row to th", () => {
+    const input = '<html><body><table style="width:100%"><tr><td style="border:1px solid">Header</td></tr><tr><td>Cell</td></tr></table></body></html>';
     const result = sanitiseGoogleDocsHtml(input);
     expect(result).toContain("<table>");
+    expect(result).toContain("<th>Header</th>");
     expect(result).toContain("<td>Cell</td>");
+  });
+
+  it("converts bold spans to strong tags", () => {
+    const input = '<html><body><p><span style="font-weight:700">Bold text</span></p></body></html>';
+    const result = sanitiseGoogleDocsHtml(input);
+    expect(result).toContain("<strong>Bold text</strong>");
+    expect(result).not.toContain("<span");
+  });
+
+  it("converts italic spans to em tags", () => {
+    const input = '<html><body><p><span style="font-style:italic">Italic text</span></p></body></html>';
+    const result = sanitiseGoogleDocsHtml(input);
+    expect(result).toContain("<em>Italic text</em>");
+  });
+
+  it("converts bold+italic spans to nested strong+em", () => {
+    const input = '<html><body><p><span style="font-weight:700;font-style:italic">Both</span></p></body></html>';
+    const result = sanitiseGoogleDocsHtml(input);
+    expect(result).toContain("<strong><em>Both</em></strong>");
+  });
+
+  it("preserves table column widths as percentages", () => {
+    const input = '<html><body><table><tr><td style="width:200px">A</td><td style="width:300px">B</td></tr><tr><td>C</td><td>D</td></tr></table></body></html>';
+    const result = sanitiseGoogleDocsHtml(input);
+    expect(result).toContain('style="width:40%"');
+    expect(result).toContain('style="width:60%"');
+  });
+
+  it("skips column widths when no width styles present", () => {
+    const input = '<html><body><table><tr><td>A</td><td>B</td></tr></table></body></html>';
+    const result = sanitiseGoogleDocsHtml(input);
+    expect(result).toContain("<th>A</th>");
     expect(result).not.toContain("style=");
   });
 
