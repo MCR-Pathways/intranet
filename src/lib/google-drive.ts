@@ -248,13 +248,98 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
   const removeTags = body.querySelectorAll("style, script, meta, link, title");
   removeTags.forEach((el: Element) => el.remove());
 
-  // Process all elements
+  // ── Phase 1: Preserve semantic formatting from inline styles ──────────
+  // Google Docs uses <span style="font-weight:700"> for bold and
+  // <span style="font-style:italic"> for italic instead of <strong>/<em>.
+  // Convert these BEFORE stripping styles so formatting is preserved.
+  const styledSpans = body.querySelectorAll("span[style]");
+  styledSpans.forEach((span: Element) => {
+    const style = span.getAttribute("style") ?? "";
+    const isBold = /font-weight:\s*(700|bold)/i.test(style);
+    const isItalic = /font-style:\s*italic/i.test(style);
+
+    if (isBold && isItalic) {
+      // Wrap content in <strong><em>...</em></strong>
+      const strong = doc.createElement("strong");
+      const em = doc.createElement("em");
+      while (span.firstChild) em.appendChild(span.firstChild);
+      strong.appendChild(em);
+      span.parentNode?.replaceChild(strong, span);
+    } else if (isBold) {
+      const strong = doc.createElement("strong");
+      while (span.firstChild) strong.appendChild(span.firstChild);
+      span.parentNode?.replaceChild(strong, span);
+    } else if (isItalic) {
+      const em = doc.createElement("em");
+      while (span.firstChild) em.appendChild(span.firstChild);
+      span.parentNode?.replaceChild(em, span);
+    }
+  });
+
+  // ── Phase 2: Preserve table column widths as responsive percentages ───
+  // Google Docs exports <td style="width:234px">. Extract pixel widths from
+  // the first row and convert to percentages before stripping all styles.
+  const tables = body.querySelectorAll("table");
+  tables.forEach((table: Element) => {
+    const firstRow = table.querySelector("tr");
+    if (!firstRow) return;
+
+    const cells = firstRow.querySelectorAll("td, th");
+    const widths: number[] = [];
+
+    cells.forEach((cell: Element) => {
+      const style = cell.getAttribute("style") ?? "";
+      const match = style.match(/width:\s*([\d.]+)\s*(?:px|pt)/i);
+      widths.push(match ? parseFloat(match[1]) : 0);
+    });
+
+    const totalWidth = widths.reduce((sum, w) => sum + w, 0);
+    if (totalWidth > 0) {
+      cells.forEach((cell: Element, i: number) => {
+        if (widths[i] > 0) {
+          const pct = Math.round((widths[i] / totalWidth) * 100);
+          cell.setAttribute("style", `width:${pct}%`);
+        }
+      });
+    }
+  });
+
+  // ── Phase 3: Promote first table row <td> to <th> ─────────────────────
+  // Google Docs never uses <th> — all cells are <td>. Promote the first
+  // row's cells so Tailwind prose can style headers correctly.
+  tables.forEach((table: Element) => {
+    const firstRow = table.querySelector("tr");
+    if (!firstRow) return;
+
+    const cells = firstRow.querySelectorAll("td");
+    cells.forEach((td: Element) => {
+      const th = doc.createElement("th");
+      // Copy attributes (including width from Phase 2)
+      for (const attr of Array.from(td.attributes) as Attr[]) {
+        th.setAttribute(attr.name, attr.value);
+      }
+      while (td.firstChild) th.appendChild(td.firstChild);
+      td.parentNode?.replaceChild(th, td);
+    });
+  });
+
+  // ── Phase 4: Strip all remaining styles, classes, and data attributes ─
   const allElements = body.querySelectorAll("*");
   const emptySpans: Element[] = [];
 
   allElements.forEach((el: Element) => {
-    // Strip inline styles
-    el.removeAttribute("style");
+    // Strip inline styles — EXCEPT width on <th>/<td> (preserved from Phase 2)
+    if (el.tagName === "TH" || el.tagName === "TD") {
+      const style = el.getAttribute("style") ?? "";
+      const widthMatch = style.match(/width:\s*\d+%/);
+      if (widthMatch) {
+        el.setAttribute("style", widthMatch[0]);
+      } else {
+        el.removeAttribute("style");
+      }
+    } else {
+      el.removeAttribute("style");
+    }
 
     // Strip class attributes (Google's proprietary classes)
     el.removeAttribute("class");
