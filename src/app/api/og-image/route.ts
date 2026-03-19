@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveExternalUrl } from "@/lib/ssrf";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimiters, createRateLimitResponse, getClientIp } from "@/lib/ratelimit";
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 const FETCH_TIMEOUT_MS = 5000;
@@ -20,6 +21,13 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  // Rate limit by IP + user ID — prevents SSRF abuse
+  if (rateLimiters) {
+    const ip = getClientIp(request);
+    const { success, reset } = await rateLimiters.ogImage.limit(`${ip}:${user.id}`);
+    if (!success) return createRateLimitResponse(reset);
   }
 
   const url = request.nextUrl.searchParams.get("url");

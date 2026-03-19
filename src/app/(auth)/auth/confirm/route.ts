@@ -3,8 +3,21 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { sanitizeRedirectPath } from "@/lib/url";
+import { rateLimiters, getClientIp } from "@/lib/ratelimit";
 
 export async function GET(request: NextRequest) {
+  // Rate limit by IP — prevents OTP brute-force
+  if (rateLimiters) {
+    const ip = getClientIp(request);
+    const { success } = await rateLimiters.auth.limit(ip);
+    if (!success) {
+      const { origin } = new URL(request.url);
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent("Too many attempts. Please try again later.")}`
+      );
+    }
+  }
+
   const { searchParams, origin } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
