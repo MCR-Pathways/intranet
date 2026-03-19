@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Org Chart PoC — Priya's Subtree</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #F2F4F7; color: #213350; padding: 1.5rem;
+  }
+  h1 { font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem; }
+  .sub { font-size: 0.75rem; color: #6b7280; text-align: center; margin-bottom: 1rem; }
+  .toolbar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; }
+  .tool-btn { padding: 0.35rem 0.7rem; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.75rem; background: white; cursor: pointer; color: #6b7280; font-weight: 500; font-family: inherit; }
+  .tool-btn:hover { background: #f3f4f6; color: #213350; }
+
+  .canvas {
+    background: white; border-radius: 12px; border: 1px solid #e5e7eb;
+    position: relative; overflow: auto; min-height: 500px;
+  }
+  .canvas svg { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  /* Card */
+  .card {
+    position: absolute;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem;
+    border-radius: 10px; border: 1px solid #e5e7eb; background: white;
+    width: 210px; height: 44px; cursor: pointer; transition: box-shadow 0.15s;
+    border-left-width: 4px; font-size: 0;
+  }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .av {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 0.45rem; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .ci { flex: 1; min-width: 0; }
+  .cn { font-size: 0.7rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct { font-size: 0.57rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cb { display: flex; gap: 3px; margin-top: 1px; }
+  .bs { font-size: 0.48rem; font-weight: 500; padding: 1px 4px; border-radius: 999px; line-height: 1.3; }
+  .br { background: rgba(33,51,80,0.08); color: #213350; }
+
+  /* Expand button */
+  .exp {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center; gap: 2px;
+    padding: 2px 7px; border-radius: 999px; font-size: 0.5rem; font-weight: 600;
+    border: 1px solid; cursor: pointer; font-family: inherit;
+    white-space: nowrap; z-index: 2;
+  }
+  .exp.c { background: #213350; color: white; border-color: #213350; }
+  .exp.c:hover { background: #2d4568; }
+  .exp.e { background: white; color: #6b7280; border-color: #e5e7eb; }
+  .exp.e:hover { background: #f3f4f6; }
+</style>
+</head>
+<body>
+
+<h1>Proof of Concept — Computed Layout</h1>
+<p class="sub">Priya Sharma's subtree. Positions calculated in JS, rendered with absolute positioning + SVG connectors.</p>
+<div class="toolbar">
+  <button class="tool-btn" onclick="collapseAll()">Collapse All</button>
+  <button class="tool-btn" onclick="expandAll()">Expand All</button>
+</div>
+
+<div class="canvas" id="canvas"></div>
+
+<script>
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const CARD_W = 210;
+const CARD_H = 44;
+const H_GAP = 24;   // horizontal gap between siblings (horizontal layout)
+const V_GAP = 16;   // vertical gap between siblings (vertical layout)
+const BRANCH_GAP = 32; // gap between parent card and children connector (horizontal branching to right)
+const LEVEL_GAP = 60;  // vertical gap between parent and horizontal children row
+const THRESHOLD = 4;
+const PAD = 40;
+
+const DC = {
+  executive:"#334155", people:"#a855f7", finance:"#22c55e",
+  delivery:"#f97316", development:"#06b6d4", engagement:"#ec4899",
+  systems:"#64748b", fundraising:"#f59e0b", communications:"#f43f5e",
+  learning_development:"#6366f1", hr:"#10b981",
+};
+
+// ─── Data ───────────────────────────────────────────────────────────────────
+
+const tree = {
+  id:"ps", name:"Priya Sharma", title:"Head of Engagement & Influencing", dept:"engagement",
+  children: [
+    { id:"cr", name:"Callum Reid", title:"Mentor & YP Engagement Officer", dept:"engagement" },
+    { id:"hd", name:"Hannah Douglas", title:"Mentor & YP Engagement Officer", dept:"engagement" },
+    { id:"nc", name:"Neil Crawford", title:"Strategic Comms Lead", dept:"communications",
+      children: [
+        { id:"ab", name:"Aisha Begum", title:"Policy & Public Affairs Officer", dept:"communications" },
+        { id:"lb", name:"Lucy Brennan", title:"Policy & Public Affairs Officer", dept:"communications" },
+        { id:"ms", name:"Megan Scott", title:"Senior Marketing Officer", dept:"communications" },
+      ]
+    },
+    { id:"af", name:"Aileen Fraser", title:"Strategic Partnerships Lead", dept:"fundraising" },
+    { id:"dm", name:"David Mitchell", title:"Events Coordinator", dept:"engagement" },
+    { id:"rh", name:"Rachel Hill", title:"Engagement Officer", dept:"engagement" },
+  ],
+};
+
+// ─── State ──────────────────────────────────────────────────────────────────
+
+const expanded = new Set(["ps"]);
+
+function tog(id) { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
+function collapseAll() { expanded.clear(); expanded.add("ps"); render(); }
+function expandAll() { (function a(n) { if(n.children?.length) { expanded.add(n.id); n.children.forEach(a); } })(tree); render(); }
+
+function cnt(n) { if(!n.children?.length) return 0; let c=n.children.length; for(const x of n.children) c+=cnt(x); return c; }
+function ini(n) { return n.split(" ").map(w=>w[0]).join("").slice(0,2); }
+
+// ─── Layout engine ──────────────────────────────────────────────────────────
+// Each node gets: { x, y, w, h, node, childPositions[], expandBtnPos, expandBtnDir }
+// parentDir: "horizontal" | "vertical" — the direction THIS node's siblings are laid out
+
+function layoutNode(node, parentDir) {
+  const dc = node.children?.length || 0;
+  const has = dc > 0;
+  const exp = expanded.has(node.id);
+  const tot = cnt(node);
+
+  const result = {
+    node,
+    x: 0, y: 0,
+    w: CARD_W, h: CARD_H,
+    totalW: CARD_W, totalH: CARD_H,
+    listH: CARD_H, // height used for spacing in vertical lists (excludes right-branched children)
+    children: [],
+    expBtn: null,
+  };
+
+  if (!has) return result;
+
+  // Determine where expand button goes
+  const btnDir = (parentDir === "vertical") ? "right" : "bottom";
+
+  if (!exp) {
+    result.expBtn = { dir: btnDir, collapsed: true, count: dc };
+    // Add space for button
+    if (btnDir === "bottom") {
+      result.totalH = CARD_H + 16;
+    } else {
+      result.totalW = CARD_W + 36;
+    }
+    return result;
+  }
+
+  result.expBtn = { dir: btnDir, collapsed: false, count: dc };
+
+  // Layout children based on count and parent context
+  const childLayouts = [];
+
+  if (parentDir === "vertical" || parentDir === "vertical-right") {
+    // Inside vertical parent → children branch to the RIGHT as a vertical list
+    for (const c of node.children) {
+      childLayouts.push(layoutNode(c, "vertical-right"));
+    }
+    // Stack children with TIGHT spacing (smaller than parent list gap)
+    const RIGHT_CHILD_GAP = 6;
+    let childrenListH = 0;
+    let childrenMaxW = 0;
+    for (let i = 0; i < childLayouts.length; i++) {
+      childrenListH += childLayouts[i].listH;
+      if (i < childLayouts.length - 1) childrenListH += RIGHT_CHILD_GAP;
+      childrenMaxW = Math.max(childrenMaxW, childLayouts[i].totalW);
+    }
+
+    // Vertically centre children relative to this card
+    const cardCenterY = CARD_H / 2;
+    const childrenStartY = cardCenterY - childrenListH / 2;
+    const childrenStartX = CARD_W + BRANCH_GAP;
+
+    let cy = childrenStartY;
+    for (const cl of childLayouts) {
+      cl.x = childrenStartX;
+      cl.y = cy;
+      result.children.push(cl);
+      cy += cl.listH + RIGHT_CHILD_GAP;
+    }
+
+    result.totalW = CARD_W + BRANCH_GAP + childrenMaxW;
+    result.totalH = Math.max(CARD_H, childrenListH);
+    result.listH = CARD_H; // Only card height counts for parent vertical list spacing
+    // Mark as right-branching for connector rendering
+    result.rightBranch = true;
+    // Adjust if children extend above the card
+    if (childrenStartY < 0) {
+      const shift = -childrenStartY;
+      for (const cl of result.children) cl.y += shift;
+      result.totalH += shift;
+    }
+
+  } else if (dc === 1) {
+    // Single child — straight down
+    const cl = layoutNode(node.children[0], "vertical");
+    cl.x = (CARD_W - cl.totalW) / 2;
+    cl.y = CARD_H + LEVEL_GAP;
+    result.children.push(cl);
+    result.totalW = Math.max(CARD_W, cl.totalW);
+    result.totalH = CARD_H + LEVEL_GAP + cl.totalH;
+
+  } else if (dc <= THRESHOLD) {
+    // ≤4 children → horizontal below
+    for (const c of node.children) {
+      childLayouts.push(layoutNode(c, "horizontal"));
+    }
+    let totalChildW = 0;
+    let maxChildH = 0;
+    for (let i = 0; i < childLayouts.length; i++) {
+      totalChildW += childLayouts[i].totalW;
+      if (i < childLayouts.length - 1) totalChildW += H_GAP;
+      maxChildH = Math.max(maxChildH, childLayouts[i].totalH);
+    }
+
+    const startX = (CARD_W - totalChildW) / 2;
+    let cx = startX;
+    const childY = CARD_H + LEVEL_GAP;
+    for (const cl of childLayouts) {
+      cl.x = cx;
+      cl.y = childY;
+      result.children.push(cl);
+      cx += cl.totalW + H_GAP;
+    }
+
+    result.totalW = Math.max(CARD_W, totalChildW);
+    result.totalH = CARD_H + LEVEL_GAP + maxChildH;
+
+    // Centre parent card if children are wider
+    if (totalChildW > CARD_W) {
+      // Shift everything so parent is centred above children
+      const parentOffset = (totalChildW - CARD_W) / 2;
+      result.cardOffsetX = parentOffset;
+    }
+
+  } else {
+    // 5+ children → vertical below
+    for (const c of node.children) {
+      childLayouts.push(layoutNode(c, "vertical"));
+    }
+    let totalChildH = 0;
+    let maxChildW = 0;
+    for (let i = 0; i < childLayouts.length; i++) {
+      // Use listH for spacing — excludes right-branched children overflow
+      totalChildH += childLayouts[i].listH;
+      if (i < childLayouts.length - 1) totalChildH += V_GAP;
+      maxChildW = Math.max(maxChildW, childLayouts[i].totalW);
+    }
+
+    const childX = 28; // indent
+    let cy = CARD_H + 24;
+    for (const cl of childLayouts) {
+      cl.x = childX;
+      cl.y = cy;
+      result.children.push(cl);
+      cy += cl.listH + V_GAP;
+    }
+
+    result.totalW = Math.max(CARD_W, childX + maxChildW);
+    result.totalH = CARD_H + 24 + totalChildH;
+  }
+
+  return result;
+}
+
+// ─── Render ─────────────────────────────────────────────────────────────────
+
+function renderLayout(layout, offsetX, offsetY, svgLines) {
+  const cards = [];
+  const cardX = offsetX + (layout.cardOffsetX || 0);
+  const cardY = offsetY;
+  const col = DC[layout.node.dept] || "#94a3b8";
+  const tot = cnt(layout.node);
+  const dc = layout.node.children?.length || 0;
+
+  let badges = "";
+  if (layout.node.fte && layout.node.fte !== 1) badges += `<span class="bs bf">${layout.node.fte} FTE</span>`;
+  if (tot > 0) badges += `<span class="bs br">${tot} ${tot===1?"report":"reports"}</span>`;
+
+  cards.push(`<div class="card" style="left:${cardX}px;top:${cardY}px;border-left-color:${col}">
+    <div class="av" style="background:${col}">${ini(layout.node.name)}</div>
+    <div class="ci">
+      <div class="cn">${layout.node.name}</div>
+      <div class="ct">${layout.node.title}</div>
+      ${badges ? `<div class="cb">${badges}</div>` : ""}
+    </div>
+  </div>`);
+
+  // Expand button
+  if (layout.expBtn) {
+    const btn = layout.expBtn;
+    let bx, by;
+    if (btn.dir === "bottom") {
+      bx = cardX + CARD_W / 2 - 14;
+      by = cardY + CARD_H + 2;
+    } else {
+      // Right side
+      bx = cardX + CARD_W + 4;
+      by = cardY + CARD_H / 2 - 8;
+    }
+    const cls = btn.collapsed ? "c" : "e";
+    const label = btn.collapsed
+      ? (btn.dir === "right" ? `${btn.count} &#9656;` : `&#8964; ${btn.count}`)
+      : (btn.dir === "right" ? `&#9666;` : `&#8963;`);
+    cards.push(`<div class="exp ${cls}" style="left:${bx}px;top:${by}px" onclick="tog('${layout.node.id}')">${label}</div>`);
+  }
+
+  // Draw right-branch trunk line (horizontal from parent + vertical trunk + ticks)
+  const rightChildren = layout.children.filter(c => c.x >= CARD_W);
+  if (rightChildren.length > 0) {
+    const trunkX = cardX + CARD_W + BRANCH_GAP / 2;
+    // Horizontal line from card right edge to trunk
+    svgLines.push(`<line x1="${cardX + CARD_W}" y1="${cardY + CARD_H / 2}" x2="${trunkX}" y2="${cardY + CARD_H / 2}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    // Vertical trunk from first child to last child
+    const firstChildCY = offsetY + rightChildren[0].y + CARD_H / 2;
+    const lastChildCY = offsetY + rightChildren[rightChildren.length - 1].y + CARD_H / 2;
+    if (rightChildren.length > 1) {
+      svgLines.push(`<line x1="${trunkX}" y1="${firstChildCY}" x2="${trunkX}" y2="${lastChildCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    }
+    // Connect parent horizontal line to trunk (vertical bit if needed)
+    const parentMidY = cardY + CARD_H / 2;
+    if (parentMidY < firstChildCY) {
+      svgLines.push(`<line x1="${trunkX}" y1="${parentMidY}" x2="${trunkX}" y2="${firstChildCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    } else if (parentMidY > lastChildCY) {
+      svgLines.push(`<line x1="${trunkX}" y1="${lastChildCY}" x2="${trunkX}" y2="${parentMidY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    }
+  }
+
+  // Draw vertical trunk line for vertical children lists (below parent)
+  const vertChildren = layout.children.filter(c => c.y > CARD_H && c.x < CARD_W);
+  if (vertChildren.length > 0) {
+    const trunkX = cardX + 14;
+    const trunkTop = cardY + CARD_H;
+    const lastChild = vertChildren[vertChildren.length - 1];
+    const trunkBottom = offsetY + lastChild.y + CARD_H / 2;
+    svgLines.push(`<line x1="${trunkX}" y1="${trunkTop}" x2="${trunkX}" y2="${trunkBottom}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+  }
+
+  // Draw connector lines and render children
+  for (const child of layout.children) {
+    const cx = offsetX + child.x + (child.cardOffsetX || 0);
+    const cy = offsetY + child.y;
+
+    // Determine connector type based on child position relative to parent
+    const parentCX = cardX + CARD_W / 2;
+    const parentCY = cardY + CARD_H / 2;
+    const parentBottom = cardY + CARD_H;
+    const parentRight = cardX + CARD_W;
+    const childLeft = cx;
+    const childCY = cy + CARD_H / 2;
+    const childTop = cy;
+    const childCX = cx + CARD_W / 2;
+
+    if (child.x >= CARD_W) {
+      // Right-branching: horizontal tick from trunk to child
+      // (trunk line drawn separately below)
+      const trunkX = cardX + CARD_W + BRANCH_GAP / 2;
+      svgLines.push(`<line x1="${trunkX}" y1="${childCY}" x2="${childLeft}" y2="${childCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    } else if (child.y > CARD_H && child.x < CARD_W) {
+      // Vertical list child — horizontal tick from trunk line to child
+      const trunkX = cardX + 14;
+      svgLines.push(`<line x1="${trunkX}" y1="${childCY}" x2="${cx}" y2="${childCY}" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`);
+    } else {
+      // Horizontal children below — curved connector
+      const midY = parentBottom + (childTop - parentBottom) / 2;
+      svgLines.push(`<path d="M${parentCX},${parentBottom} C${parentCX},${midY} ${childCX},${midY} ${childCX},${childTop}" stroke="#94a3b8" stroke-width="2" fill="none" stroke-linecap="round"/>`);
+    }
+
+    const childCards = renderLayout(child, offsetX + child.x, offsetY + child.y, svgLines);
+    cards.push(...childCards);
+  }
+
+  return cards;
+}
+
+function render() {
+  const layout = layoutNode(tree, "horizontal");
+
+  const canvasW = layout.totalW + PAD * 2;
+  const canvasH = layout.totalH + PAD * 2;
+
+  const svgLines = [];
+  const cards = renderLayout(layout, PAD, PAD, svgLines);
+
+  const el = document.getElementById("canvas");
+  el.style.width = canvasW + "px";
+  el.style.height = canvasH + "px";
+
+  el.innerHTML =
+    `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">${svgLines.join("")}</svg>` +
+    cards.join("");
+}
+
+render();
+</script>
+
+</body>
+</html>

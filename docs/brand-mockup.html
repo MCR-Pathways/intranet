@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCR Pathways — Brand Colour Refinement</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #F2F4F7;
+    color: #213350;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem; }
+  .subtitle { color: #6b7280; font-size: 0.9rem; text-align: center; margin-bottom: 2rem; }
+
+  /* Tabs */
+  .tab-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .tab-btn {
+    padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid #e5e7eb; background: white;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer; color: #6b7280;
+  }
+  .tab-btn.active { background: #213350; color: white; border-color: #213350; }
+  .tab-btn:hover:not(.active) { background: #f3f4f6; color: #213350; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Version labels */
+  .version-label {
+    text-align: center; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  }
+  .version-label::before, .version-label::after { content: ''; flex: 1; max-width: 200px; height: 1px; background: #d1d5db; }
+  .version-label .tag {
+    display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; margin-left: 0.5rem; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* App frame */
+  .app-frame {
+    max-width: 1100px; margin: 0 auto 2rem; background: white;
+    border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  /* Top header bar */
+  .top-bar {
+    display: flex; align-items: center; padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e5e7eb; background: white; position: sticky; top: 0; z-index: 50;
+  }
+  .hamburger { width: 20px; height: 14px; display: flex; flex-direction: column; justify-content: space-between; margin-right: 0.75rem; cursor: default; }
+  .hamburger span { display: block; height: 2px; background: #213350; border-radius: 1px; }
+  .logo-area { display: flex; align-items: center; gap: 0.4rem; }
+  .logo-area img { height: 24px; width: auto; }
+  .top-bar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+  .bell { font-size: 1rem; color: #6b7280; }
+  .header-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: white; }
+
+  /* Layout */
+  .app-body { display: grid; grid-template-columns: 210px 1fr; min-height: 520px; }
+
+  /* Sidebar */
+  .sidebar { padding: 0.5rem 0; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; }
+  .sidebar-nav { flex: 1; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.5rem 0.75rem; margin: 1px 0.4rem;
+    border-radius: 8px; font-size: 0.82rem; font-weight: 500;
+    cursor: default; color: #6b7280;
+  }
+  .sidebar-item.active { background: #213350; color: white; font-weight: 600; }
+  .sidebar-item .ico { width: 18px; text-align: center; font-size: 0.75rem; opacity: 0.7; }
+  .sidebar-item.active .ico { opacity: 1; }
+  .sidebar-child { padding-left: 2.5rem; font-size: 0.78rem; padding-top: 0.35rem; padding-bottom: 0.35rem; color: #6b7280; cursor: default; }
+  .sidebar-child.active-child { color: #213350; font-weight: 600; background: #f3f4f6; border-radius: 6px; margin: 1px 0.4rem; padding-left: 2.1rem; }
+  .sidebar-section { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.75rem 0.75rem 0.25rem; color: #9ca3af; }
+
+  /* Main content area — matches real app-layout.tsx */
+  .main { background: #F2F4F7; padding: 1rem 1.5rem; overflow: hidden; }
+
+  /* Centred feed column — matches real intranet/page.tsx max-w-[590px] mx-auto */
+  .feed-column {
+    max-width: 500px; /* scaled down proportionally for mockup — represents 590px in real app */
+    margin: 0 auto;
+  }
+
+  .breadcrumb { font-size: 0.72rem; color: #6b7280; margin-bottom: 0.25rem; }
+  .breadcrumb a { color: #6b7280; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .breadcrumb .sep { margin: 0 0.3rem; color: #d1d5db; user-select: none; }
+  .page-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.1rem; }
+  .page-desc { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.75rem; }
+
+  /* Location nudge — full width within content area, NOT inside feed column */
+  .nudge {
+    background: #FEF9E7; border: 1px solid #FDE68A; border-radius: 10px;
+    padding: 0.6rem 0.9rem; margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem;
+  }
+  .nudge-sub { color: #92400E; font-size: 0.7rem; }
+  .nudge-pills { display: flex; gap: 0.35rem; margin-left: auto; }
+  .nudge-pill {
+    padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.68rem; font-weight: 500;
+    border: 1px solid #F09336; color: #9a3412; background: #FFF7ED;
+    display: flex; align-items: center; gap: 0.25rem;
+  }
+  .nudge-x { margin-left: 0.5rem; color: #9ca3af; font-size: 0.8rem; cursor: default; }
+
+  /* Cards — matches real card.tsx: rounded-lg border bg-card shadow-sm */
+  .card { background: white; border-radius: 12px; padding: 1rem; margin-bottom: 0.6rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+
+  /* Composer — matches real post-composer.tsx pill-shaped input trigger */
+  .composer { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: white; flex-shrink: 0; }
+  .avatar-sm { width: 28px; height: 28px; font-size: 0.55rem; }
+  .composer-input { flex: 1; background: #f3f4f6; border-radius: 20px; padding: 0.45rem 0.8rem; font-size: 0.78rem; color: #9ca3af; }
+  .composer-actions { display: flex; gap: 1rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; margin-top: 0.25rem; }
+  .composer-action { font-size: 0.72rem; color: #6b7280; display: flex; align-items: center; gap: 0.3rem; }
+  .composer-action .ca-icon { font-size: 0.8rem; }
+
+  /* Post */
+  .post-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .post-name { font-weight: 600; font-size: 0.82rem; }
+  .post-meta { font-size: 0.68rem; color: #6b7280; }
+  .post-body { font-size: 0.8rem; line-height: 1.5; margin-bottom: 0.5rem; }
+  .post-link { font-weight: 500; text-decoration: none; }
+  .post-link:hover { text-decoration: underline; }
+  .post-actions { display: flex; gap: 1rem; font-size: 0.72rem; color: #6b7280; padding-top: 0.4rem; border-top: 1px solid #f3f4f6; }
+
+  /* Table — matches real data-table.tsx: bg-card shadow-md rounded-xl overflow-clip */
+  .table-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.07); }
+  .table-card table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.76rem; }
+  .table-card th { text-align: left; padding: 0.55rem 0.7rem; font-weight: 600; font-size: 0.68rem; background: #E4E7EC; border-bottom: 1px solid #e5e7eb; }
+  .table-card td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #f3f4f6; }
+  .table-card tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.62rem; font-weight: 600; }
+  .badge-active { background: #22c55e; color: white; }
+  .table-footer { padding: 0.4rem 0.7rem; font-size: 0.68rem; color: #6b7280; border-top: 1px solid #f3f4f6; }
+
+  /* Button — matches real btn: rounded-lg with primary bg */
+  .btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600; border: none; cursor: default; }
+
+  /* Annotation badges */
+  .anno {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white;
+    font-size: 0.6rem; font-weight: 700; position: absolute; z-index: 10;
+    box-shadow: 0 2px 4px rgba(239,68,68,0.3);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { box-shadow: 0 2px 4px rgba(239,68,68,0.3); } 50% { box-shadow: 0 2px 8px rgba(239,68,68,0.6); } }
+
+  /* Change callout */
+  .changes-box {
+    max-width: 1100px; margin: 0 auto 2.5rem;
+    background: white; border-radius: 12px; padding: 1rem 1.25rem;
+    border-left: 4px solid #2A6075; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .changes-box h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .change-item { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.78rem; line-height: 1.4; }
+  .change-num {
+    width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white;
+    font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.1); margin: 0 2px; }
+
+  /* Category cards */
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .cat-card { background: white; border-radius: 10px; padding: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 0.6rem; cursor: default; border: 1px solid #e5e7eb; }
+  .cat-card:hover { border-color: rgba(33,51,80,0.3); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+  .cat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+  .cat-name { font-weight: 600; font-size: 0.82rem; }
+  .cat-count { font-size: 0.65rem; color: #6b7280; }
+
+  /* Search bar */
+  .search-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .search-input {
+    flex: 1; padding: 0.45rem 0.7rem; border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 0.78rem; background: white; color: #213350;
+  }
+
+  /* Summary section */
+  .summary {
+    max-width: 1100px; margin: 2rem auto; background: white; border-radius: 16px;
+    padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .summary h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .summary h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1rem; color: #213350; }
+  .summary-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; margin-bottom: 1rem; }
+  .summary-table th { text-align: left; padding: 0.5rem 0.7rem; font-weight: 600; font-size: 0.68rem; background: #E4E7EC; text-transform: uppercase; letter-spacing: 0.04em; }
+  .summary-table td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .summary-table tr:last-child td { border-bottom: none; }
+
+  .dna-section { margin-bottom: 1.5rem; }
+  .dna-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .dna-item {
+    display: flex; gap: 0.5rem; font-size: 0.78rem; line-height: 1.4;
+    padding: 0.5rem 0.6rem; background: #f9fafb; border-radius: 8px; border: 1px solid #f3f4f6;
+  }
+  .dna-check { color: #22c55e; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; margin-top: -1px; }
+  .dna-item strong { font-weight: 600; }
+  .dna-item code { font-size: 0.68rem; background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-family: 'SF Mono', 'Menlo', monospace; }
+  .dna-item .file-ref { font-size: 0.65rem; color: #6b7280; display: block; margin-top: 2px; }
+
+  .pos-rel { position: relative; }
+
+  /* Feed column label */
+  .column-indicator {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto 0.25rem;
+  }
+  .column-indicator::before, .column-indicator::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    border-left: 1px dashed #d1d5db;
+  }
+  .column-indicator::before { left: -8px; }
+  .column-indicator::after { right: -8px; }
+  .column-label {
+    text-align: center;
+    font-size: 0.58rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>MCR Pathways — Brand Colour Refinement</h1>
+<p class="subtitle">4 targeted changes. Everything else stays exactly as it is. This document is the definitive reference.</p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('feed')">News Feed</button>
+  <button class="tab-btn" onclick="showTab('table')">User Management</button>
+  <button class="tab-btn" onclick="showTab('resources')">Resources</button>
+  <button class="tab-btn" onclick="showTab('dna')">Design DNA</button>
+</div>
+
+<!-- ============================================ -->
+<!-- NEWS FEED -->
+<!-- ============================================ -->
+<div id="tab-feed" class="tab-content active">
+
+<!-- CURRENT -->
+<div class="version-label">Current<span class="tag" style="background:#f3f4f6; color:#6b7280;">Today</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item active"><span class="ico">🏠</span> Home <span style="margin-left:auto; font-size:0.7rem;">›</span></div>
+        <div class="sidebar-child">Resources</div>
+        <div class="sidebar-child">Bin</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <!-- Nudge banner: full width within content area, ABOVE the centred feed column -->
+      <div class="nudge">
+        <div>
+          <div style="font-weight:500; color:#92400E;">📍 Where are you working today?</div>
+          <div class="nudge-sub">Let your team know your location.</div>
+        </div>
+        <div class="nudge-pills">
+          <span class="nudge-pill">🏠 Home</span>
+          <span class="nudge-pill">🏢 Glasgow</span>
+          <span class="nudge-pill">🏢 Stevenage</span>
+        </div>
+        <span class="nudge-x">✕</span>
+      </div>
+      <!-- Centred feed column: max-w-[590px] mx-auto — the Facebook-style reading column -->
+      <div class="feed-column">
+        <div class="column-label">← centred 590px column →</div>
+        <div class="page-title">News Feed</div>
+        <div class="page-desc">Stay updated with the latest news and announcements</div>
+        <div class="card">
+          <div class="composer">
+            <div class="avatar" style="background:#213350">AA</div>
+            <div class="composer-input">Share something with the team...</div>
+          </div>
+          <div class="composer-actions">
+            <span class="composer-action"><span class="ca-icon" style="color:#22c55e">🖼</span> Photo</span>
+            <span class="composer-action"><span class="ca-icon" style="color:#6b7280">📎</span> Document</span>
+            <span class="composer-action"><span class="ca-icon" style="color:#8b5cf6">📊</span> Poll</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="post-header">
+            <div class="avatar" style="background:#213350">SJ</div>
+            <div>
+              <div class="post-name">Sarah Johnston</div>
+              <div class="post-meta">HR Manager · 2h ago</div>
+            </div>
+          </div>
+          <div class="post-body">Reminder: all team timesheets need to be submitted by Friday. <a href="#" class="post-link" style="color:#213350">See the policy here</a>.</div>
+          <div class="post-actions"><span>👍 Like</span><span>💬 Comment</span></div>
+        </div>
+        <div class="card">
+          <div class="post-header">
+            <div class="avatar" style="background:#213350">JM</div>
+            <div>
+              <div class="post-name">James Murray</div>
+              <div class="post-meta">Delivery Manager · 1d ago</div>
+            </div>
+          </div>
+          <div class="post-body">Great session with the Edinburgh team yesterday! Thanks <a href="#" class="post-link" style="color:#213350">@Lisa Campbell</a> for organising.</div>
+          <div class="post-actions"><span>👍 3 Likes</span><span>💬 1 Comment</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED -->
+<div class="version-label">Proposed<span class="tag" style="background:#DCFCE7; color:#166534;">Refined</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item active"><span class="ico">🏠</span> Home <span style="margin-left:auto; font-size:0.7rem;">›</span></div>
+        <div class="sidebar-child">Resources</div>
+        <div class="sidebar-child">Bin</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <!-- Nudge banner: UNCHANGED — full width, warm amber, above feed column -->
+      <div class="nudge">
+        <div>
+          <div style="font-weight:500; color:#92400E;">📍 Where are you working today?</div>
+          <div class="nudge-sub">Let your team know your location.</div>
+        </div>
+        <div class="nudge-pills">
+          <span class="nudge-pill">🏠 Home</span>
+          <span class="nudge-pill">🏢 Glasgow</span>
+          <span class="nudge-pill">🏢 Stevenage</span>
+        </div>
+        <span class="nudge-x">✕</span>
+      </div>
+      <!-- Centred feed column: UNCHANGED — same max-width, same centering -->
+      <div class="feed-column">
+        <div class="column-label">← centred 590px column (unchanged) →</div>
+        <div class="page-title">News Feed</div>
+        <div class="page-desc">Stay updated with the latest news and announcements</div>
+        <div class="card">
+          <div class="composer">
+            <div class="avatar pos-rel" style="background:#2A6075">AA
+              <span class="anno" style="top:-8px; right:-8px;">1</span>
+            </div>
+            <div class="composer-input">Share something with the team...</div>
+          </div>
+          <div class="composer-actions">
+            <span class="composer-action"><span class="ca-icon" style="color:#22c55e">🖼</span> Photo</span>
+            <span class="composer-action"><span class="ca-icon" style="color:#6b7280">📎</span> Document</span>
+            <span class="composer-action"><span class="ca-icon" style="color:#8b5cf6">📊</span> Poll</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="post-header">
+            <div class="avatar pos-rel" style="background:#DA417C">SJ
+              <span class="anno" style="top:-8px; right:-8px;">1</span>
+            </div>
+            <div>
+              <div class="post-name">Sarah Johnston</div>
+              <div class="post-meta">HR Manager · 2h ago</div>
+            </div>
+          </div>
+          <div class="post-body pos-rel">Reminder: all team timesheets need to be submitted by Friday. <a href="#" class="post-link" style="color:#2A6075; text-decoration: underline; text-decoration-color: rgba(42,96,117,0.3); text-underline-offset: 2px;">See the policy here</a>.
+            <span class="anno" style="top:-8px; right:120px;">2</span>
+          </div>
+          <div class="post-actions"><span>👍 Like</span><span>💬 Comment</span></div>
+        </div>
+        <div class="card">
+          <div class="post-header">
+            <div class="avatar" style="background:#751B48">JM</div>
+            <div>
+              <div class="post-name">James Murray</div>
+              <div class="post-meta">Delivery Manager · 1d ago</div>
+            </div>
+          </div>
+          <div class="post-body">Great session with the Edinburgh team yesterday! Thanks <a href="#" class="post-link" style="color:#2A6075; text-decoration: underline; text-decoration-color: rgba(42,96,117,0.3); text-underline-offset: 2px;">@Lisa Campbell</a> for organising.</div>
+          <div class="post-actions"><span>👍 3 Likes</span><span>💬 1 Comment</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="changes-box">
+  <h4>Changes in this view</h4>
+  <div class="change-item">
+    <span class="change-num">1</span>
+    <div><strong>Avatar palette</strong> — Avatars use 4 brand colours instead of all navy. Deterministic per user (name hash). Consistent across the entire app.<br>
+      <span class="swatch" style="background:#213350"></span> Navy
+      <span class="swatch" style="background:#2A6075"></span> Teal
+      <span class="swatch" style="background:#DA417C"></span> Pink (WCAG-corrected)
+      <span class="swatch" style="background:#751B48"></span> Wine
+    </div>
+  </div>
+  <div class="change-item">
+    <span class="change-num">2</span>
+    <div><strong>Link colour</strong> — Clickable text uses <span class="swatch" style="background:#2A6075"></span> <code>#2A6075</code> (MCR Teal, 5.4:1 contrast) instead of <span class="swatch" style="background:#213350"></span> body text colour. Subtle underline on hover. Links now visually distinct from plain text.</div>
+  </div>
+  <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; font-size: 0.75rem; color: #6b7280;">
+    <strong style="color:#22c55e;">Preserved:</strong> Centred 590px feed column, pill-shaped composer, card surfaces with borders + shadows, nudge banner (full-width, warm amber), page title + subtitle, post action bar with border-top separator, grey page background.
+  </div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- USER MANAGEMENT TABLE -->
+<!-- ============================================ -->
+<div id="tab-table" class="tab-content">
+
+<!-- CURRENT -->
+<div class="version-label">Current<span class="tag" style="background:#f3f4f6; color:#6b7280;">Today</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item"><span class="ico">🏠</span> Home</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item active"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="breadcrumb"><a href="#">Admin</a> <span class="sep">/</span> User Management</div>
+      <div class="page-title">User Management</div>
+      <div class="page-desc">Manage staff profiles, roles, and induction status</div>
+      <div class="search-bar"><input class="search-input" type="text" placeholder="🔍 Search by name or email..."></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>#</th><th>Person</th><th>Status</th><th>Organisation</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm" style="background:#213350">AA</div><div><div style="font-weight:500; color:#213350;">Abdulmuiz Adaranijo</div><div style="font-size:0.65rem; color:#6b7280;">abdulmuiz.adaranijo@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Systems, Evidence & Impact</div><div style="font-size:0.65rem; color:#6b7280;">West</div></td><td style="color:#6b7280">⋯</td></tr>
+            <tr><td>2</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm" style="background:#213350">AF</div><div><div style="font-weight:500; color:#213350;">Aileen Fraser</div><div style="font-size:0.65rem; color:#6b7280;">aileen.fraser@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Fundraising & Partnerships</div><div style="font-size:0.65rem; color:#6b7280;">East</div></td><td style="color:#6b7280">⋯</td></tr>
+            <tr><td>3</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm" style="background:#213350">AB</div><div><div style="font-weight:500; color:#213350;">Aisha Begum</div><div style="font-size:0.65rem; color:#6b7280;">aisha.begum@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Communications & Policy</div><div style="font-size:0.65rem; color:#6b7280;">West</div></td><td style="color:#6b7280">⋯</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">Showing 3 of 47 results</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED -->
+<div class="version-label">Proposed<span class="tag" style="background:#DCFCE7; color:#166534;">Refined</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item"><span class="ico">🏠</span> Home</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item active"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="breadcrumb"><a href="#" style="color:#2A6075;">Admin</a> <span class="sep">/</span> User Management</div>
+      <div class="page-title">User Management</div>
+      <div class="page-desc">Manage staff profiles, roles, and induction status</div>
+      <div class="search-bar"><input class="search-input" type="text" placeholder="🔍 Search by name or email..."></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>#</th><th>Person</th><th>Status</th><th>Organisation</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm pos-rel" style="background:#2A6075">AA<span class="anno" style="top:-6px; right:-6px; width:16px; height:16px; font-size:0.5rem;">1</span></div><div><div class="pos-rel" style="font-weight:500; color:#2A6075; cursor:pointer;">Abdulmuiz Adaranijo<span class="anno" style="top:-6px; right:-6px; width:16px; height:16px; font-size:0.5rem;">2</span></div><div style="font-size:0.65rem; color:#6b7280;">abdulmuiz.adaranijo@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Systems, Evidence & Impact</div><div style="font-size:0.65rem; color:#6b7280;">West</div></td><td style="color:#6b7280">⋯</td></tr>
+            <tr><td>2</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm" style="background:#DA417C">AF</div><div><div style="font-weight:500; color:#2A6075; cursor:pointer;">Aileen Fraser</div><div style="font-size:0.65rem; color:#6b7280;">aileen.fraser@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Fundraising & Partnerships</div><div style="font-size:0.65rem; color:#6b7280;">East</div></td><td style="color:#6b7280">⋯</td></tr>
+            <tr><td>3</td><td><div style="display:flex; align-items:center; gap:0.5rem;"><div class="avatar avatar-sm" style="background:#751B48">AB</div><div><div style="font-weight:500; color:#2A6075; cursor:pointer;">Aisha Begum</div><div style="font-size:0.65rem; color:#6b7280;">aisha.begum@mcrpathways.org</div></div></div></td><td><span class="badge badge-active">Active</span></td><td><div style="font-size:0.75rem;">Communications & Policy</div><div style="font-size:0.65rem; color:#6b7280;">West</div></td><td style="color:#6b7280">⋯</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">Showing 3 of 47 results</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="changes-box">
+  <h4>Changes in this view</h4>
+  <div class="change-item"><span class="change-num">1</span><div><strong>Avatar palette</strong> — Same 4-colour hash. Each person gets a consistent colour across the entire app.</div></div>
+  <div class="change-item"><span class="change-num">2</span><div><strong>Clickable names</strong> — Employee names use <span class="swatch" style="background:#2A6075"></span> teal to signal they're links. Breadcrumb links also use teal.</div></div>
+  <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; font-size: 0.75rem; color: #6b7280;">
+    <strong style="color:#22c55e;">Preserved:</strong> Table card wrapper (shadow-md, rounded-xl), #E4E7EC table header background, border-separate for sticky header compat, search toolbar inside card, "Showing X of Y" footer, breadcrumb with <code>/</code> separator + hover underlines, page title + subtitle, green Active badge, kebab menu column.
+  </div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- RESOURCES -->
+<!-- ============================================ -->
+<div id="tab-resources" class="tab-content">
+
+<!-- CURRENT -->
+<div class="version-label">Current<span class="tag" style="background:#f3f4f6; color:#6b7280;">Today</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item active"><span class="ico">🏠</span> Home <span style="margin-left:auto; font-size:0.7rem;">›</span></div>
+        <div class="sidebar-child active-child">Resources</div>
+        <div class="sidebar-child">Bin</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="breadcrumb"><a href="#">Home</a> <span class="sep">/</span> Resources</div>
+      <div class="page-title">Resources</div>
+      <div class="page-desc">Policies, guides, and reference materials</div>
+      <div class="search-bar">
+        <input class="search-input" type="text" placeholder="🔍 Search categories...">
+        <button class="btn" style="background:#213350; color:white;">+ New Category</button>
+      </div>
+      <div class="cat-grid">
+        <div class="cat-card"><div class="cat-icon" style="background:#f3f4f6; color:#6b7280;">📋</div><div><div class="cat-name">Policies <span class="badge" style="background:#f3f4f6; color:#6b7280;">1 article</span></div><div class="cat-count">Company policies and procedures</div></div></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#f3f4f6; color:#6b7280;">📖</div><div><div class="cat-name">Guides <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Helpful guides and reference materials</div></div></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#f3f4f6; color:#6b7280;">🔧</div><div><div class="cat-name">How-to Guides <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Step-by-step instructions for common tasks</div></div></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#f3f4f6; color:#6b7280;">📄</div><div><div class="cat-name">Templates <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Document and form templates</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED -->
+<div class="version-label">Proposed<span class="tag" style="background:#DCFCE7; color:#166534;">Refined</span></div>
+<div class="app-frame">
+  <div class="top-bar">
+    <div class="hamburger"><span></span><span></span><span></span></div>
+    <div class="logo-area"><img src="/MCR_LOGO-1.svg" alt="MCR Pathways"></div>
+    <div class="top-bar-right"><span class="bell">🔔</span><div class="header-avatar" style="background:#8B6914;">A</div></div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-nav">
+        <div class="sidebar-item active"><span class="ico">🏠</span> Home <span style="margin-left:auto; font-size:0.7rem;">›</span></div>
+        <div class="sidebar-child active-child">Resources</div>
+        <div class="sidebar-child">Bin</div>
+        <div class="sidebar-item"><span class="ico">👤</span> Me</div>
+        <div class="sidebar-item"><span class="ico">📚</span> Learning</div>
+        <div class="sidebar-item"><span class="ico">📍</span> Location</div>
+      </div>
+      <div style="margin-top:auto;">
+        <div class="sidebar-item"><span class="ico">📊</span> Admin</div>
+        <div class="sidebar-section">Account</div>
+        <div class="sidebar-item"><span class="ico">⚙️</span> Settings</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="breadcrumb"><a href="#" style="color:#2A6075;">Home</a> <span class="sep">/</span> Resources</div>
+      <div class="page-title">Resources</div>
+      <div class="page-desc">Policies, guides, and reference materials</div>
+      <div class="search-bar">
+        <input class="search-input" type="text" placeholder="🔍 Search categories...">
+        <button class="btn" style="background:#213350; color:white;">+ New Category</button>
+      </div>
+      <div class="cat-grid">
+        <div class="cat-card pos-rel"><div class="cat-icon" style="background:#EBF5F7; color:#2A6075;">📋</div><div><div class="cat-name">Policies <span class="badge" style="background:#f3f4f6; color:#6b7280;">1 article</span></div><div class="cat-count">Company policies and procedures</div></div><span class="anno" style="top:-6px; right:-6px;">3</span></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#FBEEF3; color:#DA417C;">📖</div><div><div class="cat-name">Guides <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Helpful guides and reference materials</div></div></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#FFF4E6; color:#F09336;">🔧</div><div><div class="cat-name">How-to Guides <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Step-by-step instructions for common tasks</div></div></div>
+        <div class="cat-card"><div class="cat-icon" style="background:#F0E6F4; color:#751B48;">📄</div><div><div class="cat-name">Templates <span class="badge" style="background:#f3f4f6; color:#6b7280;">0 articles</span></div><div class="cat-count">Document and form templates</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="changes-box">
+  <h4>Changes in this view</h4>
+  <div class="change-item"><span class="change-num">3</span><div><strong>Category icon colour palette</strong> — Replace the 8 generic Tailwind colour swatches (blue, green, orange, red, purple, pink) in the icon picker with MCR brand colours (Teal, Green, Orange, Wine, Light Blue, Pink). Admins choose from brand swatches when creating/editing categories. Default + Grey remain as neutral options.<br>
+      <span style="font-size:0.7rem; color:#6b7280;">File: <code>src/lib/resource-icons.ts</code> → <code>ICON_COLOURS</code> array</span>
+    </div></div>
+  <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; font-size: 0.75rem; color: #6b7280;">
+    <strong style="color:#22c55e;">Preserved:</strong> 2-column responsive grid (sm:grid-cols-2), card surface with border + hover lift, icon + text layout, article count badges, search bar with New Category button (navy primary), breadcrumb with <code>/</code> separator, icon picker UI (Notion model — 8 swatches + icon grid), <code>icon_colour</code> DB field.
+  </div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- DESIGN DNA -->
+<!-- ============================================ -->
+<div id="tab-dna" class="tab-content">
+
+<div class="summary">
+  <h3>Design DNA — What We're Doing Well</h3>
+  <p style="font-size: 0.82rem; color: #6b7280; margin-bottom: 1.25rem;">Every item below is explicitly preserved. None of the 4 proposed changes affect any of these. This is our non-negotiable baseline.</p>
+
+  <h4>Layout & Structure</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Facebook-style centred feed column</strong> — Content is constrained to 590px and horizontally centred. Creates a focused reading experience regardless of viewport width. Grey space visible on both sides.
+        <span class="file-ref">intranet/page.tsx → <code>max-w-[590px] mx-auto</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Grey page background + white card surfaces</strong> — #F2F4F7 page background with white cards using shadow-sm (posts) and shadow-md (tables). Cards are the primary content surface. Industry standard (GitHub, Notion, Linear).
+        <span class="file-ref">globals.css → <code>--background: #F2F4F7</code>, <code>--card: white</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Collapsible sidebar with persistence</strong> — Expanded (w-64) and collapsed (w-16) states. Collapse state persists in localStorage and syncs across tabs via <code>storage</code> event. Tooltip fallbacks in collapsed mode. Smooth 200ms transition.
+        <span class="file-ref">sidebar.tsx, app-layout.tsx → <code>useSyncExternalStore</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Responsive container with padding scale</strong> — Content capped at max-w-7xl. Padding scales by breakpoint: p-4 → md:p-6 → lg:p-8. Ensures breathing room on large screens.
+        <span class="file-ref">app-layout.tsx → <code>max-w-7xl p-4 md:p-6 lg:p-8</code></span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Navigation & Headers</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Sticky header with z-50</strong> — Header stays above content when scrolling. Hamburger, logo, bell, and avatar aligned. Right-aligned user controls with avatar dropdown showing name, email, and job title.
+        <span class="file-ref">header.tsx → <code>sticky top-0 z-50</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Breadcrumbs with / separator</strong> — Text <code>/</code> separators (not chevron icons). Links have <code>hover:underline underline-offset-4</code> for click affordance. Applied consistently across all 24 pages.
+        <span class="file-ref">page-header.tsx → <code>select-none aria-hidden</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Page title + subtitle hierarchy</strong> — h1 at text-3xl font-bold, subtitle in text-muted-foreground. Right-aligned action buttons. Consistent across every page.
+        <span class="file-ref">page-header.tsx → <code>PageHeader</code> component</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Dark navy active pill in sidebar</strong> — Active item: <code>bg-primary text-primary-foreground</code> (#213350 + white). Child items indent with left border. Section labels uppercase with letter-spacing.
+        <span class="file-ref">sidebar.tsx → <code>isItemActive()</code></span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Social Feed</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Pill-shaped composer trigger</strong> — Avatar + rounded-full input reading "Share something with the team..." + action bar below with Photo/Document/Poll. Matches Facebook/LinkedIn convention. Low-friction composition.
+        <span class="file-ref">post-composer.tsx → <code>rounded-full bg-muted px-4 py-2.5</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Optimistic reactions</strong> — Reaction counts update immediately on click before server round-trip. Uses pending state to avoid double-taps. Feels instant.
+        <span class="file-ref">post-card.tsx → <code>useTransition</code> + optimistic state</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Pinned/roundup visual distinction</strong> — Pinned posts get coloured border + "Pinned" badge with pin icon. Weekly roundups get distinct background. Both stand out from regular posts.
+        <span class="file-ref">post-card.tsx → conditional <code>border</code> and <code>bg</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Post action bar with border-top</strong> — Like/Comment/Share actions separated from content by a 1px border-top. Consistent spacing and icon alignment. Matches social platform patterns.
+        <span class="file-ref">post-card.tsx → <code>border-top: 1px solid</code></span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Data Tables</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Card wrapper with shadow-md</strong> — Tables sit inside <code>bg-card shadow-md rounded-xl overflow-clip</code>. More visual weight than post cards. Overflow-clip preserves sticky headers without breaking child scroll containers.
+        <span class="file-ref">data-table.tsx → card wrapper</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Dedicated table header token #E4E7EC</strong> — Not bg-muted (#F0F2F5) which blends into the page. Purpose-built contrast between page, card, and header surfaces.
+        <span class="file-ref">globals.css → <code>--table-header: #E4E7EC</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Search toolbar inside card</strong> — Search input with magnifying glass icon + filter dropdowns. All within the card surface, not floating above. Toolbar is part of the table, not separate.
+        <span class="file-ref">data-table.tsx → toolbar section</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>"Showing X of Y results" footer</strong> — Footer with border-top inside the card. Shows total count when external filtering is active. Pagination controls on the right.
+        <span class="file-ref">data-table.tsx → <code>totalCount</code> prop</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Sticky headers with border-separate</strong> — <code>border-separate border-spacing-0</code> prevents visual glitches when combined with <code>position: sticky</code>. Borders on th cells, not tr rows.
+        <span class="file-ref">data-table.tsx → <code>border-separate</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Sortable column headers with font-semibold</strong> — Ghost Button gets <code>font-semibold</code> override to match non-sortable headers. Sort indicator arrows visible on hover/active.
+        <span class="file-ref">DataTableColumnHeader → <code>font-semibold</code></span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Component Patterns</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Line + pill tab variants</strong> — Line tabs for top-level (border-bottom, after:: pseudo-element underline). Pill tabs for nested sections (bg-muted background). Both get hover:text-foreground. Propagated via data-variant attribute.
+        <span class="file-ref">tabs.tsx → <code>cva</code> with default + line variants</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Semantic badge variants</strong> — success (green), warning (amber), destructive (red), muted, outline. Rounded-full pills. Status colours use dedicated tokens. Compact text-xs sizing.
+        <span class="file-ref">badge.tsx → <code>cva</code> with 7 variants</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Location nudge banner</strong> — Warm amber (#FEF9E7 bg, #FDE68A border). Full-width within content area, above the centred feed column. Location pills with orange border. Dismiss button on right.
+        <span class="file-ref">daily-banner.tsx → amber colour palette</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Primary navy buttons</strong> — #213350 background, white text. Used for primary CTAs (New Category, Add User, Save). Rounded-lg (8px). Clear, professional, consistent.
+        <span class="file-ref">globals.css → <code>--primary: var(--mcr-dark-blue)</code></span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Design Tokens & Theming</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Decoupled accent/secondary tokens</strong> — <code>--accent</code> (#E2E8F0) for hover/focus states. <code>--secondary</code> (#E8ECF0) for badges/surfaces. Independent tuning in both light and dark mode.
+        <span class="file-ref">globals.css → separate hex values in :root and .dark</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Complete dark mode token parity</strong> — Every semantic token has a dark mode equivalent. Proper contrast ratios maintained. Dark mode is not an afterthought.
+        <span class="file-ref">globals.css → <code>.dark</code> block</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Status colour tokens</strong> — <code>--status-active</code> (green), <code>--status-pending</code> (amber), <code>--status-inactive</code> (red). Used by badges, not hardcoded per component.
+        <span class="file-ref">globals.css → status token block</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>bg-card for inputs, not bg-background</strong> — Form controls use <code>bg-card</code> (white) for visibility on grey page background. On white dialogs, the border provides sufficient contrast.
+        <span class="file-ref">CLAUDE.md lesson → <code>bg-card</code> for inputs</span>
+      </div>
+    </div>
+  </div>
+
+  <h4>Accessibility & Motion</h4>
+  <div class="dna-grid">
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Focus-visible with 2px offset</strong> — Global focus ring: 2px outline, 2px offset. Applied via <code>:focus-visible</code> (not <code>:focus</code>). Keyboard navigators see clear focus indicators; mouse users don't.
+        <span class="file-ref">globals.css → <code>:focus-visible</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Reduced motion support</strong> — All animations respect <code>prefers-reduced-motion: reduce</code>. Duration set to 0.01ms. No flashing, no disorientation for motion-sensitive users.
+        <span class="file-ref">globals.css → <code>@media (prefers-reduced-motion)</code></span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Screen reader text on action buttons</strong> — All row action buttons use entity-specific sr-only text: "Actions for {name}", not generic "Actions". Column headers stay generic.
+        <span class="file-ref">CLAUDE.md lesson → specific sr-only text</span>
+      </div>
+    </div>
+    <div class="dna-item">
+      <span class="dna-check">✓</span>
+      <div>
+        <strong>Smooth transitions</strong> — 200ms sidebar collapse, 300ms fade-in/slide-in animations. Custom keyframes for accordion, fade, slide. All respect reduced motion preference.
+        <span class="file-ref">globals.css → <code>@keyframes fade-in</code>, <code>slide-in-left</code></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE SUMMARY -->
+<div class="summary" style="margin-top: 1.5rem;">
+  <h3>Complete Change Summary</h3>
+  <p style="font-size: 0.82rem; color: #6b7280; margin-bottom: 1rem;">Only 4 changes. Everything in the Design DNA tab above is untouched.</p>
+  <table class="summary-table">
+    <thead><tr><th>Change</th><th>Current</th><th>Proposed</th><th>Rationale</th><th>Scope</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600">1. Avatar palette</td>
+        <td>All <span class="swatch" style="background:#213350"></span> #213350</td>
+        <td>Hash from 4 colours:<br><span class="swatch" style="background:#213350"></span> <span class="swatch" style="background:#2A6075"></span> <span class="swatch" style="background:#DA417C"></span> <span class="swatch" style="background:#751B48"></span></td>
+        <td>Visual variety. Facebook, Slack, Teams all do this. Deterministic per user.</td>
+        <td>New utility + avatar components</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600">2. Link colour</td>
+        <td><span class="swatch" style="background:#213350"></span> #213350 (same as body)</td>
+        <td><span class="swatch" style="background:#2A6075"></span> #2A6075 (MCR Teal)</td>
+        <td>Links should be visually distinct. 5.4:1 contrast — passes WCAG AA.</td>
+        <td>globals.css + link components</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600">3. Category colour palette</td>
+        <td>Generic Tailwind swatches:<br><span style="font-size:0.7rem;">blue, green, orange, red, purple, pink</span></td>
+        <td>MCR brand swatches:<br>
+          <span class="swatch" style="background:#2A6075"></span> Teal
+          <span class="swatch" style="background:#B5E046"></span> Green
+          <span class="swatch" style="background:#F09336"></span> Orange<br>
+          <span class="swatch" style="background:#751B48"></span> Wine
+          <span class="swatch" style="background:#5BC6E9"></span> Light Blue
+          <span class="swatch" style="background:#DA417C"></span> Pink
+        </td>
+        <td>Brand cohesion. Icon picker uses MCR colours instead of generic Tailwind. Default + Grey kept as neutral options.</td>
+        <td><code>resource-icons.ts</code> — swap <code>ICON_COLOURS</code> array</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600">4. Pink WCAG fix</td>
+        <td><span class="swatch" style="background:#FF82B2"></span> #FF82B2 (2.38:1)</td>
+        <td><span class="swatch" style="background:#DA417C"></span> #DA417C (4.04:1)</td>
+        <td>Accessibility compliance. Matches official brand guidelines.</td>
+        <td>globals.css (1 token)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 1.5rem;">Future Aspiration</h3>
+  <p style="font-size: 0.82rem; color: #6b7280; margin-bottom: 0.5rem;">Not part of this proposal, but noted for future consideration:</p>
+  <div class="dna-item" style="margin-bottom: 0;">
+    <span style="color:#6b7280; font-size: 0.9rem; flex-shrink: 0;">○</span>
+    <div>
+      <strong>Google Workspace avatar integration</strong> — Pull real user photos from Google accounts instead of colour-hashed initials. MCR uses Google Workspace. The colour hash is acceptable for now but real photos would be the ideal end state.
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>

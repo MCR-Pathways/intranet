@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCR Pathways — Poll Improvements</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #F2F4F7;
+    color: #213350;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem; }
+  .subtitle { color: #6b7280; font-size: 0.9rem; text-align: center; margin-bottom: 2rem; }
+
+  /* Tabs */
+  .tab-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 0.5rem 1.25rem; border-radius: 8px; border: 1px solid #e5e7eb; background: white;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer; color: #6b7280;
+  }
+  .tab-btn.active { background: #213350; color: white; border-color: #213350; }
+  .tab-btn:hover:not(.active) { background: #f3f4f6; color: #213350; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Version labels */
+  .version-label {
+    text-align: center; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  }
+  .version-label::before, .version-label::after { content: ''; flex: 1; max-width: 200px; height: 1px; background: #d1d5db; }
+  .tag {
+    display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; margin-left: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .tag-current { background: #f3f4f6; color: #6b7280; }
+  .tag-proposed { background: #dbeafe; color: #1d4ed8; }
+
+  /* ─── App frame (mirrors real app) ─── */
+  .app-frame {
+    max-width: 620px; margin: 0 auto 2rem; background: #F2F4F7;
+  }
+
+  /* Post card — matches real Card component: bg-card shadow-sm rounded-xl */
+  .post-card {
+    background: #ffffff; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+  .post-card-content { padding: 1.25rem; }
+
+  /* Post header — matches real layout */
+  .post-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem; }
+  .post-header-left { display: flex; gap: 0.75rem; }
+
+  /* Avatar — matches real AvatarFallback with brand colours */
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .avatar-navy { background: #213350; }
+  .avatar-teal { background: #2A6075; }
+  .avatar-wine { background: #751B48; }
+
+  .post-name { font-size: 0.875rem; font-weight: 600; }
+  .post-role { font-size: 0.75rem; color: #6b7280; }
+  .post-time { font-size: 0.75rem; color: #6b7280; }
+  .post-text { font-size: 0.875rem; line-height: 1.5; margin-bottom: 0.75rem; }
+
+  /* MoreHorizontal kebab button — matches real Button variant="ghost" size="icon" */
+  .kebab-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent;
+    color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .kebab-btn:hover { background: #f3f4f6; }
+  .kebab-btn svg { width: 16px; height: 16px; }
+
+  /* Dropdown menu — matches real DropdownMenuContent */
+  .dropdown-wrap { position: relative; }
+  .dropdown-menu {
+    position: absolute; top: 100%; right: 0; background: white; border: 1px solid #e5e7eb;
+    border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 200px;
+    padding: 4px; z-index: 10;
+  }
+  .dropdown-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px;
+    font-size: 0.8rem; cursor: pointer; color: #213350; border: none; background: none;
+    width: 100%; text-align: left;
+  }
+  .dropdown-item:hover { background: #f3f4f6; }
+  .dropdown-item.destructive { color: #ef4444; }
+  .dropdown-item.destructive:hover { background: #fef2f2; }
+  .dropdown-item svg, .dropdown-item .di-icon { width: 16px; height: 16px; flex-shrink: 0; color: inherit; }
+  .dropdown-sep { height: 1px; background: #e5e7eb; margin: 4px 0; }
+
+  /* ─── Poll box — matches real poll-display.tsx ─── */
+  .poll-box {
+    border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; padding: 1rem;
+  }
+  .poll-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .poll-icon { color: #6b7280; width: 16px; height: 16px; }
+  .poll-question { font-size: 0.875rem; font-weight: 500; }
+  .poll-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #6b7280; margin-top: 0.75rem; }
+  .poll-meta-left { display: flex; align-items: center; gap: 0.75rem; }
+  .clock-icon { width: 12px; height: 12px; margin-right: 2px; }
+
+  /* Vote options — matches real voting view */
+  .vote-option {
+    display: flex; align-items: center; width: 100%; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 0.55rem 0.75rem; font-size: 0.875rem; background: white; margin-bottom: 0.5rem;
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .vote-option:hover { border-color: rgba(33,51,80,0.4); background: rgba(33,51,80,0.02); }
+  .vote-option.selected { border-color: #213350; background: rgba(33,51,80,0.03); color: #213350; }
+
+  /* Radio / Checkbox indicators */
+  .indicator { width: 16px; height: 16px; border: 2px solid #9ca3af; margin-right: 0.75rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .indicator-radio { border-radius: 50%; }
+  .indicator-checkbox { border-radius: 4px; }
+  .vote-option.selected .indicator { border-color: #213350; background: #213350; }
+  .indicator-dot { width: 6px; height: 6px; border-radius: 50%; background: white; display: none; }
+  .vote-option.selected .indicator-dot { display: block; }
+  .indicator-check { color: white; font-size: 0.6rem; font-weight: 700; display: none; }
+  .vote-option.selected .indicator-check { display: block; }
+
+  /* Result bars — matches real results view */
+  .result-row { margin-bottom: 0.6rem; }
+  .result-label { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.2rem; }
+  .result-text { display: flex; align-items: center; gap: 6px; }
+  .result-text.voted { font-weight: 500; }
+  .result-check { color: #213350; }
+  .result-check svg { width: 14px; height: 14px; }
+  .result-pct { color: #6b7280; font-variant-numeric: tabular-nums; }
+  .result-bar-track { height: 8px; width: 100%; border-radius: 999px; background: rgba(33,51,80,0.08); }
+  .result-bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+  .result-bar-fill.user { background: #213350; }
+  .result-bar-fill.other { background: rgba(33,51,80,0.3); }
+  .result-voters { font-size: 0.7rem; color: #9ca3af; margin-top: 1px; }
+
+  /* Buttons — matches real Button variants */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.85rem;
+    border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: none;
+    font-family: inherit;
+  }
+  .btn-primary { background: #213350; color: white; }
+  .btn-primary:hover { background: #2d4568; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-outline { background: white; color: #213350; border: 1px solid #e5e7eb; }
+  .btn-outline:hover { background: #f3f4f6; }
+  .btn-ghost { background: transparent; color: #6b7280; padding: 0.35rem 0.5rem; }
+  .btn-ghost:hover { background: #f3f4f6; color: #213350; }
+  .btn-sm { font-size: 0.8rem; padding: 0.35rem 0.75rem; }
+  .change-vote { font-size: 0.75rem; color: #213350; background: none; border: none; cursor: pointer; text-decoration: none; font-family: inherit; }
+  .change-vote:hover { text-decoration: underline; }
+
+  /* ─── Composer — matches real poll-composer.tsx ─── */
+  .composer-box {
+    border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; padding: 1rem;
+  }
+  .composer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .composer-title { font-size: 0.875rem; font-weight: 500; }
+  .close-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent;
+    color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .close-btn:hover { color: #ef4444; background: #fef2f2; }
+
+  .input-field {
+    width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 0.875rem; background: white; outline: none; margin-bottom: 0.5rem;
+    font-family: inherit; color: #213350;
+  }
+  .input-field:focus { border-color: #213350; box-shadow: 0 0 0 2px rgba(33,51,80,0.1); }
+  .input-field::placeholder { color: #9ca3af; }
+  .option-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .option-row .input-field { margin-bottom: 0; flex: 1; }
+  .remove-opt-btn {
+    width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent;
+    color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .remove-opt-btn:hover { color: #ef4444; background: #fef2f2; }
+  .remove-opt-btn svg { width: 16px; height: 16px; }
+
+  .add-option-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 0.35rem 0.5rem;
+    border-radius: 6px; border: none; background: transparent; color: #6b7280;
+    font-size: 0.8rem; cursor: pointer; font-family: inherit;
+  }
+  .add-option-btn:hover { background: #f3f4f6; color: #213350; }
+  .add-option-btn svg { width: 16px; height: 16px; }
+
+  /* Select — matches real SelectTrigger */
+  .controls-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .select-group { display: flex; align-items: center; gap: 0.5rem; }
+  .select-label { font-size: 0.875rem; color: #6b7280; }
+  .select-field {
+    padding: 0.3rem 0.6rem; border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 0.8rem; background: white; color: #213350; outline: none; cursor: pointer;
+    font-family: inherit; height: 32px;
+  }
+  .select-field:focus { border-color: #213350; }
+
+  /* Toggle switch */
+  .toggle-group { display: flex; align-items: center; gap: 0.5rem; }
+  .toggle-track {
+    width: 36px; height: 20px; border-radius: 999px; background: #d1d5db; position: relative;
+    cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle-track.on { background: #213350; }
+  .toggle-knob {
+    width: 16px; height: 16px; border-radius: 50%; background: white; position: absolute;
+    top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .toggle-track.on .toggle-knob { transform: translateX(16px); }
+  .toggle-text { font-size: 0.8rem; color: #6b7280; }
+
+  /* Date-time picker */
+  .datetime-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+  .datetime-field {
+    padding: 0.3rem 0.6rem; border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 0.8rem; background: white; color: #213350; outline: none; font-family: inherit; height: 32px;
+  }
+  .datetime-field:focus { border-color: #213350; }
+
+  /* ─── Export dialog — matches real Shadcn Dialog (bg-card, rounded-xl) ─── */
+  .dialog-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none;
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .dialog-overlay.show { display: flex; }
+  /* Inline version for mockup */
+  .dialog-inline {
+    background: white; border-radius: 12px; padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-width: 440px; margin: 0 auto;
+  }
+  .dialog-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .dialog-desc { font-size: 0.8rem; color: #6b7280; margin-bottom: 1rem; }
+  .dialog-section { margin-bottom: 1rem; }
+  .dialog-section-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+
+  /* Format cards */
+  .format-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+  .format-card {
+    border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.75rem 0.5rem; text-align: center;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .format-card:hover { border-color: rgba(33,51,80,0.3); }
+  .format-card.selected { border-color: #213350; background: rgba(33,51,80,0.03); box-shadow: 0 0 0 1px #213350; }
+  .format-icon { font-size: 1.4rem; margin-bottom: 0.2rem; }
+  .format-name { font-size: 0.8rem; font-weight: 600; }
+  .format-ext { font-size: 0.65rem; color: #6b7280; }
+
+  /* Checkboxes for export options */
+  .check-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .check-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; cursor: pointer; }
+  .check-box {
+    width: 16px; height: 16px; border-radius: 4px; border: 2px solid #d1d5db;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .check-box.checked { background: #213350; border-color: #213350; }
+  .check-box.checked::after { content: '✓'; color: white; font-size: 0.55rem; font-weight: 700; }
+
+  /* CSV preview */
+  .csv-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; margin-top: 0.5rem; }
+  .csv-table th {
+    background: #E4E7EC; padding: 0.35rem 0.5rem; text-align: left; font-weight: 600;
+    border-bottom: 1px solid #d1d5db; white-space: nowrap;
+  }
+  .csv-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #f3f4f6; white-space: nowrap; }
+
+  /* ─── Layout helpers ─── */
+  .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 1200px; margin: 0 auto 2rem; }
+  @media (max-width: 900px) { .side-by-side { grid-template-columns: 1fr; } }
+  .center-col { max-width: 620px; margin: 0 auto 2rem; }
+  .wide-col { max-width: 800px; margin: 0 auto 2rem; }
+
+  /* Annotation callout */
+  .annotation {
+    border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.75rem; margin-top: 0.75rem;
+    display: flex; align-items: flex-start; gap: 0.4rem; line-height: 1.4;
+  }
+  .annotation-warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+  .annotation-new { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
+  .annotation-icon { flex-shrink: 0; }
+
+  /* Pros/Cons panel */
+  .analysis-card {
+    background: white; border-radius: 12px; padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 1.5rem;
+  }
+  .analysis-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .analysis-desc { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.75rem; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 700px) { .pros-cons { grid-template-columns: 1fr; } }
+  .pros-title { font-weight: 600; color: #16a34a; margin-bottom: 0.35rem; font-size: 0.8rem; }
+  .cons-title { font-weight: 600; color: #ef4444; margin-bottom: 0.35rem; font-size: 0.8rem; }
+  .pros ul, .cons ul { margin-left: 1rem; font-size: 0.8rem; }
+  .pros li, .cons li { margin-bottom: 0.15rem; color: #374151; }
+
+  .info-box {
+    background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 0.65rem 0.85rem;
+    font-size: 0.8rem; color: #0c4a6e; margin-top: 0.75rem; line-height: 1.4;
+  }
+  .info-box strong { font-weight: 600; }
+  .ms-hint { font-size: 0.75rem; color: #6b7280; font-style: italic; }
+
+  /* Composer action bar — matches real composer-action-bar.tsx */
+  .action-bar { display: flex; align-items: center; gap: 4px; padding-top: 0.75rem; }
+  .action-bar-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 0.35rem 0.65rem;
+    border-radius: 6px; border: none; background: transparent; font-size: 0.8rem;
+    cursor: pointer; font-family: inherit; color: #6b7280; font-weight: 500;
+  }
+  .action-bar-btn:hover { background: #f3f4f6; }
+  .action-bar-btn .ab-icon { width: 20px; height: 20px; }
+  .action-bar-btn.green .ab-icon { color: #22c55e; }
+  .action-bar-btn.blue .ab-icon { color: #3b82f6; }
+  .action-bar-btn.amber .ab-icon { color: #f59e0b; }
+  .action-bar-btn.green:hover { color: #16a34a; background: #f0fdf4; }
+  .action-bar-btn.blue:hover { color: #2563eb; background: #eff6ff; }
+  .action-bar-btn.amber:hover { color: #d97706; background: #fffbeb; }
+
+  /* SVG icons inline */
+  .icon-sm { width: 16px; height: 16px; }
+  .icon-xs { width: 14px; height: 14px; }
+  .icon-md { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Poll Improvements</h1>
+<p class="subtitle">Top 5 recommendations — visual mockups matching the live intranet</p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab(event, 'tab-duration')">1. Custom Duration</button>
+  <button class="tab-btn" onclick="showTab(event, 'tab-export')">2. Export Results</button>
+  <button class="tab-btn" onclick="showTab(event, 'tab-multi')">3. Multi-Select</button>
+  <button class="tab-btn" onclick="showTab(event, 'tab-close')">4. Close Early</button>
+  <button class="tab-btn" onclick="showTab(event, 'tab-options')">5. More Options</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 1. CUSTOM DURATION                                                      -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-duration" class="tab-content active">
+  <div class="side-by-side">
+
+    <!-- CURRENT -->
+    <div>
+      <div class="version-label">Current <span class="tag tag-current">Live</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="composer-box">
+            <div class="composer-header">
+              <span class="composer-title">Poll</span>
+              <button class="close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <input class="input-field" value="When should we hold the team social?">
+            <div class="option-row">
+              <input class="input-field" value="Friday 21st March">
+            </div>
+            <div class="option-row">
+              <input class="input-field" value="Friday 28th March">
+            </div>
+            <button class="add-option-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 5v14M5 12h14"/></svg>
+              Add option
+            </button>
+            <div class="controls-row">
+              <div class="select-group">
+                <span class="select-label">Poll duration:</span>
+                <select class="select-field" style="width: 120px;">
+                  <option>1 day</option>
+                  <option>3 days</option>
+                  <option selected>1 week</option>
+                  <option>No expiry</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="annotation annotation-warn">
+            <span class="annotation-icon">&#9888;&#65039;</span>
+            <span>Only 4 fixed presets. No way to set a specific close date — e.g. "close after the board meeting on 15 April".</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROPOSED -->
+    <div>
+      <div class="version-label">Proposed <span class="tag tag-proposed">New</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="composer-box">
+            <div class="composer-header">
+              <span class="composer-title">Poll</span>
+              <button class="close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <input class="input-field" value="When should we hold the team social?">
+            <div class="option-row">
+              <input class="input-field" value="Friday 21st March">
+            </div>
+            <div class="option-row">
+              <input class="input-field" value="Friday 28th March">
+            </div>
+            <button class="add-option-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 5v14M5 12h14"/></svg>
+              Add option
+            </button>
+            <div class="controls-row">
+              <div class="select-group">
+                <span class="select-label">Poll duration:</span>
+                <select class="select-field" style="width: 120px;">
+                  <option>1 day</option>
+                  <option>3 days</option>
+                  <option>1 week</option>
+                  <option>2 weeks</option>
+                  <option>1 month</option>
+                  <option>No expiry</option>
+                  <option selected>Custom...</option>
+                </select>
+              </div>
+            </div>
+            <div class="datetime-row">
+              <span class="select-label">Closes:</span>
+              <input type="date" class="datetime-field" value="2026-04-15">
+              <span class="select-label" style="color: #9ca3af;">at</span>
+              <input type="time" class="datetime-field" value="17:00">
+            </div>
+          </div>
+          <div class="annotation annotation-new">
+            <span class="annotation-icon">&#10024;</span>
+            <span>Added "2 weeks" + "1 month" presets. "Custom" reveals a date-time picker — native browser inputs, no extra dependencies. No upper bound.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-col">
+    <div class="analysis-card">
+      <div class="analysis-title">1. Custom Poll Duration</div>
+      <div class="analysis-desc">Extend the duration dropdown with two extra presets + a "Custom" date-time picker. Matches LinkedIn (presets) + StrawPoll (custom deadline).</div>
+      <div class="pros-cons">
+        <div class="pros">
+          <div class="pros-title">Pros</div>
+          <ul>
+            <li>Covers 95% of use cases with presets alone</li>
+            <li>"Custom" handles edge cases (close after a specific meeting/event)</li>
+            <li>Native &lt;input type="date"&gt; — zero dependencies, accessible</li>
+            <li>Minimal code change — extends existing DURATION_OPTIONS array</li>
+            <li>computePollClosesAt() just returns the selected ISO string for "custom"</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <div class="cons-title">Cons</div>
+          <ul>
+            <li>Date-time picker appearance varies across browsers</li>
+            <li>Needs validation: can't set close date in the past</li>
+            <li>Timezone edge case if user is travelling</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 2. EXPORT RESULTS                                                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-export" class="tab-content">
+
+  <!-- Closed poll with export in kebab -->
+  <div class="version-label">Closed Poll — Kebab Menu with Export <span class="tag tag-proposed">New</span></div>
+  <div class="center-col">
+    <div class="post-card">
+      <div class="post-card-content">
+        <div class="post-header">
+          <div class="post-header-left">
+            <div class="avatar avatar-teal">SA</div>
+            <div>
+              <div class="post-name">Sarah Anderson</div>
+              <div class="post-role">Operations Manager</div>
+              <div class="post-time">12 Mar 2026</div>
+            </div>
+          </div>
+          <div class="dropdown-wrap">
+            <button class="kebab-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export results
+              </button>
+              <button class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                Copy link
+              </button>
+              <button class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M12 17v5M5 17H4a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15"/></svg>
+                Pin post
+              </button>
+              <div class="dropdown-sep"></div>
+              <button class="dropdown-item destructive">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Delete post
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="post-text">Quick poll — what day works best for the April all-hands?</div>
+
+        <div class="poll-box">
+          <div class="poll-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="poll-question">What day works best for the April all-hands?</span>
+          </div>
+          <div class="result-row">
+            <div class="result-label">
+              <span class="result-text voted">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="result-check icon-xs"><polyline points="20 6 9 17 4 12"/></svg>
+                Tuesday
+              </span>
+              <span class="result-pct">45%</span>
+            </div>
+            <div class="result-bar-track"><div class="result-bar-fill user" style="width: 45%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">
+              <span class="result-text">Wednesday</span>
+              <span class="result-pct">35%</span>
+            </div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 35%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">
+              <span class="result-text">Thursday</span>
+              <span class="result-pct">20%</span>
+            </div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 20%;"></div></div>
+          </div>
+          <div class="poll-meta">
+            <span class="poll-meta-left">20 votes &middot; Closed 14 Mar 2026</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: -0.5rem; margin-bottom: 1.5rem;">
+      <div class="annotation annotation-new" style="max-width: 620px; margin: 0 auto;">
+        <span class="annotation-icon">&#10024;</span>
+        <span>"Export results" sits in the existing kebab menu alongside Pin/Edit/Delete. Visible on <strong>closed polls only</strong>, to <strong>poll author + system admins</strong>.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export dialog -->
+  <div class="version-label">Export Dialog <span class="tag tag-proposed">New</span></div>
+  <div class="center-col">
+    <div class="dialog-inline">
+      <div class="dialog-title">Export Poll Results</div>
+      <div class="dialog-desc">What day works best for the April all-hands? &middot; 20 votes &middot; Closed 14 Mar</div>
+
+      <div class="dialog-section">
+        <div class="dialog-section-title">Format</div>
+        <div class="format-cards">
+          <div class="format-card selected">
+            <div class="format-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#213350" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="format-name">CSV</div>
+            <div class="format-ext">.csv</div>
+          </div>
+          <div class="format-card">
+            <div class="format-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#6b7280" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            </div>
+            <div class="format-name">Excel</div>
+            <div class="format-ext">.xlsx</div>
+          </div>
+          <div class="format-card">
+            <div class="format-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#6b7280" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+            </div>
+            <div class="format-name">PDF</div>
+            <div class="format-ext">.pdf</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-section">
+        <div class="dialog-section-title">Include in export</div>
+        <div class="check-list">
+          <label class="check-item"><span class="check-box checked"></span> Summary (options, vote counts, percentages)</label>
+          <label class="check-item"><span class="check-box checked"></span> Individual responses (voter name, choice, timestamp)</label>
+          <label class="check-item"><span class="check-box"></span> Poll metadata (created date, closed date, author)</label>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="btn btn-outline">Cancel</button>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV output preview -->
+  <div class="version-label">CSV Output Preview <span class="tag tag-proposed">Example</span></div>
+  <div class="wide-col">
+    <div class="post-card">
+      <div class="post-card-content">
+        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem;">Summary</div>
+        <div style="overflow-x: auto;">
+          <table class="csv-table">
+            <thead><tr><th>Question</th><th>Option</th><th>Votes</th><th>Percentage</th><th>Total Voters</th><th>Status</th><th>Created</th><th>Closed</th></tr></thead>
+            <tbody>
+              <tr><td>What day works best for the April all-hands?</td><td>Tuesday</td><td>9</td><td>45%</td><td>20</td><td>Closed</td><td>2026-03-10</td><td>2026-03-14</td></tr>
+              <tr><td></td><td>Wednesday</td><td>7</td><td>35%</td><td></td><td></td><td></td><td></td></tr>
+              <tr><td></td><td>Thursday</td><td>4</td><td>20%</td><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; margin-top: 1rem;">Individual Responses</div>
+        <div style="overflow-x: auto;">
+          <table class="csv-table">
+            <thead><tr><th>Voter Name</th><th>Option Chosen</th><th>Voted At</th></tr></thead>
+            <tbody>
+              <tr><td>Sarah Anderson</td><td>Tuesday</td><td>2026-03-10 09:15</td></tr>
+              <tr><td>James Mitchell</td><td>Wednesday</td><td>2026-03-10 10:22</td></tr>
+              <tr><td>Emma Davies</td><td>Tuesday</td><td>2026-03-10 11:03</td></tr>
+              <tr><td style="color: #9ca3af;">&#8230;</td><td style="color: #9ca3af;">&#8230;</td><td style="color: #9ca3af;">&#8230;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ms-hint" style="margin-top: 0.5rem;">For multi-select polls, "Option Chosen" contains semicolon-delimited values (e.g. "Tuesday; Wednesday").</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-col">
+    <div class="analysis-card">
+      <div class="analysis-title">2. Export Poll Results</div>
+      <div class="analysis-desc">CSV, Excel, and PDF export via a dialog triggered from the kebab menu. Closed polls only. Poll author + system admins.</div>
+      <div class="pros-cons">
+        <div class="pros">
+          <div class="pros-title">Pros</div>
+          <ul>
+            <li>Three formats cover all audiences (data, managers, stakeholders)</li>
+            <li>Two-tier output (summary + individual) matches Typeform/Mentimeter</li>
+            <li>Reuses existing sanitiseCSVCell() from reports-panel</li>
+            <li>Kebab menu placement follows existing app convention</li>
+            <li>Checkbox toggles let users control exported data scope</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <div class="cons-title">Cons</div>
+          <ul>
+            <li>PDF needs a library (jsPDF or similar) — extra bundle</li>
+            <li>Excel multi-sheet needs SheetJS — extra bundle</li>
+            <li>CSV is the only zero-dependency format</li>
+            <li>Individual responses reveal who voted what (privacy)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info-box">
+        <strong>Phasing:</strong> Ship CSV first (zero dependencies). Add Excel + PDF in a follow-up PR once library options are evaluated. CSV covers the core need immediately.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 3. MULTI-SELECT                                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-multi" class="tab-content">
+
+  <!-- Voting view comparison -->
+  <div class="side-by-side">
+    <div>
+      <div class="version-label">Single Select — Voting <span class="tag tag-current">Live</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="post-header">
+            <div class="post-header-left">
+              <div class="avatar avatar-wine">ED</div>
+              <div>
+                <div class="post-name">Emma Davies</div>
+                <div class="post-role">People &amp; Culture Lead</div>
+                <div class="post-time">3 hours ago</div>
+              </div>
+            </div>
+          </div>
+          <div class="post-text">What snacks should we stock in the kitchen?</div>
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">What snacks should we stock in the kitchen?</span>
+            </div>
+            <div class="vote-option selected">
+              <div class="indicator indicator-radio"><div class="indicator-dot"></div></div>
+              Fruit basket
+            </div>
+            <div class="vote-option">
+              <div class="indicator indicator-radio"><div class="indicator-dot"></div></div>
+              Biscuit selection
+            </div>
+            <div class="vote-option">
+              <div class="indicator indicator-radio"><div class="indicator-dot"></div></div>
+              Trail mix
+            </div>
+            <div class="vote-option">
+              <div class="indicator indicator-radio"><div class="indicator-dot"></div></div>
+              Protein bars
+            </div>
+            <div style="margin-top: 0.65rem;"><button class="btn btn-primary btn-sm">Vote</button></div>
+            <div class="poll-meta">
+              <span class="poll-meta-left">
+                0 votes &middot;
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="clock-icon" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                5d 12h remaining
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="version-label">Multi-Select — Voting <span class="tag tag-proposed">New</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="post-header">
+            <div class="post-header-left">
+              <div class="avatar avatar-wine">ED</div>
+              <div>
+                <div class="post-name">Emma Davies</div>
+                <div class="post-role">People &amp; Culture Lead</div>
+                <div class="post-time">3 hours ago</div>
+              </div>
+            </div>
+          </div>
+          <div class="post-text">What snacks should we stock in the kitchen?</div>
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">What snacks should we stock in the kitchen?</span>
+            </div>
+            <p class="ms-hint" style="margin-bottom: 0.4rem;">Select all that apply</p>
+            <div class="vote-option selected">
+              <div class="indicator indicator-checkbox"><span class="indicator-check">&#10003;</span></div>
+              Fruit basket
+            </div>
+            <div class="vote-option selected">
+              <div class="indicator indicator-checkbox"><span class="indicator-check">&#10003;</span></div>
+              Biscuit selection
+            </div>
+            <div class="vote-option">
+              <div class="indicator indicator-checkbox"><span class="indicator-check">&#10003;</span></div>
+              Trail mix
+            </div>
+            <div class="vote-option">
+              <div class="indicator indicator-checkbox"><span class="indicator-check">&#10003;</span></div>
+              Protein bars
+            </div>
+            <div style="margin-top: 0.65rem;"><button class="btn btn-primary btn-sm">Vote</button></div>
+            <div class="poll-meta">
+              <span class="poll-meta-left">
+                0 votes &middot;
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="clock-icon" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                5d 12h remaining
+              </span>
+            </div>
+          </div>
+          <div class="annotation annotation-new">
+            <span class="annotation-icon">&#10024;</span>
+            <span>Checkboxes replace radio buttons. "Select all that apply" hint appears below the question. Multiple options can be selected before pressing Vote.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results view comparison -->
+  <div class="side-by-side">
+    <div>
+      <div class="version-label">Single-Select Results <span class="tag tag-current">Live</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">When is the all-hands?</span>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text voted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="result-check icon-xs"><polyline points="20 6 9 17 4 12"/></svg> Tuesday</span><span class="result-pct">45%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill user" style="width: 45%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Wednesday</span><span class="result-pct">35%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 35%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Thursday</span><span class="result-pct">20%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 20%;"></div></div>
+            </div>
+            <div class="poll-meta">
+              <span>20 votes</span>
+              <button class="change-vote">Change vote</button>
+            </div>
+          </div>
+          <div class="annotation annotation-warn">
+            <span class="annotation-icon">&#8505;&#65039;</span>
+            <span>Percentages sum to 100%. "20 votes" = 20 voters. Standard single-choice result display.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="version-label">Multi-Select Results <span class="tag tag-proposed">New</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">What snacks for the kitchen?</span>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text voted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="result-check icon-xs"><polyline points="20 6 9 17 4 12"/></svg> Fruit basket</span><span class="result-pct">75%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill user" style="width: 75%;"></div></div>
+              <div class="result-voters">15 of 20 voters</div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text voted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="result-check icon-xs"><polyline points="20 6 9 17 4 12"/></svg> Biscuit selection</span><span class="result-pct">60%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill user" style="width: 60%;"></div></div>
+              <div class="result-voters">12 of 20 voters</div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Trail mix</span><span class="result-pct">40%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 40%;"></div></div>
+              <div class="result-voters">8 of 20 voters</div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Protein bars</span><span class="result-pct">25%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 25%;"></div></div>
+              <div class="result-voters">5 of 20 voters</div>
+            </div>
+            <div class="poll-meta">
+              <span>20 voters</span>
+              <button class="change-vote">Change selections</button>
+            </div>
+          </div>
+          <div class="annotation annotation-new">
+            <span class="annotation-icon">&#10024;</span>
+            <span>% = "% of voters who chose this" — can exceed 100% total. "X of Y voters" shown per option. Footer says <strong>"voters"</strong> not "votes". "Change selections" replaces "Change vote".</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Composer toggle -->
+  <div class="version-label">Composer — Multi-Select Toggle <span class="tag tag-proposed">New</span></div>
+  <div class="center-col">
+    <div class="post-card">
+      <div class="post-card-content">
+        <div class="composer-box">
+          <div class="composer-header">
+            <span class="composer-title">Poll</span>
+            <button class="close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <input class="input-field" value="What snacks should we stock in the kitchen?">
+          <div class="option-row"><input class="input-field" value="Fruit basket"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+          <div class="option-row"><input class="input-field" value="Biscuit selection"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+          <div class="option-row"><input class="input-field" value="Trail mix"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+          <div class="option-row"><input class="input-field" value="Protein bars"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+
+          <div class="controls-row">
+            <div class="select-group">
+              <span class="select-label">Poll duration:</span>
+              <select class="select-field" style="width: 120px;"><option selected>1 week</option></select>
+            </div>
+            <div class="toggle-group">
+              <div class="toggle-track on"><div class="toggle-knob"></div></div>
+              <span class="toggle-text">Allow multiple selections</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action bar matching real composer-action-bar.tsx -->
+        <div class="action-bar">
+          <button class="action-bar-btn green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ab-icon"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            Photo
+          </button>
+          <button class="action-bar-btn blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ab-icon"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            Document
+          </button>
+          <button class="action-bar-btn amber" style="opacity: 0.5; cursor: not-allowed;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ab-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Poll
+          </button>
+          <div style="margin-left: auto;"><button class="btn btn-primary btn-sm">Post</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-col">
+    <div class="analysis-card">
+      <div class="analysis-title">3. Multi-Select Polls</div>
+      <div class="analysis-desc">Creator toggles "Allow multiple selections" at creation. Checkboxes replace radio buttons. Percentages = % of voters (Polly/Google Forms model).</div>
+      <div class="pros-cons">
+        <div class="pros">
+          <div class="pros-title">Pros</div>
+          <ul>
+            <li>Natural for "pick all that apply" questions</li>
+            <li>"% of voters" is the industry standard — intuitive</li>
+            <li>Simple toggle in composer — no complex UX</li>
+            <li>Export: semicolon-delimited choices per voter row</li>
+            <li>Immutable after creation — no mid-poll confusion</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <div class="cons-title">Cons</div>
+          <ul>
+            <li>DB migration: UNIQUE constraint swap on poll_votes</li>
+            <li>New column on posts table (poll_allow_multiple)</li>
+            <li>"Change selections" UX is more complex than "Change vote"</li>
+            <li>Percentages exceeding 100% may confuse initially</li>
+            <li>Single-select enforcement moves from DB to application layer</li>
+          </ul>
+        </div>
+      </div>
+      <div class="info-box">
+        <strong>DB change:</strong> Add <code>poll_allow_multiple BOOLEAN DEFAULT FALSE</code> to posts. Replace <code>UNIQUE(post_id, user_id)</code> on poll_votes with <code>UNIQUE(post_id, user_id, option_id)</code>. For single-select, the server action deletes existing vote + inserts new one in a transaction.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 4. CLOSE EARLY                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-close" class="tab-content">
+  <div class="side-by-side">
+    <div>
+      <div class="version-label">Current — No Close Option <span class="tag tag-current">Live</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="post-header">
+            <div class="post-header-left">
+              <div class="avatar avatar-navy">JM</div>
+              <div>
+                <div class="post-name">James Mitchell</div>
+                <div class="post-role">Programme Director</div>
+                <div class="post-time">10 Mar 2026</div>
+              </div>
+            </div>
+            <div class="dropdown-wrap">
+              <button class="kebab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              <div class="dropdown-menu">
+                <button class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M12 17v5M5 17H4a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15"/></svg> Pin post</button>
+                <button class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit post</button>
+                <div class="dropdown-sep"></div>
+                <button class="dropdown-item destructive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Delete post</button>
+              </div>
+            </div>
+          </div>
+          <div class="post-text">Should we adopt flexible Fridays?</div>
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">Should we adopt flexible Fridays?</span>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Yes, every week</span><span class="result-pct">62%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 62%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Yes, fortnightly</span><span class="result-pct">25%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 25%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">No</span><span class="result-pct">13%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 13%;"></div></div>
+            </div>
+            <div class="poll-meta"><span>16 votes &middot; 2d 8h remaining</span></div>
+          </div>
+          <div class="annotation annotation-warn">
+            <span class="annotation-icon">&#9888;&#65039;</span>
+            <span>Result is clear (62%) but poll stays open for 2 more days. Only option is deleting the entire post.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="version-label">Proposed — Close Poll Action <span class="tag tag-proposed">New</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="post-header">
+            <div class="post-header-left">
+              <div class="avatar avatar-navy">JM</div>
+              <div>
+                <div class="post-name">James Mitchell</div>
+                <div class="post-role">Programme Director</div>
+                <div class="post-time">10 Mar 2026</div>
+              </div>
+            </div>
+            <div class="dropdown-wrap">
+              <button class="kebab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              <div class="dropdown-menu">
+                <button class="dropdown-item" style="font-weight: 600;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  Close poll
+                </button>
+                <button class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M12 17v5M5 17H4a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15"/></svg> Pin post</button>
+                <button class="dropdown-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit post</button>
+                <div class="dropdown-sep"></div>
+                <button class="dropdown-item destructive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="icon-sm"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Delete post</button>
+              </div>
+            </div>
+          </div>
+          <div class="post-text">Should we adopt flexible Fridays?</div>
+          <div class="poll-box">
+            <div class="poll-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span class="poll-question">Should we adopt flexible Fridays?</span>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Yes, every week</span><span class="result-pct">62%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 62%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">Yes, fortnightly</span><span class="result-pct">25%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 25%;"></div></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label"><span class="result-text">No</span><span class="result-pct">13%</span></div>
+              <div class="result-bar-track"><div class="result-bar-fill other" style="width: 13%;"></div></div>
+            </div>
+            <div class="poll-meta"><span>16 votes &middot; 2d 8h remaining</span></div>
+          </div>
+          <div class="annotation annotation-new">
+            <span class="annotation-icon">&#10024;</span>
+            <span>"Close poll" in kebab — sets <code>poll_closes_at = now()</code>. Confirmation dialog: "Close this poll? Voting will end immediately. This cannot be undone." Visible to <strong>poll author + system admins</strong>.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-col">
+    <div class="analysis-card">
+      <div class="analysis-title">4. Close Poll Early</div>
+      <div class="analysis-desc">Poll author and system admins can close a poll before its scheduled expiry. One server action, one menu item, no schema changes.</div>
+      <div class="pros-cons">
+        <div class="pros">
+          <div class="pros-title">Pros</div>
+          <ul>
+            <li>Universal feature — every enterprise platform supports this</li>
+            <li>Simplest of all 5 recommendations (one action, one menu item)</li>
+            <li>No schema change — updates existing poll_closes_at column</li>
+            <li>Enables the export workflow (close &rarr; export &rarr; share)</li>
+            <li>Prevents stale polls lingering in the feed</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <div class="cons-title">Cons</div>
+          <ul>
+            <li>Irreversible — cannot reopen a closed poll</li>
+            <li>Author could close to suppress unfavourable results</li>
+            <li>Need to decide: should system admins close anyone's poll?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 5. MORE OPTIONS                                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-options" class="tab-content">
+  <div class="side-by-side">
+    <div>
+      <div class="version-label">Current — 4 Options Max <span class="tag tag-current">Live</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="composer-box">
+            <div class="composer-header">
+              <span class="composer-title">Poll</span>
+              <button class="close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <input class="input-field" value="Which Friday for the social?">
+            <div class="option-row"><input class="input-field" value="14th March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="21st March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="28th March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="4th April"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <!-- At max — no add button visible -->
+          </div>
+          <div class="annotation annotation-warn">
+            <span class="annotation-icon">&#9888;&#65039;</span>
+            <span>At MAX_OPTIONS (4). Can't add "11th April" or "18th April". Date-picking polls often need 5-6 options.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="version-label">Proposed — 6 Options Max <span class="tag tag-proposed">New</span></div>
+      <div class="post-card">
+        <div class="post-card-content">
+          <div class="composer-box">
+            <div class="composer-header">
+              <span class="composer-title">Poll</span>
+              <button class="close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <input class="input-field" value="Which Friday for the social?">
+            <div class="option-row"><input class="input-field" value="14th March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="21st March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="28th March"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="4th April"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="11th April"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <div class="option-row"><input class="input-field" value="18th April"><button class="remove-opt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>
+            <!-- At max 6 — no add button visible -->
+          </div>
+          <div class="annotation annotation-new">
+            <span class="annotation-icon">&#10024;</span>
+            <span>MAX_OPTIONS: 4 &rarr; 6. Covers 6 consecutive Fridays. No DB change — the option_text column has no count constraint. One constant change.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results with 6 options -->
+  <div class="version-label">Results View — 6 Options <span class="tag tag-proposed">Example</span></div>
+  <div class="center-col">
+    <div class="post-card">
+      <div class="post-card-content">
+        <div class="poll-box">
+          <div class="poll-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="poll-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="poll-question">Which Friday for the social?</span>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text voted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="result-check icon-xs"><polyline points="20 6 9 17 4 12"/></svg> 28th March</span><span class="result-pct">30%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill user" style="width: 30%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text">21st March</span><span class="result-pct">25%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 25%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text">14th March</span><span class="result-pct">18%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 18%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text">4th April</span><span class="result-pct">15%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 15%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text">11th April</span><span class="result-pct">7%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 7%;"></div></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label"><span class="result-text">18th April</span><span class="result-pct">5%</span></div>
+            <div class="result-bar-track"><div class="result-bar-fill other" style="width: 5%;"></div></div>
+          </div>
+          <div class="poll-meta"><span>40 votes &middot; Closed</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-col">
+    <div class="analysis-card">
+      <div class="analysis-title">5. Increase Max Options (4 &rarr; 6)</div>
+      <div class="analysis-desc">Bump MAX_OPTIONS constant from 4 to 6. No DB change, no migration, no UI restructuring.</div>
+      <div class="pros-cons">
+        <div class="pros">
+          <div class="pros-title">Pros</div>
+          <ul>
+            <li>One constant change — literally <code>MAX_OPTIONS = 6</code></li>
+            <li>No migration — DB has no option count constraint</li>
+            <li>Covers date-picking polls (6 consecutive weeks)</li>
+            <li>6 bars still readable in the feed card</li>
+            <li>LinkedIn raised from 4&rarr;5 for the same reason</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <div class="cons-title">Cons</div>
+          <ul>
+            <li>More vertical space in voting view</li>
+            <li>Votes spread thinner — harder to get a clear majority</li>
+            <li>Could encourage low-effort "dump all options" polls</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(event, id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

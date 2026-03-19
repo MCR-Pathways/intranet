@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireContentEditor } from "@/lib/auth";
 import { extractPlainText } from "@/lib/tiptap";
+import { logger } from "@/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type {
