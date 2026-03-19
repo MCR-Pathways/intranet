@@ -35,7 +35,9 @@ export function slugifyHeading(text: string): string {
 export function parseHtmlIntoSections(html: string): HtmlSection[] {
   if (!html) return [];
 
-  const { document } = parseHTML(html);
+  // linkedom requires full HTML structure — wrap fragments if no <body> tag
+  const wrapped = html.includes("<body") ? html : `<html><body>${html}</body></html>`;
+  const { document } = parseHTML(wrapped);
   const body = document.body;
   if (!body) return [];
 

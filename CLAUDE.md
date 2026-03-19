@@ -290,3 +290,13 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 **Component pages require static imports + migration seed.** Next.js code-splitting requires hardcoded dynamic imports — the component registry maps `component_name` to a `next/dynamic` import. Adding a new component page requires: (1) add to `COMPONENT_REGISTRY` in `src/lib/resource-components.ts`, (2) add static dynamic import in `component-article-view.tsx`, (3) add DB migration to seed the `resource_articles` row with `content_type = 'component'`.
 
 **Encode compound webhook tokens as `{secret}:{id}`.** When a webhook needs to verify both the caller's identity and the resource being updated, encode both in the token. Google Doc IDs use only `[a-zA-Z0-9_-]`, so a colon is a safe delimiter. Split on first colon, verify secret with `timingSafeTokenCompare()`, then use the ID to look up the article. See `drive-actions.ts` watch channel setup.
+
+**Use `linkedom` instead of `jsdom` for server-side HTML parsing.** `jsdom` v28 is ESM-only and fails with `ERR_REQUIRE_ESM` on Vercel serverless functions — even with `serverExternalPackages`. `linkedom` is lightweight (~50x smaller), ESM-native, and works in serverless. Import: `import { parseHTML } from "linkedom"`. Usage: `const { document } = parseHTML(html)`. Keep `jsdom` in devDependencies for Vitest's jsdom test environment only.
+
+**Never put server-only packages in `devDependencies` if production code imports them.** Vercel prunes devDependencies after build. If production code (server actions, API routes) imports a package, it MUST be in `dependencies`. This caused all `/resources` server actions to 500 when `jsdom` was in devDependencies.
+
+**Always add `.catch()` and `.finally()` to server action promises in client components.** Without `.catch()`, a rejected server action leaves UI state stuck (e.g. loading spinners, disabled inputs). Use `.finally()` to always clear loading state. See `link-google-doc-dialog.tsx` for the pattern.
+
+**Hard-refresh (Cmd+Shift+R) after Vercel deployments that change server action modules.** Stale cached JS bundles contain old server action IDs that don't match the new deployment. The server returns "Server Components render error" and all server actions fail silently. A hard refresh loads the new JS bundles.
+
+**Google Docs must be shared with the service account for linking.** The service account email is `mcr-pathways@appspot.gserviceaccount.com`. Share the Google Doc with this email as Viewer before linking. Alternatively, place docs in a registered Drive folder already shared with the service account.
