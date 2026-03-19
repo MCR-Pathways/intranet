@@ -340,14 +340,16 @@ export async function fetchRecentlyUpdatedArticles(
     title: string;
     slug: string;
     updated_at: string;
+    synced_html: string | null;
     category_name: string;
     category_slug: string;
+    parent_category_name: string | null;
   }>
 > {
   const { data, error } = await supabase
     .from("resource_articles")
     .select(
-      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug)"
+      "id, title, slug, updated_at, synced_html, category:resource_categories!category_id(name, slug, parent_id)"
     )
     .is("deleted_at", null)
     .eq("status", "published")
@@ -356,15 +358,44 @@ export async function fetchRecentlyUpdatedArticles(
 
   if (error || !data) return [];
 
+  // Supabase joined tables return arrays — unwrap to single object
+  type CatJoin = { name: string; slug: string; parent_id: string | null };
+  function unwrapCat(raw: unknown): CatJoin | null {
+    if (!raw) return null;
+    const arr = raw as CatJoin[];
+    return Array.isArray(arr) ? arr[0] ?? null : (raw as CatJoin);
+  }
+
+  // Collect parent IDs that need resolving
+  const parentIds = new Set<string>();
+  for (const row of data) {
+    const cat = unwrapCat(row.category);
+    if (cat?.parent_id) parentIds.add(cat.parent_id);
+  }
+
+  // Fetch parent category names in one query
+  let parentNames = new Map<string, string>();
+  if (parentIds.size > 0) {
+    const { data: parents } = await supabase
+      .from("resource_categories")
+      .select("id, name")
+      .in("id", Array.from(parentIds));
+    if (parents) {
+      parentNames = new Map(parents.map((p: { id: string; name: string }) => [p.id, p.name]));
+    }
+  }
+
   return data.map((row: Record<string, unknown>) => {
-    const cat = row.category as { name: string; slug: string } | null;
+    const cat = unwrapCat(row.category);
     return {
       id: row.id as string,
       title: row.title as string,
       slug: row.slug as string,
       updated_at: row.updated_at as string,
+      synced_html: row.synced_html as string | null,
       category_name: cat?.name ?? "",
       category_slug: cat?.slug ?? "",
+      parent_category_name: cat?.parent_id ? (parentNames.get(cat.parent_id) ?? null) : null,
     };
   });
 }

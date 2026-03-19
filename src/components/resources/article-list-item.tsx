@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/utils";
+import { getExcerpt } from "@/lib/resource-utils";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
 interface ArticleListItemProps {
@@ -31,9 +32,10 @@ export function ArticleListItem({
   const displayDate = article.published_at
     ? new Date(article.published_at)
     : new Date(article.updated_at);
+  const excerpt = getExcerpt(article.synced_html, 120);
 
   return (
-    <div className="group relative flex items-center gap-3 rounded-lg px-3.5 py-3 transition-colors hover:bg-muted">
+    <div className="group relative flex items-start gap-3 rounded-lg px-3.5 py-3 transition-colors hover:bg-muted">
       <Link
         href={`/resources/article/${article.slug}`}
         className="absolute inset-0 z-0"
@@ -41,12 +43,17 @@ export function ArticleListItem({
         <span className="sr-only">Read {article.title}</span>
       </Link>
 
-      <div className="text-muted-foreground shrink-0">
+      <div className="text-muted-foreground shrink-0 mt-0.5">
         <FileText className="h-[18px] w-[18px]" />
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium truncate">{article.title}</div>
+        {excerpt && (
+          <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75">
+            {excerpt}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground mt-0.5">
           Updated {formatDate(displayDate)}
         </div>

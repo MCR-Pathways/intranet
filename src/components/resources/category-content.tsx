@@ -96,19 +96,20 @@ export function CategoryContent({
       {/* Subcategory cards */}
       {subcategories.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">
             Subcategories
           </h3>
           <SubcategoryGrid
             subcategories={subcategories}
             parentSlugPath={categorySlugPath}
+            parentIconColour={category.icon_colour}
           />
         </section>
       )}
 
       {/* Article list */}
       <section>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3">
           Articles
           {articles.length > 0 && (
             <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
