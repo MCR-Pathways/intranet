@@ -236,7 +236,9 @@ export async function exportDocAsHtml(docId: string): Promise<string> {
  * 8. Sanitises href values (XSS prevention)
  */
 export function sanitiseGoogleDocsHtml(rawHtml: string): string {
-  const { document: doc } = parseHTML(rawHtml);
+  // linkedom requires full HTML structure — Google Docs exports include <body>, but wrap if missing
+  const wrapped = rawHtml.includes("<body") ? rawHtml : `<html><body>${rawHtml}</body></html>`;
+  const { document: doc } = parseHTML(wrapped);
 
   // Get body content (Google exports full HTML document)
   const body = doc.body;
@@ -326,7 +328,9 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
  */
 export function extractPlainTextFromHtml(html: string): string {
   if (!html) return "";
-  const { document } = parseHTML(html);
+  // linkedom requires full HTML structure — wrap fragments if no <body> tag
+  const wrapped = html.includes("<body") ? html : `<html><body>${html}</body></html>`;
+  const { document } = parseHTML(wrapped);
   const body = document.body;
   if (!body) return "";
 

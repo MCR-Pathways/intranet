@@ -191,6 +191,14 @@ Complete redesign of the Resources module. Tiptap article editor replaced with G
 - [x] **Sub-PR 5 — Settings + Algolia Search** (PR #155): Settings page (folder registration, featured curation, category management), Algolia InstantSearch (section-level indexing with deep links), `html-react-parser` for heading IDs, article outline sidebar restored.
 - [x] **Sub-PR 6 — Cleanup** (PR #156): Deleted 9 files + 12 dead server actions (3,081 lines of Tiptap editor code removed).
 
+### Resources Post-Launch Fixes (2026-03-19)
+- [x] **jsdom → linkedom migration** (PR #159 + main commits): jsdom v28 failed with ERR_REQUIRE_ESM on Vercel serverless. Replaced with linkedom in `html-sections.ts` and `google-drive.ts`. jsdom kept in devDependencies for Vitest.
+- [x] **Category dropdown error handling**: Added `.catch()`/`.finally()` to `fetchCategoriesForMove()` in link dialog.
+- [x] **Error logging**: Added `logger.error` to `fetchCategoriesForMove` for Supabase query failures.
+- [ ] **Prose rendering bug**: Tailwind `prose` heading/table styles not applying to synced Google Doc HTML. See `memory/prose-rendering-investigation.md`.
+- [ ] **6 failing google-drive tests**: Whitespace differences between jsdom (test) and linkedom (production).
+- [ ] **Algolia index creation**: `resources_articles` index auto-creates on first successful Google Doc link.
+
 ### Intranet Phase 8 — Surveys + Universal Search
 - [ ] Full survey module: multi-question, 5 question types, anonymous option, results dashboard
 - [ ] Cmd+K universal search palette: posts + resources + people
