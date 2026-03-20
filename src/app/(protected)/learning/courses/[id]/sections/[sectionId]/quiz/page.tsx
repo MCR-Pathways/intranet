@@ -74,17 +74,20 @@ export default async function SectionQuizPage({
     optionsData = opts ?? [];
   }
 
+  // Group options by question_id for O(1) lookup
+  const optionsByQuestion = new Map<string, { id: string; option_text: string }[]>();
+  for (const o of optionsData) {
+    const list = optionsByQuestion.get(o.question_id) ?? [];
+    list.push({ id: o.id, option_text: o.option_text });
+    optionsByQuestion.set(o.question_id, list);
+  }
+
   // Assemble questions with options (is_correct stripped — never sent to client)
   const questionsWithOptions = questions.map((q) => ({
     id: q.id,
     question_text: q.question_text,
     question_type: q.question_type as "single" | "multi",
-    options: optionsData
-      .filter((o) => o.question_id === q.id)
-      .map((o) => ({
-        id: o.id,
-        option_text: o.option_text,
-      })),
+    options: optionsByQuestion.get(q.id) ?? [],
   }));
 
   // Fetch user's previous attempts (sorted newest first)

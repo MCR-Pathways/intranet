@@ -1,6 +1,7 @@
 "use server";
 
 import { requireLDAdmin } from "@/lib/auth";
+import { validateQuizOptions } from "@/lib/learning";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
@@ -760,32 +761,6 @@ export async function deleteLessonImage(imageId: string, courseId: string) {
 // QUIZ QUESTION CRUD
 // ===========================================
 
-/** Shared validation for quiz question options */
-function validateQuizOptions(
-  options: { is_correct: boolean }[],
-  questionType: QuestionType
-): string | null {
-  if (options.length < 2) {
-    return "At least 2 options are required";
-  }
-
-  const correctCount = options.filter((o) => o.is_correct).length;
-  if (questionType === "single") {
-    if (correctCount !== 1) {
-      return "Exactly one correct answer is required";
-    }
-  } else {
-    if (correctCount < 1) {
-      return "At least one correct answer is required";
-    }
-    const incorrectCount = options.length - correctCount;
-    if (incorrectCount < 1) {
-      return "At least one incorrect option is required";
-    }
-  }
-
-  return null;
-}
 
 export async function createQuizQuestion(data: {
   lesson_id: string;

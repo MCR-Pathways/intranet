@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   createSection,
   updateSection,
@@ -68,14 +68,18 @@ export function SectionManager({
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
 
-  const sortedSections = [...sections].sort(
-    (a, b) => a.sort_order - b.sort_order
+  const sortedSections = useMemo(
+    () => [...sections].sort((a, b) => a.sort_order - b.sort_order),
+    [sections]
   );
 
-  const nextSortOrder =
-    sortedSections.length > 0
-      ? sortedSections[sortedSections.length - 1].sort_order + 1
-      : 0;
+  const nextSortOrder = useMemo(
+    () =>
+      sortedSections.length > 0
+        ? sortedSections[sortedSections.length - 1].sort_order + 1
+        : 0,
+    [sortedSections]
+  );
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {

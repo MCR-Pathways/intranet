@@ -121,6 +121,40 @@ export function calculateSectionProgress(
   return Math.round((completedItems / totalItems) * 100);
 }
 
+/**
+ * Validates quiz question options for correctness constraints.
+ * Shared between legacy quiz and section quiz server actions.
+ *
+ * @param options - Array of options with is_correct flags
+ * @param questionType - "single" (exactly 1 correct) or "multi" (at least 1 correct + 1 incorrect)
+ * @returns Error message string, or null if valid.
+ */
+export function validateQuizOptions(
+  options: { is_correct: boolean }[],
+  questionType: "single" | "multi"
+): string | null {
+  if (options.length < 2) {
+    return "At least 2 options are required";
+  }
+
+  const correctCount = options.filter((o) => o.is_correct).length;
+  if (questionType === "single") {
+    if (correctCount !== 1) {
+      return "Exactly one correct answer is required";
+    }
+  } else {
+    if (correctCount < 1) {
+      return "At least one correct answer is required";
+    }
+    const incorrectCount = options.length - correctCount;
+    if (incorrectCount < 1) {
+      return "At least one incorrect option is required";
+    }
+  }
+
+  return null;
+}
+
 /** Icon map for lesson progress states: completed, current, upcoming, locked */
 export const lessonProgressIcons = {
   completed: CheckCircle2,

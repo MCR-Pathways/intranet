@@ -104,12 +104,20 @@ export default async function CourseDetailPage({
         allOptions = opts ?? [];
       }
 
+      // Group options by question_id for O(1) lookup
+      const optionsByQuestionId = new Map<string, typeof allOptions>();
+      for (const o of allOptions) {
+        const list = optionsByQuestionId.get(o.question_id) ?? [];
+        list.push(o);
+        optionsByQuestionId.set(o.question_id, list);
+      }
+
       for (const quiz of quizzes) {
         const quizQuestions = (questions ?? [])
           .filter((q) => q.quiz_id === quiz.id)
           .map((q) => ({
             ...q,
-            options: allOptions.filter((o) => o.question_id === q.id),
+            options: optionsByQuestionId.get(q.id) ?? [],
           }));
 
         sectionQuizMap[quiz.section_id] = {

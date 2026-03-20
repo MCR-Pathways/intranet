@@ -1,40 +1,10 @@
 "use server";
 
 import { requireLDAdmin } from "@/lib/auth";
+import { validateQuizOptions } from "@/lib/learning";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import type { SectionQuizQuestionType } from "@/types/database.types";
-
-// ===========================================
-// VALIDATION
-// ===========================================
-
-/** Shared validation for section quiz question options */
-function validateSectionQuizOptions(
-  options: { is_correct: boolean }[],
-  questionType: SectionQuizQuestionType
-): string | null {
-  if (options.length < 2) {
-    return "At least 2 options are required";
-  }
-
-  const correctCount = options.filter((o) => o.is_correct).length;
-  if (questionType === "single") {
-    if (correctCount !== 1) {
-      return "Exactly one correct answer is required";
-    }
-  } else {
-    if (correctCount < 1) {
-      return "At least one correct answer is required";
-    }
-    const incorrectCount = options.length - correctCount;
-    if (incorrectCount < 1) {
-      return "At least one incorrect option is required";
-    }
-  }
-
-  return null;
-}
 
 // ===========================================
 // SECTION CRUD
@@ -278,7 +248,7 @@ export async function createSectionQuizQuestion(data: {
 
   const questionType = data.question_type ?? "single";
 
-  const validationError = validateSectionQuizOptions(data.options, questionType);
+  const validationError = validateQuizOptions(data.options, questionType);
   if (validationError) {
     return { success: false, error: validationError, questionId: null };
   }
@@ -371,7 +341,7 @@ export async function updateSectionQuizQuestion(
       questionType = (existingQuestion.question_type as SectionQuizQuestionType) ?? "single";
     }
 
-    const validationError = validateSectionQuizOptions(data.options, questionType);
+    const validationError = validateQuizOptions(data.options, questionType);
     if (validationError) {
       return { success: false, error: validationError };
     }
