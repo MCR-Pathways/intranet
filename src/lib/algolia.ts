@@ -19,6 +19,7 @@ const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY ?? "";
 const ADMIN_KEY = process.env.ALGOLIA_ADMIN_KEY ?? "";
 
 export const RESOURCES_INDEX = "resources_articles";
+export const COURSES_INDEX = "learning_courses";
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,80 @@ export async function indexArticleSections(
     // Non-critical — search will be stale but app still works
     logger.warn("Algolia: failed to index article", {
       articleId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ─── Course indexing ──────────────────────────────────────────────────────────
+
+export interface AlgoliaCourseRecord {
+  objectID: string;
+  courseId: string;
+  title: string;
+  description: string | null;
+  category: string;
+  isRequired: boolean;
+  durationMinutes: number | null;
+  updatedAt: string;
+}
+
+/**
+ * Index a course into Algolia for search.
+ */
+export async function indexCourse(
+  courseId: string,
+  title: string,
+  description: string | null,
+  category: string,
+  isRequired: boolean,
+  durationMinutes: number | null,
+  updatedAt: string
+): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    const record: AlgoliaCourseRecord = {
+      objectID: courseId,
+      courseId,
+      title,
+      description,
+      category,
+      isRequired,
+      durationMinutes,
+      updatedAt,
+    };
+
+    await client.saveObjects({
+      indexName: COURSES_INDEX,
+      objects: [record as unknown as Record<string, unknown>],
+    });
+
+    logger.info("Algolia: indexed course", { courseId, title });
+  } catch (error) {
+    logger.warn("Algolia: failed to index course", {
+      courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Remove a course from the Algolia index.
+ */
+export async function removeCourseFromIndex(courseId: string): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    await client.deleteObjects({
+      indexName: COURSES_INDEX,
+      objectIDs: [courseId],
+    });
+
+    logger.info("Algolia: removed course from index", { courseId });
+  } catch (error) {
+    logger.warn("Algolia: failed to remove course from index", {
+      courseId,
       error: error instanceof Error ? error.message : String(error),
     });
   }

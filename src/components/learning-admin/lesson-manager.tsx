@@ -27,7 +27,6 @@ import {
   BookOpen,
   PlayCircle,
   FileText,
-  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -36,16 +35,16 @@ import type { CourseLesson, LessonType, LessonImage } from "@/types/database.typ
 const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
   text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
   video: { label: "Video", icon: PlayCircle, color: "text-blue-600", bgColor: "bg-blue-50" },
-  quiz: { label: "Quiz", icon: HelpCircle, color: "text-purple-600", bgColor: "bg-purple-50" },
 };
 
 interface LessonManagerProps {
   courseId: string;
+  sectionId?: string;
   lessons: CourseLesson[];
   lessonImagesMap?: Record<string, LessonImage[]>;
 }
 
-export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
+export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingLesson, setEditingLesson] = useState<CourseLesson | null>(null);
@@ -138,7 +137,6 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
                       {lessonTypeConfig[lesson.lesson_type ?? "text"].label}
                       {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
                       {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
-                      {lesson.lesson_type === "quiz" && lesson.passing_score != null && ` · ${lesson.passing_score}% to pass`}
                       {lesson.lesson_type === "text" && (lessonImagesMap[lesson.id]?.length ?? 0) > 0 && ` · ${lessonImagesMap[lesson.id].length} image${lessonImagesMap[lesson.id].length > 1 ? "s" : ""}`}
                     </p>
                   </div>
@@ -195,6 +193,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
       {/* Create Lesson Dialog */}
       <LessonEditDialog
         courseId={courseId}
+        sectionId={sectionId}
         sortOrder={nextSortOrder}
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -204,6 +203,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
       {editingLesson && (
         <LessonEditDialog
           courseId={courseId}
+          sectionId={sectionId}
           lesson={editingLesson}
           lessonImages={lessonImagesMap[editingLesson.id] ?? []}
           open={!!editingLesson}

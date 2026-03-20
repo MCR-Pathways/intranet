@@ -95,3 +95,41 @@ export async function submitQuiz(
     progress_percent: number;
   } };
 }
+
+export async function submitSectionQuiz(
+  quizId: string,
+  sectionId: string,
+  courseId: string,
+  answers: Record<string, string | string[]>
+) {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated", result: null };
+  }
+
+  const { data: result, error } = await supabase.rpc("submit_section_quiz_attempt", {
+    p_user_id: user.id,
+    p_quiz_id: quizId,
+    p_section_id: sectionId,
+    p_course_id: courseId,
+    p_answers: answers,
+  });
+
+  if (error) {
+    logger.error("Failed to submit section quiz", { error });
+    return { success: false, error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", result: null };
+  }
+
+  revalidatePath(`/learning/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}/sections/${sectionId}/quiz`);
+  revalidatePath("/learning");
+  revalidatePath("/learning/my-courses");
+  return { success: true, error: null, result: result as {
+    score: number;
+    passed: boolean;
+    correct_answers: number;
+    total_questions: number;
+    passing_score: number;
+  } };
+}

@@ -146,36 +146,88 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
 export async function publishCourse(courseId: string) {
   const { supabase, user } = await requireLDAdmin();
 
-  // Validate: course must have at least 1 active lesson
-  const { data: lessons } = await supabase
-    .from("course_lessons")
-    .select("id, title, lesson_type")
+  // Check if this is a section-based course
+  const { data: sections } = await supabase
+    .from("course_sections")
+    .select("id, title")
     .eq("course_id", courseId)
     .eq("is_active", true);
 
-  if (!lessons || lessons.length === 0) {
-    return { success: false, error: "Add at least one lesson before publishing." };
-  }
+  const hasSections = sections && sections.length > 0;
 
-  // Validate: quiz lessons must have at least 1 question (batch query to avoid N+1)
-  const quizLessons = lessons.filter((l) => l.lesson_type === "quiz");
-  if (quizLessons.length > 0) {
-    const quizLessonIds = quizLessons.map((l) => l.id);
-    const { data: questionsWithLessons } = await supabase
-      .from("quiz_questions")
-      .select("lesson_id")
-      .in("lesson_id", quizLessonIds);
+  if (hasSections) {
+    // Section-based validation: at least 1 section with at least 1 lesson
+    const sectionIds = sections.map((s) => s.id);
+    const { data: sectionLessons } = await supabase
+      .from("course_lessons")
+      .select("id, section_id")
+      .eq("course_id", courseId)
+      .eq("is_active", true)
+      .in("section_id", sectionIds);
 
-    const lessonsWithQuestions = new Set(
-      (questionsWithLessons ?? []).map((q) => q.lesson_id)
-    );
+    if (!sectionLessons || sectionLessons.length === 0) {
+      return { success: false, error: "Add at least one lesson to a section before publishing." };
+    }
 
-    const emptyQuiz = quizLessons.find((q) => !lessonsWithQuestions.has(q.id));
-    if (emptyQuiz) {
-      return {
-        success: false,
-        error: `Quiz "${emptyQuiz.title}" needs at least one question before publishing.`,
-      };
+    // Validate section quizzes have at least 1 question each
+    const { data: sectionQuizzes } = await supabase
+      .from("section_quizzes")
+      .select("id, section_id")
+      .in("section_id", sectionIds)
+      .eq("is_active", true);
+
+    if (sectionQuizzes && sectionQuizzes.length > 0) {
+      const quizIds = sectionQuizzes.map((q) => q.id);
+      const { data: quizQuestions } = await supabase
+        .from("section_quiz_questions")
+        .select("quiz_id")
+        .in("quiz_id", quizIds);
+
+      const quizzesWithQuestions = new Set(
+        (quizQuestions ?? []).map((q) => q.quiz_id)
+      );
+
+      const emptyQuiz = sectionQuizzes.find((q) => !quizzesWithQuestions.has(q.id));
+      if (emptyQuiz) {
+        const section = sections.find((s) => s.id === emptyQuiz.section_id);
+        return {
+          success: false,
+          error: `Section quiz in "${section?.title ?? "Unknown"}" needs at least one question before publishing.`,
+        };
+      }
+    }
+  } else {
+    // Legacy flat validation: course must have at least 1 active lesson
+    const { data: lessons } = await supabase
+      .from("course_lessons")
+      .select("id, title, lesson_type")
+      .eq("course_id", courseId)
+      .eq("is_active", true);
+
+    if (!lessons || lessons.length === 0) {
+      return { success: false, error: "Add at least one lesson before publishing." };
+    }
+
+    // Validate: quiz lessons must have at least 1 question
+    const quizLessons = lessons.filter((l) => l.lesson_type === "quiz");
+    if (quizLessons.length > 0) {
+      const quizLessonIds = quizLessons.map((l) => l.id);
+      const { data: questionsWithLessons } = await supabase
+        .from("quiz_questions")
+        .select("lesson_id")
+        .in("lesson_id", quizLessonIds);
+
+      const lessonsWithQuestions = new Set(
+        (questionsWithLessons ?? []).map((q) => q.lesson_id)
+      );
+
+      const emptyQuiz = quizLessons.find((q) => !lessonsWithQuestions.has(q.id));
+      if (emptyQuiz) {
+        return {
+          success: false,
+          error: `Quiz "${emptyQuiz.title}" needs at least one question before publishing.`,
+        };
+      }
     }
   }
 
@@ -239,6 +291,7 @@ export async function unpublishCourse(courseId: string) {
 
 export async function createLesson(data: {
   course_id: string;
+  section_id?: string | null;
   title: string;
   content?: string | null;
   video_url?: string | null;
@@ -251,6 +304,7 @@ export async function createLesson(data: {
 
   const ALLOWED_FIELDS = [
     "course_id",
+    "section_id",
     "title",
     "content",
     "video_url",

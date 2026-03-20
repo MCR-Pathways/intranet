@@ -16,9 +16,10 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
+import { categoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
+import { SectionAccordion } from "@/components/learning/section-accordion";
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "N/A";
@@ -69,7 +70,7 @@ export default async function CourseDetailPage({
   // Fetch lessons for this course
   const { data: lessonsData } = await supabase
     .from("course_lessons")
-    .select("id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
+    .select("id, course_id, section_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
     .eq("course_id", id)
     .eq("is_active", true)
     .order("sort_order");
@@ -89,10 +90,89 @@ export default async function CourseDetailPage({
   }
 
   const hasLessons = lessons.length > 0;
+  const isEnrolled = !!enrolment;
+
+  // Fetch sections for section-based courses
+  const { data: sectionsData } = await supabase
+    .from("course_sections")
+    .select("id, title, description, sort_order")
+    .eq("course_id", id)
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const sections = sectionsData ?? [];
+  const hasSections = sections.length > 0;
+
+  // For section-based courses: fetch section quizzes and attempts
+  let passedQuizSectionIds = new Set<string>();
+  let sectionsWithQuizzes = new Set<string>();
+  let lockedSectionIds = new Set<string>();
+
+  if (hasSections && isEnrolled) {
+    const sectionIds = sections.map((s) => s.id);
+
+    const { data: sectionQuizzes } = await supabase
+      .from("section_quizzes")
+      .select("id, section_id")
+      .in("section_id", sectionIds)
+      .eq("is_active", true);
+
+    sectionsWithQuizzes = new Set((sectionQuizzes ?? []).map((q) => q.section_id));
+
+    if (sectionQuizzes && sectionQuizzes.length > 0) {
+      const { data: passedAttempts } = await supabase
+        .from("section_quiz_attempts")
+        .select("section_id")
+        .eq("user_id", user.id)
+        .eq("course_id", id)
+        .eq("passed", true);
+
+      passedQuizSectionIds = new Set((passedAttempts ?? []).map((a) => a.section_id));
+    }
+
+    lockedSectionIds = getLockedSectionIds(sections, passedQuizSectionIds, sectionsWithQuizzes);
+  }
+
+  // Build section data for SectionAccordion
+  const sectionAccordionData = sections.map((s) => {
+    const sectionLessons = lessons
+      .filter((l) => l.section_id === s.id)
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        lesson_type: l.lesson_type ?? "text",
+        isCompleted: completedLessonIds.includes(l.id),
+      }));
+
+    return {
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      sort_order: s.sort_order,
+      lessons: sectionLessons,
+      hasQuiz: sectionsWithQuizzes.has(s.id),
+      quizPassed: passedQuizSectionIds.has(s.id),
+      isLocked: lockedSectionIds.has(s.id),
+    };
+  });
 
   // Find the first incomplete, unlocked lesson for the "Continue Learning" button
   const resumeLessonId = (() => {
     if (!hasLessons) return null;
+
+    if (hasSections) {
+      // Section-based: find first incomplete lesson in first unlocked section
+      for (const section of sectionAccordionData) {
+        if (section.isLocked) continue;
+        const firstIncomplete = section.lessons.find((l) => !l.isCompleted);
+        if (firstIncomplete) return firstIncomplete.id;
+      }
+      // All complete, return first lesson
+      const firstSection = sectionAccordionData[0];
+      return firstSection?.lessons[0]?.id ?? lessons[0]?.id ?? null;
+    }
+
+    // Legacy flat: find first incomplete unlocked lesson
     const lockedIds = getLockedLessonIds(lessons, completedLessonIds);
     const firstIncomplete = lessons.find(
       (l) => !completedLessonIds.includes(l.id) && !lockedIds.has(l.id)
@@ -103,7 +183,6 @@ export default async function CourseDetailPage({
   const config = categoryConfig[course.category];
   const Icon = config.icon;
 
-  const isEnrolled = !!enrolment;
   const isCompleted = enrolment?.status === "completed";
   const isInProgress = enrolment?.status === "in_progress";
 
@@ -330,15 +409,21 @@ export default async function CourseDetailPage({
         )}
       </div>
 
-      {/* Lessons section */}
-      {hasLessons && (
+      {/* Course content */}
+      {hasSections ? (
+        <SectionAccordion
+          courseId={course.id}
+          sections={sectionAccordionData}
+          isEnrolled={isEnrolled}
+        />
+      ) : hasLessons ? (
         <LessonList
           courseId={course.id}
           lessons={lessons}
           completedLessonIds={completedLessonIds}
           isEnrolled={isEnrolled}
         />
-      )}
+      ) : null}
     </div>
   );
 }

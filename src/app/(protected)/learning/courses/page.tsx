@@ -118,7 +118,7 @@ export default async function CourseCatalogPage({
   const [{ data: courses }, { data: enrolments }] = await Promise.all([
     supabase
       .from("courses")
-      .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
+      .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, feedback_avg, feedback_count, created_by, updated_by, created_at, updated_at")
       .eq("is_active", true)
       .eq("status", "published")
       .order("is_required", { ascending: false })

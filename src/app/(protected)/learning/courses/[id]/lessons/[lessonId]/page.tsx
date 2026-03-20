@@ -8,13 +8,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import type {
   CourseLesson,
   LessonType,
-  QuizQuestionWithOptions,
-  QuizAttempt,
-  QuizOption,
 } from "@/types/database.types";
 import { MarkCompleteButton } from "./mark-complete-button";
 import { VideoPlayer } from "@/components/learning/video-player";
-import { QuizPlayer } from "@/components/learning/quiz-player";
 import { LessonSidebar } from "@/components/learning/lesson-sidebar";
 import { getLockedLessonIds } from "@/lib/learning";
 
@@ -59,7 +55,7 @@ export default async function LessonPage({
   const { data: allLessons } = await supabase
     .from("course_lessons")
     .select(
-      "id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
+      "id, course_id, section_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
     )
     .eq("course_id", courseId)
     .eq("is_active", true)
@@ -109,59 +105,6 @@ export default async function LessonPage({
     isCompleted: completedLessonIds.includes(l.id),
     isLocked: lockedLessonIds.has(l.id),
   }));
-
-  // For quiz lessons: fetch questions with options (strip is_correct) and past attempts
-  let quizQuestions: QuizQuestionWithOptions[] = [];
-  let quizAttempts: QuizAttempt[] = [];
-
-  if (lesson.lesson_type === "quiz") {
-    const [questionsResult, attemptsResult] = await Promise.all([
-      supabase
-        .from("quiz_questions")
-        .select(
-          "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
-        )
-        .eq("lesson_id", lessonId)
-        .order("sort_order"),
-      supabase
-        .from("quiz_attempts")
-        .select(
-          "id, user_id, lesson_id, score, passed, answers, attempted_at"
-        )
-        .eq("user_id", user.id)
-        .eq("lesson_id", lessonId)
-        .order("attempted_at", { ascending: false }),
-    ]);
-
-    const questions = questionsResult.data ?? [];
-    quizAttempts = (attemptsResult.data as QuizAttempt[]) ?? [];
-
-    // Fetch options for all questions (strip is_correct for security)
-    if (questions.length > 0) {
-      const questionIds = questions.map((q) => q.id);
-      const { data: optionsData } = await supabase
-        .from("quiz_options")
-        .select("id, question_id, option_text, is_correct, sort_order, created_at")
-        .in("question_id", questionIds)
-        .order("sort_order");
-
-      const options = optionsData ?? [];
-
-      // Group options by question and strip is_correct
-      quizQuestions = questions.map((q) => ({
-        ...q,
-        options: options
-          .filter((o) => o.question_id === q.id)
-          .map(
-            (o) =>
-              ({
-                ...o,
-                is_correct: false, // Stripped for security — scoring happens server-side
-              }) as QuizOption
-          ),
-      }));
-    }
-  }
 
   // For text lessons: fetch images
   let lessonImages: { id: string; file_url: string; file_name: string }[] = [];
@@ -250,18 +193,6 @@ export default async function LessonPage({
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {lessonType === "quiz" && (
-            <QuizPlayer
-              lessonId={lessonId}
-              courseId={courseId}
-              questions={quizQuestions}
-              passingScore={lesson.passing_score ?? 80}
-              previousAttempts={quizAttempts}
-              isCompleted={isCompleted}
-              isLastLesson={isLastLesson}
-            />
           )}
 
           {/* Mark Complete + Navigation */}

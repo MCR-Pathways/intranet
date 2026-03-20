@@ -29,7 +29,9 @@ export type TimeSlot = "full_day" | "morning" | "afternoon";
 export type LocationSource = "manual" | "calendar" | "pattern" | "leave";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrolmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
-export type LessonType = "video" | "text" | "quiz";
+export type LessonType = "video" | "text";
+export type SectionQuizQuestionType = "single" | "multi";
+export type ToolShedFormat = "postcard" | "three_two_one" | "takeover";
 export type CourseStatus = "draft" | "published";
 export type QuestionType = "single" | "multi";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
@@ -245,6 +247,8 @@ export interface Database {
           due_days_from_start: number | null;
           is_active: boolean;
           status: CourseStatus;
+          feedback_avg: number | null;
+          feedback_count: number;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
@@ -263,6 +267,8 @@ export interface Database {
           due_days_from_start?: number | null;
           is_active?: boolean;
           status?: CourseStatus;
+          feedback_avg?: number | null;
+          feedback_count?: number;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -281,6 +287,8 @@ export interface Database {
           due_days_from_start?: number | null;
           is_active?: boolean;
           status?: CourseStatus;
+          feedback_avg?: number | null;
+          feedback_count?: number;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -544,6 +552,7 @@ export interface Database {
         Row: {
           id: string;
           course_id: string;
+          section_id: string | null;
           title: string;
           content: string | null;
           video_url: string | null;
@@ -558,6 +567,7 @@ export interface Database {
         Insert: {
           id?: string;
           course_id: string;
+          section_id?: string | null;
           title: string;
           content?: string | null;
           video_url?: string | null;
@@ -572,6 +582,7 @@ export interface Database {
         Update: {
           id?: string;
           course_id?: string;
+          section_id?: string | null;
           title?: string;
           content?: string | null;
           video_url?: string | null;
@@ -987,6 +998,273 @@ export interface Database {
           updated_at?: string;
         };
       };
+      course_sections: {
+        Row: {
+          id: string;
+          course_id: string;
+          title: string;
+          description: string | null;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          title: string;
+          description?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          course_id?: string;
+          title?: string;
+          description?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      section_quizzes: {
+        Row: {
+          id: string;
+          section_id: string;
+          title: string;
+          passing_score: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          section_id: string;
+          title?: string;
+          passing_score?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          section_id?: string;
+          title?: string;
+          passing_score?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      section_quiz_questions: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          question_text: string;
+          question_type: SectionQuizQuestionType;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          question_text: string;
+          question_type?: SectionQuizQuestionType;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          quiz_id?: string;
+          question_text?: string;
+          question_type?: SectionQuizQuestionType;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      section_quiz_options: {
+        Row: {
+          id: string;
+          question_id: string;
+          option_text: string;
+          is_correct: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          option_text: string;
+          is_correct?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          question_id?: string;
+          option_text?: string;
+          is_correct?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      section_quiz_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          quiz_id: string;
+          section_id: string;
+          course_id: string;
+          score: number;
+          passed: boolean;
+          answers: Json | null;
+          attempted_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          quiz_id: string;
+          section_id: string;
+          course_id: string;
+          score: number;
+          passed?: boolean;
+          answers?: Json | null;
+          attempted_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          quiz_id?: string;
+          section_id?: string;
+          course_id?: string;
+          score?: number;
+          passed?: boolean;
+          answers?: Json | null;
+          attempted_at?: string;
+        };
+      };
+      certificates: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          certificate_number: string;
+          issued_at: string;
+          pdf_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          certificate_number: string;
+          issued_at?: string;
+          pdf_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          certificate_number?: string;
+          issued_at?: string;
+          pdf_url?: string | null;
+          created_at?: string;
+        };
+      };
+      course_feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          rating: number;
+          comment: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          rating: number;
+          comment?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          rating?: number;
+          comment?: string | null;
+          created_at?: string;
+        };
+      };
+      tool_shed_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          lesson_id: string;
+          format: ToolShedFormat;
+          content: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          lesson_id: string;
+          format: ToolShedFormat;
+          content?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          lesson_id?: string;
+          format?: ToolShedFormat;
+          content?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      email_notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          email_type: string;
+          subject: string;
+          metadata: Json | null;
+          sent_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email_type: string;
+          subject: string;
+          metadata?: Json | null;
+          sent_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          email_type?: string;
+          subject?: string;
+          metadata?: Json | null;
+          sent_at?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1070,6 +1348,23 @@ export interface Database {
         };
         Returns: number;
       };
+      submit_section_quiz_attempt: {
+        Args: {
+          p_user_id: string;
+          p_quiz_id: string;
+          p_section_id: string;
+          p_course_id: string;
+          p_answers: Json;
+        };
+        Returns: Json;
+      };
+      recalculate_course_progress: {
+        Args: {
+          p_user_id: string;
+          p_course_id: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums
@@ -1102,6 +1397,26 @@ export interface QuizQuestionWithOptions extends QuizQuestion {
   options: QuizOption[];
 }
 export type InductionProgress = Database["public"]["Tables"]["induction_progress"]["Row"];
+
+// Section-based learning types
+export type CourseSection = Database["public"]["Tables"]["course_sections"]["Row"];
+export type SectionQuiz = Database["public"]["Tables"]["section_quizzes"]["Row"];
+export type SectionQuizQuestion = Database["public"]["Tables"]["section_quiz_questions"]["Row"];
+export type SectionQuizOption = Database["public"]["Tables"]["section_quiz_options"]["Row"];
+export type SectionQuizAttempt = Database["public"]["Tables"]["section_quiz_attempts"]["Row"];
+export type Certificate = Database["public"]["Tables"]["certificates"]["Row"];
+export type CourseFeedback = Database["public"]["Tables"]["course_feedback"]["Row"];
+export type ToolShedEntry = Database["public"]["Tables"]["tool_shed_entries"]["Row"];
+export type EmailNotification = Database["public"]["Tables"]["email_notifications"]["Row"];
+
+export interface SectionQuizQuestionWithOptions extends SectionQuizQuestion {
+  options: SectionQuizOption[];
+}
+
+export interface CourseSectionWithDetails extends CourseSection {
+  lessons: CourseLesson[];
+  quiz: (SectionQuiz & { questions: SectionQuizQuestionWithOptions[] }) | null;
+}
 
 // Extended types with relations
 export interface ProfileWithRelations extends Profile {
