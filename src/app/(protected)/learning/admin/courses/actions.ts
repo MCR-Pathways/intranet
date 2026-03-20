@@ -295,6 +295,8 @@ export async function createLesson(data: {
   section_id?: string | null;
   title: string;
   content?: string | null;
+  content_json?: any | null;
+  slides_url?: string | null;
   video_url?: string | null;
   video_storage_path?: string | null;
   lesson_type?: LessonType;
@@ -308,6 +310,8 @@ export async function createLesson(data: {
     "section_id",
     "title",
     "content",
+    "content_json",
+    "slides_url",
     "video_url",
     "video_storage_path",
     "lesson_type",
@@ -327,6 +331,20 @@ export async function createLesson(data: {
     const c = data.content;
     if (!c || !c.trim()) {
       return { success: false, error: "Text content cannot be empty", lessonId: null };
+    }
+  }
+  if (data.lesson_type === "rich_text") {
+    if (!data.content_json) {
+      return { success: false, error: "Rich text content cannot be empty", lessonId: null };
+    }
+  }
+  if (data.lesson_type === "slides") {
+    if (!data.slides_url) {
+      return { success: false, error: "Slides URL is required", lessonId: null };
+    }
+    const urlError = validateUrl(data.slides_url, "Slides URL");
+    if (urlError) {
+      return { success: false, error: urlError, lessonId: null };
     }
   }
   if (data.lesson_type === "video") {
@@ -365,6 +383,8 @@ export async function updateLesson(
   data: {
     title?: string;
     content?: string | null;
+    content_json?: any | null;
+    slides_url?: string | null;
     video_url?: string | null;
     video_storage_path?: string | null;
     lesson_type?: LessonType;
@@ -378,6 +398,8 @@ export async function updateLesson(
   const ALLOWED_FIELDS = [
     "title",
     "content",
+    "content_json",
+    "slides_url",
     "video_url",
     "video_storage_path",
     "lesson_type",
@@ -403,6 +425,21 @@ export async function updateLesson(
     const c = data.content;
     if (!c || !c.trim()) {
       return { success: false, error: "Text content cannot be empty" };
+    }
+  }
+  if (lessonType === "rich_text") {
+    if (!data.content_json && !data.content) {
+      // Allow saving an empty editor, but front-end might validate.
+      // Alternatively, be lenient if transitioning lesson types.
+    }
+  }
+  if (lessonType === "slides") {
+    if (!data.slides_url) {
+      return { success: false, error: "Slides URL is required" };
+    }
+    const urlError = validateUrl(data.slides_url, "Slides URL");
+    if (urlError) {
+      return { success: false, error: urlError };
     }
   }
   if (lessonType === "video") {

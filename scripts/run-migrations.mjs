@@ -19,7 +19,7 @@ if (!DATABASE_URL) {
 }
 
 const sql = postgres(DATABASE_URL, {
-  ssl: 'require',
+  ssl: DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1') ? false : 'require',
 });
 
 const migrations = [

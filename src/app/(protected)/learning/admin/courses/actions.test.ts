@@ -348,6 +348,14 @@ describe("L&D Course Actions", () => {
             return { select: mockQuizSelect };
           case "courses":
             return { update: mockCourseUpdate };
+          case "course_sections":
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+                }),
+              }),
+            };
           case "course_assignments":
             return { select: mockAssignSelect };
           default:

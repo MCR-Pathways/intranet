@@ -10,7 +10,11 @@ import {
   Circle,
   Lock,
   PlayCircle,
+  Video as VideoIcon,
   FileText,
+  Presentation,
+  AlignLeft,
+  HelpCircle,
 } from "lucide-react";
 import type { CourseCategory, LessonType } from "@/types/database.types";
 import type { BadgeProps } from "@/components/ui/badge";
@@ -163,13 +167,41 @@ export const lessonProgressIcons = {
   locked: Lock,
 } as const;
 
-/** Config for lesson types (video/text only — quiz is now section-level) */
+/** Config for lesson types */
 export const lessonTypeConfig: Record<
-  Exclude<LessonType, "quiz">,
-  { label: string; icon: typeof FileText; color: string; bgColor: string }
+  LessonType,
+  { label: string; icon: React.ElementType; color: string; bgColor: string }
 > = {
-  text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
-  video: { label: "Video", icon: PlayCircle, color: "text-blue-600", bgColor: "bg-blue-50" },
+  text: {
+    label: "Plain Text",
+    icon: FileText,
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+  },
+  rich_text: {
+    label: "Rich Text",
+    icon: AlignLeft,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
+  },
+  video: {
+    label: "Video",
+    icon: VideoIcon,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+  },
+  slides: {
+    label: "Slides",
+    icon: Presentation,
+    color: "text-orange-600",
+    bgColor: "bg-orange-50",
+  },
+  quiz: {
+    label: "Quiz",
+    icon: HelpCircle,
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+  },
 };
 
 /**

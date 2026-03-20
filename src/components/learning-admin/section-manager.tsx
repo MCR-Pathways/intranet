@@ -210,9 +210,11 @@ export function SectionManager({
         </CardHeader>
         <CardContent>
           {sortedSections.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              No sections yet. Add sections to organise this course.
-            </p>
+            <div className="text-center py-6 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                No sections yet. Sections let you group lessons into modules and add a quiz to each section.
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
               {sortedSections.map((section, index) => {

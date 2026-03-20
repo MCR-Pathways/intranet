@@ -70,7 +70,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net; img-src 'self' blob: data: https://*.supabase.co https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-ancestors 'none'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net; img-src 'self' blob: data: https://*.supabase.co https://*.googleusercontent.com http://localhost:* http://127.0.0.1:*; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com http://localhost:* http://127.0.0.1:*; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-ancestors 'none'",
           },
         ],
       },

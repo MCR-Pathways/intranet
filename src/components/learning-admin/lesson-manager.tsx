@@ -30,21 +30,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
-
-const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
-  text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
-  video: { label: "Video", icon: PlayCircle, color: "text-blue-600", bgColor: "bg-blue-50" },
-};
+import type { CourseLesson, LessonType, LessonImage, QuizQuestionWithOptions } from "@/types/database.types";
+import { lessonTypeConfig } from "@/lib/learning";
 
 interface LessonManagerProps {
   courseId: string;
   sectionId?: string;
   lessons: CourseLesson[];
   lessonImagesMap?: Record<string, LessonImage[]>;
+  lessonQuizzesMap?: Record<string, QuizQuestionWithOptions[]>;
 }
 
-export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
+export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = {}, lessonQuizzesMap = {} }: LessonManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingLesson, setEditingLesson] = useState<CourseLesson | null>(null);
@@ -121,7 +118,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
                     {index + 1}
                   </span>
                   {(() => {
-                    const typeConfig = lessonTypeConfig[lesson.lesson_type ?? "text"];
+                    const typeConfig = lessonTypeConfig[lesson.lesson_type] || lessonTypeConfig.text;
                     const TypeIcon = typeConfig.icon;
                     return (
                       <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
@@ -134,7 +131,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
                       {lesson.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {lessonTypeConfig[lesson.lesson_type ?? "text"].label}
+                      {lessonTypeConfig[lesson.lesson_type]?.label || "Unknown Type"}
                       {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
                       {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
                       {lesson.lesson_type === "text" && (lessonImagesMap[lesson.id]?.length ?? 0) > 0 && ` · ${lessonImagesMap[lesson.id].length} image${lessonImagesMap[lesson.id].length > 1 ? "s" : ""}`}
@@ -205,7 +202,8 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
           courseId={courseId}
           sectionId={sectionId}
           lesson={editingLesson}
-          lessonImages={lessonImagesMap[editingLesson.id] ?? []}
+          lessonImages={editingLesson ? lessonImagesMap[editingLesson.id] : []}
+          quizQuestions={editingLesson ? lessonQuizzesMap[editingLesson.id] : []}
           open={!!editingLesson}
           onOpenChange={(open) => {
             if (!open) setEditingLesson(null);

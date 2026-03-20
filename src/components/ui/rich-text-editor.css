@@ -1,0 +1,53 @@
+/* Base styles for Tiptap editor */
+.tiptap {
+  /* Remove browser focus outline everywhere */
+  outline: none;
+}
+
+/* Placeholder support */
+.tiptap p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Ensure images sit nicely inline */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin-block: 1rem;
+}
+
+.tiptap iframe {
+  max-width: 100%;
+  border-radius: var(--radius);
+  margin-block: 1rem;
+}
+
+/* Ensure tables render correctly */
+.tiptap table {
+  border-collapse: collapse;
+  margin: 0;
+  overflow: hidden;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.tiptap table td,
+.tiptap table th {
+  border: 1px solid hsl(var(--border));
+  box-sizing: border-box;
+  min-width: 1em;
+  padding: 6px 8px;
+  position: relative;
+  vertical-align: top;
+}
+
+.tiptap table th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+  text-align: left;
+}

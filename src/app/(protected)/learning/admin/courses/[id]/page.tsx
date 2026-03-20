@@ -8,7 +8,7 @@ import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
-import type { CourseLesson, LessonImage, CourseSectionWithDetails } from "@/types/database.types";
+import type { CourseLesson, LessonImage, CourseSectionWithDetails, QuizQuestionWithOptions } from "@/types/database.types";
 import { SectionManager } from "@/components/learning-admin/section-manager";
 
 export default async function CourseDetailPage({
@@ -157,6 +157,44 @@ export default async function CourseDetailPage({
     }
   }
 
+  // Fetch quiz questions for individual lessons
+  const quizLessonIds = typedLessons.filter((l) => l.lesson_type === "quiz").map((l) => l.id);
+  const lessonQuizzesMap: Record<string, QuizQuestionWithOptions[]> = {};
+
+  if (quizLessonIds.length > 0) {
+    const { data: questions } = await supabase
+      .from("quiz_questions")
+      .select("id, lesson_id, question_text, question_type, sort_order, created_at, updated_at")
+      .in("lesson_id", quizLessonIds)
+      .order("sort_order");
+
+    if (questions && questions.length > 0) {
+      const questionIds = questions.map((q) => q.id);
+      const { data: options } = await supabase
+        .from("quiz_options")
+        .select("id, question_id, option_text, is_correct, sort_order, created_at")
+        .in("question_id", questionIds)
+        .order("sort_order");
+
+      const optionsByQuestionId = new Map<string, any[]>();
+      for (const o of options ?? []) {
+        const list = optionsByQuestionId.get(o.question_id) ?? [];
+        list.push(o);
+        optionsByQuestionId.set(o.question_id, list);
+      }
+
+      for (const q of questions) {
+        if (!lessonQuizzesMap[q.lesson_id]) {
+          lessonQuizzesMap[q.lesson_id] = [];
+        }
+        lessonQuizzesMap[q.lesson_id].push({
+          ...q,
+          options: optionsByQuestionId.get(q.id) ?? [],
+        } as QuizQuestionWithOptions);
+      }
+    }
+  }
+
   // Fetch creator and updater profiles
   const [creatorResult, updaterResult] = await Promise.all([
     course.created_by
@@ -220,16 +258,20 @@ export default async function CourseDetailPage({
             </CardContent>
           </Card>
 
-          {/* Section-based course content */}
-          {hasSections ? (
-            <SectionManager
-              courseId={course.id}
-              sections={sectionsWithDetails}
-              lessonImagesMap={lessonImagesMap}
-            />
-          ) : (
-            <LessonManager courseId={course.id} lessons={unsectionedLessons} lessonImagesMap={lessonImagesMap} />
-          )}
+          {/* Section management (Quizzes + Grouping) */}
+          <SectionManager
+            courseId={course.id}
+            sections={sectionsWithDetails}
+            lessonImagesMap={lessonImagesMap}
+          />
+
+          {/* Unsectioned Content */}
+          <LessonManager 
+            courseId={course.id} 
+            lessons={unsectionedLessons} 
+            lessonImagesMap={lessonImagesMap} 
+            lessonQuizzesMap={lessonQuizzesMap}
+          />
 
           <CourseDangerZone
             courseId={course.id}

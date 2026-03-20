@@ -29,7 +29,7 @@ export type TimeSlot = "full_day" | "morning" | "afternoon";
 export type LocationSource = "manual" | "calendar" | "pattern" | "leave";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrolmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
-export type LessonType = "video" | "text";
+export type LessonType = "video" | "text" | "slides" | "rich_text" | "quiz";
 export type SectionQuizQuestionType = "single" | "multi";
 export type ToolShedFormat = "postcard" | "three_two_one" | "takeover";
 export type CourseStatus = "draft" | "published";
@@ -555,6 +555,8 @@ export interface Database {
           section_id: string | null;
           title: string;
           content: string | null;
+          content_json: any | null;
+          slides_url: string | null;
           video_url: string | null;
           video_storage_path: string | null;
           lesson_type: LessonType;
@@ -570,6 +572,8 @@ export interface Database {
           section_id?: string | null;
           title: string;
           content?: string | null;
+          content_json?: Json | null;
+          slides_url?: string | null;
           video_url?: string | null;
           video_storage_path?: string | null;
           lesson_type?: LessonType;
@@ -585,6 +589,8 @@ export interface Database {
           section_id?: string | null;
           title?: string;
           content?: string | null;
+          content_json?: Json | null;
+          slides_url?: string | null;
           video_url?: string | null;
           video_storage_path?: string | null;
           lesson_type?: LessonType;
