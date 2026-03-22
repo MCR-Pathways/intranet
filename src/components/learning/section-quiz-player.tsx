@@ -24,7 +24,6 @@ interface QuizQuestion {
   options: {
     id: string;
     option_text: string;
-    is_correct?: boolean;
   }[];
 }
 
@@ -57,6 +56,9 @@ interface QuizResult {
  * Quiz player for section-level quizzes. Allows learners to answer
  * single-choice and multi-choice questions, submit for grading,
  * review correct/incorrect answers, and retry on failure (unlimited retries).
+ *
+ * Correct answers are NOT sent to the client on load — they are returned
+ * by the server action only after submission.
  */
 export function SectionQuizPlayer({
   quizId,
@@ -69,6 +71,8 @@ export function SectionQuizPlayer({
 }: SectionQuizPlayerProps) {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
+  // Map of question_id -> correct option IDs, populated after submission
+  const [correctOptionMap, setCorrectOptionMap] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -118,6 +122,9 @@ export function SectionQuizPlayer({
         toast.error(response.error ?? "Failed to submit quiz. Please try again.");
       } else if (response.result) {
         setResult(response.result);
+        if (response.correctOptionMap) {
+          setCorrectOptionMap(response.correctOptionMap);
+        }
         if (response.result.passed) {
           toast.success("Quiz passed!");
         }
@@ -128,6 +135,7 @@ export function SectionQuizPlayer({
   function handleRetry() {
     setAnswers({});
     setResult(null);
+    setCorrectOptionMap({});
     setError(null);
   }
 
@@ -184,6 +192,7 @@ export function SectionQuizPlayer({
         {questions.map((q, idx) => {
           const isMulti = q.question_type === "multi";
           const showResult = !!result;
+          const correctIds = correctOptionMap[q.id] ?? [];
 
           return (
             <Card key={q.id}>
@@ -204,7 +213,7 @@ export function SectionQuizPlayer({
                       ? Array.isArray(currentAnswer) &&
                         currentAnswer.includes(opt.id)
                       : currentAnswer === opt.id;
-                    const isCorrect = opt.is_correct === true;
+                    const isCorrect = correctIds.includes(opt.id);
 
                     return (
                       <button

@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 const mockInsert = vi.hoisted(() => vi.fn());
+const mockSelect = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
 const mockRpc = vi.hoisted(() => vi.fn());
 
@@ -13,6 +14,22 @@ const mockSupabase = vi.hoisted(() => ({
   from: mockFrom,
   rpc: mockRpc,
 }));
+
+/** Helper: create a chainable query builder that resolves to { data, error } */
+function createQueryChain(data: unknown = [], error: unknown = null) {
+  const result = { data, error };
+  const chain: Record<string, unknown> = {};
+  chain.select = vi.fn().mockReturnValue(chain);
+  chain.eq = vi.fn().mockReturnValue(chain);
+  chain.in = vi.fn().mockReturnValue(chain);
+  chain.single = vi.fn().mockResolvedValue(result);
+  // Make the chain itself thenable for queries without .single()
+  Object.defineProperty(chain, "then", {
+    value: (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+      Promise.resolve(result).then(onFulfilled, onRejected),
+  });
+  return chain;
+}
 
 vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn().mockResolvedValue({
@@ -215,6 +232,21 @@ describe("Course Learner Actions", () => {
 
     beforeEach(() => {
       mockRpc.mockResolvedValue({ data: mockQuizResult, error: null });
+
+      // After RPC, submitQuiz now queries quiz_questions and quiz_options
+      // to return correct answers for review. Set up chainable mock.
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "course_enrolments") {
+          return { insert: mockInsert };
+        }
+        if (table === "quiz_questions") {
+          return createQueryChain([{ id: "q1" }]);
+        }
+        if (table === "quiz_options") {
+          return createQueryChain([{ id: "opt-a", question_id: "q1" }]);
+        }
+        return { insert: mockInsert };
+      });
     });
 
     it("returns error when not authenticated", async () => {
@@ -253,6 +285,7 @@ describe("Course Learner Actions", () => {
       expect(result.success).toBe(true);
       expect(result.error).toBeNull();
       expect(result.result).toEqual(mockQuizResult);
+      expect(result.correctOptionMap).toEqual({ q1: ["opt-a"] });
     });
 
     it("revalidates 4 paths on success (including lesson path)", async () => {

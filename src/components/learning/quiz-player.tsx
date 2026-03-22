@@ -45,6 +45,8 @@ export function QuizPlayer({
 }: QuizPlayerProps) {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
+  // Map of question_id -> correct option IDs, populated after submission
+  const [correctOptionMap, setCorrectOptionMap] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -89,6 +91,9 @@ export function QuizPlayer({
         toast.error(response.error ?? "Failed to submit quiz. Please try again.");
       } else if (response.result) {
         setResult(response.result);
+        if (response.correctOptionMap) {
+          setCorrectOptionMap(response.correctOptionMap);
+        }
         if (response.result.passed) {
           toast.success("Quiz passed!");
         }
@@ -99,6 +104,7 @@ export function QuizPlayer({
   function handleRetry() {
     setAnswers({});
     setResult(null);
+    setCorrectOptionMap({});
     setError(null);
   }
 
@@ -145,6 +151,7 @@ export function QuizPlayer({
           const qType = (q.question_type ?? "single") as QuestionType;
           const isMulti = qType === "multi";
           const showResult = !!result;
+          const correctIds = correctOptionMap[q.id] ?? [];
 
           return (
             <Card key={q.id}>
@@ -164,7 +171,8 @@ export function QuizPlayer({
                     const isSelected = isMulti
                       ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
                       : currentAnswer === opt.id;
-                    const isCorrect = opt.is_correct === true;
+                    // Use server-returned correct answers (only available after submission)
+                    const isCorrect = correctIds.includes(opt.id);
 
                     return (
                       <button

@@ -10,6 +10,9 @@ import {
   Circle,
   Lock,
   ChevronLeft,
+  Presentation,
+  FileCode2,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -34,6 +37,9 @@ interface LessonSidebarProps {
 const lessonTypeIcon: Record<LessonType, typeof PlayCircle> = {
   video: PlayCircle,
   text: FileText,
+  slides: Presentation,
+  rich_text: FileCode2,
+  quiz: HelpCircle,
 };
 
 export function LessonSidebar({

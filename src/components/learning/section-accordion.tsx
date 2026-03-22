@@ -15,6 +15,8 @@ import {
   PlayCircle,
   FileText,
   HelpCircle,
+  Presentation,
+  FileCode2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +47,9 @@ interface SectionAccordionProps {
 const lessonTypeIcon: Record<string, typeof FileText> = {
   video: PlayCircle,
   text: FileText,
+  slides: Presentation,
+  rich_text: FileCode2,
+  quiz: HelpCircle,
 };
 
 /**

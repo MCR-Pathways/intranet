@@ -83,6 +83,29 @@ export async function submitQuiz(
     return { success: false, error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", result: null };
   }
 
+  // After submission, fetch the correct answers so the client can show review
+  const { data: quizQuestions } = await supabase
+    .from("quiz_questions")
+    .select("id")
+    .eq("lesson_id", lessonId);
+
+  const questionIds = (quizQuestions ?? []).map((q) => q.id);
+  let correctOptionMap: Record<string, string[]> = {};
+
+  if (questionIds.length > 0) {
+    const { data: correctOptions } = await supabase
+      .from("quiz_options")
+      .select("id, question_id")
+      .in("question_id", questionIds)
+      .eq("is_correct", true);
+
+    for (const opt of correctOptions ?? []) {
+      const list = correctOptionMap[opt.question_id] ?? [];
+      list.push(opt.id);
+      correctOptionMap[opt.question_id] = list;
+    }
+  }
+
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath(`/learning/courses/${courseId}/lessons/${lessonId}`);
   revalidatePath("/learning");
@@ -93,7 +116,7 @@ export async function submitQuiz(
     correct_answers: number;
     total_questions: number;
     progress_percent: number;
-  } };
+  }, correctOptionMap };
 }
 
 export async function submitSectionQuiz(
@@ -121,6 +144,29 @@ export async function submitSectionQuiz(
     return { success: false, error: "Failed to submit quiz. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", result: null };
   }
 
+  // After submission, fetch the correct answers so the client can show review
+  const { data: quizQuestions } = await supabase
+    .from("section_quiz_questions")
+    .select("id")
+    .eq("quiz_id", quizId);
+
+  const questionIds = (quizQuestions ?? []).map((q) => q.id);
+  let correctOptionMap: Record<string, string[]> = {};
+
+  if (questionIds.length > 0) {
+    const { data: correctOptions } = await supabase
+      .from("section_quiz_options")
+      .select("id, question_id")
+      .in("question_id", questionIds)
+      .eq("is_correct", true);
+
+    for (const opt of correctOptions ?? []) {
+      const list = correctOptionMap[opt.question_id] ?? [];
+      list.push(opt.id);
+      correctOptionMap[opt.question_id] = list;
+    }
+  }
+
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath(`/learning/courses/${courseId}/sections/${sectionId}/quiz`);
   revalidatePath("/learning");
@@ -131,5 +177,5 @@ export async function submitSectionQuiz(
     correct_answers: number;
     total_questions: number;
     passing_score: number;
-  } };
+  }, correctOptionMap };
 }

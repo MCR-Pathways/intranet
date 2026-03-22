@@ -62,27 +62,27 @@ export default async function SectionQuizPage({
 
   const questions = questionsData ?? [];
 
-  // Fetch options for each question (including is_correct for post-submission review)
+  // Fetch options for each question (strip is_correct to prevent cheating)
   const questionIds = questions.map((q) => q.id);
-  let optionsData: { id: string; question_id: string; option_text: string; is_correct: boolean; sort_order: number }[] = [];
+  let optionsData: { id: string; question_id: string; option_text: string; sort_order: number }[] = [];
   if (questionIds.length > 0) {
     const { data: opts } = await supabase
       .from("section_quiz_options")
-      .select("id, question_id, option_text, is_correct, sort_order")
+      .select("id, question_id, option_text, sort_order")
       .in("question_id", questionIds)
       .order("sort_order");
     optionsData = opts ?? [];
   }
 
   // Group options by question_id for O(1) lookup
-  const optionsByQuestion = new Map<string, { id: string; option_text: string; is_correct: boolean }[]>();
+  const optionsByQuestion = new Map<string, { id: string; option_text: string }[]>();
   for (const o of optionsData) {
     const list = optionsByQuestion.get(o.question_id) ?? [];
-    list.push({ id: o.id, option_text: o.option_text, is_correct: o.is_correct });
+    list.push({ id: o.id, option_text: o.option_text });
     optionsByQuestion.set(o.question_id, list);
   }
 
-  // Assemble questions with options (is_correct included for post-submission answer review)
+  // Assemble questions with options (is_correct NOT included — returned by server action after submission)
   const questionsWithOptions = questions.map((q) => ({
     id: q.id,
     question_text: q.question_text,

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, sanitizeUrl } from "@/lib/utils";
 import { categoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
@@ -292,9 +292,9 @@ export default async function CourseDetailPage({
                     Download Certificate
                   </a>
                 </Button>
-                {course.content_url && (
+                {sanitizeUrl(course.content_url) && (
                   <Button asChild className="w-full" variant="outline">
-                    <a href={course.content_url} target="_blank" rel="noopener noreferrer">
+                    <a href={sanitizeUrl(course.content_url)!} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Review Course
                     </a>
@@ -310,9 +310,9 @@ export default async function CourseDetailPage({
                       {isInProgress ? "Continue Learning" : "Start Learning"}
                     </Link>
                   </Button>
-                ) : course.content_url ? (
+                ) : sanitizeUrl(course.content_url) ? (
                   <Button asChild className="w-full">
-                    <a href={course.content_url} target="_blank" rel="noopener noreferrer">
+                    <a href={sanitizeUrl(course.content_url)!} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       {isInProgress ? "Continue Course" : "Start Course"}
                     </a>

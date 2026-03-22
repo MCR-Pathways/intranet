@@ -1,6 +1,6 @@
 "use client";
 
-import { type Editor } from "@tiptap/react";
+import { type Editor, useEditorState } from "@tiptap/react";
 import {
   Bold,
   Italic,
@@ -32,6 +32,24 @@ interface RichTextToolbarProps {
 export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolbarProps) {
   const isFull = preset === "full";
   const isStandard = preset === "standard" || isFull;
+
+  // Subscribe to editor state so toggle pressed states update reactively
+  const activeStates = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      bold: e.isActive("bold"),
+      italic: e.isActive("italic"),
+      underline: e.isActive("underline"),
+      bulletList: e.isActive("bulletList"),
+      orderedList: e.isActive("orderedList"),
+      taskList: e.isActive("taskList"),
+      heading2: e.isActive("heading", { level: 2 }),
+      heading3: e.isActive("heading", { level: 3 }),
+      blockquote: e.isActive("blockquote"),
+      link: e.isActive("link"),
+      codeBlock: e.isActive("codeBlock"),
+    }),
+  });
 
   const setLink = useCallback(() => {
     const previousUrl = editor.getAttributes("link").href;
@@ -88,7 +106,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       {/* Basic Formatting */}
       <Toggle
         size="sm"
-        pressed={editor.isActive("bold")}
+        pressed={activeStates.bold}
         onPressedChange={() => editor.chain().focus().toggleBold().run()}
         aria-label="Toggle bold"
       >
@@ -96,7 +114,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       </Toggle>
       <Toggle
         size="sm"
-        pressed={editor.isActive("italic")}
+        pressed={activeStates.italic}
         onPressedChange={() => editor.chain().focus().toggleItalic().run()}
         aria-label="Toggle italic"
       >
@@ -104,7 +122,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       </Toggle>
       <Toggle
         size="sm"
-        pressed={editor.isActive("underline")}
+        pressed={activeStates.underline}
         onPressedChange={() => editor.chain().focus().toggleUnderline().run()}
         aria-label="Toggle underline"
       >
@@ -116,7 +134,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       {/* Lists */}
       <Toggle
         size="sm"
-        pressed={editor.isActive("bulletList")}
+        pressed={activeStates.bulletList}
         onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
         aria-label="Toggle bullet list"
       >
@@ -124,7 +142,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       </Toggle>
       <Toggle
         size="sm"
-        pressed={editor.isActive("orderedList")}
+        pressed={activeStates.orderedList}
         onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
         aria-label="Toggle ordered list"
       >
@@ -134,7 +152,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
       {isFull && (
         <Toggle
           size="sm"
-          pressed={editor.isActive("taskList")}
+          pressed={activeStates.taskList}
           onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
           aria-label="Toggle task list"
         >
@@ -149,7 +167,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
 
           <Toggle
             size="sm"
-            pressed={editor.isActive("heading", { level: 2 })}
+            pressed={activeStates.heading2}
             onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             aria-label="Toggle heading 2"
           >
@@ -157,16 +175,16 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
           </Toggle>
           <Toggle
             size="sm"
-            pressed={editor.isActive("heading", { level: 3 })}
+            pressed={activeStates.heading3}
             onPressedChange={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             aria-label="Toggle heading 3"
           >
             <Heading3 className="h-4 w-4" />
           </Toggle>
-          
+
           <Toggle
             size="sm"
-            pressed={editor.isActive("blockquote")}
+            pressed={activeStates.blockquote}
             onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
             aria-label="Toggle blockquote"
           >
@@ -175,7 +193,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
 
           <Toggle
             size="sm"
-            pressed={editor.isActive("link")}
+            pressed={activeStates.link}
             onPressedChange={setLink}
             aria-label="Toggle link"
           >
@@ -185,7 +203,7 @@ export function RichTextToolbar({ editor, preset, onImageUpload }: RichTextToolb
           {isFull && (
             <Toggle
               size="sm"
-              pressed={editor.isActive("codeBlock")}
+              pressed={activeStates.codeBlock}
               onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
               aria-label="Toggle code block"
             >

@@ -183,64 +183,73 @@ export async function duplicateCourse(courseId: string) {
     return { success: false, error: "Failed to duplicate course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", courseId: null };
   }
 
-  // Duplicate sections
-  const { data: sections } = await supabase
-    .from("course_sections")
-    .select("id, title, description, sort_order, is_active")
-    .eq("course_id", courseId)
-    .order("sort_order");
+  // Fetch all related data upfront in parallel (3 queries instead of N+1)
+  const [
+    { data: sections },
+    { data: lessons },
+  ] = await Promise.all([
+    supabase
+      .from("course_sections")
+      .select("id, title, description, sort_order, is_active")
+      .eq("course_id", courseId)
+      .order("sort_order"),
+    supabase
+      .from("course_lessons")
+      .select("id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active")
+      .eq("course_id", courseId)
+      .order("sort_order"),
+  ]);
 
   const sectionIdMap = new Map<string, string>(); // old ID -> new ID
 
+  // Bulk insert sections
   if (sections && sections.length > 0) {
-    for (const section of sections) {
-      const { data: newSection } = await supabase
-        .from("course_sections")
-        .insert({
+    const { data: newSections } = await supabase
+      .from("course_sections")
+      .insert(
+        sections.map((s) => ({
           course_id: newCourse.id,
-          title: section.title,
-          description: section.description,
-          sort_order: section.sort_order,
-          is_active: section.is_active,
-        })
-        .select("id")
-        .single();
+          title: s.title,
+          description: s.description,
+          sort_order: s.sort_order,
+          is_active: s.is_active,
+        }))
+      )
+      .select("id");
 
-      if (newSection) {
-        sectionIdMap.set(section.id, newSection.id);
-      }
+    // Map old -> new IDs (insert order matches input order)
+    if (newSections) {
+      sections.forEach((s, i) => {
+        if (newSections[i]) {
+          sectionIdMap.set(s.id, newSections[i].id);
+        }
+      });
     }
   }
 
-  // Duplicate lessons
-  const { data: lessons } = await supabase
-    .from("course_lessons")
-    .select("id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active")
-    .eq("course_id", courseId)
-    .order("sort_order");
-
+  // Bulk insert lessons
   if (lessons && lessons.length > 0) {
-    for (const lesson of lessons) {
-      await supabase
-        .from("course_lessons")
-        .insert({
+    await supabase
+      .from("course_lessons")
+      .insert(
+        lessons.map((l) => ({
           course_id: newCourse.id,
-          section_id: lesson.section_id ? sectionIdMap.get(lesson.section_id) ?? null : null,
-          title: lesson.title,
-          content: lesson.content,
-          content_json: lesson.content_json,
-          slides_url: lesson.slides_url,
-          video_url: lesson.video_url,
-          video_storage_path: lesson.video_storage_path,
-          lesson_type: lesson.lesson_type,
-          passing_score: lesson.passing_score,
-          sort_order: lesson.sort_order,
-          is_active: lesson.is_active,
-        });
-    }
+          section_id: l.section_id ? sectionIdMap.get(l.section_id) ?? null : null,
+          title: l.title,
+          content: l.content,
+          content_json: l.content_json,
+          slides_url: l.slides_url,
+          video_url: l.video_url,
+          video_storage_path: l.video_storage_path,
+          lesson_type: l.lesson_type,
+          passing_score: l.passing_score,
+          sort_order: l.sort_order,
+          is_active: l.is_active,
+        }))
+      );
   }
 
-  // Duplicate section quizzes and their questions/options
+  // Duplicate section quizzes, questions, and options using bulk operations
   if (sectionIdMap.size > 0) {
     const oldSectionIds = Array.from(sectionIdMap.keys());
     const { data: quizzes } = await supabase
@@ -249,61 +258,81 @@ export async function duplicateCourse(courseId: string) {
       .in("section_id", oldSectionIds);
 
     if (quizzes && quizzes.length > 0) {
-      for (const quiz of quizzes) {
-        const newSectionId = sectionIdMap.get(quiz.section_id);
-        if (!newSectionId) continue;
+      // Bulk insert quizzes
+      const { data: newQuizzes } = await supabase
+        .from("section_quizzes")
+        .insert(
+          quizzes.map((q) => ({
+            section_id: sectionIdMap.get(q.section_id)!,
+            title: q.title,
+            passing_score: q.passing_score,
+            is_active: q.is_active,
+          }))
+        )
+        .select("id");
 
-        const { data: newQuiz } = await supabase
-          .from("section_quizzes")
-          .insert({
-            section_id: newSectionId,
-            title: quiz.title,
-            passing_score: quiz.passing_score,
-            is_active: quiz.is_active,
-          })
-          .select("id")
-          .single();
+      const quizIdMap = new Map<string, string>(); // old quiz ID -> new quiz ID
+      if (newQuizzes) {
+        quizzes.forEach((q, i) => {
+          if (newQuizzes[i]) {
+            quizIdMap.set(q.id, newQuizzes[i].id);
+          }
+        });
+      }
 
-        if (!newQuiz) continue;
-
-        // Duplicate questions
-        const { data: questions } = await supabase
+      if (quizIdMap.size > 0) {
+        // Fetch all questions for all quizzes in one query
+        const oldQuizIds = Array.from(quizIdMap.keys());
+        const { data: allQuestions } = await supabase
           .from("section_quiz_questions")
-          .select("id, question_text, question_type, sort_order")
-          .eq("quiz_id", quiz.id)
+          .select("id, quiz_id, question_text, question_type, sort_order")
+          .in("quiz_id", oldQuizIds)
           .order("sort_order");
 
-        if (questions && questions.length > 0) {
-          for (const question of questions) {
-            const { data: newQuestion } = await supabase
-              .from("section_quiz_questions")
-              .insert({
-                quiz_id: newQuiz.id,
-                question_text: question.question_text,
-                question_type: question.question_type,
-                sort_order: question.sort_order,
-              })
-              .select("id")
-              .single();
+        if (allQuestions && allQuestions.length > 0) {
+          // Bulk insert questions
+          const { data: newQuestions } = await supabase
+            .from("section_quiz_questions")
+            .insert(
+              allQuestions.map((q) => ({
+                quiz_id: quizIdMap.get(q.quiz_id)!,
+                question_text: q.question_text,
+                question_type: q.question_type,
+                sort_order: q.sort_order,
+              }))
+            )
+            .select("id");
 
-            if (!newQuestion) continue;
+          const questionIdMap = new Map<string, string>(); // old question ID -> new question ID
+          if (newQuestions) {
+            allQuestions.forEach((q, i) => {
+              if (newQuestions[i]) {
+                questionIdMap.set(q.id, newQuestions[i].id);
+              }
+            });
+          }
 
-            // Duplicate options
-            const { data: options } = await supabase
+          if (questionIdMap.size > 0) {
+            // Fetch all options for all questions in one query
+            const oldQuestionIds = Array.from(questionIdMap.keys());
+            const { data: allOptions } = await supabase
               .from("section_quiz_options")
-              .select("option_text, is_correct, sort_order")
-              .eq("question_id", question.id)
+              .select("question_id, option_text, is_correct, sort_order")
+              .in("question_id", oldQuestionIds)
               .order("sort_order");
 
-            if (options && options.length > 0) {
+            if (allOptions && allOptions.length > 0) {
+              // Bulk insert options
               await supabase
                 .from("section_quiz_options")
-                .insert(options.map((opt) => ({
-                  question_id: newQuestion.id,
-                  option_text: opt.option_text,
-                  is_correct: opt.is_correct,
-                  sort_order: opt.sort_order,
-                })));
+                .insert(
+                  allOptions.map((opt) => ({
+                    question_id: questionIdMap.get(opt.question_id)!,
+                    option_text: opt.option_text,
+                    is_correct: opt.is_correct,
+                    sort_order: opt.sort_order,
+                  }))
+                );
             }
           }
         }
