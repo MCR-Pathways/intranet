@@ -144,6 +144,7 @@ export function QuizPlayer({
         {questions.map((q, idx) => {
           const qType = (q.question_type ?? "single") as QuestionType;
           const isMulti = qType === "multi";
+          const showResult = !!result;
 
           return (
             <Card key={q.id}>
@@ -163,7 +164,7 @@ export function QuizPlayer({
                     const isSelected = isMulti
                       ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
                       : currentAnswer === opt.id;
-                    const showResult = !!result;
+                    const isCorrect = opt.is_correct === true;
 
                     return (
                       <button
@@ -177,22 +178,38 @@ export function QuizPlayer({
                         }
                         className={cn(
                           "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
+                          // Before submission
                           !showResult && isSelected &&
                             "border-primary bg-primary/5 text-primary",
                           !showResult && !isSelected &&
                             "border-border hover:border-muted-foreground/30 hover:bg-muted/50",
-                          showResult && isSelected &&
-                            "border-muted-foreground/30 bg-muted/50",
-                          (!!result || isPending) && "cursor-not-allowed opacity-80"
+                          // After submission: correct answer
+                          showResult && isCorrect &&
+                            "border-green-500 bg-green-50 text-green-800",
+                          // After submission: wrong selection
+                          showResult && isSelected && !isCorrect &&
+                            "border-red-400 bg-red-50 text-red-800",
+                          // After submission: unselected, not correct
+                          showResult && !isSelected && !isCorrect &&
+                            "border-border opacity-60",
+                          (!!result || isPending) && "cursor-not-allowed"
                         )}
                       >
                         <span className="text-sm">{opt.option_text}</span>
+                        {/* Before submission: selection indicator */}
                         {isSelected && !showResult && (
                           isMulti ? (
                             <CheckCircle2 className="h-4 w-4 text-primary" />
                           ) : (
                             <div className="h-3 w-3 rounded-full bg-primary" />
                           )
+                        )}
+                        {/* After submission: correct/incorrect icons */}
+                        {showResult && isCorrect && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                        )}
+                        {showResult && isSelected && !isCorrect && (
+                          <XCircle className="h-4 w-4 shrink-0 text-red-500" />
                         )}
                       </button>
                     );
@@ -267,6 +284,9 @@ export function QuizPlayer({
                     Score too low. You need {passingScore}% to pass.
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Review the correct answers above, then try again.
+                </p>
                 <Button
                   variant="outline"
                   onClick={handleRetry}

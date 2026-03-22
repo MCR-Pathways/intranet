@@ -24,6 +24,7 @@ interface QuizQuestion {
   options: {
     id: string;
     option_text: string;
+    is_correct?: boolean;
   }[];
 }
 
@@ -55,7 +56,7 @@ interface QuizResult {
 /**
  * Quiz player for section-level quizzes. Allows learners to answer
  * single-choice and multi-choice questions, submit for grading,
- * and retry on failure (unlimited retries).
+ * review correct/incorrect answers, and retry on failure (unlimited retries).
  */
 export function SectionQuizPlayer({
   quizId,
@@ -182,6 +183,7 @@ export function SectionQuizPlayer({
       <div className="space-y-8">
         {questions.map((q, idx) => {
           const isMulti = q.question_type === "multi";
+          const showResult = !!result;
 
           return (
             <Card key={q.id}>
@@ -202,7 +204,7 @@ export function SectionQuizPlayer({
                       ? Array.isArray(currentAnswer) &&
                         currentAnswer.includes(opt.id)
                       : currentAnswer === opt.id;
-                    const showResult = !!result;
+                    const isCorrect = opt.is_correct === true;
 
                     return (
                       <button
@@ -216,20 +218,32 @@ export function SectionQuizPlayer({
                         }
                         className={cn(
                           "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
+                          // Before submission
                           !showResult &&
                             isSelected &&
                             "border-primary bg-primary/5 text-primary",
                           !showResult &&
                             !isSelected &&
                             "border-border hover:border-muted-foreground/30 hover:bg-muted/50",
+                          // After submission: correct answer
+                          showResult &&
+                            isCorrect &&
+                            "border-green-500 bg-green-50 text-green-800",
+                          // After submission: wrong selection
                           showResult &&
                             isSelected &&
-                            "border-muted-foreground/30 bg-muted/50",
-                          (!!result || isPending) &&
-                            "cursor-not-allowed opacity-80"
+                            !isCorrect &&
+                            "border-red-400 bg-red-50 text-red-800",
+                          // After submission: unselected, not correct
+                          showResult &&
+                            !isSelected &&
+                            !isCorrect &&
+                            "border-border opacity-60",
+                          (!!result || isPending) && "cursor-not-allowed"
                         )}
                       >
                         <span className="text-sm">{opt.option_text}</span>
+                        {/* Before submission: selection indicator */}
                         {isSelected &&
                           !showResult &&
                           (isMulti ? (
@@ -237,6 +251,13 @@ export function SectionQuizPlayer({
                           ) : (
                             <div className="h-3 w-3 rounded-full bg-primary" />
                           ))}
+                        {/* After submission: correct/incorrect icons */}
+                        {showResult && isCorrect && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                        )}
+                        {showResult && isSelected && !isCorrect && (
+                          <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+                        )}
                       </button>
                     );
                   })}
@@ -316,6 +337,9 @@ export function SectionQuizPlayer({
                     Score too low. You need {passingScore}% to pass.
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Review the correct answers above, then try again.
+                </p>
                 <Button variant="outline" onClick={handleRetry} className="mx-auto">
                   <RefreshCcw className="mr-2 h-4 w-4" />
                   Retry Quiz

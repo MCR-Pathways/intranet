@@ -21,9 +21,14 @@ import {
   Search,
   Pencil,
   Plus,
+  Copy,
+  Loader2,
 } from "lucide-react";
 import { formatDate, formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
+import { duplicateCourse } from "@/app/(protected)/learning/admin/courses/actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import type { Course } from "@/types/database.types";
 
 interface CourseManagementTableProps {
@@ -35,6 +40,23 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleDuplicate(courseId: string) {
+    setDuplicatingId(courseId);
+    try {
+      const result = await duplicateCourse(courseId);
+      if (result.success && result.courseId) {
+        toast.success("Course duplicated successfully");
+        router.push(`/learning/admin/courses/${result.courseId}`);
+      } else {
+        toast.error(result.error ?? "Failed to duplicate course");
+      }
+    } finally {
+      setDuplicatingId(null);
+    }
+  }
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -142,12 +164,28 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-          <Link href={`/learning/admin/courses/${row.original.id}`}>
-            <Pencil className="h-3.5 w-3.5 mr-1" />
-            Edit
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+            <Link href={`/learning/admin/courses/${row.original.id}`}>
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              Edit
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+            disabled={duplicatingId === row.original.id}
+            onClick={() => handleDuplicate(row.original.id)}
+          >
+            {duplicatingId === row.original.id ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+            ) : (
+              <Copy className="h-3.5 w-3.5 mr-1" />
+            )}
+            Duplicate
+          </Button>
+        </div>
       ),
       enableSorting: false,
     },

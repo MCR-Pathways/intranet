@@ -12,6 +12,7 @@ import {
   Calendar,
   AlertTriangle,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
@@ -285,6 +286,12 @@ export default async function CourseDetailPage({
               <EnrollButton courseId={course.id} />
             ) : isCompleted ? (
               <div className="space-y-2">
+                <Button asChild className="w-full">
+                  <a href={`/api/certificate/${course.id}`} download>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Certificate
+                  </a>
+                </Button>
                 {course.content_url && (
                   <Button asChild className="w-full" variant="outline">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">

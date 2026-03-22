@@ -141,6 +141,181 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
 }
 
 // ===========================================
+// COURSE DUPLICATION
+// ===========================================
+
+export async function duplicateCourse(courseId: string) {
+  const { supabase, user } = await requireLDAdmin();
+
+  // Fetch the original course
+  const { data: original, error: fetchError } = await supabase
+    .from("courses")
+    .select("title, description, category, duration_minutes, is_required, passing_score, due_days_from_start, content_url")
+    .eq("id", courseId)
+    .single();
+
+  if (fetchError || !original) {
+    logger.error("Failed to fetch course for duplication", { error: fetchError });
+    return { success: false, error: "Course not found", courseId: null };
+  }
+
+  // Create the duplicate course (always starts as draft + inactive)
+  const { data: newCourse, error: createError } = await supabase
+    .from("courses")
+    .insert({
+      title: `${original.title} (Copy)`,
+      description: original.description,
+      category: original.category,
+      duration_minutes: original.duration_minutes,
+      is_required: original.is_required,
+      passing_score: original.passing_score,
+      due_days_from_start: original.due_days_from_start,
+      content_url: original.content_url,
+      created_by: user.id,
+      is_active: false,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+
+  if (createError || !newCourse) {
+    logger.error("Failed to create duplicate course", { error: createError });
+    return { success: false, error: "Failed to duplicate course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", courseId: null };
+  }
+
+  // Duplicate sections
+  const { data: sections } = await supabase
+    .from("course_sections")
+    .select("id, title, description, sort_order, is_active")
+    .eq("course_id", courseId)
+    .order("sort_order");
+
+  const sectionIdMap = new Map<string, string>(); // old ID -> new ID
+
+  if (sections && sections.length > 0) {
+    for (const section of sections) {
+      const { data: newSection } = await supabase
+        .from("course_sections")
+        .insert({
+          course_id: newCourse.id,
+          title: section.title,
+          description: section.description,
+          sort_order: section.sort_order,
+          is_active: section.is_active,
+        })
+        .select("id")
+        .single();
+
+      if (newSection) {
+        sectionIdMap.set(section.id, newSection.id);
+      }
+    }
+  }
+
+  // Duplicate lessons
+  const { data: lessons } = await supabase
+    .from("course_lessons")
+    .select("id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active")
+    .eq("course_id", courseId)
+    .order("sort_order");
+
+  if (lessons && lessons.length > 0) {
+    for (const lesson of lessons) {
+      await supabase
+        .from("course_lessons")
+        .insert({
+          course_id: newCourse.id,
+          section_id: lesson.section_id ? sectionIdMap.get(lesson.section_id) ?? null : null,
+          title: lesson.title,
+          content: lesson.content,
+          content_json: lesson.content_json,
+          slides_url: lesson.slides_url,
+          video_url: lesson.video_url,
+          video_storage_path: lesson.video_storage_path,
+          lesson_type: lesson.lesson_type,
+          passing_score: lesson.passing_score,
+          sort_order: lesson.sort_order,
+          is_active: lesson.is_active,
+        });
+    }
+  }
+
+  // Duplicate section quizzes and their questions/options
+  if (sectionIdMap.size > 0) {
+    const oldSectionIds = Array.from(sectionIdMap.keys());
+    const { data: quizzes } = await supabase
+      .from("section_quizzes")
+      .select("id, section_id, title, passing_score, is_active")
+      .in("section_id", oldSectionIds);
+
+    if (quizzes && quizzes.length > 0) {
+      for (const quiz of quizzes) {
+        const newSectionId = sectionIdMap.get(quiz.section_id);
+        if (!newSectionId) continue;
+
+        const { data: newQuiz } = await supabase
+          .from("section_quizzes")
+          .insert({
+            section_id: newSectionId,
+            title: quiz.title,
+            passing_score: quiz.passing_score,
+            is_active: quiz.is_active,
+          })
+          .select("id")
+          .single();
+
+        if (!newQuiz) continue;
+
+        // Duplicate questions
+        const { data: questions } = await supabase
+          .from("section_quiz_questions")
+          .select("id, question_text, question_type, sort_order")
+          .eq("quiz_id", quiz.id)
+          .order("sort_order");
+
+        if (questions && questions.length > 0) {
+          for (const question of questions) {
+            const { data: newQuestion } = await supabase
+              .from("section_quiz_questions")
+              .insert({
+                quiz_id: newQuiz.id,
+                question_text: question.question_text,
+                question_type: question.question_type,
+                sort_order: question.sort_order,
+              })
+              .select("id")
+              .single();
+
+            if (!newQuestion) continue;
+
+            // Duplicate options
+            const { data: options } = await supabase
+              .from("section_quiz_options")
+              .select("option_text, is_correct, sort_order")
+              .eq("question_id", question.id)
+              .order("sort_order");
+
+            if (options && options.length > 0) {
+              await supabase
+                .from("section_quiz_options")
+                .insert(options.map((opt) => ({
+                  question_id: newQuestion.id,
+                  option_text: opt.option_text,
+                  is_correct: opt.is_correct,
+                  sort_order: opt.sort_order,
+                })));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  revalidatePath("/learning/admin/courses");
+  return { success: true, error: null, courseId: newCourse.id };
+}
+
+// ===========================================
 // PUBLISH / UNPUBLISH
 // ===========================================
 

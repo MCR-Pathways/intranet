@@ -15,6 +15,7 @@ import {
   GraduationCap,
   BookOpen,
   Globe,
+  Download,
 } from "lucide-react";
 import type { EnrolmentWithCourse, ExternalCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
@@ -22,7 +23,7 @@ import { categoryConfig } from "@/lib/learning";
 import { ExternalCourseDialog } from "@/components/learning/external-course-dialog";
 import { ExternalCourseCard } from "@/components/learning/external-course-card";
 
-function EnrolledCourseCard({ enrolment }: { enrolment: EnrolmentWithCourse }) {
+function EnrolledCourseCard({ enrolment, resumeLessonId }: { enrolment: EnrolmentWithCourse; resumeLessonId?: string | null }) {
   const { course } = enrolment;
   const config = categoryConfig[course.category];
   const Icon = config.icon;
@@ -109,6 +110,27 @@ function EnrolledCourseCard({ enrolment }: { enrolment: EnrolmentWithCourse }) {
               {config.label}
             </Badge>
           </div>
+          {!isCompleted && resumeLessonId && (
+            <Link
+              href={`/learning/courses/${course.id}/lessons/${resumeLessonId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <PlayCircle className="h-3.5 w-3.5" />
+              Resume Learning
+            </Link>
+          )}
+          {isCompleted && (
+            <a
+              href={`/api/certificate/${course.id}`}
+              download
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Certificate
+            </a>
+          )}
         </CardContent>
       </Card>
     </Link>
@@ -156,6 +178,45 @@ export default async function MyCoursesPage() {
   const completedCourses = typedEnrolments.filter(
     (e) => e.status === "completed"
   );
+
+  // Fetch lesson data for in-progress courses to compute "Resume" links
+  const inProgressCourseIds = inProgressCourses.map((e) => e.course_id);
+  let resumeLessonMap = new Map<string, string>();
+
+  if (inProgressCourseIds.length > 0) {
+    const [{ data: allLessons }, { data: allCompletions }] = await Promise.all([
+      supabase
+        .from("course_lessons")
+        .select("id, course_id, sort_order")
+        .in("course_id", inProgressCourseIds)
+        .eq("is_active", true)
+        .order("sort_order"),
+      supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("user_id", user.id),
+    ]);
+
+    const completedSet = new Set((allCompletions ?? []).map((c) => c.lesson_id));
+
+    // Group lessons by course and find the first incomplete one
+    const lessonsByCourse = new Map<string, { id: string; sort_order: number }[]>();
+    for (const l of allLessons ?? []) {
+      const list = lessonsByCourse.get(l.course_id) ?? [];
+      list.push({ id: l.id, sort_order: l.sort_order });
+      lessonsByCourse.set(l.course_id, list);
+    }
+
+    for (const [courseId, lessons] of lessonsByCourse) {
+      const firstIncomplete = lessons.find((l) => !completedSet.has(l.id));
+      if (firstIncomplete) {
+        resumeLessonMap.set(courseId, firstIncomplete.id);
+      } else if (lessons.length > 0) {
+        // All complete, link to first lesson
+        resumeLessonMap.set(courseId, lessons[0].id);
+      }
+    }
+  }
 
   // Count overdue and due soon
   const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
@@ -296,7 +357,7 @@ export default async function MyCoursesPage() {
           {inProgressCourses.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {inProgressCourses.map((enrolment) => (
-                <EnrolledCourseCard key={enrolment.id} enrolment={enrolment} />
+                <EnrolledCourseCard key={enrolment.id} enrolment={enrolment} resumeLessonId={resumeLessonMap.get(enrolment.course_id)} />
               ))}
             </div>
           ) : (
