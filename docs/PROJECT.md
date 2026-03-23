@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-19
+> **Last reviewed:** 2026-03-23
 > **Document updated during:** Periodic syncs
 
 ---
@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (60 files, `00001` through `00059` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (69 files, `00001` through `00068` plus a combined migration).
 
 ### Local Supabase
 
@@ -228,13 +228,13 @@ The largest module. Provides employee self-service and HR admin functionality.
 
 For the detailed HR roadmap, see `docs/hr-plan.md`.
 
-### Learning & Development Module (OVERHAUL IN PROGRESS)
+### Learning & Development Module (Phase 1+2+3 complete)
 
-Replacing LearnDash (WordPress LMS) with a custom-built LMS. Full overhaul adding course sections, section quizzes, certificates, course feedback, Tool Shed social learning, global search, and email notifications. See `docs/learning-overhaul.md` for comprehensive handover document.
+Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based courses with section quizzes, learner UI, certificate auto-issue, completion notifications, 4 lesson types (text, video, slides, rich_text), and `auth.uid()` RPC enforcement. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Status:** Phase 1 (schema + utilities + actions) + Phase 2 (admin UI) complete. Phase 3 (learner UI) next. Branch: `feature/learning-overhaul-migrations` (not yet merged to main). Migrations 00060-00064 applied to production Supabase.
+**Status:** Phase 1 (schema + utilities + actions), Phase 2 (admin UI), and Phase 3 (learner UI + certificates + security) complete. PR #167 merged to main. PR #168 (wire components into pages + slides/rich_text admin support) pending. Migrations 00060-00068 applied to production Supabase. PRs #165 and #166 (Colin's) closed and superseded by #167.
 
-**Current routes:** 10 pages under `/learning` (unchanged — UI overhaul not yet started)
+**Routes:** 12 pages under `/learning`
 
 | Feature | Route |
 |---|---|
@@ -242,17 +242,23 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Full overhaul addin
 | Course Catalogue | `/learning/courses` |
 | Course Detail | `/learning/courses/[id]` |
 | Lesson View | `/learning/courses/[id]/lessons/[lessonId]` |
+| Section Quiz | `/learning/courses/[id]/sections/[sectionId]/quiz` |
 | My Courses | `/learning/my-courses` |
 | Tool Shed | `/learning/tool-shed` |
 | Admin: Courses | `/learning/admin/courses` |
 | Admin: Course Detail | `/learning/admin/courses/[id]` |
 | Admin: Reports | `/learning/admin/reports` |
+| Certificate PDF | `/api/certificate/[id]/route` |
 
-**New routes (planned, not yet built):** `/learning/certificates`, `/learning/certificates/[id]`, `/learning/courses/[id]/sections/[sectionId]/quiz`, `/learning/tool-shed/new`, `/learning/tool-shed/[id]`, `/learning/tool-shed/[id]/edit`, `/learning/admin/tool-shed`, `/api/certificates/[id]/pdf`
+**New routes (planned, not yet built):** `/learning/certificates` (certificate wall), `/learning/certificates/[id]`, `/learning/tool-shed/new`, `/learning/tool-shed/[id]`, `/learning/tool-shed/[id]/edit`, `/learning/admin/tool-shed`
 
-**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), PDF certificates, private course feedback (5 structured fields), Tool Shed social learning framework (Digital Postcards, 3-2-1 Model, 10-Minute Takeover), global Cmd+K search (Algolia), email notifications (Resend).
+**Key components (Phase 3):** `section-accordion.tsx` (expandable sections in course detail), `section-quiz-player.tsx` (quiz UI with `submit_section_quiz_attempt` RPC), `lesson-renderer.tsx` (renders text/video/slides/rich_text lessons), rewritten `lesson-sidebar.tsx` (section-grouped, LinkedIn-style checkmarks).
 
-**New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00064.
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs. Remaining: course feedback dialog, Tool Shed social learning rewrite, global Cmd+K search (Algolia), email notifications (Resend), course duplication, resume course, dashboard redesign.
+
+**New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00068.
+
+**Migrations 00065-00068:** `00065` reconciliation (clean up old quiz tables, add slides/rich_text to lesson_type CHECK), `00066` delete empty courses, `00067` certificate auto-issue trigger (`generate_certificate_on_completion`), `00068` completion notification trigger.
 
 **New dependencies:** `@react-pdf/renderer`, `resend`. New env var: `RESEND_API_KEY`.
 
@@ -300,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**60 migration files** in `supabase/migrations/`, numbered `00001` through `00059` plus a combined migration.
+**69 migration files** in `supabase/migrations/`, numbered `00001` through `00068` plus a combined migration.
 
 **26+ tables** — key ones:
 
@@ -323,7 +329,7 @@ Plus HR-specific tables added via migrations (leave, absence, assets, compliance
 
 ### Database Functions (RPCs)
 
-Key functions: `complete_lesson_and_update_progress`, `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `submit_quiz_attempt`, `unpin_expired_roundups`.
+Key functions: `complete_lesson_and_update_progress`, `submit_section_quiz_attempt`, `generate_certificate_on_completion` (trigger), `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `unpin_expired_roundups`. All RPCs enforce `auth.uid()` for identity.
 
 ### Key Conventions
 
@@ -434,7 +440,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 53 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1266 tests across 53 files
+- **Coverage:** 1,267 tests across 53 files
 
 ### Test Categories
 
@@ -528,7 +534,9 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 |---|---|
 | `src/lib/hr.ts` | HR constants, leave types, formatters (938 lines) |
 | `src/lib/sign-in.ts` | Sign-in types, location config, formatters |
-| `src/lib/learning.ts` | L&D utilities |
+| `src/lib/learning.ts` | L&D utilities (section types, progress logic, duration formatting, lesson type config) |
+| `src/lib/certificates.ts` | PDF certificate generation (`@react-pdf/renderer`) |
+| `src/lib/email.ts` | Resend email client + MCR-branded templates |
 | `src/lib/intranet.ts` | Intranet utilities |
 | `src/lib/tiptap.ts` | Tiptap rich text utilities (extractPlainText, extractMentionIds, extractHeadings, slugifyHeading) |
 | `src/lib/tiptap-callout.ts` | Custom Tiptap callout extension + shared CALLOUT_CONFIG |
@@ -557,6 +565,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 | `docs/hr-plan.md` | HR module roadmap |
 | `docs/testing-plan.md` | Testing strategy |
 | `docs/google-calendar-setup.md` | Google Calendar integration setup |
+| `docs/learning-overhaul.md` | Learning module overhaul handover document |
 | `docs/PROJECT.md` | This document |
 
 ---
@@ -718,6 +727,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-23 | Abdul-Muiz Adaranijo | Learning overhaul Phase 3 complete. PR #167 merged: learner UI (section-accordion.tsx, section-quiz-player.tsx, lesson-renderer.tsx), certificate auto-issue via DB trigger, completion notifications via DB trigger, auth.uid() RPC enforcement, 4 lesson types (text, video, slides, rich_text). Migrations 00065-00068 applied to production. PR #168 pending (wire components into pages + slides/rich_text admin support). PRs #165, #166 (Colin's) closed and superseded. Open PRs: #163 (rate limiting), #164 (resources UX), #168 (learning wire components). 1,267 tests, 53 files. |
 | 2026-03-19 | Abdul-Muiz Adaranijo | Learning overhaul Phase 1+2. PR 1: 5 migrations (00060-00064), 4 utility files, section-actions.ts. PR 2: admin UI — section-manager.tsx (~350 lines), section-quiz-editor.tsx (~500 lines), rewritten course detail page for section-based hierarchy, combined quiz actions with rollback. LessonType "quiz" removed (knock-on fixes in 4 learner files). All 5 migrations applied to production Supabase. Build + lint clean, all CRUD verified live. Branch: `feature/learning-overhaul-migrations`. |
 | 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes + enhancements. PR #162: Google Docs formatting preservation in HTML sanitiser (bold/italic spans → `<strong>`/`<em>`, first-row `<td>` → `<th>`, column widths converted to responsive percentages). PR #161: cascading category selection (Category → Subcategory → Folder). PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,266 tests, 53 files. |
 | 2026-03-18 | Abdul-Muiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |

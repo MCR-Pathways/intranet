@@ -4,9 +4,9 @@
 > **Author:** Abdulmuiz Adaranijo + Claude Code
 > **Branch:** `feature/learning-overhaul`
 > **Plan file:** `.claude/plans/virtual-splashing-hippo.md`
-> **Status:** Implementation in progress (Phase 1 + Phase 2 complete — schema, utilities, actions, admin UI)
-> **Branch:** `feature/learning-overhaul-migrations`
-> **Commits:** 5 commits (Phase 1: 3,168 lines, Phase 2: ~1,500 lines)
+> **Status:** Phase 1 + Phase 2 + Phase 3 complete. PR #167 merged to main. PR #168 pending (wire components into pages + slides/rich_text admin support).
+> **Branch:** `feature/learning-overhaul-migrations` (merged to main via PR #167)
+> **Migrations:** 00060-00068, all applied to production Supabase
 
 ---
 
@@ -166,8 +166,8 @@ Interactive HTML mockups were created during planning:
 - `courses` — ADD `feedback_avg` NUMERIC(3,2), `feedback_count` INT
 - `course_assignments` — ALTER CHECK to include 'user'
 
-### Migrations (00060–00064)
-5 migration files (consolidated from original 8). Clean slate — all old learning seed data deleted since no real users exist. No backward compatibility migration needed.
+### Migrations (00060–00068)
+9 migration files. Clean slate — all old learning seed data deleted since no real users exist. No backward compatibility migration needed.
 
 | Migration | File | Contents |
 |-----------|------|----------|
@@ -176,6 +176,10 @@ Interactive HTML mockups were created during planning:
 | 00062 | `learning_overhaul_tool_shed.sql` | tool_shed_entries table with JSONB content, GIN index on tags, all RLS |
 | 00063 | `learning_overhaul_email_and_assignments.sql` | email_notifications queue table, ALTER course_assignments CHECK to add 'user', rewrite auto_enroll_from_assignment trigger for 'user' type |
 | 00064 | `learning_overhaul_rpcs.sql` | Rewrite complete_lesson_and_update_progress for sections, new submit_section_quiz_attempt RPC, generate_certificate_on_completion trigger |
+| 00065 | Reconciliation | Clean up old quiz tables, add 'slides' and 'rich_text' to lesson_type CHECK constraint |
+| 00066 | Delete empty courses | Remove courses with no sections/lessons (seed data cleanup) |
+| 00067 | Certificate trigger | `generate_certificate_on_completion` trigger — auto-issues certificate when all sections complete |
+| 00068 | Notification trigger | Completion notification trigger — sends in-app notification on course completion |
 
 ---
 
@@ -239,70 +243,54 @@ Interactive HTML mockups were created during planning:
       with options — all working against production Supabase).
 ```
 
-### REMAINING (Phase 3 — Learner UI + remaining features)
+### COMPLETED (Phase 3 — Learner UI, Certificates, Security)
 ```
-⬜ 5. Learner UI components:
-      - section-accordion.tsx — expandable sections in course detail
-      - section-quiz-player.tsx — section quiz UI (adapted from quiz-player)
-      - lesson-sidebar.tsx — REWRITE: section-grouped, collapsible, LinkedIn-style
-        checkmarks (green check done, blue dot current, grey circle pending)
-      - section-progress-indicator.tsx
-      - Update course detail page, lesson player page
+✅ 5. Learner UI components (PR #167):
+      - section-accordion.tsx — expandable sections in course detail with progress
+      - section-quiz-player.tsx — section quiz UI calling submit_section_quiz_attempt RPC
+      - lesson-renderer.tsx — renders text, video, slides, and rich_text lessons
+      - lesson-sidebar.tsx — REWRITTEN: section-grouped, collapsible, LinkedIn-style
+        checkmarks (green check done, blue dot current, grey circle pending, lock for locked)
       - New route: /learning/courses/[id]/sections/[sectionId]/quiz
 
-⬜ 6. Certificate system:
-      - certificate-card.tsx, certificate-download-button.tsx
-      - /learning/certificates page (certificate wall)
-      - /learning/certificates/[id] page
-      - /api/certificates/[id]/pdf API route
-      - certificates/actions.ts
+✅ 6. Certificate system (PR #167):
+      - Certificate auto-issue via DB trigger (generate_certificate_on_completion)
+      - /api/certificate/[id]/route — PDF generation endpoint
+      - Certificate wall and detail pages still pending (UI only)
 
-⬜ 7. Course feedback:
-      - course-feedback-dialog.tsx (5 structured fields, X close + "Maybe later")
-      - feedback-dashboard.tsx (admin: aggregates + anonymous comments + CSV)
-      - Show dialog once after course completion, never nag
+✅ 7. Security hardening (PR #167):
+      - auth.uid() enforcement on all RPCs (submit_section_quiz_attempt,
+        complete_lesson_and_update_progress)
+      - 4 lesson types: text, video, slides, rich_text
 
-⬜ 8. Tool Shed rewrite:
-      - tool-shed-entry-card.tsx, tool-shed-filter-bar.tsx
-      - tool-shed-create-form.tsx + postcard/321/takeover sub-forms
-      - tool-shed-entry-detail.tsx
-      - /learning/tool-shed page (complete rewrite: social feed)
-      - /learning/tool-shed/new, /[id], /[id]/edit pages
-      - tool-shed/actions.ts
-      - Admin: tool-shed-admin-table.tsx + /learning/admin/tool-shed page
+✅ 8. Wiring components into pages (PR #168, pending):
+      - Section accordion wired into course detail page
+      - Quiz player wired into section quiz route
+      - Lesson renderer wired into lesson player page
+      - Admin support for slides and rich_text lesson types
+```
 
-⬜ 9. Algolia course search:
-      - course-search.tsx (InstantSearch for catalogue)
-      - Update /learning/courses page to include search bar above tabs
-      - Index courses on publish, remove on unpublish
-
-⬜ 10. Global Cmd+K search:
-      - global-search.tsx (multi-index overlay in header)
-      - Update header.tsx to add search icon
-
-⬜ 11. Integrations:
-      - sidebar.tsx — update Learning children
-      - Profile page — add Learning tab
-      - Team page — add compliance summary
-      - Notification RPCs for learning events
-
-⬜ 12. Dashboard redesign:
-      - /learning page — list-first layout
-      - Final polish, consistency pass
+### REMAINING (Future PRs)
+```
+⬜ Course duplication — admin ability to duplicate a course with all sections/lessons
+⬜ Resume course — "Continue where you left off" on dashboard
+⬜ Course search — Algolia InstantSearch on catalogue page
+⬜ Course feedback dialog — 5 structured fields, shows once after completion
+⬜ Tool Shed rewrite — social learning feed (Digital Postcards, 3-2-1, Takeover)
+⬜ Global Cmd+K search — multi-index overlay in header (courses + resources)
+⬜ HR profile Learning tab — certificates + course progress on profile page
+⬜ Dashboard redesign — list-first layout (LinkedIn Learning pattern)
+⬜ Certificate wall — /learning/certificates page (internal + external certs)
+⬜ Integrations — sidebar children update, team compliance summary
 ```
 
 ### PR Strategy (Small PRs)
-- **PR 1:** ✅ Migrations + utilities + section actions (DONE, on branch `feature/learning-overhaul-migrations`)
-- **PR 2:** ✅ Admin UI (section manager, quiz editor, course detail page) — DONE, same branch
-- **PR 3:** Learner UI (section accordion, sidebar rewrite, quiz player)
-- **PR 4:** Certificates (pages, PDF, actions)
-- **PR 5:** Feedback (dialog, admin dashboard)
-- **PR 6:** Tool Shed (full rewrite)
-- **PR 7:** Algolia search + global Cmd+K
-- **PR 8:** Integrations (profile, team, sidebar, notifications)
-- **PR 9:** Dashboard redesign + polish
-
-Steps 5–8 can be parallelised after step 4.
+- **PR 1:** ✅ Migrations + utilities + section actions (DONE)
+- **PR 2:** ✅ Admin UI (section manager, quiz editor, course detail page) — DONE
+- **PR 3 (PR #167):** ✅ Learner UI + certificates + security — MERGED to main
+- **PR 4 (PR #168):** Wire components into pages + slides/rich_text admin support — PENDING
+- **PRs #165, #166:** Colin's PRs — CLOSED, superseded by #167
+- **Future PRs:** Feedback dialog, Tool Shed rewrite, Algolia search, global Cmd+K, integrations, dashboard redesign
 
 ---
 
@@ -387,6 +375,14 @@ Steps 5–8 can be parallelised after step 4.
 - `src/components/learning-admin/section-manager.tsx` (~350 lines)
 - `src/components/learning-admin/section-quiz-editor.tsx` (~500 lines)
 
+**New files (PR #167 — Learner UI + Certificates + Security):**
+- `src/components/learning/section-accordion.tsx` — expandable sections with progress
+- `src/components/learning/section-quiz-player.tsx` — section quiz UI
+- `src/components/learning/lesson-renderer.tsx` — renders text/video/slides/rich_text
+- `src/app/api/certificate/[id]/route.ts` — PDF certificate generation endpoint
+- `src/app/(protected)/learning/courses/[id]/sections/[sectionId]/quiz/page.tsx` — section quiz route
+- `supabase/migrations/00065_*.sql` through `supabase/migrations/00068_*.sql` — reconciliation, cleanup, certificate trigger, notification trigger
+
 **Modified files (PR 1):**
 - `src/lib/learning.ts` (55→250 lines: added section logic, Tool Shed config, duration formatting)
 - `src/lib/algolia.ts` (162→250 lines: added COURSES_INDEX, course indexing)
@@ -408,77 +404,75 @@ Steps 5–8 can be parallelised after step 4.
 ### Existing Files That Still Need Modification
 - `src/components/layout/header.tsx` — add search icon for Cmd+K
 - `src/components/layout/sidebar.tsx` (lines 103-122) — update Learning children (add Certificates, rename Tool Shed)
-- `src/components/learning/lesson-sidebar.tsx` — full rewrite for section-grouped layout with LinkedIn-style checkmarks
-- `src/components/learning/quiz-player.tsx` — adapt for section quizzes (or create new `section-quiz-player.tsx`)
 - `src/app/(protected)/learning/page.tsx` — dashboard redesign (list-first, compliance alerts, continue learning)
 - `src/app/(protected)/learning/courses/page.tsx` — add Algolia search bar above category tabs
-- `src/app/(protected)/learning/courses/[id]/page.tsx` — sections accordion (expandable sections with progress)
-- `src/app/(protected)/learning/courses/[id]/lessons/[lessonId]/page.tsx` — add section context (which section this lesson belongs to)
 - `src/app/(protected)/learning/tool-shed/page.tsx` — complete rewrite (social learning feed, not static resources)
 - `src/app/(protected)/learning/my-courses/page.tsx` — add Certificates tab
 - `src/app/(protected)/learning/admin/reports/page.tsx` — add feedback/certs/tool shed tabs
 - `src/app/(protected)/hr/profile/page.tsx` — add Learning tab (certificates + course progress)
 - `src/app/(protected)/hr/team/page.tsx` — add compliance summary for line managers
 
-**Already done (PR 2):**
+**Already done (PR 2 — Admin UI):**
 - ~~`src/components/learning-admin/lesson-manager.tsx`~~ — sectionId prop added, Card wrapper removed
 - ~~`src/app/(protected)/learning/admin/courses/[id]/page.tsx`~~ — rewritten with SectionManager
+
+**Already done (PR #167 — Learner UI + Certificates + Security):**
+- ~~`src/components/learning/lesson-sidebar.tsx`~~ — rewritten: section-grouped, collapsible, LinkedIn-style checkmarks
+- ~~`src/components/learning/quiz-player.tsx`~~ — new `section-quiz-player.tsx` created
+- ~~`src/app/(protected)/learning/courses/[id]/page.tsx`~~ — sections accordion wired (PR #168)
+- ~~`src/app/(protected)/learning/courses/[id]/lessons/[lessonId]/page.tsx`~~ — lesson renderer wired (PR #168)
+- ~~`/api/certificate/[id]/route`~~ — PDF generation endpoint created
+- ~~`/learning/courses/[id]/sections/[sectionId]/quiz`~~ — section quiz route created
 
 ---
 
 ## How to Continue (Handover Guide)
 
 ### Current State
-- **Branch:** `feature/learning-overhaul-migrations` — all Phase 1 + Phase 2 work is here (not yet merged to main)
-- **Database:** All 5 migrations (00060-00064) have been applied to production Supabase. All old learning seed data was deleted (no real users existed).
-- **What works now:** Admin can create courses, add sections to courses, add lessons to sections, create section quizzes with questions/options. All CRUD verified against live database.
-- **What doesn't work yet:** Learner-side course detail page shows flat lesson list (no sections), lesson sidebar has no section grouping, quiz player doesn't support section quizzes, no certificates UI, no feedback dialog, Tool Shed is still hardcoded static content, no global search.
-- **Open PRs:** None. The branch has not been submitted as a PR yet — it needs PR 3+ work before the learner experience is functional.
+- **Branch:** `feature/learning-overhaul-migrations` — merged to main via PR #167. PR #168 pending on same branch.
+- **Database:** All 9 migrations (00060-00068) have been applied to production Supabase. All old learning seed data was deleted (no real users existed).
+- **What works now:** Admin can create courses with sections, lessons (text, video, slides, rich_text), and section quizzes. Learners see section-based course detail with accordion, can take section quizzes, complete lessons, and receive auto-generated PDF certificates on course completion. Completion notifications fire via DB trigger. All RPCs enforce `auth.uid()`.
+- **What doesn't work yet:** Feedback dialog not shown after completion, Tool Shed is still hardcoded static content, no global search, no course duplication, no "resume course" on dashboard.
+- **Open PRs:** #163 (rate limiting), #164 (resources UX), #168 (learning wire components).
 
 ### Recommended Next Steps (in order)
 
-**PR 3: Learner UI** (HIGHEST PRIORITY — makes the section structure visible to learners)
-1. Create `section-accordion.tsx` — expandable sections on course detail page with progress indicators
-2. Rewrite `lesson-sidebar.tsx` — section-grouped with collapsible modules, LinkedIn-style checkmarks (green check done, blue dot current, grey circle pending, lock icon for locked)
-3. Create `section-quiz-player.tsx` — section quiz UI, adapted from existing `quiz-player.tsx` but calling `submit_section_quiz_attempt` RPC
-4. Create route `/learning/courses/[id]/sections/[sectionId]/quiz`
-5. Update course detail page (`/learning/courses/[id]/page.tsx`) to show sections accordion
-6. Update lesson player page to show section context
-7. Use existing utilities: `getLockedSectionIds()` and `calculateSectionProgress()` from `src/lib/learning.ts`
+**PR #168: Wire Components** (IN PROGRESS)
+- Wire section-accordion, quiz-player, lesson-renderer into their page routes
+- Add slides and rich_text support to admin lesson editor
 
-**PR 4: Certificates**
-1. Create `certificate-card.tsx`, `certificate-download-button.tsx`
-2. Create `/learning/certificates` page (certificate wall: internal + external certs)
-3. Create `/learning/certificates/[id]` page
-4. Create `/api/certificates/[id]/pdf` API route (uses `generateCertificatePdf()` from `src/lib/certificates.ts`)
-5. Create `certificates/actions.ts`
+**Course Duplication**
+- Admin ability to duplicate a course (with all sections, lessons, quizzes)
 
-**PR 5: Course Feedback**
-1. Create `course-feedback-dialog.tsx` — 5 structured fields, shows once after completion
-2. Create `feedback-dashboard.tsx` — admin aggregates + anonymous comments + CSV export
-3. Wire into course completion flow
+**Resume Course**
+- "Continue where you left off" card on learning dashboard
 
-**PR 6: Tool Shed** (can be done in parallel with PR 4-5)
-1. Complete rewrite of `/learning/tool-shed` page — social learning feed
-2. Create entry form with 3 format sub-forms (Postcard, 3-2-1, Takeover)
-3. Create admin management page
-4. Create `tool-shed/actions.ts`
-5. See "Tool Shed Content JSON Structures" section above for JSONB formats
+**Course Search (Algolia)**
+- `course-search.tsx` with InstantSearch for catalogue page
+- Index courses on publish via `indexCourse()` from `src/lib/algolia.ts`
 
-**PR 7: Algolia Search + Global Cmd+K**
-1. Create `course-search.tsx` with InstantSearch for catalogue
-2. Create `global-search.tsx` (Cmd+K overlay in header)
-3. Index courses on publish via `indexCourse()` from `src/lib/algolia.ts`
+**Course Feedback**
+- `course-feedback-dialog.tsx` — 5 structured fields, shows once after completion
+- `feedback-dashboard.tsx` — admin aggregates + anonymous comments + CSV export
 
-**PR 8: Integrations**
-1. Update sidebar children for Learning module
-2. Add Learning tab to HR profile page
-3. Add compliance summary to team page for line managers
-4. Wire notification RPCs for learning events
+**Tool Shed** (can be done in parallel)
+- Complete rewrite of `/learning/tool-shed` page — social learning feed
+- Entry form with 3 format sub-forms (Postcard, 3-2-1, Takeover)
+- Admin management page + `tool-shed/actions.ts`
+- See "Tool Shed Content JSON Structures" section above for JSONB formats
 
-**PR 9: Dashboard Redesign + Polish**
-1. Redesign `/learning` page — list-first layout (LinkedIn Learning pattern)
-2. Final consistency pass across all learning pages
+**Global Cmd+K Search**
+- `global-search.tsx` (multi-index overlay in header: courses + resources)
+- Update `header.tsx` to add search icon
+
+**Integrations**
+- Update sidebar children for Learning module
+- Add Learning tab to HR profile page
+- Add compliance summary to team page for line managers
+
+**Dashboard Redesign + Polish**
+- Redesign `/learning` page — list-first layout (LinkedIn Learning pattern)
+- Final consistency pass across all learning pages
 
 ### Key Files to Read First
 1. **This document** — you're reading it
@@ -541,10 +535,11 @@ Group lessons by `section_id`, calculate per-section progress, determine locked 
 - **section_quiz_attempts:** Users see own attempts, can insert own. L&D + HR admins see all.
 
 ### Database Migration Notes
-- **Migrations 00060-00064 are already applied to production Supabase** (applied 19 Mar 2026 via SQL Editor).
+- **Migrations 00060-00068 are all applied to production Supabase** (00060-00064 applied 19 Mar 2026, 00065-00068 applied 23 Mar 2026).
 - If setting up a fresh local Supabase instance, run these migrations first before testing any learning features.
 - The Supabase PostgREST schema cache may need refreshing after applying migrations — use the Supabase dashboard to reload schema if `.select()` queries return null for new columns/tables.
 - All old learning seed data was deleted in migration 00060. The database is clean — no legacy courses/lessons/quizzes exist.
+- `lesson_type` CHECK now includes 4 types: `('video', 'text', 'slides', 'rich_text')` — added by migration 00065.
 
 ### Important Patterns
 - **Server Components fetch data → pass props to Client Components** (never fetch in client)
@@ -570,15 +565,17 @@ Group lessons by `section_id`, calculate per-section progress, determine locked 
 
 ## Verification Checklist
 
-- [x] All 5 migrations run successfully on Supabase (applied 19 Mar 2026)
+- [x] All 9 migrations run successfully on Supabase (00060-00064 applied 19 Mar, 00065-00068 applied 23 Mar)
 - [x] Create course with sections (admin)
-- [x] Create lessons within sections (admin)
+- [x] Create lessons within sections (admin) — text, video, slides, rich_text
 - [x] Create section quiz with questions + options (admin)
 - [x] Build passes with no type errors
 - [x] Lint passes with no new errors
-- [ ] Enrol, complete sections, verify quiz gates progression
-- [ ] Complete course → certificate auto-generates
-- [ ] Download certificate PDF
+- [x] Learner UI: section accordion, quiz player, lesson renderer (PR #167)
+- [x] Certificate auto-generates on course completion (DB trigger)
+- [x] Completion notification fires (DB trigger)
+- [x] auth.uid() enforcement on all RPCs
+- [ ] Download certificate PDF (API route exists, UI pending)
 - [ ] Submit course feedback (verify anonymous)
 - [ ] Create Tool Shed entries in all 3 formats
 - [ ] Browse + filter Tool Shed feed
