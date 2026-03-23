@@ -1,9 +1,12 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { SectionManager } from "@/components/learning-admin/section-manager";
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { CourseEditorLayout } from "@/components/learning-admin/course-editor-layout";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { Eye } from "lucide-react";
 import type {
   CourseLesson,
   LessonImage,
@@ -232,15 +235,26 @@ export default async function CourseDetailPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={course.title}
-        subtitle="Manage course content and settings."
-        breadcrumbs={[
-          { label: "Admin", href: "/hr" },
-          { label: "Course Management", href: "/learning/admin/courses" },
-          { label: course.title },
-        ]}
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title={course.title}
+          subtitle="Manage course content and settings."
+          breadcrumbs={[
+            { label: "Admin", href: "/hr" },
+            { label: "Course Management", href: "/learning/admin/courses" },
+            { label: course.title },
+          ]}
+        />
+        <Button variant="outline" size="sm" className="shrink-0 mt-2" asChild>
+          <Link
+            href={`/learning/courses/${course.id}?preview=true`}
+            target="_blank"
+          >
+            <Eye className="h-4 w-4 mr-1.5" />
+            Preview as Learner
+          </Link>
+        </Button>
+      </div>
 
       {/* Draft / Publish banner */}
       <CoursePublishBanner

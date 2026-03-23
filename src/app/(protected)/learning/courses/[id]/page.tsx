@@ -1,5 +1,6 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
+import { getPreviewMode } from "@/lib/learning";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { categoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/l
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
 import { SectionAccordion } from "@/components/learning/section-accordion";
+import { PreviewModeBanner } from "@/components/learning/preview-mode-banner";
 import type { LessonType } from "@/types/database.types";
 
 function formatDate(dateString: string | null): string {
@@ -33,24 +35,35 @@ function formatDate(dateString: string | null): string {
 
 export default async function CourseDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const { supabase, user } = await getCurrentUser();
+  const resolvedSearchParams = await searchParams;
+  const { supabase, user, profile } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch course details (only published + active courses visible to learners)
-  const { data: courseData, error } = await supabase
+  const { isPreview, searchParamString } = getPreviewMode(
+    resolvedSearchParams,
+    profile
+  );
+
+  // Fetch course details — preview mode bypasses published+active filters
+  let query = supabase
     .from("courses")
     .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
-    .eq("id", id)
-    .eq("is_active", true)
-    .eq("status", "published")
-    .single();
+    .eq("id", id);
+
+  if (!isPreview) {
+    query = query.eq("is_active", true).eq("status", "published");
+  }
+
+  const { data: courseData, error } = await query.single();
 
   if (error || !courseData) {
     notFound();
@@ -209,6 +222,8 @@ export default async function CourseDetailPage({
 
   return (
     <div className="space-y-6">
+      {isPreview && <PreviewModeBanner courseId={id} />}
+
       {/* Course header */}
       <PageHeader
         title={course.title}
