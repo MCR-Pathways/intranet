@@ -16,9 +16,11 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { categoryConfig, getLockedLessonIds } from "@/lib/learning";
+import { categoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
+import { SectionAccordion } from "@/components/learning/section-accordion";
+import type { LessonType } from "@/types/database.types";
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return "N/A";
@@ -89,6 +91,89 @@ export default async function CourseDetailPage({
   }
 
   const hasLessons = lessons.length > 0;
+
+  // Fetch sections for section-based courses
+  const { data: sectionsData } = await supabase
+    .from("course_sections")
+    .select("id, title, description, sort_order")
+    .eq("course_id", id)
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const sections = sectionsData ?? [];
+  const hasSections = sections.length > 0;
+
+  // For section-based courses: fetch quiz data + attempts
+  let sectionAccordionData: {
+    id: string;
+    title: string;
+    description: string | null;
+    sort_order: number;
+    lessons: { id: string; title: string; lesson_type: LessonType; isCompleted: boolean }[];
+    hasQuiz: boolean;
+    quizPassed: boolean;
+    isLocked: boolean;
+  }[] = [];
+
+  if (hasSections) {
+    const sectionIds = sections.map((s) => s.id);
+
+    // Fetch section quizzes
+    const { data: quizzesData } = await supabase
+      .from("section_quizzes")
+      .select("id, section_id")
+      .in("section_id", sectionIds)
+      .eq("is_active", true);
+
+    const quizzes = quizzesData ?? [];
+    const sectionsWithQuizzes = new Set(quizzes.map((q) => q.section_id));
+    const quizIdToSectionId = new Map(quizzes.map((q) => [q.id, q.section_id]));
+
+    // Fetch quiz attempts to determine passed status
+    const { data: attemptsData } = await supabase
+      .from("section_quiz_attempts")
+      .select("quiz_id, passed")
+      .eq("user_id", user.id);
+
+    const passedQuizSectionIds = new Set(
+      (attemptsData ?? [])
+        .filter((a) => a.passed)
+        .map((a) => quizIdToSectionId.get(a.quiz_id))
+        .filter((id): id is string => !!id)
+    );
+
+    const lockedSectionIds = getLockedSectionIds(
+      sections.map((s) => ({ id: s.id, sort_order: s.sort_order })),
+      passedQuizSectionIds,
+      sectionsWithQuizzes
+    );
+
+    // Group lessons by section
+    const lessonsBySection = new Map<string, CourseLesson[]>();
+    for (const lesson of lessons) {
+      if (lesson.section_id) {
+        const list = lessonsBySection.get(lesson.section_id) ?? [];
+        list.push(lesson);
+        lessonsBySection.set(lesson.section_id, list);
+      }
+    }
+
+    sectionAccordionData = sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      sort_order: s.sort_order,
+      lessons: (lessonsBySection.get(s.id) ?? []).map((l) => ({
+        id: l.id,
+        title: l.title,
+        lesson_type: (l.lesson_type ?? "text") as LessonType,
+        isCompleted: completedLessonIds.includes(l.id),
+      })),
+      hasQuiz: sectionsWithQuizzes.has(s.id),
+      quizPassed: passedQuizSectionIds.has(s.id),
+      isLocked: lockedSectionIds.has(s.id),
+    }));
+  }
 
   // Find the first incomplete, unlocked lesson for the "Continue Learning" button
   const resumeLessonId = (() => {
@@ -330,15 +415,21 @@ export default async function CourseDetailPage({
         )}
       </div>
 
-      {/* Lessons section */}
-      {hasLessons && (
+      {/* Course content — sections or flat lesson list */}
+      {hasSections ? (
+        <SectionAccordion
+          courseId={course.id}
+          sections={sectionAccordionData}
+          isEnrolled={isEnrolled}
+        />
+      ) : hasLessons ? (
         <LessonList
           courseId={course.id}
           lessons={lessons}
           completedLessonIds={completedLessonIds}
           isEnrolled={isEnrolled}
         />
-      )}
+      ) : null}
     </div>
   );
 }

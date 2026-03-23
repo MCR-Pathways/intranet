@@ -62,6 +62,7 @@ export function LessonEditDialog({
   const [videoStoragePath, setVideoStoragePath] = useState(
     lesson?.video_storage_path ?? ""
   );
+  const [slidesUrl, setSlidesUrl] = useState(lesson?.slides_url ?? "");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   const resetForm = () => {
@@ -71,6 +72,7 @@ export function LessonEditDialog({
       setContent("");
       setVideoUrl("");
       setVideoStoragePath("");
+      setSlidesUrl("");
       setUploadedFileName(null);
     }
     setError(null);
@@ -113,6 +115,10 @@ export function LessonEditDialog({
       setError("A video URL or uploaded video is required");
       return;
     }
+    if (lessonType === "slides" && !slidesUrl.trim()) {
+      setError("A slides URL is required (e.g. Google Slides embed link)");
+      return;
+    }
 
     startTransition(async () => {
       if (isEditing) {
@@ -123,6 +129,7 @@ export function LessonEditDialog({
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
+          slides_url: lessonType === "slides" ? slidesUrl || null : null,
         });
 
         if (result.success) {
@@ -142,6 +149,7 @@ export function LessonEditDialog({
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
+          slides_url: lessonType === "slides" ? slidesUrl || null : null,
           sort_order: sortOrder,
         });
 
@@ -191,6 +199,8 @@ export function LessonEditDialog({
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
+                  <SelectItem value="slides">Slides (Google Slides)</SelectItem>
+                  <SelectItem value="rich_text">Rich Text</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -304,6 +314,35 @@ export function LessonEditDialog({
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Slides URL (for slides lessons) */}
+            {lessonType === "slides" && (
+              <div className="grid gap-2">
+                <Label htmlFor="lesson_slides_url">
+                  Google Slides Embed URL
+                </Label>
+                <Input
+                  id="lesson_slides_url"
+                  type="url"
+                  value={slidesUrl}
+                  onChange={(e) => setSlidesUrl(e.target.value)}
+                  placeholder="https://docs.google.com/presentation/d/.../embed"
+                />
+                <p className="text-xs text-muted-foreground">
+                  In Google Slides: File → Share → Publish to web → Embed tab → Copy the URL
+                </p>
+              </div>
+            )}
+
+            {/* Rich text placeholder — content editing via Tiptap (future) */}
+            {lessonType === "rich_text" && (
+              <div className="grid gap-2">
+                <Label>Rich Text Content</Label>
+                <div className="rounded-md border border-input bg-muted/50 p-4 text-sm text-muted-foreground text-center">
+                  Rich text editing will be available soon. For now, create the lesson and edit content later.
+                </div>
+              </div>
             )}
 
             {error && (

@@ -271,6 +271,8 @@ export async function createLesson(data: {
   section_id: string;
   title: string;
   content?: string | null;
+  content_json?: Record<string, unknown> | null;
+  slides_url?: string | null;
   video_url?: string | null;
   video_storage_path?: string | null;
   lesson_type?: LessonType;
@@ -284,6 +286,8 @@ export async function createLesson(data: {
     "section_id",
     "title",
     "content",
+    "content_json",
+    "slides_url",
     "video_url",
     "video_storage_path",
     "lesson_type",
@@ -341,6 +345,8 @@ export async function updateLesson(
   data: {
     title?: string;
     content?: string | null;
+    content_json?: Record<string, unknown> | null;
+    slides_url?: string | null;
     video_url?: string | null;
     video_storage_path?: string | null;
     lesson_type?: LessonType;
@@ -354,6 +360,8 @@ export async function updateLesson(
   const ALLOWED_FIELDS = [
     "title",
     "content",
+    "content_json",
+    "slides_url",
     "video_url",
     "video_storage_path",
     "lesson_type",
