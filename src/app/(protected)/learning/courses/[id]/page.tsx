@@ -58,52 +58,64 @@ export default async function CourseDetailPage({
 
   const course = courseData as Course;
 
-  // Fetch user's enrolment for this course
-  const { data: enrolmentData } = await supabase
-    .from("course_enrolments")
-    .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
-    .eq("user_id", user.id)
-    .eq("course_id", id)
-    .single();
+  // Fetch enrolment, lessons, and sections in parallel
+  const [{ data: enrolmentData }, { data: lessonsData }, { data: sectionsData }] =
+    await Promise.all([
+      supabase
+        .from("course_enrolments")
+        .select("id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at")
+        .eq("user_id", user.id)
+        .eq("course_id", id)
+        .single(),
+      supabase
+        .from("course_lessons")
+        .select("id, course_id, section_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
+        .eq("course_id", id)
+        .eq("is_active", true)
+        .order("sort_order"),
+      supabase
+        .from("course_sections")
+        .select("id, title, description, sort_order")
+        .eq("course_id", id)
+        .eq("is_active", true)
+        .order("sort_order"),
+    ]);
 
   const enrolment = enrolmentData as CourseEnrolment | null;
-
-  // Fetch lessons for this course
-  const { data: lessonsData } = await supabase
-    .from("course_lessons")
-    .select("id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at")
-    .eq("course_id", id)
-    .eq("is_active", true)
-    .order("sort_order");
-
   const lessons = (lessonsData as CourseLesson[]) ?? [];
-
-  // Fetch user's lesson completions if they have lessons
-  const lessonIds = lessons.map((l) => l.id);
-  let completedLessonIds: string[] = [];
-  if (lessonIds.length > 0) {
-    const { data: completions } = await supabase
-      .from("lesson_completions")
-      .select("lesson_id")
-      .eq("user_id", user.id)
-      .in("lesson_id", lessonIds);
-    completedLessonIds = completions?.map((c) => c.lesson_id) ?? [];
-  }
-
-  const hasLessons = lessons.length > 0;
-
-  // Fetch sections for section-based courses
-  const { data: sectionsData } = await supabase
-    .from("course_sections")
-    .select("id, title, description, sort_order")
-    .eq("course_id", id)
-    .eq("is_active", true)
-    .order("sort_order");
-
   const sections = sectionsData ?? [];
+  const hasLessons = lessons.length > 0;
   const hasSections = sections.length > 0;
 
-  // For section-based courses: fetch quiz data + attempts
+  // Fetch completions and section quizzes in parallel
+  const lessonIds = lessons.map((l) => l.id);
+  const sectionIds = sections.map((s) => s.id);
+
+  const [completionsResult, quizzesResult, attemptsResult] = await Promise.all([
+    lessonIds.length > 0
+      ? supabase
+          .from("lesson_completions")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .in("lesson_id", lessonIds)
+      : Promise.resolve({ data: null }),
+    sectionIds.length > 0
+      ? supabase
+          .from("section_quizzes")
+          .select("id, section_id")
+          .in("section_id", sectionIds)
+          .eq("is_active", true)
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("section_quiz_attempts")
+      .select("quiz_id, passed")
+      .eq("user_id", user.id),
+  ]);
+
+  const completedLessonIds =
+    completionsResult.data?.map((c: { lesson_id: string }) => c.lesson_id) ?? [];
+
+  // Build section accordion data
   let sectionAccordionData: {
     id: string;
     title: string;
@@ -116,30 +128,15 @@ export default async function CourseDetailPage({
   }[] = [];
 
   if (hasSections) {
-    const sectionIds = sections.map((s) => s.id);
-
-    // Fetch section quizzes
-    const { data: quizzesData } = await supabase
-      .from("section_quizzes")
-      .select("id, section_id")
-      .in("section_id", sectionIds)
-      .eq("is_active", true);
-
-    const quizzes = quizzesData ?? [];
-    const sectionsWithQuizzes = new Set(quizzes.map((q) => q.section_id));
-    const quizIdToSectionId = new Map(quizzes.map((q) => [q.id, q.section_id]));
-
-    // Fetch quiz attempts to determine passed status
-    const { data: attemptsData } = await supabase
-      .from("section_quiz_attempts")
-      .select("quiz_id, passed")
-      .eq("user_id", user.id);
+    const quizzes = quizzesResult.data ?? [];
+    const sectionsWithQuizzes = new Set(quizzes.map((q: { section_id: string }) => q.section_id));
+    const quizIdToSectionId = new Map(quizzes.map((q: { id: string; section_id: string }) => [q.id, q.section_id]));
 
     const passedQuizSectionIds = new Set(
-      (attemptsData ?? [])
-        .filter((a) => a.passed)
-        .map((a) => quizIdToSectionId.get(a.quiz_id))
-        .filter((id): id is string => !!id)
+      (attemptsResult.data ?? [])
+        .filter((a: { passed: boolean }) => a.passed)
+        .map((a: { quiz_id: string }) => quizIdToSectionId.get(a.quiz_id))
+        .filter((id: string | undefined): id is string => !!id)
     );
 
     const lockedSectionIds = getLockedSectionIds(

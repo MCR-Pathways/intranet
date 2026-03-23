@@ -242,6 +242,8 @@ export async function generateCertificatePdf(
 ): Promise<Buffer> {
   const { renderToBuffer } = await import("@react-pdf/renderer");
   const element = React.createElement(CertificateDocument, { data });
+  // @react-pdf/renderer typing expects ReactElement<DocumentProps> but
+  // createElement returns ReactElement<unknown>. The element IS a Document.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(element as any);
   return Buffer.from(buffer);
