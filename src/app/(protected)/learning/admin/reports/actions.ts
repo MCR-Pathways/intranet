@@ -1,6 +1,7 @@
 "use server";
 
 import { requireLDAdmin } from "@/lib/auth";
+import { sanitiseCSVCell, buildCSVContent } from "@/lib/csv";
 
 interface ReportFilters {
   courseId?: string;
@@ -75,7 +76,7 @@ export async function exportReportCSV(filters: ReportFilters) {
   const courseMap = new Map(courses?.map((c) => [c.id, c]) ?? []);
   const teamMap = new Map(teams?.map((t) => [t.id, t]) ?? []);
 
-  // Build CSV
+  // Build CSV with sanitisation to prevent CSV injection
   const headers = [
     "User Name",
     "Email",
@@ -97,12 +98,12 @@ export async function exportReportCSV(filters: ReportFilters) {
     const team = profile?.team_id ? teamMap.get(profile.team_id) : null;
 
     return [
-      profile?.full_name ?? "",
-      profile?.email ?? "",
-      profile?.user_type ?? "",
-      team?.name ?? "",
-      course?.title ?? "",
-      course?.category ?? "",
+      sanitiseCSVCell(profile?.full_name),
+      sanitiseCSVCell(profile?.email),
+      sanitiseCSVCell(profile?.user_type),
+      sanitiseCSVCell(team?.name),
+      sanitiseCSVCell(course?.title),
+      sanitiseCSVCell(course?.category),
       e.status,
       e.progress_percent.toString(),
       e.score?.toString() ?? "",
@@ -114,12 +115,7 @@ export async function exportReportCSV(filters: ReportFilters) {
     ];
   });
 
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) =>
-      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")
-    ),
-  ].join("\n");
+  const csvContent = buildCSVContent(headers, rows);
 
   return { success: true, error: null, csv: csvContent };
 }

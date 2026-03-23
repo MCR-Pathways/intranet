@@ -59,6 +59,32 @@ describe("Course Learner Actions", () => {
   // enrollInCourse
   // ===========================================
 
+  /** Mock `from()` to handle both enrolment insert and first-lesson fetch */
+  function mockEnrolmentWithFirstLesson(lessonId: string | null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "course_enrolments") return { insert: mockInsert };
+      if (table === "course_lessons") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                order: () => ({
+                  limit: () => ({
+                    single: () =>
+                      Promise.resolve({
+                        data: lessonId ? { id: lessonId } : null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      return { insert: mockInsert };
+    });
+  }
+
   describe("enrollInCourse", () => {
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
@@ -69,11 +95,13 @@ describe("Course Learner Actions", () => {
 
       const result = await enrollInCourse("course-1");
 
-      expect(result).toEqual({ success: false, error: "Not authenticated" });
+      expect(result).toEqual({ success: false, error: "Not authenticated", firstLessonId: null });
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
     it("inserts enrolment with correct fields", async () => {
+      mockEnrolmentWithFirstLesson("lesson-1");
+
       await enrollInCourse("course-1");
 
       expect(mockFrom).toHaveBeenCalledWith("course_enrolments");
@@ -85,13 +113,17 @@ describe("Course Learner Actions", () => {
       });
     });
 
-    it("returns success on successful enrolment", async () => {
+    it("returns success with firstLessonId on successful enrolment", async () => {
+      mockEnrolmentWithFirstLesson("lesson-1");
+
       const result = await enrollInCourse("course-1");
 
-      expect(result).toEqual({ success: true, error: null });
+      expect(result).toEqual({ success: true, error: null, firstLessonId: "lesson-1" });
     });
 
     it("revalidates correct paths on success", async () => {
+      mockEnrolmentWithFirstLesson(null);
+
       await enrollInCourse("course-1");
 
       expect(revalidatePath).toHaveBeenCalledWith("/learning/courses/course-1");
@@ -109,6 +141,7 @@ describe("Course Learner Actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Already enrolled in this course",
+        firstLessonId: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
@@ -123,6 +156,7 @@ describe("Course Learner Actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+        firstLessonId: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
