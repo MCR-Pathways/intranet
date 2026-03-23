@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
 import {
   createLesson,
   updateLesson,
@@ -29,6 +29,8 @@ import { Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { LessonImageManager } from "./lesson-image-manager";
 import { LessonTiptapEditor } from "./lesson-tiptap-editor";
 import { extractPlainText, plainTextToTiptapDoc } from "@/lib/tiptap";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { autoSaveLessonContent } from "@/app/(protected)/learning/admin/courses/actions";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
@@ -78,6 +80,28 @@ export function LessonEditDialog({
       return plainTextToTiptapDoc(lesson.content);
     }
     return null;
+  });
+
+  // Auto-save for existing rich_text lessons
+  const autoSaveData = useMemo(
+    () =>
+      contentJson
+        ? {
+            content_json: contentJson as unknown as Record<string, unknown>,
+            content: extractPlainText(contentJson),
+          }
+        : null,
+    [contentJson]
+  );
+
+  const { status: autoSaveStatus } = useAutoSave({
+    data: autoSaveData,
+    onSave: async (data) => {
+      if (!data || !lesson) return { success: false };
+      return autoSaveLessonContent(lesson.id, courseId, data);
+    },
+    delay: 2000,
+    enabled: isEditing && lessonType === "rich_text" && !!contentJson,
   });
 
   const resetForm = () => {
@@ -385,7 +409,18 @@ export function LessonEditDialog({
             {/* Rich text editor (Tiptap) */}
             {lessonType === "rich_text" && (
               <div className="grid gap-2">
-                <Label>Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Content</Label>
+                  {isEditing && autoSaveStatus !== "idle" && (
+                    <span className="text-xs text-muted-foreground">
+                      {autoSaveStatus === "saving" && "Saving..."}
+                      {autoSaveStatus === "saved" && "Saved"}
+                      {autoSaveStatus === "error" && (
+                        <span className="text-destructive">Save failed</span>
+                      )}
+                    </span>
+                  )}
+                </div>
                 <LessonTiptapEditor
                   initialContent={contentJson}
                   onChange={setContentJson}

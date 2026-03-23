@@ -13,43 +13,57 @@ import { MarkCompleteButton } from "./mark-complete-button";
 import { VideoPlayer } from "@/components/learning/video-player";
 import { LessonSidebar } from "@/components/learning/lesson-sidebar";
 import { LessonRenderer } from "@/components/learning/lesson-renderer";
-import { getLockedLessonIds } from "@/lib/learning";
+import { PreviewModeBanner } from "@/components/learning/preview-mode-banner";
+import { getLockedLessonIds, getPreviewMode } from "@/lib/learning";
 
 export default async function LessonPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; lessonId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: courseId, lessonId } = await params;
-  const { supabase, user } = await getCurrentUser();
+  const resolvedSearchParams = await searchParams;
+  const { supabase, user, profile } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch the course (only published + active)
-  const { data: course } = await supabase
+  const { isPreview, searchParamString } = getPreviewMode(
+    resolvedSearchParams,
+    profile
+  );
+
+  // Fetch the course — preview mode bypasses published+active filters
+  let courseQuery = supabase
     .from("courses")
     .select("id, title, is_active, status")
-    .eq("id", courseId)
-    .eq("is_active", true)
-    .eq("status", "published")
-    .single();
+    .eq("id", courseId);
+
+  if (!isPreview) {
+    courseQuery = courseQuery.eq("is_active", true).eq("status", "published");
+  }
+
+  const { data: course } = await courseQuery.single();
 
   if (!course) {
     notFound();
   }
 
-  // Check enrolment
-  const { data: enrolment } = await supabase
-    .from("course_enrolments")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .single();
+  // Check enrolment — skip in preview mode
+  if (!isPreview) {
+    const { data: enrolment } = await supabase
+      .from("course_enrolments")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .single();
 
-  if (!enrolment) {
-    redirect(`/learning/courses/${courseId}`);
+    if (!enrolment) {
+      redirect(`/learning/courses/${courseId}${searchParamString}`);
+    }
   }
 
   // Fetch all active lessons for navigation and sidebar
@@ -226,6 +240,8 @@ export default async function LessonPage({
       {/* Main content */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl p-6 space-y-6">
+          {isPreview && <PreviewModeBanner courseId={courseId} />}
+
           {/* Header */}
           <PageHeader
             title={lesson.title}
@@ -233,7 +249,7 @@ export default async function LessonPage({
             breadcrumbs={[
               { label: "Learning", href: "/learning" },
               { label: "Courses", href: "/learning/courses" },
-              { label: course.title, href: `/learning/courses/${courseId}` },
+              { label: course.title, href: `/learning/courses/${courseId}${searchParamString}` },
               { label: lesson.title },
             ]}
           />
@@ -333,17 +349,23 @@ export default async function LessonPage({
               )}
             </div>
 
-            <MarkCompleteButton
-              lessonId={lessonId}
-              courseId={courseId}
-              isCompleted={isCompleted}
-              lessonType={lessonType}
-              hasUploadedVideo={
-                lessonType === "video" && !!lesson.video_storage_path
-              }
-              nextHref={nextHref}
-              nextLabel={nextLabel}
-            />
+            {isPreview ? (
+              <span className="text-sm text-muted-foreground italic">
+                Completion disabled in preview
+              </span>
+            ) : (
+              <MarkCompleteButton
+                lessonId={lessonId}
+                courseId={courseId}
+                isCompleted={isCompleted}
+                lessonType={lessonType}
+                hasUploadedVideo={
+                  lessonType === "video" && !!lesson.video_storage_path
+                }
+                nextHref={nextHref}
+                nextLabel={nextLabel}
+              />
+            )}
           </div>
         </div>
       </div>

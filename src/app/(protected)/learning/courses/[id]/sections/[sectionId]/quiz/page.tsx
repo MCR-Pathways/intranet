@@ -4,30 +4,41 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionQuizPlayer } from "@/components/learning/section-quiz-player";
-import { getLockedSectionIds } from "@/lib/learning";
+import { PreviewModeBanner } from "@/components/learning/preview-mode-banner";
+import { getLockedSectionIds, getPreviewMode } from "@/lib/learning";
 
 export default async function SectionQuizPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; sectionId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id: courseId, sectionId } = await params;
-  const { supabase, user } = await getCurrentUser();
+  const resolvedSearchParams = await searchParams;
+  const { supabase, user, profile } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Verify enrolment
-  const { data: enrolment } = await supabase
-    .from("course_enrolments")
-    .select("id, status")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .single();
+  const { isPreview, searchParamString } = getPreviewMode(
+    resolvedSearchParams,
+    profile
+  );
 
-  if (!enrolment) {
-    redirect(`/learning/courses/${courseId}`);
+  // Verify enrolment — skip in preview mode
+  if (!isPreview) {
+    const { data: enrolment } = await supabase
+      .from("course_enrolments")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .single();
+
+    if (!enrolment) {
+      redirect(`/learning/courses/${courseId}${searchParamString}`);
+    }
   }
 
   // Fetch section + quiz data in parallel
@@ -96,7 +107,7 @@ export default async function SectionQuizPage({
     sectionsWithQuizzes
   );
 
-  if (lockedSectionIds.has(sectionId)) {
+  if (!isPreview && lockedSectionIds.has(sectionId)) {
     redirect(`/learning/courses/${courseId}`);
   }
 
@@ -151,9 +162,11 @@ export default async function SectionQuizPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
+      {isPreview && <PreviewModeBanner courseId={courseId} />}
+
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild>
-        <Link href={`/learning/courses/${courseId}`}>
+        <Link href={`/learning/courses/${courseId}${searchParamString}`}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to {course?.title ?? "Course"}
         </Link>
@@ -167,16 +180,23 @@ export default async function SectionQuizPage({
         <h1 className="text-2xl font-bold">{quiz.title}</h1>
       </div>
 
-      {/* Quiz player */}
-      <SectionQuizPlayer
-        quizId={quiz.id}
-        sectionId={sectionId}
-        courseId={courseId}
-        questions={formattedQuestions}
-        passingScore={quiz.passing_score}
-        previousAttempts={previousAttempts ?? []}
-        isCompleted={isCompleted}
-      />
+      {isPreview ? (
+        <p className="text-sm text-muted-foreground italic">
+          Quiz submission is disabled in preview mode. Learners will see the
+          questions and can submit answers.
+        </p>
+      ) : (
+        /* Quiz player */
+        <SectionQuizPlayer
+          quizId={quiz.id}
+          sectionId={sectionId}
+          courseId={courseId}
+          questions={formattedQuestions}
+          passingScore={quiz.passing_score}
+          previousAttempts={previousAttempts ?? []}
+          isCompleted={isCompleted}
+        />
+      )}
     </div>
   );
 }
