@@ -203,7 +203,11 @@ export default async function LessonPage({
             <Card>
               <CardContent className="pt-6">
                 <LessonRenderer
-                  json={lesson.content_json as Record<string, unknown> | null}
+                  json={
+                    typeof lesson.content_json === "object" && lesson.content_json !== null
+                      ? (lesson.content_json as Record<string, unknown>)
+                      : null
+                  }
                   fallback={lesson.content ?? undefined}
                 />
               </CardContent>
@@ -217,6 +221,7 @@ export default async function LessonPage({
                 className="absolute inset-0 w-full h-full border-0"
                 allowFullScreen
                 title={lesson.title}
+                sandbox="allow-scripts allow-same-origin allow-popups"
               />
             </div>
           )}

@@ -115,20 +115,32 @@ export async function reorderSections(
 ) {
   const { supabase } = await requireLDAdmin();
 
-  // Update sort_order for each section
-  const updates = sectionIds.map((id, index) =>
-    supabase
+  // Two-pass update to avoid UNIQUE constraint on (course_id, sort_order):
+  // Pass 1: shift all to temporary high offsets to clear collisions
+  for (let i = 0; i < sectionIds.length; i++) {
+    const { error } = await supabase
       .from("course_sections")
-      .update({ sort_order: index })
-      .eq("id", id)
-  );
+      .update({ sort_order: 10000 + i })
+      .eq("id", sectionIds[i])
+      .eq("course_id", courseId);
 
-  const results = await Promise.all(updates);
-  const failed = results.find((r) => r.error);
+    if (error) {
+      logger.error("Failed to reorder sections (pass 1)", { error });
+      return { success: false, error: "Failed to reorder sections. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
+  }
+  // Pass 2: set final sort_order values
+  for (let i = 0; i < sectionIds.length; i++) {
+    const { error } = await supabase
+      .from("course_sections")
+      .update({ sort_order: i })
+      .eq("id", sectionIds[i])
+      .eq("course_id", courseId);
 
-  if (failed?.error) {
-    logger.error("Failed to reorder sections", { error: failed.error });
-    return { success: false, error: "Failed to reorder sections. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    if (error) {
+      logger.error("Failed to reorder sections (pass 2)", { error });
+      return { success: false, error: "Failed to reorder sections. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
@@ -565,19 +577,17 @@ export async function reorderSectionQuizQuestions(
 ) {
   const { supabase } = await requireLDAdmin();
 
-  const updates = questionIds.map((id, index) =>
-    supabase
+  // Update sort_order sequentially to avoid row-locking conflicts
+  for (let i = 0; i < questionIds.length; i++) {
+    const { error } = await supabase
       .from("section_quiz_questions")
-      .update({ sort_order: index })
-      .eq("id", id)
-  );
+      .update({ sort_order: i })
+      .eq("id", questionIds[i]);
 
-  const results = await Promise.all(updates);
-  const failed = results.find((r) => r.error);
-
-  if (failed?.error) {
-    logger.error("Failed to reorder quiz questions", { error: failed.error });
-    return { success: false, error: "Failed to reorder questions. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    if (error) {
+      logger.error("Failed to reorder quiz questions", { error });
+      return { success: false, error: "Failed to reorder questions. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
   }
 
   revalidatePath(`/learning/admin/courses/${courseId}`);

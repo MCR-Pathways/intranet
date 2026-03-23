@@ -25,7 +25,7 @@ export function LessonRenderer({ json, fallback }: LessonRendererProps) {
   if (!json) {
     if (!fallback) return null;
     return (
-      <div className="prose prose-sm max-w-none whitespace-pre-wrap break-words">
+      <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words">
         {linkifyText(fallback)}
       </div>
     );
@@ -38,7 +38,7 @@ export function LessonRenderer({ json, fallback }: LessonRendererProps) {
   let headingIndex = 0;
 
   return (
-    <div className="prose prose-sm max-w-none break-words">
+    <div className="prose prose-sm max-w-none dark:prose-invert break-words">
       {doc.content?.map((node, i) => {
         if (node.type === "heading") {
           const level = (node.attrs?.level as number) ?? 2;

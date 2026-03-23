@@ -115,9 +115,16 @@ export function LessonEditDialog({
       setError("A video URL or uploaded video is required");
       return;
     }
-    if (lessonType === "slides" && !slidesUrl.trim()) {
-      setError("A slides URL is required (e.g. Google Slides embed link)");
-      return;
+    if (lessonType === "slides") {
+      const trimmedSlidesUrl = slidesUrl.trim();
+      if (!trimmedSlidesUrl) {
+        setError("A slides URL is required (e.g. Google Slides embed link)");
+        return;
+      }
+      if (!trimmedSlidesUrl.startsWith("https://docs.google.com/presentation/")) {
+        setError("Please provide a valid Google Slides URL (must start with https://docs.google.com/presentation/)");
+        return;
+      }
     }
 
     startTransition(async () => {
