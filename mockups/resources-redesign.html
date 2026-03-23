@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCR Pathways — Resources Redesign Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    /* ─── MCR Design Tokens ─── */
+    :root {
+      --mcr-dark-blue: #213350;
+      --mcr-teal: #2A6075;
+      --mcr-wine: #751B48;
+      --mcr-pink: #DA417C;
+      --mcr-orange: #F09336;
+      --mcr-green: #4A7A00;
+      --mcr-light-blue: #1A6E8E;
+      --mcr-yellow: #F8D45B;
+
+      --background: #F2F4F7;
+      --foreground: #213350;
+      --card: #ffffff;
+      --muted: #F0F2F5;
+      --muted-fg: #6b7280;
+      --border: #e5e7eb;
+      --link: #2A6075;
+      --table-header: #E4E7EC;
+      --accent: #E2E8F0;
+      --ring: #213350;
+
+      /* Icon colour backgrounds */
+      --icon-bg-teal: #e8f4f8;
+      --icon-bg-wine: #f5e8ef;
+      --icon-bg-pink: #fce8f0;
+      --icon-bg-orange: #fef0e0;
+      --icon-bg-green: #eef5e0;
+      --icon-bg-blue: #e8f0f8;
+      --icon-bg-navy: #e8ecf0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ─── View Switcher (top nav for mockup) ─── */
+    .mockup-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--mcr-dark-blue);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 32px;
+    }
+    .mockup-nav h1 {
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+    .mockup-nav .tabs {
+      display: flex;
+      gap: 4px;
+    }
+    .mockup-nav button {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.6);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mockup-nav button:hover {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.9);
+    }
+    .mockup-nav button.active {
+      background: rgba(255,255,255,0.15);
+      color: white;
+    }
+    .mockup-nav .badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: auto;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    /* ─── Layout Shell ─── */
+    .shell {
+      margin-top: 56px;
+      display: flex;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* App sidebar (simulated) */
+    .app-sidebar {
+      width: 64px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 8px;
+    }
+    .app-sidebar .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted-fg);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .app-sidebar .icon:hover { background: var(--muted); color: var(--foreground); }
+    .app-sidebar .icon.active {
+      background: var(--mcr-teal);
+      color: white;
+    }
+    .app-sidebar .icon svg { width: 20px; height: 20px; }
+
+    /* Main area = resource sidebar + content */
+    .main-area {
+      flex: 1;
+      padding: 24px 32px 24px 24px;
+      min-width: 0;
+    }
+
+    .resources-card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+      display: flex;
+      min-height: calc(100vh - 56px - 48px);
+      overflow: clip;
+    }
+
+    /* ─── Resource Sidebar (Tree) ─── */
+    .resource-sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      overflow-y: auto;
+    }
+    .resource-sidebar .collapse-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted-fg);
+      cursor: pointer;
+      margin: 0 16px 12px;
+      transition: all 0.15s;
+    }
+    .resource-sidebar .collapse-btn:hover { background: var(--muted); color: var(--foreground); }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: all 0.1s;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--foreground);
+      text-decoration: none;
+      position: relative;
+    }
+    .tree-item:hover { background: var(--muted); }
+    .tree-item.active {
+      background: rgba(42, 96, 117, 0.08);
+    }
+    .tree-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 4px;
+      bottom: 4px;
+      width: 3px;
+      background: var(--mcr-teal);
+      border-radius: 0 2px 2px 0;
+    }
+    .tree-item .tree-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .tree-item .tree-icon svg { width: 16px; height: 16px; }
+
+    .tree-child {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted-fg);
+      padding: 6px 20px 6px 62px;
+    }
+    .tree-child:hover { color: var(--foreground); }
+    .tree-child.active { color: var(--foreground); font-weight: 500; }
+
+    .tree-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+    /* ─── Content Area ─── */
+    .content-area {
+      flex: 1;
+      padding: 28px 32px;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    /* ─── Views ─── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ═══════════════════════════════════════════════════
+       VIEW 1: LANDING PAGE
+       ═══════════════════════════════════════════════════ */
+
+    /* Search */
+    .search-bar {
+      position: relative;
+      margin-bottom: 28px;
+    }
+    .search-bar input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--card);
+      color: var(--foreground);
+      outline: none;
+      transition: all 0.15s;
+    }
+    .search-bar input::placeholder { color: var(--muted-fg); }
+    .search-bar input:focus {
+      border-color: var(--mcr-teal);
+      box-shadow: 0 0 0 3px rgba(42, 96, 117, 0.1);
+    }
+    .search-bar .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted-fg);
+    }
+    .search-bar .shortcut {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--muted);
+      color: var(--muted-fg);
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 5px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+
+    /* Section headers — title case, not uppercase */
+    .section-header {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted-fg);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-header .count {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    /* Category Grid */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .category-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .category-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .category-card:hover {
+      border-color: rgba(42, 96, 117, 0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+    .category-card .cat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .category-card .cat-icon svg { width: 20px; height: 20px; }
+    .category-card .cat-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .category-card .cat-desc {
+      font-size: 13px;
+      color: var(--muted-fg);
+      line-height: 1.5;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .category-card .cat-meta {
+      font-size: 12px;
+      color: var(--muted-fg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .category-card .cat-meta svg { width: 13px; height: 13px; opacity: 0.5; }
+
+    /* Colour accent bands */
+    .cat-teal::before { background: var(--mcr-teal); }
+    .cat-wine::before { background: var(--mcr-wine); }
+    .cat-pink::before { background: var(--mcr-pink); }
+    .cat-orange::before { background: var(--mcr-orange); }
+    .cat-green::before { background: var(--mcr-green); }
+    .cat-blue::before { background: var(--mcr-light-blue); }
+    .cat-navy::before { background: var(--mcr-dark-blue); }
+
+    /* Featured Resources */
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .featured-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s;
+      cursor: pointer;
+      display: flex;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .featured-card:hover {
+      border-color: rgba(42, 96, 117, 0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .featured-card .feat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .featured-card .feat-icon svg { width: 16px; height: 16px; }
+    .featured-card .feat-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .featured-card .feat-excerpt {
+      font-size: 12.5px;
+      color: var(--muted-fg);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .featured-card .feat-meta {
+      font-size: 11.5px;
+      color: var(--muted-fg);
+      opacity: 0.7;
+    }
+
+    /* Recently Updated */
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .recent-item:hover { background: var(--muted); }
+    .recent-item .ri-icon {
+      color: var(--muted-fg);
+      flex-shrink: 0;
+    }
+    .recent-item .ri-icon svg { width: 18px; height: 18px; }
+    .recent-item .ri-content { flex: 1; min-width: 0; }
+    .recent-item .ri-title {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .recent-item .ri-meta {
+      font-size: 12px;
+      color: var(--muted-fg);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .recent-item .ri-meta .dot { opacity: 0.4; }
+    .recent-item .ri-excerpt {
+      font-size: 12.5px;
+      color: var(--muted-fg);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.75;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       VIEW 2: CATEGORY PAGE
+       ═══════════════════════════════════════════════════ */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted-fg);
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .breadcrumbs a {
+      color: var(--muted-fg);
+      text-decoration: none;
+      transition: color 0.1s;
+    }
+    .breadcrumbs a:hover {
+      color: var(--foreground);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    .breadcrumbs .sep { opacity: 0.4; user-select: none; }
+    .breadcrumbs .current { color: var(--foreground); font-weight: 500; }
+
+    .cat-page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .cat-page-header .header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .cat-page-header .header-icon svg { width: 24px; height: 24px; }
+    .cat-page-header .header-text h2 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .cat-page-header .header-text p {
+      font-size: 13.5px;
+      color: var(--muted-fg);
+      margin-top: 2px;
+    }
+
+    /* Enriched subcategory cards */
+    .subcat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .subcat-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .subcat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--mcr-teal);
+    }
+    .subcat-card:hover {
+      border-color: rgba(42, 96, 117, 0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
+    .subcat-card .sc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .subcat-card .sc-header svg {
+      width: 16px;
+      height: 16px;
+      color: var(--mcr-teal);
+      flex-shrink: 0;
+    }
+    .subcat-card .sc-name {
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    .subcat-card .sc-desc {
+      font-size: 12.5px;
+      color: var(--muted-fg);
+      line-height: 1.5;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .subcat-card .sc-count {
+      font-size: 11.5px;
+      color: var(--muted-fg);
+      opacity: 0.75;
+    }
+
+    /* Article list with excerpts */
+    .article-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .article-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .article-item:hover { background: var(--muted); }
+    .article-item .ai-icon {
+      color: var(--muted-fg);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .article-item .ai-icon svg { width: 18px; height: 18px; }
+    .article-item .ai-content { flex: 1; min-width: 0; }
+    .article-item .ai-title {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .article-item .ai-excerpt {
+      font-size: 13px;
+      color: var(--muted-fg);
+      margin-top: 3px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .article-item .ai-meta {
+      font-size: 12px;
+      color: var(--muted-fg);
+      margin-top: 5px;
+      opacity: 0.7;
+    }
+    .article-item .ai-arrow {
+      color: var(--muted-fg);
+      opacity: 0;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .article-item:hover .ai-arrow { opacity: 0.6; transform: translateX(2px); }
+
+    /* ═══════════════════════════════════════════════════
+       VIEW 3: ARTICLE VIEW
+       ═══════════════════════════════════════════════════ */
+    .article-layout {
+      display: flex;
+      gap: 40px;
+    }
+    .article-main {
+      flex: 1;
+      min-width: 0;
+      max-width: 760px;
+    }
+    .article-toc {
+      width: 200px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 24px;
+      align-self: flex-start;
+    }
+    .article-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .article-meta-line {
+      font-size: 13px;
+      color: var(--muted-fg);
+      margin-bottom: 28px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .article-meta-line .dot { opacity: 0.4; }
+
+    /* Prose-like content */
+    .prose-content h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 32px 0 12px;
+      letter-spacing: -0.2px;
+    }
+    .prose-content h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+    }
+    .prose-content p {
+      color: rgba(33, 51, 80, 0.85);
+      line-height: 1.75;
+      margin-bottom: 16px;
+    }
+    .prose-content ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    .prose-content li {
+      color: rgba(33, 51, 80, 0.85);
+      line-height: 1.75;
+      margin-bottom: 6px;
+    }
+    .prose-content a {
+      color: var(--link);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    .prose-content table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 20px 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .prose-content th {
+      background: var(--table-header);
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .prose-content td {
+      padding: 10px 14px;
+      font-size: 13.5px;
+      border-top: 1px solid var(--border);
+      color: rgba(33, 51, 80, 0.85);
+    }
+
+    /* TOC */
+    .toc-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted-fg);
+      margin-bottom: 12px;
+    }
+    .toc-list {
+      list-style: none;
+    }
+    .toc-list li {
+      margin-bottom: 6px;
+    }
+    .toc-list a {
+      font-size: 12.5px;
+      color: var(--muted-fg);
+      text-decoration: none;
+      transition: color 0.1s;
+      display: block;
+      padding: 2px 0;
+    }
+    .toc-list a:hover { color: var(--foreground); }
+    .toc-list a.active {
+      color: var(--mcr-teal);
+      font-weight: 500;
+    }
+    .toc-list .indent { padding-left: 14px; }
+
+    /* ─── Annotations (mockup callouts) ─── */
+    .annotation {
+      position: relative;
+    }
+    .annotation::after {
+      content: attr(data-note);
+      position: absolute;
+      right: -16px;
+      top: -8px;
+      transform: translateX(100%);
+      background: var(--mcr-pink);
+      color: white;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      font-weight: 500;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .annotation:hover::after { opacity: 1; }
+
+    /* ─── Label: Before/After ─── */
+    .comparison-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+    .label-new {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .label-improved {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    .label-changed {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    /* ─── SVG Icons (inline) ─── */
+    .svg-search { width: 18px; height: 18px; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 1280px) {
+      .category-grid { grid-template-columns: repeat(2, 1fr); }
+      .featured-grid { grid-template-columns: repeat(2, 1fr); }
+      .article-toc { display: none; }
+    }
+
+    /* ─── Print-friendly ─── */
+    @media print {
+      .mockup-nav, .app-sidebar { display: none; }
+      .shell { margin-top: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Mockup Navigation ─── -->
+<nav class="mockup-nav">
+  <h1>RESOURCES REDESIGN</h1>
+  <div class="tabs">
+    <button class="active" onclick="showView('landing')">Landing Page</button>
+    <button onclick="showView('category')">Category Page</button>
+    <button onclick="showView('article')">Article View</button>
+  </div>
+  <span class="badge">INTERACTIVE MOCKUP</span>
+</nav>
+
+<!-- ─── Shell ─── -->
+<div class="shell">
+
+  <!-- App Sidebar (simulated, collapsed) -->
+  <div class="app-sidebar">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <div class="icon active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    </div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    </div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    </div>
+  </div>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <div class="resources-card">
+
+      <!-- Resource Sidebar -->
+      <div class="resource-sidebar">
+        <button class="collapse-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 12 3 17 8"/><polyline points="17 16 12 21 7 16"/></svg>
+        </button>
+
+        <a class="tree-item active" href="#" onclick="showView('category'); return false;">
+          <span class="tree-icon" style="background: var(--icon-bg-navy); color: var(--mcr-dark-blue);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="2" y1="9" x2="9" y2="9"/></svg>
+          </span>
+          Organisation
+        </a>
+        <a class="tree-child" href="#">Mission, Vision & Values</a>
+        <a class="tree-child" href="#">Strategy</a>
+        <a class="tree-child" href="#" onclick="showView('category'); return false;">Org Structure</a>
+        <a class="tree-child" href="#">MCR's DNA</a>
+        <a class="tree-child" href="#">Jargon Buster</a>
+        <a class="tree-child" href="#">Impact Report</a>
+        <a class="tree-child" href="#">FAQ</a>
+        <a class="tree-child" href="#">Supplier Directory</a>
+
+        <div class="tree-divider"></div>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-wine); color: var(--mcr-wine);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span>
+          Policies & Compliance
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-blue); color: var(--mcr-light-blue);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </span>
+          IT & Digital
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-pink); color: var(--mcr-pink);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          Marketing & Comms
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-green); color: var(--mcr-green);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          Finance & Governance
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-orange); color: var(--mcr-orange);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </span>
+          People & Benefits
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-teal); color: var(--mcr-teal);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </span>
+          Operations
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-wine); color: var(--mcr-wine);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </span>
+          Safeguarding
+        </a>
+
+        <a class="tree-item" href="#">
+          <span class="tree-icon" style="background: var(--icon-bg-blue); color: var(--mcr-light-blue);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 6 3 6 3s6-1 6-3v-5"/></svg>
+          </span>
+          Programmes
+        </a>
+      </div>
+
+      <!-- Content Area -->
+      <div class="content-area">
+
+        <!-- ═══ VIEW 1: Landing Page ═══ -->
+        <div class="view active" id="view-landing">
+          <!-- Search -->
+          <div class="search-bar">
+            <span class="search-icon">
+              <svg class="svg-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="text" placeholder="Search all resources...">
+            <span class="shortcut">⌘K</span>
+          </div>
+
+          <!-- Browse by Category -->
+          <div class="section-header">
+            <span class="comparison-label label-new">NEW</span>
+            Browse by Category
+          </div>
+          <div class="category-grid">
+            <a class="category-card cat-navy" href="#" onclick="showView('category'); return false;">
+              <div class="cat-icon" style="background: var(--icon-bg-navy); color: var(--mcr-dark-blue);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="2" y1="9" x2="9" y2="9"/></svg>
+              </div>
+              <div class="cat-name">Organisation</div>
+              <div class="cat-desc">Mission, values, strategy, org structure, and company information</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                8 subcategories &middot; 12 articles
+              </div>
+            </a>
+            <a class="category-card cat-wine" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-wine); color: var(--mcr-wine);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              </div>
+              <div class="cat-name">Policies & Compliance</div>
+              <div class="cat-desc">Organisational policies, procedures, and regulatory compliance documents</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                5 subcategories &middot; 8 articles
+              </div>
+            </a>
+            <a class="category-card cat-blue" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-blue); color: var(--mcr-light-blue);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div class="cat-name">IT & Digital</div>
+              <div class="cat-desc">Technology guides, software access, security protocols, and digital tools</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                3 subcategories &middot; 6 articles
+              </div>
+            </a>
+            <a class="category-card cat-pink" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-pink); color: var(--mcr-pink);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="cat-name">Marketing & Comms</div>
+              <div class="cat-desc">Brand guidelines, communication templates, media assets, and PR resources</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                4 subcategories &middot; 5 articles
+              </div>
+            </a>
+            <a class="category-card cat-green" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-green); color: var(--mcr-green);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="cat-name">Finance & Governance</div>
+              <div class="cat-desc">Financial procedures, expense claims, budgeting, and governance framework</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                3 subcategories &middot; 4 articles
+              </div>
+            </a>
+            <a class="category-card cat-orange" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-orange); color: var(--mcr-orange);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              </div>
+              <div class="cat-name">People & Benefits</div>
+              <div class="cat-desc">Employee benefits, wellbeing resources, leave policies, and staff support</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                6 subcategories &middot; 10 articles
+              </div>
+            </a>
+            <a class="category-card cat-teal" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-teal); color: var(--mcr-teal);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </div>
+              <div class="cat-name">Operations</div>
+              <div class="cat-desc">Day-to-day operational procedures, office management, and logistics</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                4 subcategories &middot; 7 articles
+              </div>
+            </a>
+            <a class="category-card cat-wine" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-wine); color: var(--mcr-wine);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div class="cat-name">Safeguarding</div>
+              <div class="cat-desc">Safeguarding policies, procedures, training requirements, and reporting</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                2 subcategories &middot; 5 articles
+              </div>
+            </a>
+            <a class="category-card cat-blue" href="#">
+              <div class="cat-icon" style="background: var(--icon-bg-blue); color: var(--mcr-light-blue);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 6 3 6 3s6-1 6-3v-5"/></svg>
+              </div>
+              <div class="cat-name">Programmes</div>
+              <div class="cat-desc">Programme delivery guides, mentoring resources, and school partnerships</div>
+              <div class="cat-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                5 subcategories &middot; 9 articles
+              </div>
+            </a>
+          </div>
+
+          <!-- Key Resources (Featured) -->
+          <div class="section-header">
+            <span class="comparison-label label-improved">IMPROVED</span>
+            Key Resources
+          </div>
+          <div class="featured-grid">
+            <a class="featured-card" href="#" onclick="showView('article'); return false;">
+              <div class="feat-icon" style="background: var(--icon-bg-navy); color: var(--mcr-dark-blue);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div>
+                <div class="feat-title">Working From Home Policy</div>
+                <div class="feat-excerpt">Guidelines for remote working arrangements, including equipment provision, expected hours, and communication protocols.</div>
+                <div class="feat-meta">People & Benefits &middot; Updated 12 Mar 2026</div>
+              </div>
+            </a>
+            <a class="featured-card" href="#">
+              <div class="feat-icon" style="background: var(--icon-bg-wine); color: var(--mcr-wine);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div>
+                <div class="feat-title">Comprehensive Marketing Strategy</div>
+                <div class="feat-excerpt">Brand positioning, digital strategy, partnerships, and outreach goals for the current year.</div>
+                <div class="feat-meta">Marketing & Comms &middot; Updated 8 Mar 2026</div>
+              </div>
+            </a>
+            <a class="featured-card" href="#">
+              <div class="feat-icon" style="background: var(--icon-bg-teal); color: var(--mcr-teal);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div>
+                <div class="feat-title">IT Onboarding Checklist</div>
+                <div class="feat-excerpt">Step-by-step guide for setting up accounts, devices, and access to all MCR systems.</div>
+                <div class="feat-meta">IT & Digital &middot; Updated 1 Mar 2026</div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Recently Updated -->
+          <div class="section-header">
+            <span class="comparison-label label-improved">IMPROVED</span>
+            Recently Updated
+          </div>
+          <div class="recent-list">
+            <a class="recent-item" href="#" onclick="showView('article'); return false;">
+              <span class="ri-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ri-content">
+                <div class="ri-title">Flexible Working Request Process</div>
+                <div class="ri-excerpt">How to submit, review, and manage flexible working requests under current policy</div>
+                <div class="ri-meta">
+                  <span>People & Benefits / Flexible Working</span>
+                  <span class="dot">&middot;</span>
+                  <span>19 Mar 2026</span>
+                </div>
+              </div>
+            </a>
+            <a class="recent-item" href="#">
+              <span class="ri-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ri-content">
+                <div class="ri-title">Expense Claim Guidelines</div>
+                <div class="ri-excerpt">Approved expense categories, receipt requirements, and submission deadlines</div>
+                <div class="ri-meta">
+                  <span>Finance & Governance / Expenses</span>
+                  <span class="dot">&middot;</span>
+                  <span>18 Mar 2026</span>
+                </div>
+              </div>
+            </a>
+            <a class="recent-item" href="#">
+              <span class="ri-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ri-content">
+                <div class="ri-title">Mentor Training Schedule 2026</div>
+                <div class="ri-excerpt">Upcoming mentor training dates, locations, and booking information</div>
+                <div class="ri-meta">
+                  <span>Programmes / Mentoring</span>
+                  <span class="dot">&middot;</span>
+                  <span>15 Mar 2026</span>
+                </div>
+              </div>
+            </a>
+            <a class="recent-item" href="#">
+              <span class="ri-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ri-content">
+                <div class="ri-title">Data Protection Impact Assessment Template</div>
+                <div class="ri-excerpt">Blank DPIA template with worked examples for processing personal data</div>
+                <div class="ri-meta">
+                  <span>Policies & Compliance / Data Protection</span>
+                  <span class="dot">&middot;</span>
+                  <span>14 Mar 2026</span>
+                </div>
+              </div>
+            </a>
+            <a class="recent-item" href="#">
+              <span class="ri-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ri-content">
+                <div class="ri-title">Annual Leave Entitlement 2026/27</div>
+                <div class="ri-excerpt">Updated leave entitlements, carry-over rules, and bank holiday scheduling</div>
+                <div class="ri-meta">
+                  <span>People & Benefits / Leave</span>
+                  <span class="dot">&middot;</span>
+                  <span>12 Mar 2026</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- ═══ VIEW 2: Category Page ═══ -->
+        <div class="view" id="view-category">
+          <nav class="breadcrumbs">
+            <a href="#" onclick="showView('landing'); return false;">Home</a>
+            <span class="sep">/</span>
+            <a href="#" onclick="showView('landing'); return false;">Resources</a>
+            <span class="sep">/</span>
+            <span class="current">Organisation</span>
+          </nav>
+
+          <div class="cat-page-header">
+            <div class="header-icon" style="background: var(--icon-bg-navy); color: var(--mcr-dark-blue);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="2" y1="9" x2="9" y2="9"/></svg>
+            </div>
+            <div class="header-text">
+              <h2>Organisation</h2>
+              <p>Mission, values, strategy, org structure, and company information</p>
+            </div>
+          </div>
+
+          <!-- Enriched subcategory cards -->
+          <div class="section-header">
+            <span class="comparison-label label-improved">IMPROVED</span>
+            Subcategories
+            <span class="count">8</span>
+          </div>
+          <div class="subcat-grid">
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Mission, Vision & Values</span>
+              </div>
+              <div class="sc-desc">Our purpose, long-term vision, and the values that guide everything we do</div>
+              <div class="sc-count">3 articles</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Strategy</span>
+              </div>
+              <div class="sc-desc">Strategic priorities, annual plans, and key objectives for the organisation</div>
+              <div class="sc-count">2 articles</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Org Structure</span>
+              </div>
+              <div class="sc-desc">Team structure, reporting lines, and the interactive org chart</div>
+              <div class="sc-count">1 article</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">MCR's DNA</span>
+              </div>
+              <div class="sc-desc">What makes MCR Pathways unique — our culture, approach, and core identity</div>
+              <div class="sc-count">2 articles</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Jargon Buster</span>
+              </div>
+              <div class="sc-desc">Glossary of terms, acronyms, and shorthand used across the organisation</div>
+              <div class="sc-count">1 article</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Impact Report</span>
+              </div>
+              <div class="sc-desc">Annual impact reports and key statistics on programme outcomes</div>
+              <div class="sc-count">1 article</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">FAQ</span>
+              </div>
+              <div class="sc-desc">Frequently asked questions about MCR Pathways and how we operate</div>
+              <div class="sc-count">1 article</div>
+            </a>
+            <a class="subcat-card" href="#">
+              <div class="sc-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                <span class="sc-name">Supplier Directory</span>
+              </div>
+              <div class="sc-desc">Approved suppliers, contact details, and procurement guidance</div>
+              <div class="sc-count">1 article</div>
+            </a>
+          </div>
+
+          <!-- Articles with excerpts -->
+          <div class="section-header">
+            <span class="comparison-label label-improved">IMPROVED</span>
+            Articles
+            <span class="count">3</span>
+          </div>
+          <div class="article-list">
+            <a class="article-item" href="#" onclick="showView('article'); return false;">
+              <span class="ai-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ai-content">
+                <div class="ai-title">About MCR Pathways</div>
+                <div class="ai-excerpt">An overview of MCR Pathways, our history, mission, and the impact we have across Scotland's schools and communities.</div>
+                <div class="ai-meta">Updated 10 Mar 2026</div>
+              </div>
+              <span class="ai-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </a>
+            <a class="article-item" href="#">
+              <span class="ai-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ai-content">
+                <div class="ai-title">Our Partners</div>
+                <div class="ai-excerpt">Key partnerships and collaborations that support MCR's mission, including local authorities and corporate sponsors.</div>
+                <div class="ai-meta">Updated 5 Mar 2026</div>
+              </div>
+              <span class="ai-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </a>
+            <a class="article-item" href="#">
+              <span class="ai-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </span>
+              <div class="ai-content">
+                <div class="ai-title">Key Contacts & Departments</div>
+                <div class="ai-excerpt">Contact information for all MCR departments, team leads, and frequently needed services.</div>
+                <div class="ai-meta">Updated 28 Feb 2026</div>
+              </div>
+              <span class="ai-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </a>
+          </div>
+        </div>
+
+        <!-- ═══ VIEW 3: Article View ═══ -->
+        <div class="view" id="view-article">
+          <nav class="breadcrumbs">
+            <a href="#" onclick="showView('landing'); return false;">Home</a>
+            <span class="sep">/</span>
+            <a href="#" onclick="showView('landing'); return false;">Resources</a>
+            <span class="sep">/</span>
+            <a href="#" onclick="showView('category'); return false;">Organisation</a>
+            <span class="sep">/</span>
+            <a href="#">Org Structure</a>
+            <span class="sep">/</span>
+            <span class="current">About MCR Pathways</span>
+          </nav>
+
+          <div class="article-layout">
+            <div class="article-main">
+              <h1 class="article-title">About MCR Pathways</h1>
+              <div class="article-meta-line">
+                <span>Organisation</span>
+                <span class="dot">&middot;</span>
+                <span>Updated 10 Mar 2026</span>
+              </div>
+
+              <div class="prose-content">
+                <h2>Our Mission</h2>
+                <p>MCR Pathways exists to ensure that care-experienced and disadvantaged young people have the same educational outcomes, career opportunities, and life chances as their peers. We do this through our unique, evidence-based mentoring programme, which operates within schools across Scotland.</p>
+
+                <h2>How We Work</h2>
+                <p>Our approach centres on one-to-one, school-based mentoring. Each young person is matched with a trained volunteer mentor who meets them weekly during the school day. This consistent, reliable relationship provides the stability and support that many care-experienced young people need.</p>
+
+                <h3>Programme Delivery</h3>
+                <p>We work directly with local authorities and schools to embed our programme into the school timetable. Pathways Coordinators — often employed by the school but trained by MCR — manage the day-to-day delivery, including:</p>
+                <ul>
+                  <li>Identifying and referring young people who would benefit from mentoring</li>
+                  <li>Matching young people with appropriate mentors based on interests and needs</li>
+                  <li>Providing ongoing support to both mentors and mentees</li>
+                  <li>Tracking progress and reporting on outcomes</li>
+                </ul>
+
+                <h3>Our Impact</h3>
+                <p>Since our founding, we have supported thousands of young people across Scotland. Our evidence base demonstrates significant improvements in attendance, attainment, confidence, and post-school destinations for young people in our programme.</p>
+
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      <th>Before MCR</th>
+                      <th>After MCR</th>
+                      <th>Change</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>School attendance</td>
+                      <td>78%</td>
+                      <td>91%</td>
+                      <td>+13pp</td>
+                    </tr>
+                    <tr>
+                      <td>Positive destinations</td>
+                      <td>65%</td>
+                      <td>85%</td>
+                      <td>+20pp</td>
+                    </tr>
+                    <tr>
+                      <td>Confidence rating</td>
+                      <td>3.2/5</td>
+                      <td>4.1/5</td>
+                      <td>+0.9</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <h2>Our Values</h2>
+                <p>Everything we do is guided by five core values that inform how we work with young people, schools, and each other:</p>
+                <ul>
+                  <li><strong>Relationships first</strong> — We believe in the transformative power of genuine human connection</li>
+                  <li><strong>Equity and inclusion</strong> — Every young person deserves the same opportunities regardless of their background</li>
+                  <li><strong>Evidence-based practice</strong> — We measure our impact and continuously improve our approach</li>
+                  <li><strong>Collaboration</strong> — We work alongside schools, local authorities, and communities</li>
+                  <li><strong>Ambition</strong> — We believe in the potential of every young person we support</li>
+                </ul>
+
+                <h2>Key Contacts</h2>
+                <p>For questions about MCR Pathways, reach out to your line manager or contact the operations team directly.</p>
+              </div>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="article-toc">
+              <div class="toc-title">On this page</div>
+              <ul class="toc-list">
+                <li><a href="#" class="active">Our Mission</a></li>
+                <li><a href="#">How We Work</a></li>
+                <li><a href="#" class="indent">Programme Delivery</a></li>
+                <li><a href="#" class="indent">Our Impact</a></li>
+                <li><a href="#">Our Values</a></li>
+                <li><a href="#">Key Contacts</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showView(viewName) {
+    // Hide all views
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    // Show target
+    document.getElementById('view-' + viewName).classList.add('active');
+    // Update tab buttons
+    document.querySelectorAll('.mockup-nav .tabs button').forEach(b => b.classList.remove('active'));
+    const tabs = document.querySelectorAll('.mockup-nav .tabs button');
+    if (viewName === 'landing') tabs[0].classList.add('active');
+    else if (viewName === 'category') tabs[1].classList.add('active');
+    else if (viewName === 'article') tabs[2].classList.add('active');
+    // Update sidebar active state
+    document.querySelectorAll('.tree-item').forEach(t => t.classList.remove('active'));
+    if (viewName === 'category' || viewName === 'article') {
+      document.querySelector('.tree-item').classList.add('active');
+    }
+    // Scroll content to top
+    document.querySelector('.content-area').scrollTop = 0;
+  }
+</script>
+
+</body>
+</html>
