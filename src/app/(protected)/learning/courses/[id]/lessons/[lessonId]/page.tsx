@@ -12,7 +12,9 @@ import type {
 import { MarkCompleteButton } from "./mark-complete-button";
 import { VideoPlayer } from "@/components/learning/video-player";
 import { LessonSidebar } from "@/components/learning/lesson-sidebar";
+import { LessonRenderer } from "@/components/learning/lesson-renderer";
 import { getLockedLessonIds } from "@/lib/learning";
+import type { Json } from "@/types/database.types";
 
 export default async function LessonPage({
   params,
@@ -55,7 +57,7 @@ export default async function LessonPage({
   const { data: allLessons } = await supabase
     .from("course_lessons")
     .select(
-      "id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
+      "id, course_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
     )
     .eq("course_id", courseId)
     .eq("is_active", true)
@@ -195,6 +197,28 @@ export default async function LessonPage({
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {lessonType === "rich_text" && (
+            <Card>
+              <CardContent className="pt-6">
+                <LessonRenderer
+                  json={lesson.content_json as Record<string, unknown> | null}
+                  fallback={lesson.content ?? undefined}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {lessonType === "slides" && lesson.slides_url && (
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+              <iframe
+                src={lesson.slides_url}
+                className="absolute inset-0 w-full h-full border-0"
+                allowFullScreen
+                title={lesson.title}
+              />
+            </div>
           )}
 
           {/* Mark Complete + Navigation */}
