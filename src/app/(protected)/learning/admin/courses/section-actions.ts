@@ -389,6 +389,175 @@ export async function deleteSectionQuizOption(optionId: string, courseId: string
   return { success: true, error: null };
 }
 
+// ===========================================
+// COMBINED SECTION QUIZ QUESTION + OPTIONS
+// ===========================================
+
+function validateSectionQuizOptions(
+  options: { is_correct: boolean }[],
+  questionType: "single" | "multi"
+): string | null {
+  if (options.length < 2) {
+    return "At least 2 options are required";
+  }
+
+  const correctCount = options.filter((o) => o.is_correct).length;
+  if (questionType === "single") {
+    if (correctCount !== 1) {
+      return "Exactly one correct answer is required";
+    }
+  } else {
+    if (correctCount < 1) {
+      return "At least one correct answer is required";
+    }
+    const incorrectCount = options.length - correctCount;
+    if (incorrectCount < 1) {
+      return "At least one incorrect option is required";
+    }
+  }
+
+  return null;
+}
+
+export async function createSectionQuizQuestionWithOptions(data: {
+  quiz_id: string;
+  course_id: string;
+  question_text: string;
+  question_type?: "single" | "multi";
+  sort_order: number;
+  options: { option_text: string; is_correct: boolean; sort_order: number }[];
+}) {
+  const { supabase } = await requireLDAdmin();
+
+  const questionType = data.question_type ?? "single";
+
+  const validationError = validateSectionQuizOptions(data.options, questionType);
+  if (validationError) {
+    return { success: false, error: validationError, questionId: null };
+  }
+
+  // Insert question
+  const { data: question, error: qError } = await supabase
+    .from("section_quiz_questions")
+    .insert({
+      quiz_id: data.quiz_id,
+      question_text: data.question_text,
+      question_type: questionType,
+      sort_order: data.sort_order,
+    })
+    .select("id")
+    .single();
+
+  if (qError) {
+    logger.error("Failed to create section quiz question", { error: qError.message });
+    return { success: false, error: "Failed to create question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", questionId: null };
+  }
+
+  // Insert options
+  const options = data.options.map((opt, i) => ({
+    question_id: question.id,
+    option_text: opt.option_text,
+    is_correct: opt.is_correct,
+    sort_order: opt.sort_order ?? i,
+  }));
+
+  const { error: oError } = await supabase.from("section_quiz_options").insert(options);
+
+  if (oError) {
+    // Rollback: delete the orphaned question
+    await supabase.from("section_quiz_questions").delete().eq("id", question.id);
+    logger.error("Failed to create section quiz options", { error: oError.message });
+    return { success: false, error: "Failed to create question options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", questionId: null };
+  }
+
+  revalidatePath(`/learning/admin/courses/${data.course_id}`);
+  revalidatePath(`/learning/courses/${data.course_id}`);
+  return { success: true, error: null, questionId: question.id };
+}
+
+export async function updateSectionQuizQuestionWithOptions(
+  questionId: string,
+  courseId: string,
+  data: {
+    question_text?: string;
+    question_type?: "single" | "multi";
+    options?: { option_text: string; is_correct: boolean; sort_order: number }[];
+  }
+) {
+  const { supabase } = await requireLDAdmin();
+
+  // Update question fields
+  const questionUpdate: Record<string, unknown> = {};
+  if (data.question_text) {
+    questionUpdate.question_text = data.question_text;
+  }
+  if (data.question_type) {
+    questionUpdate.question_type = data.question_type;
+  }
+
+  if (Object.keys(questionUpdate).length > 0) {
+    const { error } = await supabase
+      .from("section_quiz_questions")
+      .update(questionUpdate)
+      .eq("id", questionId);
+
+    if (error) {
+      logger.error("Failed to update section quiz question", { error });
+      return { success: false, error: "Failed to update question. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
+  }
+
+  if (data.options) {
+    // Determine the effective question type
+    let questionType: "single" | "multi" = data.question_type ?? "single";
+    if (!data.question_type) {
+      const { data: existingQuestion } = await supabase
+        .from("section_quiz_questions")
+        .select("question_type")
+        .eq("id", questionId)
+        .single();
+
+      if (!existingQuestion) {
+        return { success: false, error: "Question not found" };
+      }
+      questionType = (existingQuestion.question_type as "single" | "multi") ?? "single";
+    }
+
+    const validationError = validateSectionQuizOptions(data.options, questionType);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
+
+    // Replace all options: delete existing, insert new set
+    const { error: deleteError } = await supabase
+      .from("section_quiz_options")
+      .delete()
+      .eq("question_id", questionId);
+
+    if (deleteError) {
+      logger.error("Failed to delete section quiz options", { error: deleteError.message });
+      return { success: false, error: "Failed to update question options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
+
+    const newOptions = data.options.map((opt, i) => ({
+      question_id: questionId,
+      option_text: opt.option_text,
+      is_correct: opt.is_correct,
+      sort_order: opt.sort_order ?? i,
+    }));
+
+    const { error } = await supabase.from("section_quiz_options").insert(newOptions);
+    if (error) {
+      logger.error("Failed to insert section quiz options", { error });
+      return { success: false, error: "Failed to update question options. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    }
+  }
+
+  revalidatePath(`/learning/admin/courses/${courseId}`);
+  revalidatePath(`/learning/courses/${courseId}`);
+  return { success: true, error: null };
+}
+
 export async function reorderSectionQuizQuestions(
   quizId: string,
   courseId: string,

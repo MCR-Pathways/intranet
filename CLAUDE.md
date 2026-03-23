@@ -311,7 +311,19 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **Split large action files by feature area.** When an actions.ts file exceeds ~800 lines, create a separate actions file for the new feature (e.g. `section-actions.ts` alongside `actions.ts`). Both are `"use server"` files in the same directory. This keeps each file focused and maintainable.
 
-**Learning module uses section-level quizzes, not lesson-level.** The `lesson_type` CHECK was changed from `('video', 'text', 'quiz')` to `('video', 'text')`. Quizzes now live in the `section_quizzes` table (one per section), not as a lesson type. The section quiz gates progression to the next section. See migrations 00060-00064.
+**Learning module uses section-level quizzes, not lesson-level.** The `lesson_type` CHECK was changed from `('video', 'text', 'quiz')` to `('video', 'text', 'slides', 'rich_text')`. Quizzes now live in the `section_quizzes` table (one per section), not as a lesson type. The section quiz gates progression to the next section. See migrations 00060-00065.
+
+**Push feature branches as PRs immediately, don't leave them local.** An unpushed branch led to a team member independently rebuilding the same feature (learning overhaul). Push as a PR on day one — even as draft — so the team can see work in progress and build on it.
+
+**Snapshot columns on normalised data are usually YAGNI.** The certificates table originally stored `learner_name`, `course_title`, `score`, `completed_at` as frozen snapshots — 6 columns nothing read. The PDF endpoint JOINs to profiles + courses anyway. Only snapshot if you genuinely hard-delete the source records.
+
+**Prefer simple logs over queues until you need retry.** The email_notifications table originally had status/retry/error_message for a Vercel Cron processor that was never built. Resend handles retry. Start with a log; add queueing when you have evidence of failures.
+
+**Split RPCs into single-responsibility functions.** A combined `complete_lesson_and_update_progress` was replaced with separate `recalculate_course_progress`. More modular — admin can recalculate without completing a lesson (data fixes, bulk ops).
+
+**Never expose quiz `is_correct` to the client before submission.** Loading quiz questions with all fields (including `is_correct`) lets learners inspect React props to see answers. Strip `is_correct` from the client query; return correct answers server-side only after submission via server action.
+
+**When parallel implementations exist, assess each design decision independently.** Don't blanket "keep ours" or "take theirs." Evaluate each area on its merits: certificates (simpler better), feedback (structured better), Tool Shed (standalone better), email (log better). The best result is usually a mix.
 
 **Tool Shed is a social learning framework, NOT a resource library.** Based on the MCR Pathways Social Learning Framework document. Staff share insights from external training via structured formats (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). Content stored as JSONB in `tool_shed_entries`. The old hardcoded Tool Shed page must be completely rewritten.
 

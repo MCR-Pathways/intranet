@@ -37,11 +37,6 @@ export function MarkCompleteButton({
     );
   }
 
-  // Quiz lessons: completion is handled by QuizPlayer (pass to complete)
-  if (lessonType === "quiz") {
-    return null;
-  }
-
   // Uploaded video lessons: auto-complete on video end, no manual button needed
   if (lessonType === "video" && hasUploadedVideo) {
     return null;

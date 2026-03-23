@@ -130,10 +130,9 @@ const styles = StyleSheet.create({
 // ─── Certificate Document ───────────────────────────────────────────────────
 
 export interface CertificateData {
-  learnerName: string;
+  recipientName: string;
   courseTitle: string;
-  completedAt: string;
-  score: number | null;
+  completionDate: string;
   certificateNumber: string;
 }
 
@@ -142,11 +141,6 @@ export interface CertificateData {
  * Usage: const pdfBuffer = await renderToBuffer(<CertificateDocument data={...} />)
  */
 export function CertificateDocument({ data }: { data: CertificateData }) {
-  const completionDate = new Date(data.completedAt).toLocaleDateString(
-    "en-GB",
-    { day: "numeric", month: "long", year: "numeric" }
-  );
-
   return React.createElement(
     Document,
     null,
@@ -181,7 +175,7 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
       React.createElement(
         Text,
         { style: styles.learnerName },
-        data.learnerName
+        data.recipientName
       ),
       // Completion text
       React.createElement(
@@ -207,21 +201,9 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
           React.createElement(
             Text,
             { style: styles.detailValue },
-            completionDate
+            data.completionDate
           )
         ),
-        data.score !== null
-          ? React.createElement(
-              View,
-              { style: styles.detailItem },
-              React.createElement(Text, { style: styles.detailLabel }, "Score"),
-              React.createElement(
-                Text,
-                { style: styles.detailValue },
-                `${data.score}%`
-              )
-            )
-          : null,
         React.createElement(
           View,
           { style: styles.detailItem },
@@ -244,7 +226,7 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
         React.createElement(
           Text,
           { style: styles.footerText },
-          `MCR Pathways · ${data.certificateNumber} · Issued ${completionDate}`
+          `MCR Pathways · ${data.certificateNumber} · Issued ${data.completionDate}`
         )
       )
     )
@@ -260,6 +242,7 @@ export async function generateCertificatePdf(
 ): Promise<Buffer> {
   const { renderToBuffer } = await import("@react-pdf/renderer");
   const element = React.createElement(CertificateDocument, { data });
-  const buffer = await renderToBuffer(element);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buffer = await renderToBuffer(element as any);
   return Buffer.from(buffer);
 }

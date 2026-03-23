@@ -1,15 +1,23 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { CourseEditForm } from "@/components/learning-admin/course-edit-form";
-import { LessonManager } from "@/components/learning-admin/lesson-manager";
+import { SectionManager } from "@/components/learning-admin/section-manager";
 import { EnrolmentStatsCard } from "@/components/learning-admin/enrolment-stats-card";
 import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
-import { QuizEditor } from "@/components/learning-admin/quiz-editor";
 import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
-import type { CourseLesson, QuizQuestionWithOptions, LessonImage } from "@/types/database.types";
+import type {
+  CourseLesson,
+  LessonImage,
+  CourseSection,
+  SectionQuiz,
+  SectionQuizQuestion,
+  SectionQuizOption,
+  SectionQuizQuestionWithOptions,
+  CourseSectionWithDetails,
+} from "@/types/database.types";
 
 export default async function CourseDetailPage({
   params,
@@ -35,16 +43,25 @@ export default async function CourseDetailPage({
     notFound();
   }
 
+  // Fetch all data in parallel
   const [
+    { data: sections },
     { data: lessons },
     { data: enrolments },
     { data: assignments },
     { data: teams },
   ] = await Promise.all([
     supabase
+      .from("course_sections")
+      .select(
+        "id, course_id, title, description, sort_order, is_active, created_at, updated_at"
+      )
+      .eq("course_id", id)
+      .order("sort_order"),
+    supabase
       .from("course_lessons")
       .select(
-        "id, course_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
+        "id, course_id, section_id, title, content, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
       )
       .eq("course_id", id)
       .order("sort_order"),
@@ -61,76 +78,157 @@ export default async function CourseDetailPage({
     supabase.from("teams").select("id, name").order("name"),
   ]);
 
+  const typedSections = (sections ?? []) as CourseSection[];
   const typedLessons = (lessons ?? []) as CourseLesson[];
 
-  // Fetch quiz questions and options for all quiz lessons
-  const quizLessons = typedLessons.filter((l) => l.lesson_type === "quiz");
-  const quizLessonIds = quizLessons.map((l) => l.id);
+  // Fetch section quizzes, questions, and options
+  const sectionIds = typedSections.map((s) => s.id);
 
-  const quizQuestionsMap: Record<string, QuizQuestionWithOptions[]> = {};
+  const { data: sectionQuizzes } =
+    sectionIds.length > 0
+      ? await supabase
+          .from("section_quizzes")
+          .select(
+            "id, section_id, title, passing_score, is_active, created_at, updated_at"
+          )
+          .in("section_id", sectionIds)
+      : { data: [] as SectionQuiz[] };
 
-  if (quizLessonIds.length > 0) {
-    const { data: questions } = await supabase
-      .from("quiz_questions")
-      .select(
-        "id, lesson_id, question_text, question_type, sort_order, created_at, updated_at"
-      )
-      .in("lesson_id", quizLessonIds)
-      .order("sort_order");
+  const typedQuizzes = (sectionQuizzes ?? []) as SectionQuiz[];
+  const quizIds = typedQuizzes.map((q) => q.id);
 
-    if (questions && questions.length > 0) {
-      const questionIds = questions.map((q) => q.id);
-      const { data: options } = await supabase
-        .from("quiz_options")
-        .select(
-          "id, question_id, option_text, is_correct, sort_order, created_at"
-        )
-        .in("question_id", questionIds)
-        .order("sort_order");
+  const { data: sectionQuestions } =
+    quizIds.length > 0
+      ? await supabase
+          .from("section_quiz_questions")
+          .select(
+            "id, quiz_id, question_text, question_type, sort_order, created_at, updated_at"
+          )
+          .in("quiz_id", quizIds)
+          .order("sort_order")
+      : { data: [] as SectionQuizQuestion[] };
 
-      const allOptions = options ?? [];
+  const typedQuestions = (sectionQuestions ?? []) as SectionQuizQuestion[];
+  const questionIds = typedQuestions.map((q) => q.id);
 
-      // Group into QuizQuestionWithOptions keyed by lesson_id
-      for (const q of questions) {
-        const qWithOptions: QuizQuestionWithOptions = {
-          ...q,
-          options: allOptions.filter((o) => o.question_id === q.id),
-        };
-        if (!quizQuestionsMap[q.lesson_id]) {
-          quizQuestionsMap[q.lesson_id] = [];
-        }
-        quizQuestionsMap[q.lesson_id].push(qWithOptions);
-      }
-    }
-  }
+  const { data: sectionOptions } =
+    questionIds.length > 0
+      ? await supabase
+          .from("section_quiz_options")
+          .select(
+            "id, question_id, option_text, is_correct, sort_order, created_at"
+          )
+          .in("question_id", questionIds)
+          .order("sort_order")
+      : { data: [] as SectionQuizOption[] };
+
+  const typedOptions = (sectionOptions ?? []) as SectionQuizOption[];
 
   // Fetch lesson images for text lessons
   const textLessons = typedLessons.filter((l) => l.lesson_type === "text");
   const textLessonIds = textLessons.map((l) => l.id);
-  const lessonImagesMap: Record<string, LessonImage[]> = {};
+  const allLessonImagesMap: Record<string, LessonImage[]> = {};
 
   if (textLessonIds.length > 0) {
     const { data: allImages } = await supabase
       .from("lesson_images")
-      .select("id, lesson_id, file_name, file_url, storage_path, file_size, mime_type, sort_order, created_at")
+      .select(
+        "id, lesson_id, file_name, file_url, storage_path, file_size, mime_type, sort_order, created_at"
+      )
       .in("lesson_id", textLessonIds)
       .order("sort_order");
 
     for (const img of allImages ?? []) {
-      if (!lessonImagesMap[img.lesson_id]) {
-        lessonImagesMap[img.lesson_id] = [];
+      if (!allLessonImagesMap[img.lesson_id]) {
+        allLessonImagesMap[img.lesson_id] = [];
       }
-      lessonImagesMap[img.lesson_id].push(img as LessonImage);
+      allLessonImagesMap[img.lesson_id].push(img as LessonImage);
     }
   }
+
+  // ─── Assemble CourseSectionWithDetails[] ──────────────────────
+
+  // Group options by question_id
+  const optionsByQuestion = new Map<string, SectionQuizOption[]>();
+  for (const opt of typedOptions) {
+    const arr = optionsByQuestion.get(opt.question_id) ?? [];
+    arr.push(opt);
+    optionsByQuestion.set(opt.question_id, arr);
+  }
+
+  // Build questions with options, grouped by quiz_id
+  const questionsByQuiz = new Map<
+    string,
+    SectionQuizQuestionWithOptions[]
+  >();
+  for (const q of typedQuestions) {
+    const qWithOpts: SectionQuizQuestionWithOptions = {
+      ...q,
+      options: optionsByQuestion.get(q.id) ?? [],
+    };
+    const arr = questionsByQuiz.get(q.quiz_id) ?? [];
+    arr.push(qWithOpts);
+    questionsByQuiz.set(q.quiz_id, arr);
+  }
+
+  // Build quiz map by section_id
+  const quizBySection = new Map<string, SectionQuiz>();
+  for (const quiz of typedQuizzes) {
+    quizBySection.set(quiz.section_id, quiz);
+  }
+
+  // Group lessons by section_id
+  const lessonsBySection = new Map<string, CourseLesson[]>();
+  for (const lesson of typedLessons) {
+    if (!lesson.section_id) continue;
+    const arr = lessonsBySection.get(lesson.section_id) ?? [];
+    arr.push(lesson);
+    lessonsBySection.set(lesson.section_id, arr);
+  }
+
+  // Assemble sections with details
+  const sectionsWithDetails: CourseSectionWithDetails[] = typedSections.map(
+    (section) => {
+      const sectionLessons = lessonsBySection.get(section.id) ?? [];
+      const sectionLessonIds = sectionLessons
+        .filter((l) => l.lesson_type === "text")
+        .map((l) => l.id);
+
+      // Build lesson images map for this section only
+      const sectionImagesMap: Record<string, LessonImage[]> = {};
+      for (const lessonId of sectionLessonIds) {
+        if (allLessonImagesMap[lessonId]) {
+          sectionImagesMap[lessonId] = allLessonImagesMap[lessonId];
+        }
+      }
+
+      const quiz = quizBySection.get(section.id) ?? null;
+
+      return {
+        ...section,
+        lessons: sectionLessons,
+        quiz,
+        quizQuestions: quiz ? (questionsByQuiz.get(quiz.id) ?? []) : [],
+        lessonImagesMap: sectionImagesMap,
+      };
+    }
+  );
 
   // Fetch creator and updater profiles
   const [creatorResult, updaterResult] = await Promise.all([
     course.created_by
-      ? supabase.from("profiles").select("full_name").eq("id", course.created_by).single()
+      ? supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", course.created_by)
+          .single()
       : Promise.resolve({ data: null }),
     course.updated_by
-      ? supabase.from("profiles").select("full_name").eq("id", course.updated_by).single()
+      ? supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", course.updated_by)
+          .single()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -175,30 +273,22 @@ export default async function CourseDetailPage({
                 {course.created_by
                   ? (creatorResult.data?.full_name ?? "Unknown")
                   : "System"}{" "}
-                on{" "}
-                {formatDate(course.created_at)}
+                on {formatDate(course.created_at)}
               </p>
               {course.updated_by && (
                 <p>
-                  Last modified by {updaterResult.data?.full_name ?? "Unknown"} on{" "}
+                  Last modified by{" "}
+                  {updaterResult.data?.full_name ?? "Unknown"} on{" "}
                   {formatDate(course.updated_at)}
                 </p>
               )}
             </CardContent>
           </Card>
 
-          <LessonManager courseId={course.id} lessons={typedLessons} lessonImagesMap={lessonImagesMap} />
-
-          {/* Quiz editors for each quiz lesson */}
-          {quizLessons.map((lesson) => (
-            <QuizEditor
-              key={lesson.id}
-              lessonId={lesson.id}
-              courseId={course.id}
-              lessonTitle={lesson.title}
-              questions={quizQuestionsMap[lesson.id] ?? []}
-            />
-          ))}
+          <SectionManager
+            courseId={course.id}
+            sections={sectionsWithDetails}
+          />
 
           <CourseDangerZone
             courseId={course.id}

@@ -11,7 +11,8 @@ import {
   BookOpen,
   PlayCircle,
   FileText,
-  HelpCircle,
+  FileCode2,
+  Presentation,
 } from "lucide-react";
 import type { CourseLesson, LessonType } from "@/types/database.types";
 import { getLockedLessonIds } from "@/lib/learning";
@@ -26,13 +27,15 @@ interface LessonListProps {
 const lessonTypeIcon: Record<LessonType, typeof FileText> = {
   video: PlayCircle,
   text: FileText,
-  quiz: HelpCircle,
+  slides: Presentation,
+  rich_text: FileCode2,
 };
 
 const lessonTypeLabel: Record<LessonType, string> = {
   video: "Video",
   text: "Text",
-  quiz: "Quiz",
+  slides: "Slides",
+  rich_text: "Rich Text",
 };
 
 export function LessonList({

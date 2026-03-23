@@ -10,7 +10,9 @@ import {
   Lightbulb,
   Users,
   FileText,
+  FileCode2,
   PlayCircle,
+  Presentation,
   CheckCircle2,
   Lock,
   Circle,
@@ -57,7 +59,7 @@ export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
 
 // ─── Lesson Type Config ─────────────────────────────────────────────────────
 
-export type LessonType = "video" | "text";
+export type LessonType = "video" | "text" | "slides" | "rich_text";
 
 export interface LessonTypeConfig {
   label: string;
@@ -67,6 +69,8 @@ export interface LessonTypeConfig {
 export const lessonTypeConfig: Record<LessonType, LessonTypeConfig> = {
   video: { label: "Video", icon: PlayCircle },
   text: { label: "Text", icon: FileText },
+  slides: { label: "Slides", icon: Presentation },
+  rich_text: { label: "Rich Text", icon: FileCode2 },
 };
 
 // ─── Lesson Progress Icons ──────────────────────────────────────────────────
