@@ -14,10 +14,13 @@ interface EnrolmentData {
 
 interface EnrolmentStatsCardProps {
   enrolments: EnrolmentData[];
+  /** "card" wraps in Card (default). "sheet" renders without Card wrapper. */
+  variant?: "card" | "sheet";
 }
 
 export function EnrolmentStatsCard({
   enrolments,
+  variant = "card",
 }: EnrolmentStatsCardProps) {
   const stats = useMemo(() => {
     const now = new Date();
@@ -65,32 +68,47 @@ export function EnrolmentStatsCard({
     },
   ];
 
+  const content = (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        {statItems.map((item) => (
+          <div key={item.label} className="text-center">
+            <item.icon className={`h-5 w-5 mx-auto mb-1 ${item.color}`} />
+            <p className="text-2xl font-bold">{item.value}</p>
+            <p className="text-xs text-muted-foreground">{item.label}</p>
+          </div>
+        ))}
+      </div>
+      {stats.total > 0 && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Completion Rate</span>
+            <span className="font-medium">
+              {Math.round((stats.completed / stats.total) * 100)}%
+            </span>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  if (variant === "sheet") {
+    return (
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+          Enrolment Stats
+        </h3>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Enrolment Stats</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          {statItems.map((item) => (
-            <div key={item.label} className="text-center">
-              <item.icon className={`h-5 w-5 mx-auto mb-1 ${item.color}`} />
-              <p className="text-2xl font-bold">{item.value}</p>
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-            </div>
-          ))}
-        </div>
-        {stats.total > 0 && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Completion Rate</span>
-              <span className="font-medium">
-                {Math.round((stats.completed / stats.total) * 100)}%
-              </span>
-            </div>
-          </div>
-        )}
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

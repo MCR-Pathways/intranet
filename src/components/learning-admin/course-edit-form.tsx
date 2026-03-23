@@ -20,9 +20,11 @@ import type { Course, CourseCategory } from "@/types/database.types";
 
 interface CourseEditFormProps {
   course: Course;
+  /** "card" wraps in Card (default). "sheet" renders form without Card wrapper. */
+  variant?: "card" | "sheet";
 }
 
-export function CourseEditForm({ course }: CourseEditFormProps) {
+export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -72,23 +74,21 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
     });
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Course Details</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit_title">Title</Label>
-              <Input
-                id="edit_title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
+  const formContent = (
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4">
+        {/* Title field hidden in sheet variant — inline editable on the page */}
+        {variant === "card" && (
+          <div className="grid gap-2">
+            <Label htmlFor="edit_title">Title</Label>
+            <Input
+              id="edit_title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+        )}
 
             <div className="grid gap-2">
               <Label htmlFor="edit_description">Description</Label>
@@ -187,14 +187,32 @@ export function CourseEditForm({ course }: CourseEditFormProps) {
               <p className="text-sm text-green-600">Course updated successfully</p>
             )}
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </CardContent>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+
+  if (variant === "sheet") {
+    return (
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+          Course Details
+        </h3>
+        {formContent}
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Course Details</CardTitle>
+      </CardHeader>
+      <CardContent>{formContent}</CardContent>
     </Card>
   );
 }

@@ -1,12 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
-import { CourseEditForm } from "@/components/learning-admin/course-edit-form";
 import { SectionManager } from "@/components/learning-admin/section-manager";
-import { EnrolmentStatsCard } from "@/components/learning-admin/enrolment-stats-card";
-import { CourseAssignmentManager } from "@/components/learning-admin/course-assignment-manager";
-import { CourseDangerZone } from "@/components/learning-admin/course-danger-zone";
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
-import { Card, CardContent } from "@/components/ui/card";
+import { CourseEditorLayout } from "@/components/learning-admin/course-editor-layout";
 import { PageHeader } from "@/components/layout/page-header";
 import type {
   CourseLesson,
@@ -232,22 +228,13 @@ export default async function CourseDetailPage({
       : Promise.resolve({ data: null }),
   ]);
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
   const enrolmentCount = (enrolments ?? []).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={course.title}
-        subtitle="Manage course details, content, and assignments."
+        subtitle="Manage course content and settings."
         breadcrumbs={[
           { label: "Admin", href: "/hr" },
           { label: "Course Management", href: "/learning/admin/courses" },
@@ -261,52 +248,26 @@ export default async function CourseDetailPage({
         status={course.status as "draft" | "published"}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <CourseEditForm course={course} />
-
-          {/* Course metadata */}
-          <Card>
-            <CardContent className="pt-6 space-y-1 text-sm text-muted-foreground">
-              <p>
-                Created by{" "}
-                {course.created_by
-                  ? (creatorResult.data?.full_name ?? "Unknown")
-                  : "System"}{" "}
-                on {formatDate(course.created_at)}
-              </p>
-              {course.updated_by && (
-                <p>
-                  Last modified by{" "}
-                  {updaterResult.data?.full_name ?? "Unknown"} on{" "}
-                  {formatDate(course.updated_at)}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <SectionManager
-            courseId={course.id}
-            sections={sectionsWithDetails}
-          />
-
-          <CourseDangerZone
-            courseId={course.id}
-            courseTitle={course.title}
-            isActive={course.is_active}
-            status={course.status as "draft" | "published"}
-            enrolmentCount={enrolmentCount}
-          />
-        </div>
-        <div className="space-y-6">
-          <EnrolmentStatsCard enrolments={enrolments ?? []} />
-          <CourseAssignmentManager
-            courseId={course.id}
-            assignments={assignments ?? []}
-            teams={teams ?? []}
-          />
-        </div>
-      </div>
+      {/* Content-first layout: inline title + settings sheet */}
+      <CourseEditorLayout
+        course={course}
+        assignments={assignments ?? []}
+        teams={teams ?? []}
+        enrolments={enrolments ?? []}
+        enrolmentCount={enrolmentCount}
+        creatorName={
+          course.created_by
+            ? (creatorResult.data?.full_name ?? "Unknown")
+            : "System"
+        }
+        updaterName={updaterResult.data?.full_name ?? null}
+      >
+        {/* Full-width section manager — the primary content */}
+        <SectionManager
+          courseId={course.id}
+          sections={sectionsWithDetails}
+        />
+      </CourseEditorLayout>
     </div>
   );
 }
