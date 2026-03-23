@@ -6,7 +6,6 @@ import {
   reorderLessons,
 } from "@/app/(protected)/learning/admin/courses/actions";
 import { LessonEditDialog } from "./lesson-edit-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,28 +23,29 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
-  BookOpen,
   PlayCircle,
   FileText,
-  HelpCircle,
+  FileCode2,
+  Presentation,
 } from "lucide-react";
 import { toast } from "sonner";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
 const lessonTypeConfig: Record<LessonType, { label: string; icon: typeof FileText; color: string; bgColor: string }> = {
   text: { label: "Text", icon: FileText, color: "text-green-600", bgColor: "bg-green-50" },
   video: { label: "Video", icon: PlayCircle, color: "text-blue-600", bgColor: "bg-blue-50" },
-  quiz: { label: "Quiz", icon: HelpCircle, color: "text-purple-600", bgColor: "bg-purple-50" },
+  slides: { label: "Slides", icon: Presentation, color: "text-amber-600", bgColor: "bg-amber-50" },
+  rich_text: { label: "Rich Text", icon: FileCode2, color: "text-purple-600", bgColor: "bg-purple-50" },
 };
 
 interface LessonManagerProps {
   courseId: string;
+  sectionId: string;
   lessons: CourseLesson[];
   lessonImagesMap?: Record<string, LessonImage[]>;
 }
 
-export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
+export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = {} }: LessonManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingLesson, setEditingLesson] = useState<CourseLesson | null>(null);
@@ -94,107 +94,103 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Course Content ({sortedLessons.length})
-            <InfoTooltip text="Use the arrows to change the display order of content" />
-          </CardTitle>
-          <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            Lessons ({sortedLessons.length})
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            Add Content
+            Add Lesson
           </Button>
-        </CardHeader>
-        <CardContent>
-          {sortedLessons.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              No content yet. Add content to build this course.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {sortedLessons.map((lesson, index) => (
-                <div
-                  key={lesson.id}
-                  className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <span className="text-sm font-medium text-muted-foreground w-6 text-center">
-                    {index + 1}
-                  </span>
-                  {(() => {
-                    const typeConfig = lessonTypeConfig[lesson.lesson_type ?? "text"];
-                    const TypeIcon = typeConfig.icon;
-                    return (
-                      <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
-                        <TypeIcon className={`h-3.5 w-3.5 ${typeConfig.color}`} />
-                      </div>
-                    );
-                  })()}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {lesson.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {lessonTypeConfig[lesson.lesson_type ?? "text"].label}
-                      {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
-                      {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
-                      {lesson.lesson_type === "quiz" && lesson.passing_score != null && ` · ${lesson.passing_score}% to pass`}
-                      {lesson.lesson_type === "text" && (lessonImagesMap[lesson.id]?.length ?? 0) > 0 && ` · ${lessonImagesMap[lesson.id].length} image${lessonImagesMap[lesson.id].length > 1 ? "s" : ""}`}
-                    </p>
-                  </div>
-                  {!lesson.is_active && (
-                    <Badge variant="destructive" className="text-xs">
-                      Inactive
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => handleMoveUp(index)}
-                      disabled={index === 0 || isPending}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => handleMoveDown(index)}
-                      disabled={
-                        index === sortedLessons.length - 1 || isPending
-                      }
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => setEditingLesson(lesson)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteTarget(lesson)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+        </div>
+        {sortedLessons.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No lessons yet. Add a lesson to this section.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {sortedLessons.map((lesson, index) => (
+              <div
+                key={lesson.id}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
+              >
+                <span className="text-sm font-medium text-muted-foreground w-6 text-center">
+                  {index + 1}
+                </span>
+                {(() => {
+                  const typeConfig = lessonTypeConfig[lesson.lesson_type ?? "text"];
+                  const TypeIcon = typeConfig.icon;
+                  return (
+                    <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
+                      <TypeIcon className={`h-3.5 w-3.5 ${typeConfig.color}`} />
+                    </div>
+                  );
+                })()}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {lesson.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {lessonTypeConfig[lesson.lesson_type ?? "text"].label}
+                    {lesson.lesson_type === "video" && lesson.video_storage_path && " (uploaded)"}
+                    {lesson.lesson_type === "video" && lesson.video_url && !lesson.video_storage_path && " (external)"}
+                    {lesson.lesson_type === "text" && (lessonImagesMap[lesson.id]?.length ?? 0) > 0 && ` · ${lessonImagesMap[lesson.id].length} image${lessonImagesMap[lesson.id].length > 1 ? "s" : ""}`}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {!lesson.is_active && (
+                  <Badge variant="muted" className="text-xs">
+                    Inactive
+                  </Badge>
+                )}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0 || isPending}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => handleMoveDown(index)}
+                    disabled={
+                      index === sortedLessons.length - 1 || isPending
+                    }
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setEditingLesson(lesson)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteTarget(lesson)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Create Lesson Dialog */}
       <LessonEditDialog
         courseId={courseId}
+        sectionId={sectionId}
         sortOrder={nextSortOrder}
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -204,6 +200,7 @@ export function LessonManager({ courseId, lessons, lessonImagesMap = {} }: Lesso
       {editingLesson && (
         <LessonEditDialog
           courseId={courseId}
+          sectionId={sectionId}
           lesson={editingLesson}
           lessonImages={lessonImagesMap[editingLesson.id] ?? []}
           open={!!editingLesson}

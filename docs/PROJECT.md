@@ -228,11 +228,13 @@ The largest module. Provides employee self-service and HR admin functionality.
 
 For the detailed HR roadmap, see `docs/hr-plan.md`.
 
-### Learning & Development Module (complete)
+### Learning & Development Module (OVERHAUL IN PROGRESS)
 
-Course management with admin dashboard, progress tracking, and compliance training.
+Replacing LearnDash (WordPress LMS) with a custom-built LMS. Full overhaul adding course sections, section quizzes, certificates, course feedback, Tool Shed social learning, global search, and email notifications. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Routes:** 10 pages under `/learning`
+**Status:** Phase 1 (schema + utilities + actions) + Phase 2 (admin UI) complete. Phase 3 (learner UI) next. Branch: `feature/learning-overhaul-migrations` (not yet merged to main). Migrations 00060-00064 applied to production Supabase.
+
+**Current routes:** 10 pages under `/learning` (unchanged — UI overhaul not yet started)
 
 | Feature | Route |
 |---|---|
@@ -246,7 +248,13 @@ Course management with admin dashboard, progress tracking, and compliance traini
 | Admin: Course Detail | `/learning/admin/courses/[id]` |
 | Admin: Reports | `/learning/admin/reports` |
 
-**Key features:** Course enrolment, lesson completion tracking, quiz system, compliance due dates, admin CRUD, notifications on course publish.
+**New routes (planned, not yet built):** `/learning/certificates`, `/learning/certificates/[id]`, `/learning/courses/[id]/sections/[sectionId]/quiz`, `/learning/tool-shed/new`, `/learning/tool-shed/[id]`, `/learning/tool-shed/[id]/edit`, `/learning/admin/tool-shed`, `/api/certificates/[id]/pdf`
+
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), PDF certificates, private course feedback (5 structured fields), Tool Shed social learning framework (Digital Postcards, 3-2-1 Model, 10-Minute Takeover), global Cmd+K search (Algolia), email notifications (Resend).
+
+**New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00064.
+
+**New dependencies:** `@react-pdf/renderer`, `resend`. New env var: `RESEND_API_KEY`.
 
 ### Intranet Module (complete)
 
@@ -426,7 +434,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 53 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1261 tests across 53 files
+- **Coverage:** 1266 tests across 53 files
 
 ### Test Categories
 
@@ -710,7 +718,8 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
-| 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes + enhancements. PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). PR #161: cascading category selection for Link Google Doc dialog (Category → Subcategory → Folder, progressive disclosure, articles can live at any hierarchy level, leaf-only constraint removed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,261 tests, 53 files. |
+| 2026-03-19 | Abdul-Muiz Adaranijo | Learning overhaul Phase 1+2. PR 1: 5 migrations (00060-00064), 4 utility files, section-actions.ts. PR 2: admin UI — section-manager.tsx (~350 lines), section-quiz-editor.tsx (~500 lines), rewritten course detail page for section-based hierarchy, combined quiz actions with rollback. LessonType "quiz" removed (knock-on fixes in 4 learner files). All 5 migrations applied to production Supabase. Build + lint clean, all CRUD verified live. Branch: `feature/learning-overhaul-migrations`. |
+| 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes + enhancements. PR #162: Google Docs formatting preservation in HTML sanitiser (bold/italic spans → `<strong>`/`<em>`, first-row `<td>` → `<th>`, column widths converted to responsive percentages). PR #161: cascading category selection (Category → Subcategory → Folder). PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,266 tests, 53 files. |
 | 2026-03-18 | Abdul-Muiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
 | 2026-03-13 | Abdul-Muiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
