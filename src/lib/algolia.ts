@@ -5,8 +5,9 @@
  * - Search client (public key) — used client-side for React InstantSearch
  * - Admin client (admin key) — used server-side for indexing (push records)
  *
- * Index: `resources_articles` — one record per section (heading + content).
- * Each article is split into multiple records for section-level search.
+ * Indices:
+ * - `resources_articles` — one record per section (heading + content)
+ * - `learning_courses` — one record per published course
  */
 
 import { algoliasearch } from "algoliasearch";
@@ -19,6 +20,7 @@ const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY ?? "";
 const ADMIN_KEY = process.env.ALGOLIA_ADMIN_KEY ?? "";
 
 export const RESOURCES_INDEX = "resources_articles";
+export const COURSES_INDEX = "learning_courses";
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -134,6 +136,91 @@ export async function indexArticleSections(
     });
   }
 }
+
+// ─── Course indexing (server-side) ──────────────────────────────────────────
+
+export interface AlgoliaCourseRecord {
+  objectID: string;
+  courseId: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  duration: number | null;
+  isRequired: boolean;
+  sectionCount: number;
+  updatedAt: string;
+  /** Discriminator for global search result grouping */
+  _type: "course";
+}
+
+/**
+ * Index a course into Algolia. Called on publish.
+ */
+export async function indexCourse(
+  courseId: string,
+  title: string,
+  description: string | null,
+  category: string,
+  categoryLabel: string,
+  duration: number | null,
+  isRequired: boolean,
+  sectionCount: number,
+  updatedAt: string
+): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    const record: AlgoliaCourseRecord = {
+      objectID: courseId,
+      courseId,
+      title,
+      description: description ?? "",
+      category,
+      categoryLabel,
+      duration,
+      isRequired,
+      sectionCount,
+      updatedAt,
+      _type: "course",
+    };
+
+    await client.saveObjects({
+      indexName: COURSES_INDEX,
+      objects: [record as unknown as Record<string, unknown>],
+    });
+
+    logger.info("Algolia: indexed course", { courseId, title });
+  } catch (error) {
+    logger.warn("Algolia: failed to index course", {
+      courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Remove a course from Algolia. Called on unpublish or delete.
+ */
+export async function removeCourseFromIndex(courseId: string): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    await client.deleteObjects({
+      indexName: COURSES_INDEX,
+      objectIDs: [courseId],
+    });
+
+    logger.info("Algolia: removed course from index", { courseId });
+  } catch (error) {
+    logger.warn("Algolia: failed to remove course from index", {
+      courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ─── Resource article operations ────────────────────────────────────────────
 
 /**
  * Remove all Algolia records for an article (called on unlink).

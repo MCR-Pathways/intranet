@@ -6,7 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   PlayCircle,
   FileText,
-  HelpCircle,
+  FileCode2,
+  Presentation,
   CheckCircle2,
   Circle,
   Lock,
@@ -35,7 +36,8 @@ interface LessonSidebarProps {
 const lessonTypeIcon: Record<LessonType, typeof PlayCircle> = {
   video: PlayCircle,
   text: FileText,
-  quiz: HelpCircle,
+  slides: Presentation,
+  rich_text: FileCode2,
 };
 
 export function LessonSidebar({

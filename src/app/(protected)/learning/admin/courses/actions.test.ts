@@ -306,29 +306,50 @@ describe("L&D Course Actions", () => {
      */
 
     function wirePublishMocks(options: {
-      lessons?: { id: string; title: string; lesson_type: string }[] | null;
+      sections?: { id: string; title: string }[] | null;
+      lessons?: { id: string; section_id: string }[] | null;
       quizQuestions?: { lesson_id: string }[] | null;
+      sectionQuizzes?: { id: string; section_id: string; is_active: boolean }[] | null;
+      sectionQuizQuestions?: { quiz_id: string }[] | null;
       updateError?: { message: string } | null;
       // For notifyCoursePublished (called after publish update succeeds)
       assignmentCount?: number;
       rpcResult?: { data: number | null; error: { message: string } | null };
     }) {
       const {
-        lessons = [{ id: "lesson-1", title: "Lesson 1", lesson_type: "text" }],
+        sections = [{ id: "section-1", title: "Section 1" }],
+        lessons = [{ id: "lesson-1", section_id: "section-1" }],
         quizQuestions = null,
+        sectionQuizzes = null,
+        sectionQuizQuestions = null,
         updateError = null,
         assignmentCount = 0,
         rpcResult = { data: 0, error: null },
       } = options;
 
-      // Track second .eq() call for lessons query
-      const mockLessonEq2 = vi.fn().mockResolvedValue({ data: lessons, error: null });
+      // Sections: .from("course_sections").select("id, title").eq("course_id", ...).eq("is_active", true)
+      const mockSectionEq2 = vi.fn().mockResolvedValue({ data: sections, error: null });
+      const mockSectionEq1 = vi.fn().mockReturnValue({ eq: mockSectionEq2 });
+      const mockSectionSelect = vi.fn().mockReturnValue({ eq: mockSectionEq1 });
+
+      // Lessons: .from("course_lessons").select("id, section_id").eq("course_id", ...).eq("is_active", true).in("section_id", [...])
+      const mockLessonIn = vi.fn().mockResolvedValue({ data: lessons, error: null });
+      const mockLessonEq2 = vi.fn().mockReturnValue({ in: mockLessonIn });
       const mockLessonEq1 = vi.fn().mockReturnValue({ eq: mockLessonEq2 });
       const mockLessonSelect = vi.fn().mockReturnValue({ eq: mockLessonEq1 });
 
-      // Quiz questions: .from("quiz_questions").select("lesson_id").in("lesson_id", [...])
+      // Quiz questions (legacy): .from("quiz_questions").select("lesson_id").in("lesson_id", [...])
       const mockQuizIn = vi.fn().mockResolvedValue({ data: quizQuestions, error: null });
       const mockQuizSelect = vi.fn().mockReturnValue({ in: mockQuizIn });
+
+      // Section quizzes: .from("section_quizzes").select("id, section_id").in("section_id", [...]).eq("is_active", true)
+      const mockSQEq = vi.fn().mockResolvedValue({ data: sectionQuizzes, error: null });
+      const mockSQIn = vi.fn().mockReturnValue({ eq: mockSQEq });
+      const mockSQSelect = vi.fn().mockReturnValue({ in: mockSQIn });
+
+      // Section quiz questions: .from("section_quiz_questions").select("quiz_id").in("quiz_id", [...])
+      const mockSQQIn = vi.fn().mockResolvedValue({ data: sectionQuizQuestions, error: null });
+      const mockSQQSelect = vi.fn().mockReturnValue({ in: mockSQQIn });
 
       // Update course: .from("courses").update({}).eq("id", ...)
       const mockCourseEq = vi.fn().mockResolvedValue({ error: updateError });
@@ -342,10 +363,16 @@ describe("L&D Course Actions", () => {
 
       mockFrom.mockImplementation((table: string) => {
         switch (table) {
+          case "course_sections":
+            return { select: mockSectionSelect };
           case "course_lessons":
             return { select: mockLessonSelect };
           case "quiz_questions":
             return { select: mockQuizSelect };
+          case "section_quizzes":
+            return { select: mockSQSelect };
+          case "section_quiz_questions":
+            return { select: mockSQQSelect };
           case "courses":
             return { update: mockCourseUpdate };
           case "course_assignments":
@@ -355,12 +382,13 @@ describe("L&D Course Actions", () => {
         }
       });
 
-      return { mockCourseUpdate, mockCourseEq, mockLessonEq2, mockQuizIn };
+      return { mockCourseUpdate, mockCourseEq, mockLessonEq2: mockLessonIn, mockQuizIn };
     }
 
-    it("publishes a course with at least one active lesson", async () => {
+    it("publishes a course with at least one section and lesson", async () => {
       const { mockCourseUpdate, mockCourseEq } = wirePublishMocks({
-        lessons: [{ id: "lesson-1", title: "Lesson 1", lesson_type: "text" }],
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [{ id: "lesson-1", section_id: "section-1" }],
       });
 
       const result = await publishCourse("course-001");
@@ -378,20 +406,34 @@ describe("L&D Course Actions", () => {
       expect(revalidatePath).toHaveBeenCalledWith("/learning");
     });
 
-    it("returns error when course has no active lessons", async () => {
-      wirePublishMocks({ lessons: [] });
+    it("returns error when course has no active sections", async () => {
+      wirePublishMocks({ sections: [] });
 
       const result = await publishCourse("course-001");
 
       expect(result).toEqual({
         success: false,
-        error: "Add at least one lesson before publishing.",
+        error: "Add at least one section before publishing.",
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
 
-    it("returns error when lessons query returns null", async () => {
-      wirePublishMocks({ lessons: null });
+    it("returns error when sections query returns null", async () => {
+      wirePublishMocks({ sections: null });
+
+      const result = await publishCourse("course-001");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Add at least one section before publishing.",
+      });
+    });
+
+    it("returns error when sections have no lessons", async () => {
+      wirePublishMocks({
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [],
+      });
 
       const result = await publishCourse("course-001");
 
@@ -401,29 +443,28 @@ describe("L&D Course Actions", () => {
       });
     });
 
-    it("returns error when a quiz lesson has no questions", async () => {
+    it("returns error when a section quiz has no questions", async () => {
       wirePublishMocks({
-        lessons: [
-          { id: "lesson-1", title: "Quiz 1", lesson_type: "quiz" },
-        ],
-        quizQuestions: [], // No questions for the quiz
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [{ id: "lesson-1", section_id: "section-1" }],
+        sectionQuizzes: [{ id: "quiz-1", section_id: "section-1", is_active: true }],
+        sectionQuizQuestions: [], // No questions for the quiz
       });
 
       const result = await publishCourse("course-001");
 
       expect(result).toEqual({
         success: false,
-        error: 'Quiz "Quiz 1" needs at least one question before publishing.',
+        error: expect.stringContaining("needs at least one question"),
       });
     });
 
-    it("succeeds when quiz lessons have questions", async () => {
+    it("succeeds when section quizzes have questions", async () => {
       wirePublishMocks({
-        lessons: [
-          { id: "lesson-1", title: "Quiz 1", lesson_type: "quiz" },
-          { id: "lesson-2", title: "Text Lesson", lesson_type: "text" },
-        ],
-        quizQuestions: [{ lesson_id: "lesson-1" }],
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [{ id: "lesson-1", section_id: "section-1" }],
+        sectionQuizzes: [{ id: "quiz-1", section_id: "section-1", is_active: true }],
+        sectionQuizQuestions: [{ quiz_id: "quiz-1" }],
       });
 
       const result = await publishCourse("course-001");
@@ -433,7 +474,8 @@ describe("L&D Course Actions", () => {
 
     it("returns error when DB update fails", async () => {
       wirePublishMocks({
-        lessons: [{ id: "lesson-1", title: "Lesson 1", lesson_type: "text" }],
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [{ id: "lesson-1", section_id: "section-1" }],
         updateError: { message: "Update failed" },
       });
 
@@ -444,7 +486,8 @@ describe("L&D Course Actions", () => {
 
     it("sends notifications when course has assignments", async () => {
       wirePublishMocks({
-        lessons: [{ id: "lesson-1", title: "Lesson 1", lesson_type: "text" }],
+        sections: [{ id: "section-1", title: "Section 1" }],
+        lessons: [{ id: "lesson-1", section_id: "section-1" }],
         assignmentCount: 5,
         rpcResult: { data: 5, error: null },
       });

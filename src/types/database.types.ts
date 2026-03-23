@@ -29,7 +29,7 @@ export type TimeSlot = "full_day" | "morning" | "afternoon";
 export type LocationSource = "manual" | "calendar" | "pattern" | "leave";
 export type CourseCategory = "compliance" | "upskilling" | "soft_skills";
 export type EnrolmentStatus = "enrolled" | "in_progress" | "completed" | "dropped";
-export type LessonType = "video" | "text" | "quiz";
+export type LessonType = "video" | "text" | "slides" | "rich_text";
 export type CourseStatus = "draft" | "published";
 export type QuestionType = "single" | "multi";
 export type ReactionType = "like" | "love" | "celebrate" | "insightful" | "curious";
@@ -544,8 +544,11 @@ export interface Database {
         Row: {
           id: string;
           course_id: string;
+          section_id: string | null;
           title: string;
           content: string | null;
+          content_json: Json | null;
+          slides_url: string | null;
           video_url: string | null;
           video_storage_path: string | null;
           lesson_type: LessonType;
@@ -558,8 +561,11 @@ export interface Database {
         Insert: {
           id?: string;
           course_id: string;
+          section_id?: string | null;
           title: string;
           content?: string | null;
+          content_json?: Json | null;
+          slides_url?: string | null;
           video_url?: string | null;
           video_storage_path?: string | null;
           lesson_type?: LessonType;
@@ -572,8 +578,11 @@ export interface Database {
         Update: {
           id?: string;
           course_id?: string;
+          section_id?: string | null;
           title?: string;
           content?: string | null;
+          content_json?: Json | null;
+          slides_url?: string | null;
           video_url?: string | null;
           video_storage_path?: string | null;
           lesson_type?: LessonType;
@@ -1204,4 +1213,81 @@ export interface CategoryTreeNode extends CategoryWithCount {
   children: CategoryTreeNode[];
   /** Full slug path from root, e.g. "policies/employment-policies" */
   slugPath: string;
+}
+
+// Section types (manual — not yet in generated schema)
+export interface CourseSection {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SectionQuiz {
+  id: string;
+  section_id: string;
+  title: string;
+  passing_score: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SectionQuizQuestion {
+  id: string;
+  quiz_id: string;
+  question_text: string;
+  question_type: QuestionType;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SectionQuizOption {
+  id: string;
+  question_id: string;
+  option_text: string;
+  is_correct: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface SectionQuizQuestionWithOptions extends SectionQuizQuestion {
+  options: SectionQuizOption[];
+}
+
+/** Extended section type with nested data for admin course detail page. */
+export interface CourseSectionWithDetails extends CourseSection {
+  lessons: CourseLesson[];
+  quiz: SectionQuiz | null;
+  quizQuestions: SectionQuizQuestionWithOptions[];
+  lessonImagesMap: Record<string, LessonImage[]>;
+}
+
+// Certificate types (simplified — no snapshot columns)
+export interface Certificate {
+  id: string;
+  user_id: string;
+  course_id: string;
+  certificate_number: string;
+  issued_at: string;
+  pdf_url: string | null;
+  created_at: string;
+}
+
+// Section quiz attempt type
+export interface SectionQuizAttempt {
+  id: string;
+  user_id: string;
+  quiz_id: string;
+  section_id: string | null;
+  course_id: string | null;
+  score: number;
+  passed: boolean;
+  answers: Json | null;
+  attempted_at: string;
 }

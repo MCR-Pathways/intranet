@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { LessonImageManager } from "./lesson-image-manager";
 import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
 interface LessonEditDialogProps {
   courseId: string;
+  sectionId?: string;
   lesson?: CourseLesson;
   lessonImages?: LessonImage[];
   sortOrder?: number;
@@ -41,6 +41,7 @@ interface LessonEditDialogProps {
 
 export function LessonEditDialog({
   courseId,
+  sectionId,
   lesson,
   lessonImages = [],
   sortOrder = 0,
@@ -61,9 +62,6 @@ export function LessonEditDialog({
   const [videoStoragePath, setVideoStoragePath] = useState(
     lesson?.video_storage_path ?? ""
   );
-  const [passingScore, setPassingScore] = useState(
-    lesson?.passing_score ?? 80
-  );
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   const resetForm = () => {
@@ -73,7 +71,6 @@ export function LessonEditDialog({
       setContent("");
       setVideoUrl("");
       setVideoStoragePath("");
-      setPassingScore(80);
       setUploadedFileName(null);
     }
     setError(null);
@@ -126,7 +123,6 @@ export function LessonEditDialog({
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
-          passing_score: lessonType === "quiz" ? passingScore : null,
         });
 
         if (result.success) {
@@ -139,13 +135,13 @@ export function LessonEditDialog({
       } else {
         const result = await createLesson({
           course_id: courseId,
+          section_id: sectionId!,
           title,
           lesson_type: lessonType,
           content: lessonType === "text" ? content || null : null,
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
-          passing_score: lessonType === "quiz" ? passingScore : null,
           sort_order: sortOrder,
         });
 
@@ -195,7 +191,6 @@ export function LessonEditDialog({
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="video">Video</SelectItem>
-                  <SelectItem value="quiz">Quiz / Assessment</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,11 +202,7 @@ export function LessonEditDialog({
                 id="lesson_title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  lessonType === "quiz"
-                    ? "e.g. Module 1 Assessment"
-                    : "e.g. Introduction to Data Protection"
-                }
+                placeholder="e.g. Introduction to Data Protection"
                 required
               />
             </div>
@@ -313,30 +304,6 @@ export function LessonEditDialog({
                   </div>
                 </div>
               </>
-            )}
-
-            {/* Quiz settings */}
-            {lessonType === "quiz" && (
-              <div className="grid gap-2">
-                <Label htmlFor="passing_score">
-                  Passing Score (%)
-                  <InfoTooltip text="Learners must achieve this score to pass the quiz and unlock subsequent content" />
-                </Label>
-                <Input
-                  id="passing_score"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={passingScore}
-                  onChange={(e) =>
-                    setPassingScore(parseInt(e.target.value, 10) || 0)
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Learners must achieve this score to pass and proceed.
-                  Add questions after creating the lesson.
-                </p>
-              </div>
             )}
 
             {error && (
