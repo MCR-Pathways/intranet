@@ -285,7 +285,7 @@ export default async function CourseDetailPage({
 
             {/* Action buttons */}
             {!isEnrolled ? (
-              <EnrollButton courseId={course.id} />
+              <EnrollButton courseId={course.id} hasLessons={hasLessons} />
             ) : isCompleted ? (
               <div className="space-y-2">
                 {course.content_url && (
@@ -316,100 +316,41 @@ export default async function CourseDetailPage({
                 ) : null}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Course details */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Course Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Duration</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatDuration(course.duration_minutes, "long")}
-                </p>
-              </div>
+            {/* Compact course info */}
+            <div className="border-t border-border pt-3 space-y-2 text-sm text-muted-foreground">
+              {course.duration_minutes && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{formatDuration(course.duration_minutes, "long")}</span>
+                </div>
+              )}
+              {course.passing_score && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{course.passing_score}% to pass</span>
+                </div>
+              )}
+              {enrolment?.due_date && !isCompleted && dueStatus === "on_track" && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Due {formatDate(enrolment.due_date)}</span>
+                </div>
+              )}
+              {isEnrolled && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Enrolled {formatDate(enrolment.enrolled_at)}</span>
+                </div>
+              )}
+              {enrolment?.score !== null && enrolment?.score !== undefined && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Score: {enrolment.score}%</span>
+                </div>
+              )}
             </div>
-            {course.passing_score && (
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Passing Score</p>
-                  <p className="text-sm text-muted-foreground">
-                    {course.passing_score}% required to pass
-                  </p>
-                </div>
-              </div>
-            )}
-            {enrolment?.due_date && (
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Due Date</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(enrolment.due_date)}
-                  </p>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
-
-        {isEnrolled && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Your Progress</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <PlayCircle className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Status</p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {enrolment.status.replace("_", " ")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Enrolled</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(enrolment.enrolled_at)}
-                  </p>
-                </div>
-              </div>
-              {enrolment.started_at && (
-                <div className="flex items-center gap-3">
-                  <PlayCircle className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Started</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(enrolment.started_at)}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {enrolment.score !== null && (
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Score</p>
-                    <p className="text-sm text-muted-foreground">
-                      {enrolment.score}%
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Course content — sections or flat lesson list */}

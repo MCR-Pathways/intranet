@@ -69,11 +69,32 @@ describe("Course Learner Actions", () => {
 
       const result = await enrollInCourse("course-1");
 
-      expect(result).toEqual({ success: false, error: "Not authenticated" });
+      expect(result).toEqual({ success: false, error: "Not authenticated", firstLessonId: null });
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
     it("inserts enrolment with correct fields", async () => {
+      // Mock the chain for fetching first lesson after insert
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "course_enrolments") return { insert: mockInsert };
+        if (table === "course_lessons") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      single: () => Promise.resolve({ data: { id: "lesson-1" } }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        return { insert: mockInsert };
+      });
+
       await enrollInCourse("course-1");
 
       expect(mockFrom).toHaveBeenCalledWith("course_enrolments");
@@ -85,13 +106,55 @@ describe("Course Learner Actions", () => {
       });
     });
 
-    it("returns success on successful enrolment", async () => {
+    it("returns success with firstLessonId on successful enrolment", async () => {
+      // Mock the chain for fetching first lesson after insert
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "course_enrolments") return { insert: mockInsert };
+        if (table === "course_lessons") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      single: () => Promise.resolve({ data: { id: "lesson-1" } }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        return { insert: mockInsert };
+      });
+
       const result = await enrollInCourse("course-1");
 
-      expect(result).toEqual({ success: true, error: null });
+      expect(result).toEqual({ success: true, error: null, firstLessonId: "lesson-1" });
     });
 
     it("revalidates correct paths on success", async () => {
+      // Mock the chain for fetching first lesson after insert
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "course_enrolments") return { insert: mockInsert };
+        if (table === "course_lessons") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      single: () => Promise.resolve({ data: null }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        return { insert: mockInsert };
+      });
+
       await enrollInCourse("course-1");
 
       expect(revalidatePath).toHaveBeenCalledWith("/learning/courses/course-1");
@@ -109,6 +172,7 @@ describe("Course Learner Actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Already enrolled in this course",
+        firstLessonId: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
@@ -123,6 +187,7 @@ describe("Course Learner Actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+        firstLessonId: null,
       });
       expect(revalidatePath).not.toHaveBeenCalled();
     });
