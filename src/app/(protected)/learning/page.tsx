@@ -44,9 +44,13 @@ export default async function LearningPage() {
       .eq("user_id", user.id),
   ]);
 
-  // Type and filter enrolments
+  // Type and filter enrolments — only show enrolments for published, active courses
   const typedEnrolments = (enrolments || [])
-    .filter((e) => e.course)
+    .filter((e) => {
+      if (!e.course) return false;
+      const c = e.course as unknown as EnrolmentWithCourse["course"];
+      return c.is_active;
+    })
     .map((e) => ({
       ...e,
       course: e.course as unknown as EnrolmentWithCourse["course"],
@@ -90,7 +94,7 @@ export default async function LearningPage() {
     }).length,
   };
 
-  // Get in-progress courses for display
+  // Get in-progress courses for display (show all, not truncated)
   const inProgressEnrolments = typedEnrolments
     .filter((e) => e.status === "in_progress" || e.status === "enrolled")
     .sort((a, b) => {
@@ -101,8 +105,42 @@ export default async function LearningPage() {
       if (a.due_date) return -1;
       if (b.due_date) return 1;
       return b.progress_percent - a.progress_percent;
-    })
-    .slice(0, 3);
+    });
+
+  // Find the resume course — most recently started in-progress course
+  const resumeEnrolment = typedEnrolments
+    .filter((e) => e.status === "in_progress")
+    .sort((a, b) => {
+      // Most recently started first
+      const aStart = a.started_at ? new Date(a.started_at).getTime() : 0;
+      const bStart = b.started_at ? new Date(b.started_at).getTime() : 0;
+      return bStart - aStart;
+    })[0] ?? null;
+
+  // Fetch the next incomplete lesson for the resume course
+  let resumeLessonHref: string | null = null;
+  if (resumeEnrolment) {
+    const { data: resumeLessons } = await supabase
+      .from("course_lessons")
+      .select("id")
+      .eq("course_id", resumeEnrolment.course_id)
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (resumeLessons && resumeLessons.length > 0) {
+      const { data: completions } = await supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("user_id", user.id)
+        .in("lesson_id", resumeLessons.map((l) => l.id));
+
+      const completedIds = new Set(completions?.map((c) => c.lesson_id) ?? []);
+      const nextLesson = resumeLessons.find((l) => !completedIds.has(l.id));
+      if (nextLesson) {
+        resumeLessonHref = `/learning/courses/${resumeEnrolment.course_id}/lessons/${nextLesson.id}`;
+      }
+    }
+  }
 
   const hasComplianceDue = complianceStats.due > 0 || complianceStats.overdue > 0;
 
@@ -167,6 +205,34 @@ export default async function LearningPage() {
           </CardHeader>
         </Card>
       ) : null}
+
+      {/* Continue Learning hero card */}
+      {resumeEnrolment && resumeLessonHref && (
+        <Link href={resumeLessonHref} className="block">
+          <Card className="border-primary/20 bg-primary/5 transition-shadow hover:shadow-md cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-primary/10 shrink-0">
+                  <PlayCircle className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-primary mb-0.5">Continue Learning</p>
+                  <p className="font-semibold truncate">{resumeEnrolment.course.title}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex-1">
+                      <Progress value={resumeEnrolment.progress_percent} className="h-1.5" />
+                    </div>
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      {resumeEnrolment.progress_percent}%
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-primary shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Course categories */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -235,10 +301,14 @@ export default async function LearningPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>My Courses</CardTitle>
-            <CardDescription>Courses you&apos;re currently working on</CardDescription>
+            <CardDescription>
+              {inProgressEnrolments.length > 0
+                ? `${inProgressEnrolments.length} course${inProgressEnrolments.length !== 1 ? "s" : ""} in progress`
+                : "Courses you\u2019re currently working on"}
+            </CardDescription>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link href="/learning/my-courses">View All</Link>
+            <Link href="/learning/my-courses">All Courses</Link>
           </Button>
         </CardHeader>
         <CardContent>
@@ -300,15 +370,18 @@ export default async function LearningPage() {
             <div className="flex flex-col items-center justify-center py-8">
               <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center max-w-sm mb-4">
-                You haven&apos;t started any courses yet. Browse the course catalogue to
-                get started.
+                {courses && courses.length > 0
+                  ? "Browse the course catalogue to find courses relevant to your role."
+                  : "No courses are available yet. Check back soon."}
               </p>
-              <Button asChild>
-                <Link href="/learning/courses">
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  Browse Courses
-                </Link>
-              </Button>
+              {courses && courses.length > 0 && (
+                <Button asChild>
+                  <Link href="/learning/courses">
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Browse Courses
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

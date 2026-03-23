@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import type {
   CourseLesson,
@@ -14,7 +14,6 @@ import { VideoPlayer } from "@/components/learning/video-player";
 import { LessonSidebar } from "@/components/learning/lesson-sidebar";
 import { LessonRenderer } from "@/components/learning/lesson-renderer";
 import { getLockedLessonIds } from "@/lib/learning";
-import type { Json } from "@/types/database.types";
 
 export default async function LessonPage({
   params,
@@ -57,7 +56,7 @@ export default async function LessonPage({
   const { data: allLessons } = await supabase
     .from("course_lessons")
     .select(
-      "id, course_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
+      "id, course_id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
     )
     .eq("course_id", courseId)
     .eq("is_active", true)
@@ -91,7 +90,6 @@ export default async function LessonPage({
 
   // Determine which lessons are locked by unpassed quizzes
   const lockedLessonIds = getLockedLessonIds(lessons, completedLessonIds);
-  const isLastLesson = !nextLesson;
 
   // If the current lesson is locked, redirect to the course page
   if (lockedLessonIds.has(lessonId)) {
@@ -108,7 +106,78 @@ export default async function LessonPage({
     isLocked: lockedLessonIds.has(l.id),
   }));
 
-  // Quiz handling removed — quizzes are now at section level (PR 3: learner UI)
+  const isLastLesson = !nextLesson;
+
+  // --- Compute the "Complete and Continue" destination ---
+  // Determine if this is the last lesson in its section and if a section quiz exists
+  const currentSectionId = lesson.section_id;
+  let nextHref: string | null = null;
+  let nextLabel = "Continue";
+
+  // Helper: check if the current section has an unpassed quiz
+  async function getSectionQuizHref(
+    sectionId: string,
+    userId: string,
+    fallbackHref: string,
+    fallbackLabel: string,
+  ): Promise<{ href: string; label: string }> {
+    const { data: sectionQuiz } = await supabase
+      .from("section_quizzes")
+      .select("id")
+      .eq("section_id", sectionId)
+      .eq("is_active", true)
+      .single();
+
+    if (!sectionQuiz) return { href: fallbackHref, label: fallbackLabel };
+
+    const { data: quizAttempt } = await supabase
+      .from("section_quiz_attempts")
+      .select("passed")
+      .eq("quiz_id", sectionQuiz.id)
+      .eq("user_id", userId)
+      .eq("passed", true)
+      .limit(1);
+
+    if (!quizAttempt || quizAttempt.length === 0) {
+      return {
+        href: `/learning/courses/${courseId}/sections/${sectionId}/quiz`,
+        label: "Take Quiz",
+      };
+    }
+
+    return { href: fallbackHref, label: fallbackLabel };
+  }
+
+  if (nextLesson && !lockedLessonIds.has(nextLesson.id)) {
+    // If the next lesson is in a DIFFERENT section, check for section quiz first
+    if (currentSectionId && nextLesson.section_id !== currentSectionId) {
+      const result = await getSectionQuizHref(
+        currentSectionId,
+        user.id,
+        `/learning/courses/${courseId}/lessons/${nextLesson.id}`,
+        "Continue",
+      );
+      nextHref = result.href;
+      nextLabel = result.label;
+    } else {
+      nextHref = `/learning/courses/${courseId}/lessons/${nextLesson.id}`;
+    }
+  } else if (!nextLesson) {
+    // Last lesson — check for section quiz
+    if (currentSectionId) {
+      const result = await getSectionQuizHref(
+        currentSectionId,
+        user.id,
+        `/learning/courses/${courseId}`,
+        "Back to Course",
+      );
+      nextHref = result.href;
+      nextLabel = result.label;
+    } else {
+      nextHref = `/learning/courses/${courseId}`;
+      nextLabel = "Back to Course";
+    }
+  }
 
   // For text lessons: fetch images
   let lessonImages: { id: string; file_url: string; file_name: string }[] = [];
@@ -131,9 +200,21 @@ export default async function LessonPage({
   }
 
   const lessonType = (lesson.lesson_type ?? "text") as LessonType;
+  const progressPercent = lessons.length > 0
+    ? Math.round((completedLessonIds.length / lessons.length) * 100)
+    : 0;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Course progress bar — thin, fixed at top */}
+      <div className="h-1 w-full bg-muted shrink-0">
+        <div
+          className="h-full bg-primary transition-all duration-500"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="flex flex-1 min-h-0">
       {/* Sidebar */}
       <LessonSidebar
         courseId={courseId}
@@ -226,11 +307,11 @@ export default async function LessonPage({
             </div>
           )}
 
-          {/* Mark Complete + Navigation */}
+          {/* Navigation footer */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
             <div>
               {prevLesson ? (
-                <Button variant="outline" asChild>
+                <Button variant="ghost" asChild>
                   <Link
                     href={`/learning/courses/${courseId}/lessons/${prevLesson.id}`}
                   >
@@ -239,7 +320,12 @@ export default async function LessonPage({
                   </Link>
                 </Button>
               ) : (
-                <div />
+                <Button variant="ghost" asChild>
+                  <Link href={`/learning/courses/${courseId}`}>
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Course
+                  </Link>
+                </Button>
               )}
             </div>
 
@@ -251,28 +337,12 @@ export default async function LessonPage({
               hasUploadedVideo={
                 lessonType === "video" && !!lesson.video_storage_path
               }
+              nextHref={nextHref}
+              nextLabel={nextLabel}
             />
-
-            <div>
-              {nextLesson && !lockedLessonIds.has(nextLesson.id) ? (
-                <Button variant="outline" asChild>
-                  <Link
-                    href={`/learning/courses/${courseId}/lessons/${nextLesson.id}`}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
-              ) : (
-                <Button variant="outline" asChild>
-                  <Link href={`/learning/courses/${courseId}`}>
-                    Back to Course
-                  </Link>
-                </Button>
-              )}
-            </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

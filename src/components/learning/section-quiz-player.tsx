@@ -165,26 +165,46 @@ export function SectionQuizPlayer({
     );
   }
 
+  const answeredCount = questions.filter((q) => {
+    const answer = answers[q.id];
+    if (q.question_type === "multi") {
+      return Array.isArray(answer) && answer.length > 0;
+    }
+    return typeof answer === "string" && answer.length > 0;
+  }).length;
+
   return (
     <div className="space-y-6">
-      {/* Quiz header */}
-      <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-        <AlertCircle className="h-4 w-4 text-primary" />
-        <span>
-          Pass mark: <strong>{passingScore}%</strong> required to unlock the
-          next section.
-        </span>
-      </div>
-
-      {/* Previous attempts summary */}
-      {previousAttempts.length > 0 && !result && (
-        <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
-          <p>
-            Previous attempts: {previousAttempts.length} &middot; Best score:{" "}
-            <strong>{bestAttempt?.score ?? 0}%</strong>
-          </p>
-        </div>
-      )}
+      {/* Quiz intro card */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertCircle className="h-5 w-5 text-primary shrink-0" />
+            <h3 className="font-semibold">Section Quiz</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold">{questions.length}</p>
+              <p className="text-xs text-muted-foreground">Questions</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{passingScore}%</p>
+              <p className="text-xs text-muted-foreground">To pass</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">&infin;</p>
+              <p className="text-xs text-muted-foreground">Attempts</p>
+            </div>
+          </div>
+          {/* Previous attempts summary */}
+          {previousAttempts.length > 0 && !result && (
+            <div className="mt-3 pt-3 border-t border-border text-sm text-muted-foreground text-center">
+              Previous attempts: {previousAttempts.length} &middot; Best score:{" "}
+              <strong>{bestAttempt?.score ?? 0}%</strong>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Questions */}
       <div className="space-y-8">
@@ -281,23 +301,30 @@ export function SectionQuizPlayer({
       )}
 
       {/* Submit / Result area */}
-      <div className="border-t border-border pt-6">
+      <div className={cn(
+        "border-t border-border pt-6",
+        !result && "sticky bottom-0 bg-background pb-6 -mb-6 z-10"
+      )}>
         {!result ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={!allAnswered || isPending}
-            className="w-full md:w-auto"
-            size="lg"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              "Submit Quiz"
-            )}
-          </Button>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {answeredCount} of {questions.length} answered
+            </p>
+            <Button
+              onClick={handleSubmit}
+              disabled={!allAnswered || isPending}
+              size="lg"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Quiz"
+              )}
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
             {/* Score display */}

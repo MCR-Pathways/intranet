@@ -8,7 +8,7 @@ export async function enrollInCourse(courseId: string) {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) {
-    return { success: false, error: "Not authenticated" };
+    return { success: false, error: "Not authenticated", firstLessonId: null };
   }
 
   const { error } = await supabase.from("course_enrolments").insert({
@@ -20,16 +20,26 @@ export async function enrollInCourse(courseId: string) {
 
   if (error) {
     if (error.code === "23505") {
-      return { success: false, error: "Already enrolled in this course" };
+      return { success: false, error: "Already enrolled in this course", firstLessonId: null };
     }
     logger.error("Failed to enrol in course", { error });
-    return { success: false, error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    return { success: false, error: "Failed to enrol in course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", firstLessonId: null };
   }
+
+  // Fetch first active lesson for "Enrol and Start" navigation
+  const { data: firstLesson } = await supabase
+    .from("course_lessons")
+    .select("id")
+    .eq("course_id", courseId)
+    .eq("is_active", true)
+    .order("sort_order")
+    .limit(1)
+    .single();
 
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath("/learning");
   revalidatePath("/learning/my-courses");
-  return { success: true, error: null };
+  return { success: true, error: null, firstLessonId: firstLesson?.id ?? null };
 }
 
 export async function completeLesson(lessonId: string, courseId: string) {
