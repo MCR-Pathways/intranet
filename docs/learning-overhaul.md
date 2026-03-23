@@ -69,18 +69,34 @@ The L&D team manages **50+ courses** for all ~60 staff (internal staff + externa
 ### 6. Tool Shed — Social Learning Framework
 This is **NOT a resource library**. It's a peer-to-peer knowledge sharing system based on the MCR Pathways Social Learning Framework document.
 
-**How it works:**
-1. Staff attend external training/conferences/events
-2. They share insights via one of **3 structured formats**:
-   - **Digital Learning Postcard**: Elevator Pitch, Lightbulb Moment, Impact on Programme, Golden Nugget
-   - **3-2-1 Model**: 3 things learned, 2 things to change, 1 question raised
-   - **10-Minute Takeover**: 3 most useful things (for team meeting sharing)
-3. All entries visible **organisation-wide** in a social learning feed
-4. Entries optionally linked to external course logs (gentle prompt after logging, not required)
+**Two modes:**
+
+**A. Browse & Discover**
+- **Feed view** — cards showing title, author avatar + name, event name, date, format badge (Postcard/3-2-1/Takeover), tags
+- **Search** — full-text across title, content fields, event_name, tags. PostgreSQL FTS sufficient for ~60 staff (no Algolia needed)
+- **Filter bar** — format dropdown (All/Postcard/3-2-1/Takeover), clickable tag chips, date range
+- **Detail view** — format-specific rendering:
+  - **Digital Learning Postcard**: 4 labelled sections (Elevator Pitch, Lightbulb Moment, Impact on Programme, Golden Nugget)
+  - **3-2-1 Model**: numbered sections (3 things learned, 2 things to change, 1 question raised)
+  - **10-Minute Takeover**: 3 most useful things (presentation-style, for team meeting sharing)
+
+**B. Share**
+- **"+ Share Insight"** button → form with format selector → format-specific guided prompts
+- Optional: link to external course log, event name, event date, freeform tags (with autocomplete from existing)
+- Draft support (`is_published` toggle, default true) — save and come back later
+- Entries visible **organisation-wide** in the social learning feed
+
+**Knock-on effects:**
+- Learning dashboard: "Recent Tool Shed Insights" section (encourage browsing)
+- Sidebar: count badge for new entries since last visit
+- Profile integration (future): "Shared X insights" count on HR profile
+- Notifications: new entry optionally notifies team/manager (`email_notifications` type: `tool_shed_shared`)
 
 **Current state:** Tool Shed page has 12 hardcoded static resources — completely wrong. Needs full database-backed rewrite.
 
-**Manager workflow (future):** Plan schema but defer implementation. Future: manager logs event attendance → system prompts staff → L&D dashboard tracks pending entries.
+**Implementation order:** Feed page → Share form → Search + filter → Detail view → Draft support → Dashboard integration → Profile integration (future) → Manager workflow (future)
+
+**Manager workflow (future):** Plan schema but defer implementation. Future: manager logs event attendance (`event_attendance` table) → system prompts staff → L&D dashboard tracks pending entries. Admin can merge/rename tags.
 
 ### 7. Global Search (Cmd+K)
 - **Search icon** (magnifying glass) in the header, next to notification bell
@@ -356,7 +372,7 @@ Interactive HTML mockups were created during planning:
 - Migration 00060 DELETEs all rows from learning tables before restructuring
 - No backward compatibility migration needed (no default sections, no quiz migration)
 - Old quiz tables (`quiz_questions`, `quiz_options`, `quiz_attempts`) still exist structurally but are empty and unused
-- `lesson_type` CHECK changed from `('video', 'text', 'quiz')` to `('video', 'text')` — quizzes now section-level only
+- `lesson_type` CHECK changed from `('video', 'text', 'quiz')` to `('text', 'video', 'slides', 'rich_text')` — quizzes now section-level only, slides and rich text added in migration 00065
 
 ### Files Created/Modified So Far
 
