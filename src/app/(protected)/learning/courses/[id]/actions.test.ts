@@ -59,6 +59,32 @@ describe("Course Learner Actions", () => {
   // enrollInCourse
   // ===========================================
 
+  /** Mock `from()` to handle both enrolment insert and first-lesson fetch */
+  function mockEnrolmentWithFirstLesson(lessonId: string | null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "course_enrolments") return { insert: mockInsert };
+      if (table === "course_lessons") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                order: () => ({
+                  limit: () => ({
+                    single: () =>
+                      Promise.resolve({
+                        data: lessonId ? { id: lessonId } : null,
+                      }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      return { insert: mockInsert };
+    });
+  }
+
   describe("enrollInCourse", () => {
     it("returns error when not authenticated", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
@@ -74,26 +100,7 @@ describe("Course Learner Actions", () => {
     });
 
     it("inserts enrolment with correct fields", async () => {
-      // Mock the chain for fetching first lesson after insert
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "course_enrolments") return { insert: mockInsert };
-        if (table === "course_lessons") {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  order: () => ({
-                    limit: () => ({
-                      single: () => Promise.resolve({ data: { id: "lesson-1" } }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
-        return { insert: mockInsert };
-      });
+      mockEnrolmentWithFirstLesson("lesson-1");
 
       await enrollInCourse("course-1");
 
@@ -107,26 +114,7 @@ describe("Course Learner Actions", () => {
     });
 
     it("returns success with firstLessonId on successful enrolment", async () => {
-      // Mock the chain for fetching first lesson after insert
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "course_enrolments") return { insert: mockInsert };
-        if (table === "course_lessons") {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  order: () => ({
-                    limit: () => ({
-                      single: () => Promise.resolve({ data: { id: "lesson-1" } }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
-        return { insert: mockInsert };
-      });
+      mockEnrolmentWithFirstLesson("lesson-1");
 
       const result = await enrollInCourse("course-1");
 
@@ -134,26 +122,7 @@ describe("Course Learner Actions", () => {
     });
 
     it("revalidates correct paths on success", async () => {
-      // Mock the chain for fetching first lesson after insert
-      mockFrom.mockImplementation((table: string) => {
-        if (table === "course_enrolments") return { insert: mockInsert };
-        if (table === "course_lessons") {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  order: () => ({
-                    limit: () => ({
-                      single: () => Promise.resolve({ data: null }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
-        return { insert: mockInsert };
-      });
+      mockEnrolmentWithFirstLesson(null);
 
       await enrollInCourse("course-1");
 

@@ -114,70 +114,65 @@ export default async function LessonPage({
   let nextHref: string | null = null;
   let nextLabel = "Continue";
 
+  // Helper: check if the current section has an unpassed quiz
+  async function getSectionQuizHref(
+    sectionId: string,
+    userId: string,
+    fallbackHref: string,
+    fallbackLabel: string,
+  ): Promise<{ href: string; label: string }> {
+    const { data: sectionQuiz } = await supabase
+      .from("section_quizzes")
+      .select("id")
+      .eq("section_id", sectionId)
+      .eq("is_active", true)
+      .single();
+
+    if (!sectionQuiz) return { href: fallbackHref, label: fallbackLabel };
+
+    const { data: quizAttempt } = await supabase
+      .from("section_quiz_attempts")
+      .select("passed")
+      .eq("quiz_id", sectionQuiz.id)
+      .eq("user_id", userId)
+      .eq("passed", true)
+      .limit(1);
+
+    if (!quizAttempt || quizAttempt.length === 0) {
+      return {
+        href: `/learning/courses/${courseId}/sections/${sectionId}/quiz`,
+        label: "Take Quiz",
+      };
+    }
+
+    return { href: fallbackHref, label: fallbackLabel };
+  }
+
   if (nextLesson && !lockedLessonIds.has(nextLesson.id)) {
-    // If the next lesson is in a DIFFERENT section and current section has a quiz,
-    // navigate to the section quiz instead
+    // If the next lesson is in a DIFFERENT section, check for section quiz first
     if (currentSectionId && nextLesson.section_id !== currentSectionId) {
-      // Check if current section has an active quiz
-      const { data: sectionQuiz } = await supabase
-        .from("section_quizzes")
-        .select("id")
-        .eq("section_id", currentSectionId)
-        .eq("is_active", true)
-        .single();
-
-      if (sectionQuiz) {
-        // Check if quiz already passed
-        const { data: quizAttempt } = await supabase
-          .from("section_quiz_attempts")
-          .select("passed")
-          .eq("quiz_id", sectionQuiz.id)
-          .eq("user_id", user.id)
-          .eq("passed", true)
-          .limit(1);
-
-        if (!quizAttempt || quizAttempt.length === 0) {
-          nextHref = `/learning/courses/${courseId}/sections/${currentSectionId}/quiz`;
-          nextLabel = "Take Quiz";
-        } else {
-          nextHref = `/learning/courses/${courseId}/lessons/${nextLesson.id}`;
-        }
-      } else {
-        nextHref = `/learning/courses/${courseId}/lessons/${nextLesson.id}`;
-      }
+      const result = await getSectionQuizHref(
+        currentSectionId,
+        user.id,
+        `/learning/courses/${courseId}/lessons/${nextLesson.id}`,
+        "Continue",
+      );
+      nextHref = result.href;
+      nextLabel = result.label;
     } else {
       nextHref = `/learning/courses/${courseId}/lessons/${nextLesson.id}`;
     }
   } else if (!nextLesson) {
     // Last lesson — check for section quiz
     if (currentSectionId) {
-      const { data: sectionQuiz } = await supabase
-        .from("section_quizzes")
-        .select("id")
-        .eq("section_id", currentSectionId)
-        .eq("is_active", true)
-        .single();
-
-      if (sectionQuiz) {
-        const { data: quizAttempt } = await supabase
-          .from("section_quiz_attempts")
-          .select("passed")
-          .eq("quiz_id", sectionQuiz.id)
-          .eq("user_id", user.id)
-          .eq("passed", true)
-          .limit(1);
-
-        if (!quizAttempt || quizAttempt.length === 0) {
-          nextHref = `/learning/courses/${courseId}/sections/${currentSectionId}/quiz`;
-          nextLabel = "Take Quiz";
-        } else {
-          nextHref = `/learning/courses/${courseId}`;
-          nextLabel = "Back to Course";
-        }
-      } else {
-        nextHref = `/learning/courses/${courseId}`;
-        nextLabel = "Back to Course";
-      }
+      const result = await getSectionQuizHref(
+        currentSectionId,
+        user.id,
+        `/learning/courses/${courseId}`,
+        "Back to Course",
+      );
+      nextHref = result.href;
+      nextLabel = result.label;
     } else {
       nextHref = `/learning/courses/${courseId}`;
       nextLabel = "Back to Course";

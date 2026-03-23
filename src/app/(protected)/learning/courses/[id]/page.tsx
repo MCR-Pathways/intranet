@@ -342,7 +342,7 @@ export default async function CourseDetailPage({
                   <span>Enrolled {formatDate(enrolment.enrolled_at)}</span>
                 </div>
               )}
-              {enrolment?.score !== null && enrolment?.score !== undefined && (
+              {enrolment?.score != null && (
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Score: {enrolment.score}%</span>
