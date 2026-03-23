@@ -27,6 +27,9 @@ import {
 import { toast } from "sonner";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { LessonImageManager } from "./lesson-image-manager";
+import { LessonTiptapEditor } from "./lesson-tiptap-editor";
+import { extractPlainText, plainTextToTiptapDoc } from "@/lib/tiptap";
+import type { TiptapDocument } from "@/lib/tiptap";
 import type { CourseLesson, LessonType, LessonImage } from "@/types/database.types";
 
 interface LessonEditDialogProps {
@@ -64,6 +67,18 @@ export function LessonEditDialog({
   );
   const [slidesUrl, setSlidesUrl] = useState(lesson?.slides_url ?? "");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+
+  // Rich text content (Tiptap JSON)
+  const [contentJson, setContentJson] = useState<TiptapDocument | null>(() => {
+    if (lesson?.content_json && typeof lesson.content_json === "object") {
+      return lesson.content_json as unknown as TiptapDocument;
+    }
+    // Convert existing plain text to Tiptap JSON when switching to rich_text
+    if (lesson?.content) {
+      return plainTextToTiptapDoc(lesson.content);
+    }
+    return null;
+  });
 
   const resetForm = () => {
     if (!isEditing) {
@@ -128,11 +143,28 @@ export function LessonEditDialog({
     }
 
     startTransition(async () => {
+      // Build content fields based on lesson type
+      const richTextContent =
+        lessonType === "rich_text" && contentJson
+          ? {
+              content_json: contentJson as unknown as Record<string, unknown>,
+              content: extractPlainText(contentJson),
+            }
+          : {};
+
       if (isEditing) {
         const result = await updateLesson(lesson.id, courseId, {
           title,
           lesson_type: lessonType,
-          content: lessonType === "text" ? content || null : lesson.content,
+          content:
+            lessonType === "text"
+              ? content || null
+              : lessonType === "rich_text"
+                ? (richTextContent.content ?? lesson.content)
+                : lesson.content,
+          ...(lessonType === "rich_text" && richTextContent.content_json
+            ? { content_json: richTextContent.content_json }
+            : {}),
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
@@ -152,7 +184,15 @@ export function LessonEditDialog({
           section_id: sectionId!,
           title,
           lesson_type: lessonType,
-          content: lessonType === "text" ? content || null : null,
+          content:
+            lessonType === "text"
+              ? content || null
+              : lessonType === "rich_text"
+                ? (richTextContent.content ?? null)
+                : null,
+          ...(lessonType === "rich_text" && richTextContent.content_json
+            ? { content_json: richTextContent.content_json }
+            : {}),
           video_url: lessonType === "video" ? videoUrl || null : null,
           video_storage_path:
             lessonType === "video" ? videoStoragePath || null : null,
@@ -180,7 +220,7 @@ export function LessonEditDialog({
         onOpenChange(isOpen);
       }}
     >
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className={lessonType === "rich_text" ? "sm:max-w-[900px]" : "sm:max-w-[600px]"}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Content" : "Add Content"}
@@ -342,13 +382,15 @@ export function LessonEditDialog({
               </div>
             )}
 
-            {/* Rich text placeholder — content editing via Tiptap (future) */}
+            {/* Rich text editor (Tiptap) */}
             {lessonType === "rich_text" && (
               <div className="grid gap-2">
-                <Label>Rich Text Content</Label>
-                <div className="rounded-md border border-input bg-muted/50 p-4 text-sm text-muted-foreground text-center">
-                  Rich text editing will be available soon. For now, create the lesson and edit content later.
-                </div>
+                <Label>Content</Label>
+                <LessonTiptapEditor
+                  initialContent={contentJson}
+                  onChange={setContentJson}
+                  placeholder="Start writing your lesson content..."
+                />
               </div>
             )}
 

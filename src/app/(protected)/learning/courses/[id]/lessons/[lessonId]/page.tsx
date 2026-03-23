@@ -280,7 +280,11 @@ export default async function LessonPage({
             </Card>
           )}
 
-          {lessonType === "rich_text" && (
+          {/* Rich text content: render content_json via LessonRenderer for any lesson type */}
+          {(lessonType === "rich_text" ||
+            (typeof lesson.content_json === "object" && lesson.content_json !== null)) &&
+            lessonType !== "video" &&
+            lessonType !== "slides" && (
             <Card>
               <CardContent className="pt-6">
                 <LessonRenderer
