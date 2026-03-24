@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TeamMemberCard } from "@/components/hr/team-member-card";
+import { TeamComplianceSection } from "@/components/hr/team-compliance-section";
 import type { TeamMember, LeaveInfo, AnniversaryInfo } from "@/components/hr/team-member-card";
 import { LEAVE_TYPE_CONFIG, formatHRDate } from "@/lib/hr";
 import type { LeaveType } from "@/lib/hr";
@@ -14,11 +15,27 @@ import { cn } from "@/lib/utils";
 // TYPES
 // =============================================
 
+export interface ComplianceEnrolment {
+  user_id: string;
+  course_id: string;
+  status: string;
+  progress_percent: number;
+  due_date: string | null;
+  completed_at: string | null;
+}
+
+export interface RequiredCourse {
+  id: string;
+  title: string;
+}
+
 interface TeamDashboardContentProps {
   reports: TeamMember[];
   onLeaveMap: Record<string, LeaveInfo>;
   pendingApprovalCount: number;
   anniversaries: Record<string, AnniversaryInfo>;
+  requiredCourses?: RequiredCourse[];
+  complianceEnrolments?: ComplianceEnrolment[];
 }
 
 // =============================================
@@ -57,6 +74,8 @@ export function TeamDashboardContent({
   onLeaveMap,
   pendingApprovalCount,
   anniversaries,
+  requiredCourses = [],
+  complianceEnrolments = [],
 }: TeamDashboardContentProps) {
   const onLeaveToday = Object.entries(onLeaveMap);
   const anniversaryEntries = Object.entries(anniversaries);
@@ -171,6 +190,15 @@ export function TeamDashboardContent({
           />
         ))}
       </div>
+
+      {/* Team compliance — required course completion */}
+      {requiredCourses.length > 0 && (
+        <TeamComplianceSection
+          reports={reports}
+          requiredCourses={requiredCourses}
+          enrolments={complianceEnrolments}
+        />
+      )}
     </div>
   );
 }

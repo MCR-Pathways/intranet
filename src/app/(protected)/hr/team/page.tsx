@@ -82,20 +82,27 @@ export default async function TeamPage() {
 
   // ── Manager view ──────────────────────────────────────
   if (isManager) {
-    const [{ data: reports }, { data: onLeaveRows }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select(TEAM_MEMBER_SELECT)
-        .eq("line_manager_id", user.id)
-        .eq("status", "active")
-        .order("full_name"),
-      supabase
-        .from("leave_requests")
-        .select("profile_id, leave_type, end_date")
-        .eq("status", "approved")
-        .lte("start_date", today)
-        .gte("end_date", today),
-    ]);
+    const [{ data: reports }, { data: onLeaveRows }, { data: requiredCourses }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select(TEAM_MEMBER_SELECT)
+          .eq("line_manager_id", user.id)
+          .eq("status", "active")
+          .order("full_name"),
+        supabase
+          .from("leave_requests")
+          .select("profile_id, leave_type, end_date")
+          .eq("status", "approved")
+          .lte("start_date", today)
+          .gte("end_date", today),
+        supabase
+          .from("courses")
+          .select("id, title")
+          .eq("is_required", true)
+          .eq("is_active", true)
+          .order("title"),
+      ]);
 
     const directReports = (reports ?? []).map(toTeamMember);
 
@@ -110,6 +117,37 @@ export default async function TeamPage() {
           end_date: row.end_date as string,
         });
       }
+    }
+
+    // Fetch compliance enrolments for direct reports × required courses
+    const typedRequiredCourses = (requiredCourses ?? []) as {
+      id: string;
+      title: string;
+    }[];
+    const requiredCourseIds = typedRequiredCourses.map((c) => c.id);
+
+    let complianceEnrolments: {
+      user_id: string;
+      course_id: string;
+      status: string;
+      progress_percent: number;
+      due_date: string | null;
+      completed_at: string | null;
+    }[] = [];
+
+    if (requiredCourseIds.length > 0 && directReports.length > 0) {
+      const { data: enrolRows } = await supabase
+        .from("course_enrolments")
+        .select(
+          "user_id, course_id, status, progress_percent, due_date, completed_at"
+        )
+        .in(
+          "user_id",
+          directReports.map((r) => r.id)
+        )
+        .in("course_id", requiredCourseIds);
+
+      complianceEnrolments = (enrolRows ?? []) as typeof complianceEnrolments;
     }
 
     // Pending approvals count
@@ -133,6 +171,8 @@ export default async function TeamPage() {
         onLeaveMap={Object.fromEntries(onLeaveMap)}
         pendingApprovalCount={pendingCount ?? 0}
         anniversaries={anniversaries}
+        requiredCourses={typedRequiredCourses}
+        complianceEnrolments={complianceEnrolments}
       />
     );
   }
