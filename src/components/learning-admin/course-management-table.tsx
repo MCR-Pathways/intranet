@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { CourseCreateDialog } from "./course-create-dialog";
+import { duplicateCourse } from "@/app/(protected)/learning/admin/courses/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +15,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogClose,
+} from "@/components/ui/alert-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { createRowNumberColumn } from "@/components/ui/data-table-row-number";
 import {
   Search,
   Pencil,
+  Copy,
+  MoreHorizontal,
   Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDate, formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
 import type { Course } from "@/types/database.types";
@@ -35,6 +54,8 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [duplicateTarget, setDuplicateTarget] = useState<Course | null>(null);
+  const [isDuplicating, startDuplicateTransition] = useTransition();
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -141,14 +162,33 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-          <Link href={`/learning/admin/courses/${row.original.id}`}>
-            <Pencil className="h-3.5 w-3.5 mr-1" />
-            Edit
-          </Link>
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const course = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Actions for {course.title}</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/learning/admin/courses/${course.id}`}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setDuplicateTarget(course)}
+              >
+                <Copy className="h-4 w-4" />
+                Duplicate
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
       enableSorting: false,
     },
   ], []);
@@ -208,6 +248,48 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
       />
+
+      {/* Duplicate Confirmation Dialog */}
+      <AlertDialog
+        open={!!duplicateTarget}
+        onOpenChange={(open) => {
+          if (!open) setDuplicateTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a draft copy of &ldquo;{duplicateTarget?.title}&rdquo;
+              including all sections, lessons, and quiz questions. Enrolments and
+              learner progress will not be copied.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogClose>
+            <Button
+              disabled={isDuplicating}
+              onClick={() => {
+                if (!duplicateTarget) return;
+                startDuplicateTransition(async () => {
+                  const result = await duplicateCourse(duplicateTarget.id);
+                  if (result.success && result.newCourseId) {
+                    toast.success("Course duplicated");
+                    setDuplicateTarget(null);
+                    window.location.href = `/learning/admin/courses/${result.newCourseId}`;
+                  } else {
+                    toast.error(result.error || "Failed to duplicate course");
+                  }
+                });
+              }}
+            >
+              {isDuplicating ? "Duplicating..." : "Duplicate"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

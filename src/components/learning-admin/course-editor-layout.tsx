@@ -8,11 +8,13 @@ import type {
   CourseAssignment,
   Team,
 } from "@/types/database.types";
+import type { PersonOption } from "@/components/hr/person-combobox";
 
 interface CourseEditorLayoutProps {
   course: Course;
   assignments: CourseAssignment[];
   teams: Pick<Team, "id" | "name">[];
+  profiles: PersonOption[];
   enrolments: {
     id: string;
     status: string;
@@ -30,6 +32,7 @@ export function CourseEditorLayout({
   course,
   assignments,
   teams,
+  profiles,
   enrolments,
   enrolmentCount,
   creatorName,
@@ -55,6 +58,7 @@ export function CourseEditorLayout({
         course={course}
         assignments={assignments}
         teams={teams}
+        profiles={profiles}
         enrolments={enrolments}
         enrolmentCount={enrolmentCount}
         creatorName={creatorName}

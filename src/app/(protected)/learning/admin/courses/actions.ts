@@ -140,6 +140,215 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
 }
 
 // ===========================================
+// COURSE DUPLICATION
+// ===========================================
+
+export async function duplicateCourse(courseId: string): Promise<{
+  success: boolean;
+  newCourseId?: string;
+  error?: string;
+}> {
+  const { supabase, user } = await requireLDAdmin();
+
+  // 1. Fetch source course
+  const { data: source, error: courseError } = await supabase
+    .from("courses")
+    .select(
+      "title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start"
+    )
+    .eq("id", courseId)
+    .single();
+
+  if (courseError || !source) {
+    logger.error("Failed to fetch course for duplication", { error: courseError });
+    return { success: false, error: "Course not found" };
+  }
+
+  // 2. Insert new course as draft
+  const { data: newCourse, error: insertError } = await supabase
+    .from("courses")
+    .insert({
+      title: `Copy of ${source.title}`,
+      description: source.description,
+      category: source.category,
+      duration_minutes: source.duration_minutes,
+      is_required: source.is_required,
+      thumbnail_url: source.thumbnail_url,
+      content_url: source.content_url,
+      passing_score: source.passing_score,
+      due_days_from_start: source.due_days_from_start,
+      is_active: false,
+      status: "draft",
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !newCourse) {
+    logger.error("Failed to create duplicate course", { error: insertError });
+    return { success: false, error: "Failed to create duplicate course" };
+  }
+
+  const newCourseId = newCourse.id;
+
+  try {
+    // 3. Clone sections
+    const { data: sections } = await supabase
+      .from("course_sections")
+      .select("id, title, description, sort_order, is_active")
+      .eq("course_id", courseId)
+      .order("sort_order");
+
+    const sectionMap = new Map<string, string>(); // old → new
+
+    if (sections && sections.length > 0) {
+      for (const section of sections) {
+        const { data: newSection } = await supabase
+          .from("course_sections")
+          .insert({
+            course_id: newCourseId,
+            title: section.title,
+            description: section.description,
+            sort_order: section.sort_order,
+            is_active: section.is_active,
+          })
+          .select("id")
+          .single();
+
+        if (newSection) {
+          sectionMap.set(section.id, newSection.id);
+        }
+      }
+    }
+
+    // 4. Clone lessons
+    const { data: lessons } = await supabase
+      .from("course_lessons")
+      .select(
+        "id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active"
+      )
+      .eq("course_id", courseId)
+      .order("sort_order");
+
+    if (lessons && lessons.length > 0) {
+      for (const lesson of lessons) {
+        const newSectionId = lesson.section_id
+          ? sectionMap.get(lesson.section_id) ?? null
+          : null;
+
+        await supabase.from("course_lessons").insert({
+          course_id: newCourseId,
+          section_id: newSectionId,
+          title: lesson.title,
+          content: lesson.content,
+          content_json: lesson.content_json,
+          slides_url: lesson.slides_url,
+          video_url: lesson.video_url,
+          video_storage_path: lesson.video_storage_path,
+          lesson_type: lesson.lesson_type,
+          passing_score: lesson.passing_score,
+          sort_order: lesson.sort_order,
+          is_active: lesson.is_active,
+        });
+      }
+    }
+
+    // 5. Clone section quizzes
+    if (sectionMap.size > 0) {
+      const oldSectionIds = Array.from(sectionMap.keys());
+      const { data: quizzes } = await supabase
+        .from("section_quizzes")
+        .select("id, section_id, title, passing_score, is_active")
+        .in("section_id", oldSectionIds);
+
+      const quizMap = new Map<string, string>(); // old → new
+
+      if (quizzes && quizzes.length > 0) {
+        for (const quiz of quizzes) {
+          const newSectionId = sectionMap.get(quiz.section_id);
+          if (!newSectionId) continue;
+
+          const { data: newQuiz } = await supabase
+            .from("section_quizzes")
+            .insert({
+              section_id: newSectionId,
+              title: quiz.title,
+              passing_score: quiz.passing_score,
+              is_active: quiz.is_active,
+            })
+            .select("id")
+            .single();
+
+          if (newQuiz) {
+            quizMap.set(quiz.id, newQuiz.id);
+          }
+        }
+
+        // 6. Clone quiz questions + options
+        if (quizMap.size > 0) {
+          const oldQuizIds = Array.from(quizMap.keys());
+          const { data: questions } = await supabase
+            .from("section_quiz_questions")
+            .select("id, quiz_id, question_text, question_type, sort_order")
+            .in("quiz_id", oldQuizIds)
+            .order("sort_order");
+
+          if (questions && questions.length > 0) {
+            const questionIds = questions.map((q) => q.id);
+            const { data: options } = await supabase
+              .from("section_quiz_options")
+              .select("id, question_id, option_text, is_correct, sort_order")
+              .in("question_id", questionIds)
+              .order("sort_order");
+
+            const optionsByQuestion = new Map<string, typeof options>();
+            for (const opt of options ?? []) {
+              const arr = optionsByQuestion.get(opt.question_id) ?? [];
+              arr.push(opt);
+              optionsByQuestion.set(opt.question_id, arr);
+            }
+
+            for (const question of questions) {
+              const newQuizId = quizMap.get(question.quiz_id);
+              if (!newQuizId) continue;
+
+              const { data: newQuestion } = await supabase
+                .from("section_quiz_questions")
+                .insert({
+                  quiz_id: newQuizId,
+                  question_text: question.question_text,
+                  question_type: question.question_type,
+                  sort_order: question.sort_order,
+                })
+                .select("id")
+                .single();
+
+              if (newQuestion) {
+                const questionOptions = optionsByQuestion.get(question.id) ?? [];
+                for (const opt of questionOptions) {
+                  await supabase.from("section_quiz_options").insert({
+                    question_id: newQuestion.id,
+                    option_text: opt.option_text,
+                    is_correct: opt.is_correct,
+                    sort_order: opt.sort_order,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Non-blocking: if cloning children fails, the course shell still exists
+    logger.error("Failed to clone course children", { error: err, newCourseId });
+  }
+
+  revalidatePath("/learning/admin/courses");
+  return { success: true, newCourseId };
+}
+
+// ===========================================
 // PUBLISH / UNPUBLISH
 // ===========================================
 
@@ -481,8 +690,16 @@ export async function assignCourse(data: {
 }) {
   const { supabase, user } = await requireLDAdmin();
 
-  if (!["team", "user_type", "is_external"].includes(data.assign_type)) {
+  if (!["team", "user_type", "is_external", "user"].includes(data.assign_type)) {
     return { success: false, error: "Invalid assignment type" };
+  }
+
+  // Validate UUID format for user assignments
+  if (data.assign_type === "user") {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(data.assign_value)) {
+      return { success: false, error: "Invalid user ID" };
+    }
   }
 
   const { error } = await supabase.from("course_assignments").insert({
@@ -569,6 +786,68 @@ export async function removeAssignment(assignmentId: string, courseId: string) {
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
   return { success: true, error: null };
+}
+
+/** Preview how many users would be affected by an assignment before creating it. */
+export async function previewAssignment(data: {
+  course_id: string;
+  assign_type: string;
+  assign_value: string;
+}): Promise<{
+  success: boolean;
+  matchCount?: number;
+  alreadyEnrolled?: number;
+  sampleNames?: string[];
+  error?: string;
+}> {
+  const { supabase } = await requireLDAdmin();
+
+  if (!["team", "user_type", "is_external", "user"].includes(data.assign_type)) {
+    return { success: false, error: "Invalid assignment type" };
+  }
+
+  // Build query to find matching users
+  let query = supabase
+    .from("profiles")
+    .select("id, full_name")
+    .neq("status", "inactive")
+    .order("full_name");
+
+  if (data.assign_type === "team") {
+    query = query.eq("team_id", data.assign_value);
+  } else if (data.assign_type === "user_type") {
+    query = query.eq("user_type", data.assign_value);
+  } else if (data.assign_type === "is_external") {
+    query = query.eq("is_external", data.assign_value === "true");
+  } else if (data.assign_type === "user") {
+    query = query.eq("id", data.assign_value);
+  }
+
+  const { data: matchingUsers, error: matchError } = await query;
+
+  if (matchError) {
+    logger.error("Failed to preview assignment", { error: matchError });
+    return { success: false, error: "Failed to preview assignment" };
+  }
+
+  if (!matchingUsers || matchingUsers.length === 0) {
+    return { success: true, matchCount: 0, alreadyEnrolled: 0, sampleNames: [] };
+  }
+
+  // Check how many are already enrolled
+  const userIds = matchingUsers.map((u) => u.id);
+  const { count: enrolledCount } = await supabase
+    .from("course_enrolments")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", data.course_id)
+    .in("user_id", userIds);
+
+  return {
+    success: true,
+    matchCount: matchingUsers.length,
+    alreadyEnrolled: enrolledCount ?? 0,
+    sampleNames: matchingUsers.slice(0, 5).map((u) => u.full_name),
+  };
 }
 
 // ===========================================
