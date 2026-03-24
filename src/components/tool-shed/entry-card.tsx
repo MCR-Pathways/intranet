@@ -193,7 +193,7 @@ export function EntryCard({
   const { bg, fg } = getAvatarColour(entry.author.full_name);
 
   return (
-    <Card className="bg-card shadow-md rounded-xl overflow-clip transition-shadow hover:shadow-lg">
+    <Card id={entry.id} className="bg-card shadow-md rounded-xl overflow-clip transition-shadow hover:shadow-lg">
       <CardContent className="p-5">
         {/* Draft badge */}
         {!entry.is_published && (
