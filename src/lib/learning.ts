@@ -16,9 +16,9 @@ import {
   CheckCircle2,
   Lock,
   Circle,
-  Mail,
-  Mic,
-  Hash,
+  Send,
+  Layers,
+  Megaphone,
 } from "lucide-react";
 import type { CourseCategory } from "@/types/database.types";
 import type { BadgeProps } from "@/components/ui/badge";
@@ -146,9 +146,20 @@ export type ToolShedFormat = "postcard" | "three_two_one" | "takeover";
 export interface ToolShedFormatConfig {
   label: string;
   shortLabel: string;
-  icon: typeof Mail;
+  icon: typeof Send;
   description: string;
   badgeVariant: NonNullable<BadgeProps["variant"]>;
+  /** Tailwind classes for format-specific accent colouring */
+  accent: {
+    border: string;
+    bg: string;
+    text: string;
+    iconBg: string;
+    sectionBg: string;
+    number: string;
+  };
+  /** Short structural summary for format picker */
+  structure: string;
 }
 
 export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> =
@@ -156,26 +167,53 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
     postcard: {
       label: "Digital Postcard",
       shortLabel: "Postcard",
-      icon: Mail,
+      icon: Send,
       description:
-        "A brief 4-part reflection: elevator pitch, lightbulb moment, impact, and golden nugget.",
+        "A brief 4-part reflection covering what you learned, your key insight, the impact, and a recommendation.",
       badgeVariant: "default",
+      accent: {
+        border: "border-l-blue-500",
+        bg: "bg-blue-50",
+        text: "text-blue-700",
+        iconBg: "bg-blue-100",
+        sectionBg: "bg-blue-50/50",
+        number: "bg-blue-100 text-blue-700",
+      },
+      structure: "4 reflective sections",
     },
     three_two_one: {
       label: "3-2-1 Model",
       shortLabel: "3-2-1",
-      icon: Hash,
+      icon: Layers,
       description:
-        "3 things learned, 2 things to change, 1 question raised.",
+        "A structured reflection: 3 things learned, 2 changes you'll make, and 1 question for the team.",
       badgeVariant: "secondary",
+      accent: {
+        border: "border-l-violet-500",
+        bg: "bg-violet-50",
+        text: "text-violet-700",
+        iconBg: "bg-violet-100",
+        sectionBg: "bg-violet-50/50",
+        number: "bg-violet-100 text-violet-700",
+      },
+      structure: "3 + 2 + 1 items",
     },
     takeover: {
       label: "10-Minute Takeover",
       shortLabel: "Takeover",
-      icon: Mic,
+      icon: Megaphone,
       description:
-        "The 3 most useful things for sharing in a team meeting.",
+        "The 3 most useful takeaways, ready to share in your next team meeting.",
       badgeVariant: "warning",
+      accent: {
+        border: "border-l-amber-500",
+        bg: "bg-amber-50",
+        text: "text-amber-700",
+        iconBg: "bg-amber-100",
+        sectionBg: "bg-amber-50/50",
+        number: "bg-amber-100 text-amber-700",
+      },
+      structure: "3 key takeaways",
     },
   };
 

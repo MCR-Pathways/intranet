@@ -325,7 +325,19 @@ See `src/app/(protected)/hr/users/actions.test.ts` and `src/proxy.test.ts` for r
 
 **When parallel implementations exist, assess each design decision independently.** Don't blanket "keep ours" or "take theirs." Evaluate each area on its merits: certificates (simpler better), feedback (structured better), Tool Shed (standalone better), email (log better). The best result is usually a mix.
 
-**Tool Shed is a social learning framework, NOT a resource library.** Based on the MCR Pathways Social Learning Framework document. Staff share insights from external training via structured formats (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). Content stored as JSONB in `tool_shed_entries`. The old hardcoded Tool Shed page must be completely rewritten.
+**Tool Shed is a social learning framework, NOT a resource library.** Based on the MCR Pathways Social Learning Framework document. Staff share insights from external training via structured formats (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). Content stored as JSONB in `tool_shed_entries`. Fully implemented in PR #176. Key files: 6 components in `src/components/tool-shed/`, server actions in `src/app/(protected)/learning/tool-shed/actions.ts`, config in `src/lib/learning.ts` (toolShedFormatConfig, postcardFields).
+
+**Use `className` not `style` for Tailwind colour values.** `getAvatarColour()` returns Tailwind classes like `bg-mcr-wine`. Using `style={{ backgroundColor: bg }}` puts the class name as a CSS value (does nothing). Use `className={cn(bg, fg)}` instead. This applies anywhere Tailwind classes are stored in config objects and applied to elements.
+
+**Research before redesigning — don't iterate blindly.** The Tool Shed visual redesign went through 3 failed iterations (filter card wrapper, floating tags, borderless search) before researching how LinkedIn, Twitter, Product Hunt, Notion, Confluence, and 360Learning handle social feeds. Every platform uses underline tabs on content surfaces, not pill tabs in card wrappers. Tags belong on cards, not as a top-level filter row. Search inputs need visible borders on grey backgrounds. Research first, implement once.
+
+**Use underline tabs (`variant="line"`) for filters on grey page backgrounds.** Default pill tabs (`bg-muted` on `bg-background`) have near-zero contrast (#F0F2F5 vs #F2F4F7). Line tabs with underline indicators work on any background. This is what LinkedIn, Twitter, and GitHub all use for feed filters.
+
+**Don't show unbounded user-generated data as top-level UI.** Popular tags displayed as a row above the feed will grow unbounded as users add content. Instead, make tags on cards clickable to activate a filter, and show a dismissible "Filtered by: tag ✕" indicator only when active. Format tabs provide primary categorisation; free-form tags are secondary.
+
+**Give the "Golden Nugget" (most actionable item) distinct visual treatment.** When all sections in an expanded card have identical styling, nothing stands out. Give the most actionable section (Golden Nugget in Postcard) a tinted background while others use whitespace + border separators. This creates hierarchy within the content.
+
+**Use specific, inspiring placeholder text, not generic numbered prompts.** "Thing 1 you learned..." and "Most useful thing 1..." tell users nothing. Use prompts that guide thinking: "A key concept or idea that stuck with you...", "Something that challenged your thinking...", "A practical tip the team can use straightaway...". Each placeholder should prompt a different angle of reflection.
 
 **Course feedback is private to L&D, not public ratings.** The `course_feedback` table stores 5 structured fields (overall, relevance, clarity, duration, free text). User_id is stored for dedup (UNIQUE constraint) but hidden from L&D reports at the application layer. No star ratings on course catalogue cards.
 
