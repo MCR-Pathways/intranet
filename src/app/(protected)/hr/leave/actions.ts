@@ -376,7 +376,7 @@ export async function rejectLeave(requestId: string, reason: string) {
   try {
     const { data: requester } = await supabase
       .from("profiles")
-      .select("id, full_name, email, line_manager_id")
+      .select("id, full_name, email")
       .eq("id", request.profile_id)
       .single();
 

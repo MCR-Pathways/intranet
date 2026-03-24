@@ -12,7 +12,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { queueEmail } from "@/lib/email-queue";
-import { buildCourseOverdueEmail, baseTemplate } from "@/lib/email";
+import { baseTemplate } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -301,22 +301,32 @@ export async function GET(request: Request) {
       .lt("created_at", sevenDaysAgo);
 
     if (staleLeave && staleLeave.length > 0) {
-      for (const req of staleLeave) {
-        // Find the approver (line manager)
-        const { data: requester } = await supabase
-          .from("profiles")
-          .select("id, full_name, line_manager_id")
-          .eq("id", req.profile_id)
-          .single();
+      // Bulk-fetch requester profiles
+      const requesterIds = [...new Set(staleLeave.map((r) => r.profile_id))];
+      const { data: requesters } = await supabase
+        .from("profiles")
+        .select("id, full_name, line_manager_id")
+        .in("id", requesterIds);
 
+      const requesterMap = new Map((requesters ?? []).map((r) => [r.id, r]));
+
+      // Bulk-fetch manager profiles
+      const managerIds = [...new Set(
+        (requesters ?? [])
+          .map((r) => r.line_manager_id)
+          .filter((id): id is string => !!id)
+      )];
+      const { data: managers } = managerIds.length > 0
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", managerIds)
+        : { data: [] };
+
+      const managerMap = new Map((managers ?? []).map((m) => [m.id, m]));
+
+      for (const req of staleLeave) {
+        const requester = requesterMap.get(req.profile_id);
         if (!requester?.line_manager_id) continue;
 
-        const { data: manager } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .eq("id", requester.line_manager_id)
-          .single();
-
+        const manager = managerMap.get(requester.line_manager_id as string);
         if (!manager) continue;
 
         const daysPending = Math.ceil((now.getTime() - new Date(req.created_at).getTime()) / 86400000);
@@ -352,35 +362,44 @@ export async function GET(request: Request) {
       .gte("probation_end_date", today)
       .eq("status", "active");
 
-    for (const p of probationProfiles ?? []) {
-      if (!p.line_manager_id) continue;
-      const { data: mgr } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("id", p.line_manager_id)
-        .single();
+    if (probationProfiles && probationProfiles.length > 0) {
+      // Bulk-fetch managers for all probation profiles
+      const probManagerIds = [...new Set(
+        probationProfiles
+          .map((p) => p.line_manager_id)
+          .filter((id): id is string => !!id)
+      )];
+      const { data: probManagers } = probManagerIds.length > 0
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", probManagerIds)
+        : { data: [] };
 
-      if (!mgr) continue;
+      const probManagerMap = new Map((probManagers ?? []).map((m) => [m.id, m]));
 
-      const daysUntil = Math.ceil((new Date(p.probation_end_date + "T00:00:00").getTime() - now.getTime()) / 86400000);
-      const subject = `${p.full_name}'s probation ends in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
-      const html = baseTemplate(
-        "Probation Reminder",
-        `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Probation Period Ending</h2>
-         <p style="color: #6b7280; font-size: 14px;">Hi ${mgr.full_name},</p>
-         <p style="font-size: 14px; color: #213350;"><strong>${p.full_name}</strong>'s probation period ends in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange a review meeting.</p>`
-      );
+      for (const p of probationProfiles) {
+        if (!p.line_manager_id) continue;
+        const mgr = probManagerMap.get(p.line_manager_id as string);
+        if (!mgr) continue;
 
-      await queueEmail({
-        userId: mgr.id,
-        email: mgr.email,
-        emailType: "key_date_reminder",
-        subject,
-        bodyHtml: html,
-        entityId: `probation-${p.id}`,
-        entityType: "key_date",
-      });
-      hrReminders++;
+        const daysUntil = Math.ceil((new Date(p.probation_end_date + "T00:00:00").getTime() - now.getTime()) / 86400000);
+        const subject = `${p.full_name}'s probation ends in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+        const html = baseTemplate(
+          "Probation Reminder",
+          `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Probation Period Ending</h2>
+           <p style="color: #6b7280; font-size: 14px;">Hi ${mgr.full_name},</p>
+           <p style="font-size: 14px; color: #213350;"><strong>${p.full_name}</strong>'s probation period ends in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange a review meeting.</p>`
+        );
+
+        await queueEmail({
+          userId: mgr.id,
+          email: mgr.email,
+          emailType: "key_date_reminder",
+          subject,
+          bodyHtml: html,
+          entityId: `probation-${p.id}`,
+          entityType: "key_date",
+        });
+        hrReminders++;
+      }
     }
   } catch (err) {
     logger.error("Failed to generate HR reminders", { error: err });

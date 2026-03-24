@@ -70,78 +70,50 @@ export async function GET(request: Request) {
   let failed = 0;
 
   for (const email of pending) {
-    const recipientEmail =
+    // Resolve recipient email: metadata first, then profile lookup
+    let toEmail =
       (email.metadata as Record<string, unknown>)?.recipient_email as string | undefined;
 
-    if (!recipientEmail) {
-      // Try fetching from profiles
+    if (!toEmail) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
         .eq("id", email.user_id)
         .single();
+      toEmail = profile?.email ?? undefined;
+    }
 
-      if (!profile?.email) {
-        await supabase
-          .from("email_notifications")
-          .update({
-            status: "failed",
-            error_message: "No recipient email found",
-            retry_count: (email.retry_count ?? 0) + 1,
-          })
-          .eq("id", email.id);
-        failed++;
-        continue;
-      }
+    if (!toEmail) {
+      await supabase
+        .from("email_notifications")
+        .update({
+          status: "failed",
+          error_message: "No recipient email found",
+          retry_count: (email.retry_count ?? 0) + 1,
+        })
+        .eq("id", email.id);
+      failed++;
+      continue;
+    }
 
-      // Send with profile email
-      const result = await sendEmail(
-        profile.email as string,
-        email.subject,
-        email.body_html ?? ""
-      );
+    const result = await sendEmail(toEmail, email.subject, email.body_html ?? "");
 
-      if (result.success) {
-        await supabase
-          .from("email_notifications")
-          .update({ status: "sent", sent_at: new Date().toISOString() })
-          .eq("id", email.id);
-        sent++;
-      } else {
-        await supabase
-          .from("email_notifications")
-          .update({
-            status: "failed",
-            error_message: result.error ?? "Unknown error",
-            retry_count: (email.retry_count ?? 0) + 1,
-          })
-          .eq("id", email.id);
-        failed++;
-      }
+    if (result.success) {
+      await supabase
+        .from("email_notifications")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", email.id);
+      sent++;
     } else {
-      const result = await sendEmail(
-        recipientEmail,
-        email.subject,
-        email.body_html ?? ""
-      );
-
-      if (result.success) {
-        await supabase
-          .from("email_notifications")
-          .update({ status: "sent", sent_at: new Date().toISOString() })
-          .eq("id", email.id);
-        sent++;
-      } else {
-        await supabase
-          .from("email_notifications")
-          .update({
-            status: "failed",
-            error_message: result.error ?? "Unknown error",
-            retry_count: (email.retry_count ?? 0) + 1,
-          })
-          .eq("id", email.id);
-        failed++;
-      }
+      await supabase
+        .from("email_notifications")
+        .update({
+          status: "failed",
+          error_message: result.error ?? "Unknown error",
+          retry_count: (email.retry_count ?? 0) + 1,
+        })
+        .eq("id", email.id);
+      failed++;
     }
 
     // Rate limit: 500ms between sends

@@ -869,7 +869,7 @@ export async function assignCourse(data: {
       logger.error("Failed to send course notifications on assignment", { error: rpcError.message });
     }
 
-    // Queue assignment emails for newly enrolled users (non-blocking)
+    // Queue assignment emails for enrolled users (non-blocking)
     try {
       const { data: courseData } = await supabase
         .from("courses")
@@ -878,39 +878,32 @@ export async function assignCourse(data: {
         .single();
 
       if (courseData) {
-        // Query matching users who are now enrolled
-        let profileQuery = supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .neq("status", "inactive");
+        // Query users actually enrolled in this course (via enrolments table)
+        const { data: enrolments } = await supabase
+          .from("course_enrolments")
+          .select("user_id, profiles!user_id(id, full_name, email)")
+          .eq("course_id", data.course_id)
+          .not("status", "eq", "dropped");
 
-        if (data.assign_type === "team") {
-          profileQuery = profileQuery.eq("team_id", data.assign_value);
-        } else if (data.assign_type === "user_type") {
-          profileQuery = profileQuery.eq("user_type", data.assign_value);
-        } else if (data.assign_type === "is_external") {
-          profileQuery = profileQuery.eq("is_external", data.assign_value === "true");
-        } else if (data.assign_type === "user") {
-          profileQuery = profileQuery.eq("id", data.assign_value);
-        }
-
-        const { data: matchedUsers } = await profileQuery;
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
 
-        for (const u of matchedUsers ?? []) {
+        for (const enrolment of enrolments ?? []) {
+          const profile = Array.isArray(enrolment.profiles) ? enrolment.profiles[0] : enrolment.profiles;
+          if (!profile) continue;
+
           const dueDate = courseData.due_days_from_start
             ? new Date(Date.now() + courseData.due_days_from_start * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
             : null;
           const { subject, html } = buildCourseAssignedEmail(
-            u.full_name,
+            profile.full_name,
             courseData.title,
             dueDate,
             `${appUrl}/learning/courses/${data.course_id}`
           );
 
           await queueEmail({
-            userId: u.id,
-            email: u.email,
+            userId: profile.id,
+            email: profile.email,
             emailType: "course_assigned",
             subject,
             bodyHtml: html,
