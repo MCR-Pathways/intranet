@@ -17,10 +17,6 @@ import {
   FileText,
   GraduationCap,
   Send,
-  BookOpen,
-  Home,
-  FolderOpen,
-  Wrench,
   Clock,
 } from "lucide-react";
 import {
@@ -53,14 +49,6 @@ const EMPTY_RESULTS: SearchResults = {
   courses: [],
   toolShed: [],
 };
-
-// Quick navigation links shown before the user types
-const QUICK_LINKS = [
-  { label: "Home", href: "/intranet", icon: Home },
-  { label: "Resources", href: "/resources", icon: FolderOpen },
-  { label: "Course Catalogue", href: "/learning/courses", icon: BookOpen },
-  { label: "Tool Shed", href: "/learning/tool-shed", icon: Wrench },
-];
 
 // ─── localStorage helpers for recent searches ────────────────────────────────
 
@@ -253,31 +241,12 @@ function GlobalSearchInner() {
 
             {/* Content */}
             <CommandPrimitive.List className="max-h-[380px] overflow-y-auto overflow-x-hidden py-1">
-              {/* ─── Initial state: Quick links + Recent searches ─── */}
+              {/* ─── Initial state: Recent searches or empty ─── */}
               {!hasQuery && !isSearching && (
                 <>
-                  <CommandPrimitive.Group
-                    heading="Go to"
-                    className={groupClassName}
-                  >
-                    {QUICK_LINKS.map((link) => (
-                      <CommandPrimitive.Item
-                        key={link.href}
-                        value={`goto-${link.href}`}
-                        onSelect={() => handleSelect(link.href)}
-                        className={itemClassName}
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                          <link.icon className="h-4 w-4" />
-                        </div>
-                        <span className="font-medium">{link.label}</span>
-                      </CommandPrimitive.Item>
-                    ))}
-                  </CommandPrimitive.Group>
-
-                  {recentSearches.length > 0 && (
+                  {recentSearches.length > 0 ? (
                     <CommandPrimitive.Group
-                      heading="Recent searches"
+                      heading="Recent"
                       className={groupClassName}
                     >
                       {recentSearches.map((search) => (
@@ -287,13 +256,17 @@ function GlobalSearchInner() {
                           onSelect={() => handleRecentSelect(search)}
                           className={itemClassName}
                         >
-                          <Clock className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                          <Clock className="h-4 w-4 shrink-0 text-muted-foreground/40" />
                           <span className="text-muted-foreground">
                             {search}
                           </span>
                         </CommandPrimitive.Item>
                       ))}
                     </CommandPrimitive.Group>
+                  ) : (
+                    <div className="py-10 text-center text-sm text-muted-foreground/50">
+                      Search across resources, courses, and insights
+                    </div>
                   )}
                 </>
               )}
