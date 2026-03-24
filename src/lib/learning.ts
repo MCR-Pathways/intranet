@@ -305,3 +305,29 @@ export function getLockedLessonIds(
 
   return locked;
 }
+
+// ─── Preview mode ──────────────────────────────────────────────────
+
+/**
+ * Determines if the current request is in admin preview mode.
+ * Returns isPreview: true only if ?preview=true AND user is an L&D admin.
+ * searchParamString can be appended to all internal navigation links.
+ */
+export function getPreviewMode(
+  searchParams: Record<string, string | string[] | undefined>,
+  profile: { is_ld_admin?: boolean; status?: string } | null
+): { isPreview: boolean; searchParamString: string } {
+  const previewParam = searchParams?.preview;
+  const isPreviewRequested = previewParam === "true";
+
+  if (!isPreviewRequested || !profile) {
+    return { isPreview: false, searchParamString: "" };
+  }
+
+  // Only L&D admins can preview
+  if (profile.status !== "active" || !profile.is_ld_admin) {
+    return { isPreview: false, searchParamString: "" };
+  }
+
+  return { isPreview: true, searchParamString: "?preview=true" };
+}
