@@ -1,7 +1,8 @@
 /**
  * Vercel Cron job: Process the email notification queue.
  *
- * Runs every ~15 minutes Mon-Fri 7am-7pm UTC.
+ * Runs once daily at 8:03 AM UTC (Vercel Hobby plan limit).
+ * Upgrade to Pro for ~15-minute scheduling.
  * Claims pending/failed emails, sends via Resend, updates status.
  *
  * Security: Requires CRON_SECRET Bearer token (set by Vercel automatically).
