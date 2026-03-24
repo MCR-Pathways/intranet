@@ -4,6 +4,7 @@ import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
 import { SectionManager } from "@/components/learning-admin/section-manager";
 import { CoursePublishBanner } from "@/components/learning-admin/course-publish-banner";
 import { CourseEditorLayout } from "@/components/learning-admin/course-editor-layout";
+import { DuplicateCourseButton } from "@/components/learning-admin/duplicate-course-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
@@ -251,15 +252,21 @@ export default async function CourseDetailPage({
             { label: course.title },
           ]}
         />
-        <Button variant="outline" size="sm" className="shrink-0 mt-2" asChild>
-          <Link
-            href={`/learning/courses/${course.id}?preview=true`}
-            target="_blank"
-          >
-            <Eye className="h-4 w-4 mr-1.5" />
-            Preview as Learner
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2 shrink-0 mt-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              href={`/learning/courses/${course.id}?preview=true`}
+              target="_blank"
+            >
+              <Eye className="h-4 w-4 mr-1.5" />
+              Preview as Learner
+            </Link>
+          </Button>
+          <DuplicateCourseButton
+            courseId={course.id}
+            courseTitle={course.title}
+          />
+        </div>
       </div>
 
       {/* Draft / Publish banner */}
