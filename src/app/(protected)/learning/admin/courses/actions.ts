@@ -4,7 +4,60 @@ import { requireLDAdmin } from "@/lib/auth";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { indexCourse, removeCourseFromIndex } from "@/lib/algolia";
+import { categoryConfig } from "@/lib/learning";
 import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
+
+// ===========================================
+// ALGOLIA INDEXING HELPER
+// ===========================================
+
+/**
+ * Re-index a course in Algolia if it is published + active.
+ * Non-critical — logs warnings on failure, never blocks the calling action.
+ */
+async function indexCourseIfPublished(
+  supabase: Awaited<ReturnType<typeof requireLDAdmin>>["supabase"],
+  courseId: string
+): Promise<void> {
+  try {
+    const { data: course } = await supabase
+      .from("courses")
+      .select(
+        "title, description, category, duration_minutes, is_required, status, is_active, updated_at"
+      )
+      .eq("id", courseId)
+      .single();
+
+    if (!course || course.status !== "published" || !course.is_active) return;
+
+    // Count active sections
+    const { count } = await supabase
+      .from("course_sections")
+      .select("id", { count: "exact", head: true })
+      .eq("course_id", courseId)
+      .eq("is_active", true);
+
+    const catConfig = categoryConfig[course.category as CourseCategory];
+
+    await indexCourse(
+      courseId,
+      course.title,
+      course.description,
+      course.category,
+      catConfig?.label ?? course.category,
+      course.duration_minutes,
+      course.is_required,
+      count ?? 0,
+      course.updated_at
+    );
+  } catch (error) {
+    logger.warn("Failed to index course in Algolia", {
+      courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 // ===========================================
 // COURSE CRUD
@@ -114,6 +167,9 @@ export async function updateCourse(
     return { success: false, error: "Failed to update course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
+  // Re-index in Algolia if published+active (non-critical)
+  await indexCourseIfPublished(supabase, courseId);
+
   revalidatePath("/learning/admin/courses");
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
@@ -131,6 +187,17 @@ export async function toggleCourseActive(courseId: string, isActive: boolean) {
   if (error) {
     logger.error("Failed to toggle course active state", { error });
     return { success: false, error: "Failed to update course status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  }
+
+  // Update Algolia index (non-critical)
+  if (isActive) {
+    await indexCourseIfPublished(supabase, courseId);
+  } else {
+    try {
+      await removeCourseFromIndex(courseId);
+    } catch {
+      // Non-critical — search may be stale
+    }
   }
 
   revalidatePath("/learning/admin/courses");
@@ -430,6 +497,35 @@ export async function publishCourse(courseId: string) {
   // Send notifications to assigned users
   await notifyCoursePublished(courseId);
 
+  // Index in Algolia (non-critical). Section count already available from validation above.
+  try {
+    const { data: courseData } = await supabase
+      .from("courses")
+      .select("title, description, category, duration_minutes, is_required, updated_at")
+      .eq("id", courseId)
+      .single();
+
+    if (courseData) {
+      const catConfig = categoryConfig[courseData.category as CourseCategory];
+      await indexCourse(
+        courseId,
+        courseData.title,
+        courseData.description,
+        courseData.category,
+        catConfig?.label ?? courseData.category,
+        courseData.duration_minutes,
+        courseData.is_required,
+        sections.length,
+        courseData.updated_at
+      );
+    }
+  } catch (err) {
+    logger.warn("Failed to index course in Algolia on publish", {
+      courseId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   revalidatePath("/learning/admin/courses");
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
@@ -461,6 +557,13 @@ export async function unpublishCourse(courseId: string) {
   if (error) {
     logger.error("Failed to unpublish course", { error });
     return { success: false, error: "Failed to unpublish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  }
+
+  // Remove from Algolia (non-critical)
+  try {
+    await removeCourseFromIndex(courseId);
+  } catch {
+    // Non-critical — search may be stale
   }
 
   revalidatePath("/learning/admin/courses");

@@ -8,6 +8,7 @@
  * Indices:
  * - `resources_articles` — one record per section (heading + content)
  * - `learning_courses` — one record per published course
+ * - `tool_shed_entries` — one record per published Tool Shed entry
  */
 
 import { algoliasearch } from "algoliasearch";
@@ -21,6 +22,7 @@ const ADMIN_KEY = process.env.ALGOLIA_ADMIN_KEY ?? "";
 
 export const RESOURCES_INDEX = "resources_articles";
 export const COURSES_INDEX = "learning_courses";
+export const TOOL_SHED_INDEX = "tool_shed_entries";
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -215,6 +217,93 @@ export async function removeCourseFromIndex(courseId: string): Promise<void> {
   } catch (error) {
     logger.warn("Algolia: failed to remove course from index", {
       courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ─── Tool Shed indexing (server-side) ────────────────────────────────────────
+
+export interface AlgoliaToolShedRecord {
+  objectID: string;
+  entryId: string;
+  title: string;
+  format: string;
+  formatLabel: string;
+  eventName: string;
+  tags: string[];
+  /** All JSONB content fields flattened to plaintext for search */
+  content: string;
+  /** Author display name (preferred_name ?? full_name) */
+  authorName: string;
+  updatedAt: string;
+  /** Discriminator for global search result grouping */
+  _type: "tool_shed";
+}
+
+/**
+ * Index a Tool Shed entry into Algolia. Called on create/update when published.
+ */
+export async function indexToolShedEntry(
+  entryId: string,
+  title: string,
+  format: string,
+  formatLabel: string,
+  eventName: string | null,
+  tags: string[],
+  content: string,
+  authorName: string,
+  updatedAt: string
+): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    const record: AlgoliaToolShedRecord = {
+      objectID: entryId,
+      entryId,
+      title,
+      format,
+      formatLabel,
+      eventName: eventName ?? "",
+      tags,
+      content,
+      authorName,
+      updatedAt,
+      _type: "tool_shed",
+    };
+
+    await client.saveObjects({
+      indexName: TOOL_SHED_INDEX,
+      objects: [record as unknown as Record<string, unknown>],
+    });
+
+    logger.info("Algolia: indexed Tool Shed entry", { entryId, title });
+  } catch (error) {
+    logger.warn("Algolia: failed to index Tool Shed entry", {
+      entryId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Remove a Tool Shed entry from Algolia. Called on delete or unpublish.
+ */
+export async function removeToolShedEntryFromIndex(
+  entryId: string
+): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    await client.deleteObjects({
+      indexName: TOOL_SHED_INDEX,
+      objectIDs: [entryId],
+    });
+
+    logger.info("Algolia: removed Tool Shed entry from index", { entryId });
+  } catch (error) {
+    logger.warn("Algolia: failed to remove Tool Shed entry from index", {
+      entryId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
