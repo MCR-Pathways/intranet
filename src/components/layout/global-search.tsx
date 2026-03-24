@@ -123,18 +123,36 @@ function GlobalSearchInner() {
     debounceRef.current = setTimeout(async () => {
       try {
         const client = getSearchClient();
-        const response = await client.search({
-          requests: [
-            { indexName: RESOURCES_INDEX, query, hitsPerPage: 5, attributesToSnippet: ["content:30"] },
-            { indexName: COURSES_INDEX, query, hitsPerPage: 5 },
-            { indexName: TOOL_SHED_INDEX, query, hitsPerPage: 5 },
-          ],
-        });
-        const r = response.results;
+        // Query each index individually — if one index doesn't exist yet
+        // (e.g. no courses published), it shouldn't break the others.
+        const [resourcesResult, coursesResult, toolShedResult] =
+          await Promise.allSettled([
+            client.searchSingleIndex({
+              indexName: RESOURCES_INDEX,
+              searchParams: { query, hitsPerPage: 5, attributesToSnippet: ["content:30"] },
+            }),
+            client.searchSingleIndex({
+              indexName: COURSES_INDEX,
+              searchParams: { query, hitsPerPage: 5 },
+            }),
+            client.searchSingleIndex({
+              indexName: TOOL_SHED_INDEX,
+              searchParams: { query, hitsPerPage: 5 },
+            }),
+          ]);
         setResults({
-          resources: (r[0] as { hits: AlgoliaResourceRecord[] }).hits,
-          courses: (r[1] as { hits: AlgoliaCourseRecord[] }).hits,
-          toolShed: (r[2] as { hits: AlgoliaToolShedRecord[] }).hits,
+          resources:
+            resourcesResult.status === "fulfilled"
+              ? (resourcesResult.value.hits as unknown as AlgoliaResourceRecord[])
+              : [],
+          courses:
+            coursesResult.status === "fulfilled"
+              ? (coursesResult.value.hits as unknown as AlgoliaCourseRecord[])
+              : [],
+          toolShed:
+            toolShedResult.status === "fulfilled"
+              ? (toolShedResult.value.hits as unknown as AlgoliaToolShedRecord[])
+              : [],
         });
       } catch {
         setResults(EMPTY_RESULTS);
