@@ -58,18 +58,27 @@ function getContentPreview(format: ToolShedFormat, content: Record<string, unkno
 
 function PostcardExpanded({ content }: { content: PostcardContent }) {
   return (
-    <div className="space-y-3">
-      {postcardFields.map((field) => (
-        <div key={field.key} className="rounded-lg bg-blue-50/40 p-3">
-          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
-            <span className="text-base leading-none">{field.emoji}</span>
-            <span>{field.label}</span>
-          </h4>
-          <p className="text-sm text-muted-foreground leading-relaxed pl-6">
-            {content[field.key]}
-          </p>
-        </div>
-      ))}
+    <div className="space-y-4">
+      {postcardFields.map((field, index) => {
+        const isGoldenNugget = field.key === "golden_nugget";
+        return (
+          <div
+            key={field.key}
+            className={cn(
+              index > 0 && "border-t border-border/40 pt-4",
+              isGoldenNugget && "rounded-lg bg-amber-50/40 p-3 border-t-0"
+            )}
+          >
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
+              <span className="text-base leading-none">{field.emoji}</span>
+              <span>{field.label}</span>
+            </h4>
+            <p className="text-sm text-foreground/80 leading-relaxed pl-6">
+              {content[field.key]}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -83,43 +92,43 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
           <span className="text-base leading-none">📚</span>
           3 Things I Learned
         </h4>
-        <div className="space-y-1.5 pl-1">
+        <div className="space-y-2 pl-1">
           {content.three_learned.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5 rounded-lg bg-violet-50/40 p-2.5">
+            <div key={i} className="flex items-start gap-2.5">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 mt-0.5">
                 {i + 1}
               </span>
-              <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+              <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* 2 Things to Change */}
-      <div className="space-y-2">
+      <div className="border-t border-border/40 pt-4 space-y-2">
         <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <span className="text-base leading-none">🔄</span>
           2 Things I&apos;ll Change
         </h4>
-        <div className="space-y-1.5 pl-1">
+        <div className="space-y-2 pl-1">
           {content.two_changes.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5 rounded-lg bg-amber-50/40 p-2.5">
+            <div key={i} className="flex items-start gap-2.5">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
                 {i + 1}
               </span>
-              <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+              <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* 1 Question */}
-      <div className="space-y-2">
+      <div className="border-t border-border/40 pt-4 space-y-2">
         <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <span className="text-base leading-none">❓</span>
           1 Question Raised
         </h4>
-        <blockquote className="ml-1 rounded-lg border-l-2 border-violet-300 bg-violet-50/30 py-2.5 pl-4 pr-3 text-sm text-muted-foreground italic leading-relaxed">
+        <blockquote className="ml-1 border-l-2 border-violet-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
           {content.one_question}
         </blockquote>
       </div>
@@ -134,13 +143,13 @@ function TakeoverExpanded({ content }: { content: TakeoverContent }) {
         <span className="text-base leading-none">🎯</span>
         3 Most Useful Things
       </h4>
-      <div className="space-y-1.5 pl-1">
+      <div className="space-y-2 pl-1">
         {content.useful_things.map((item, i) => (
-          <div key={i} className="flex items-start gap-2.5 rounded-lg bg-amber-50/40 p-2.5">
+          <div key={i} className="flex items-start gap-2.5">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
               {i + 1}
             </span>
-            <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+            <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
           </div>
         ))}
       </div>
@@ -300,12 +309,15 @@ export function EntryCard({
 
         {/* Tags */}
         {entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className={cn("flex flex-wrap gap-1.5 mt-3", expanded && "border-t border-border/40 pt-3")}>
             {(expanded ? entry.tags : entry.tags.slice(0, 3)).map((tag) => (
               <Badge
                 key={tag}
                 variant="muted"
-                className={cn("text-xs font-normal", onTagClick && "cursor-pointer hover:bg-muted-foreground/20")}
+                className={cn(
+                  "text-xs font-medium",
+                  onTagClick && "cursor-pointer hover:bg-muted-foreground/20 transition-colors"
+                )}
                 onClick={(e) => {
                   if (onTagClick) {
                     e.stopPropagation();

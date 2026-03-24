@@ -209,10 +209,10 @@ export function EntryFeed({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-48 h-9 bg-card"
+              className="pl-9 w-48 h-9 border-0 bg-muted/50 focus:bg-card focus:ring-1 focus:ring-ring"
             />
           </div>
-          <Button size="sm" onClick={() => setShowShareDialog(true)}>
+          <Button size="sm" variant="outline" onClick={() => setShowShareDialog(true)}>
             <Plus className="h-4 w-4 mr-1.5" />
             Share
           </Button>

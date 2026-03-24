@@ -206,8 +206,8 @@ export function ShareInsightDialog({
                 type="button"
                 onClick={() => handleSelectFormat(key)}
                 className={cn(
-                  "w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                  "hover:border-primary/40 hover:shadow-sm",
+                  "w-full flex items-start gap-4 rounded-xl border p-4 text-left transition-colors",
+                  "hover:border-primary/50 hover:bg-accent/30",
                   format === key
                     ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                     : "border-border"
@@ -215,11 +215,11 @@ export function ShareInsightDialog({
               >
                 {/* Format icon */}
                 <div className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
                   config.accent.iconBg
                 )}>
                   {createElement(config.icon, {
-                    className: cn("h-5 w-5", config.accent.text),
+                    className: cn("h-5.5 w-5.5", config.accent.text),
                   })}
                 </div>
 
