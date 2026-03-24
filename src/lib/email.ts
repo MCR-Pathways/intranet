@@ -32,7 +32,7 @@ async function getResendClient() {
 
 const FROM_ADDRESS = "MCR Pathways <noreply@mcrpathways.org>";
 
-function baseTemplate(title: string, body: string): string {
+export function baseTemplate(title: string, body: string): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -127,6 +127,25 @@ export function buildCertificateEarnedEmail(
           <p style="font-size: 12px; color: #166534; margin: 4px 0 0;">${certificateNumber}</p>
         </div>
         <a href="${certificateUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Certificate →</a>
+      `
+    ),
+  };
+}
+
+export function buildCourseCompletedEmail(
+  learnerName: string,
+  courseTitle: string,
+  courseUrl: string
+): { subject: string; html: string } {
+  return {
+    subject: `Course completed: ${courseTitle}`,
+    html: baseTemplate(
+      "Course Completed",
+      `
+        <h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Well done!</h2>
+        <p style="color: #6b7280; font-size: 14px;">Hi ${learnerName},</p>
+        <p style="font-size: 14px; color: #213350;">You've completed <strong>${courseTitle}</strong>.</p>
+        <a href="${courseUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">View Course →</a>
       `
     ),
   };
