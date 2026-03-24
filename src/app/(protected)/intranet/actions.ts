@@ -12,6 +12,8 @@ import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { resolveExternalUrl } from "@/lib/ssrf";
+import { queueEmail } from "@/lib/email-queue";
+import { baseTemplate } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ReactionType,
@@ -667,13 +669,54 @@ export async function createPost(data: {
           mentioned_user_id: uid,
         }))
       );
-      // Send notifications via RPC
+      // Send in-app notifications via RPC
       await supabase.rpc("notify_mention", {
         p_mentioned_user_ids: mentionIds,
         p_entity_type: "post",
         p_entity_id: post.id,
         p_post_id: post.id,
       });
+
+      // Queue mention emails (non-blocking)
+      try {
+        const { data: authorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        const authorName = authorProfile?.full_name ?? "Someone";
+        const preview = data.content?.slice(0, 100) ?? "";
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
+
+        const { data: mentionedProfiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", mentionIds);
+
+        for (const mp of mentionedProfiles ?? []) {
+          const subject = `${authorName} mentioned you in a post`;
+          const html = baseTemplate(
+            "You were mentioned",
+            `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">You were mentioned</h2>
+             <p style="color: #6b7280; font-size: 14px;">Hi ${mp.full_name},</p>
+             <p style="font-size: 14px; color: #213350;"><strong>${authorName}</strong> mentioned you in a post${preview ? ":" : "."}</p>
+             ${preview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${preview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
+             <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`
+          );
+
+          await queueEmail({
+            userId: mp.id,
+            email: mp.email,
+            emailType: "mention",
+            subject,
+            bodyHtml: html,
+            entityId: post.id,
+            entityType: "post",
+          });
+        }
+      } catch (emailErr) {
+        logger.error("Failed to queue mention emails", { error: emailErr });
+      }
     }
   }
 
@@ -1203,6 +1246,47 @@ export async function addComment(
         p_entity_id: comment.id,
         p_post_id: postId,
       });
+
+      // Queue mention emails for comments (non-blocking)
+      try {
+        const { data: authorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        const authorName = authorProfile?.full_name ?? "Someone";
+        const preview = trimmed.slice(0, 100);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
+
+        const { data: mentionedProfiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", mentionIds);
+
+        for (const mp of mentionedProfiles ?? []) {
+          const subject = `${authorName} mentioned you in a comment`;
+          const html = baseTemplate(
+            "You were mentioned",
+            `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">You were mentioned</h2>
+             <p style="color: #6b7280; font-size: 14px;">Hi ${mp.full_name},</p>
+             <p style="font-size: 14px; color: #213350;"><strong>${authorName}</strong> mentioned you in a comment${preview ? ":" : "."}</p>
+             ${preview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${preview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
+             <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`
+          );
+
+          await queueEmail({
+            userId: mp.id,
+            email: mp.email,
+            emailType: "mention",
+            subject,
+            bodyHtml: html,
+            entityId: comment.id,
+            entityType: "comment",
+          });
+        }
+      } catch (emailErr) {
+        logger.error("Failed to queue comment mention emails", { error: emailErr });
+      }
     }
   }
 
