@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Send,
   Clock,
+  X,
 } from "lucide-react";
 import {
   getSearchClient,
@@ -71,6 +72,23 @@ function saveRecentSearch(query: string) {
       RECENT_SEARCHES_KEY,
       JSON.stringify(recent.slice(0, MAX_RECENT))
     );
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function clearRecentSearches() {
+  try {
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function removeRecentSearch(query: string) {
+  try {
+    const recent = getRecentSearches().filter((s) => s !== query);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent));
   } catch {
     // localStorage unavailable
   }
@@ -161,7 +179,12 @@ function GlobalSearchInner() {
       setOpen(false);
       setQuery("");
       setResults(EMPTY_RESULTS);
-      router.push(url);
+      // Use window.location.href for hash URLs so the browser scrolls to the target
+      if (url.includes("#")) {
+        window.location.href = url;
+      } else {
+        router.push(url);
+      }
     },
     [router, query]
   );
@@ -172,6 +195,16 @@ function GlobalSearchInner() {
     },
     []
   );
+
+  const handleClearRecent = useCallback(() => {
+    clearRecentSearches();
+    setRecentSearches([]);
+  }, []);
+
+  const handleRemoveRecent = useCallback((search: string) => {
+    removeRecentSearch(search);
+    setRecentSearches((prev) => prev.filter((s) => s !== search));
+  }, []);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -246,7 +279,18 @@ function GlobalSearchInner() {
                 <>
                   {recentSearches.length > 0 ? (
                     <CommandPrimitive.Group
-                      heading="Recent"
+                      heading={
+                        <span className="flex items-center justify-between">
+                          <span>Recent</span>
+                          <button
+                            type="button"
+                            onClick={handleClearRecent}
+                            className="text-[11px] font-normal normal-case tracking-normal text-muted-foreground/50 hover:text-foreground transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </span>
+                      }
                       className={groupClassName}
                     >
                       {recentSearches.map((search) => (
@@ -257,9 +301,20 @@ function GlobalSearchInner() {
                           className={itemClassName}
                         >
                           <Clock className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                          <span className="text-muted-foreground">
+                          <span className="flex-1 text-muted-foreground">
                             {search}
                           </span>
+                          <button
+                            type="button"
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemoveRecent(search);
+                            }}
+                            className="shrink-0 p-0.5 rounded text-muted-foreground/30 hover:text-foreground transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </CommandPrimitive.Item>
                       ))}
                     </CommandPrimitive.Group>
@@ -380,7 +435,7 @@ function GlobalSearchInner() {
                     <CommandPrimitive.Item
                       key={hit.objectID}
                       value={hit.objectID}
-                      onSelect={() => handleSelect("/learning/tool-shed")}
+                      onSelect={() => handleSelect(`/learning/tool-shed#${hit.entryId}`)}
                       className={itemClassName}
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-600">
