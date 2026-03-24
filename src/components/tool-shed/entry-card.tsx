@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Pencil, Trash2, ChevronUp } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ChevronDown, CalendarDays } from "lucide-react";
 import {
   toolShedFormatConfig,
   postcardFields,
@@ -20,7 +20,7 @@ import {
   type ThreeTwoOneContent,
   type TakeoverContent,
 } from "@/lib/learning";
-import { timeAgo, getInitials, filterAvatarUrl, getAvatarColour } from "@/lib/utils";
+import { timeAgo, getInitials, filterAvatarUrl, getAvatarColour, cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import type { ToolShedEntryWithAuthor } from "@/app/(protected)/learning/tool-shed/actions";
 
@@ -32,6 +32,7 @@ interface EntryCardProps {
   isAdmin: boolean;
   onEdit: (entry: ToolShedEntryWithAuthor) => void;
   onDelete: (id: string) => void;
+  onTagClick?: (tag: string) => void;
 }
 
 // ─── Content Preview ────────────────────────────────────────────────────────
@@ -57,11 +58,11 @@ function getContentPreview(format: ToolShedFormat, content: Record<string, unkno
 
 function PostcardExpanded({ content }: { content: PostcardContent }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {postcardFields.map((field) => (
-        <div key={field.key} className="space-y-1">
-          <h4 className="text-sm font-medium flex items-center gap-1.5">
-            <span>{field.emoji}</span>
+        <div key={field.key} className="rounded-lg bg-blue-50/40 p-3">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5 mb-1">
+            <span className="text-base leading-none">{field.emoji}</span>
             <span>{field.label}</span>
           </h4>
           <p className="text-sm text-muted-foreground leading-relaxed pl-6">
@@ -75,41 +76,50 @@ function PostcardExpanded({ content }: { content: PostcardContent }) {
 
 function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* 3 Things Learned */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">📚 3 Things I Learned</h4>
-        <ol className="space-y-1.5 pl-6">
+        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <span className="text-base leading-none">📚</span>
+          3 Things I Learned
+        </h4>
+        <div className="space-y-1.5 pl-1">
           {content.three_learned.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary mt-0.5">
+            <div key={i} className="flex items-start gap-2.5 rounded-lg bg-violet-50/40 p-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 mt-0.5">
                 {i + 1}
               </span>
-              <span className="leading-relaxed">{item}</span>
-            </li>
+              <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+            </div>
           ))}
-        </ol>
+        </div>
       </div>
 
       {/* 2 Things to Change */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">🔄 2 Things I&apos;ll Change</h4>
-        <ol className="space-y-1.5 pl-6">
+        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <span className="text-base leading-none">🔄</span>
+          2 Things I&apos;ll Change
+        </h4>
+        <div className="space-y-1.5 pl-1">
           {content.two_changes.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning mt-0.5">
+            <div key={i} className="flex items-start gap-2.5 rounded-lg bg-amber-50/40 p-2.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
                 {i + 1}
               </span>
-              <span className="leading-relaxed">{item}</span>
-            </li>
+              <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+            </div>
           ))}
-        </ol>
+        </div>
       </div>
 
       {/* 1 Question */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">❓ 1 Question Raised</h4>
-        <blockquote className="ml-6 border-l-2 border-primary/30 pl-3 text-sm text-muted-foreground italic leading-relaxed">
+        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <span className="text-base leading-none">❓</span>
+          1 Question Raised
+        </h4>
+        <blockquote className="ml-1 rounded-lg border-l-2 border-violet-300 bg-violet-50/30 py-2.5 pl-4 pr-3 text-sm text-muted-foreground italic leading-relaxed">
           {content.one_question}
         </blockquote>
       </div>
@@ -120,17 +130,20 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
 function TakeoverExpanded({ content }: { content: TakeoverContent }) {
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-medium">🎯 3 Most Useful Things</h4>
-      <ol className="space-y-2 pl-6">
+      <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+        <span className="text-base leading-none">🎯</span>
+        3 Most Useful Things
+      </h4>
+      <div className="space-y-1.5 pl-1">
         {content.useful_things.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning mt-0.5">
+          <div key={i} className="flex items-start gap-2.5 rounded-lg bg-amber-50/40 p-2.5">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
               {i + 1}
             </span>
-            <span className="leading-relaxed">{item}</span>
-          </li>
+            <span className="text-sm text-muted-foreground leading-relaxed">{item}</span>
+          </div>
         ))}
-      </ol>
+      </div>
     </div>
   );
 }
@@ -162,6 +175,7 @@ export function EntryCard({
   isAdmin,
   onEdit,
   onDelete,
+  onTagClick,
 }: EntryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const config = toolShedFormatConfig[entry.format];
@@ -179,10 +193,10 @@ export function EntryCard({
           </Badge>
         )}
 
-        {/* Header: author + time + kebab */}
+        {/* Header: author + format badge + time + kebab */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Avatar className="h-9 w-9 shrink-0">
+            <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage
                 src={filterAvatarUrl(entry.author.avatar_url) ?? undefined}
                 alt={entry.author.full_name}
@@ -192,7 +206,7 @@ export function EntryCard({
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm font-semibold truncate">
                 {entry.author.preferred_name || entry.author.full_name}
               </p>
               {entry.author.job_title && (
@@ -244,19 +258,20 @@ export function EntryCard({
 
         {/* Event info */}
         {entry.event_name && (
-          <p className="text-sm text-muted-foreground mb-2">
-            <span className="font-medium">{entry.event_name}</span>
+          <div className="flex items-center gap-1.5 text-sm mb-3">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="font-medium truncate">{entry.event_name}</span>
             {entry.event_date && (
-              <span className="ml-2 text-xs">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
                 · {formatDate(new Date(entry.event_date))}
               </span>
             )}
-          </p>
+          </div>
         )}
 
         {/* Content: preview or expanded */}
         <div
-          className={expanded ? "" : "cursor-pointer"}
+          className={cn(!expanded && "cursor-pointer group/preview")}
           onClick={() => {
             if (!expanded) setExpanded(true);
           }}
@@ -270,12 +285,15 @@ export function EntryCard({
           }}
         >
           {expanded ? (
-            <div className="mt-2">
+            <div className="mt-1">
               <ExpandedContent format={entry.format} content={entry.content} />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {preview}
+              <span className="text-primary font-medium ml-1 group-hover/preview:underline">
+                ...see more
+              </span>
             </p>
           )}
         </div>
@@ -284,7 +302,17 @@ export function EntryCard({
         {entry.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {(expanded ? entry.tags : entry.tags.slice(0, 3)).map((tag) => (
-              <Badge key={tag} variant="muted" className="text-xs">
+              <Badge
+                key={tag}
+                variant="muted"
+                className={cn("text-xs font-normal", onTagClick && "cursor-pointer hover:bg-muted-foreground/20")}
+                onClick={(e) => {
+                  if (onTagClick) {
+                    e.stopPropagation();
+                    onTagClick(tag);
+                  }
+                }}
+              >
                 {tag}
               </Badge>
             ))}
@@ -296,17 +324,16 @@ export function EntryCard({
           </div>
         )}
 
-        {/* Collapse button */}
+        {/* Collapse toggle */}
         {expanded && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3 text-xs text-muted-foreground"
+          <button
+            type="button"
+            className="flex items-center gap-1 mt-3 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setExpanded(false)}
           >
-            <ChevronUp className="h-3 w-3 mr-1" />
+            <ChevronDown className="h-3 w-3 rotate-180 transition-transform" />
             Show less
-          </Button>
+          </button>
         )}
       </CardContent>
     </Card>

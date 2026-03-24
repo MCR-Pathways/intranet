@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition, useEffect, useCallback, createElement } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createElement } from "react";
 import {
   toolShedFormatConfig,
   type ToolShedFormat,
@@ -23,6 +23,7 @@ import {
   type ThreeTwoOneContent,
   type TakeoverContent,
 } from "@/lib/learning";
+import { cn } from "@/lib/utils";
 import { FormatFields } from "./format-fields";
 import { TagInput } from "./tag-input";
 import {
@@ -112,6 +113,28 @@ export function ShareInsightDialog({
     return () => clearTimeout(timeout);
   }, [eventName]);
 
+  const handleSelectFormat = (key: ToolShedFormat) => {
+    setFormat(key);
+    // Initialise empty content for the selected format
+    if (key === "postcard") {
+      setContent({
+        elevator_pitch: "",
+        lightbulb_moment: "",
+        programme_impact: "",
+        golden_nugget: "",
+      });
+    } else if (key === "three_two_one") {
+      setContent({
+        three_learned: ["", "", ""],
+        two_changes: ["", ""],
+        one_question: "",
+      });
+    } else if (key === "takeover") {
+      setContent({ useful_things: ["", "", ""] });
+    }
+    setStep(2);
+  };
+
   const handleSubmit = useCallback(() => {
     if (!format) {
       setError("Please select a format");
@@ -158,7 +181,7 @@ export function ShareInsightDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card sm:max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-lg">
             {isEditing
               ? "Edit Insight"
               : step === 1
@@ -167,65 +190,56 @@ export function ShareInsightDialog({
                   ? toolShedFormatConfig[format].label
                   : "Share an Insight"}
           </DialogTitle>
+          {step === 1 && !isEditing && (
+            <DialogDescription>
+              Choose a format that suits what you'd like to share. Each one takes just a few minutes.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {/* Step 1: Format Picker */}
         {step === 1 && !isEditing && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              How would you like to share what you learned?
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {formatEntries.map(([key, config]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setFormat(key)}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:border-primary/50 ${
-                    format === key
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border"
-                  }`}
-                >
-                  {createElement(config.icon, {
-                    className: "h-6 w-6 text-muted-foreground",
-                  })}
-                  <span className="text-sm font-medium">{config.label}</span>
-                  <span className="text-xs text-muted-foreground leading-tight">
-                    {config.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  if (format) {
-                    setStep(2);
-                    // Initialise empty content for the selected format
-                    if (format === "postcard") {
-                      setContent({
-                        elevator_pitch: "",
-                        lightbulb_moment: "",
-                        programme_impact: "",
-                        golden_nugget: "",
-                      });
-                    } else if (format === "three_two_one") {
-                      setContent({
-                        three_learned: ["", "", ""],
-                        two_changes: ["", ""],
-                        one_question: "",
-                      });
-                    } else if (format === "takeover") {
-                      setContent({ useful_things: ["", "", ""] });
-                    }
-                  }
-                }}
-                disabled={!format}
+          <div className="space-y-3 pt-1">
+            {formatEntries.map(([key, config]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelectFormat(key)}
+                className={cn(
+                  "w-full flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                  "hover:border-primary/40 hover:shadow-sm",
+                  format === key
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border"
+                )}
               >
-                Next
-              </Button>
-            </div>
+                {/* Format icon */}
+                <div className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                  config.accent.iconBg
+                )}>
+                  {createElement(config.icon, {
+                    className: cn("h-5 w-5", config.accent.text),
+                  })}
+                </div>
+
+                {/* Format info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold">{config.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      · {config.structure}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {config.description}
+                  </p>
+                </div>
+
+                {/* Arrow */}
+                <ArrowRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
+              </button>
+            ))}
           </div>
         )}
 
@@ -234,7 +248,8 @@ export function ShareInsightDialog({
           <div className="space-y-6">
             {/* Format badge */}
             <div className="flex items-center gap-2">
-              <Badge variant={toolShedFormatConfig[format].badgeVariant}>
+              <Badge variant={toolShedFormatConfig[format].badgeVariant} className="gap-1">
+                {createElement(toolShedFormatConfig[format].icon, { className: "h-3 w-3" })}
                 {toolShedFormatConfig[format].shortLabel}
               </Badge>
               {isEditing && (

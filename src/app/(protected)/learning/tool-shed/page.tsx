@@ -20,18 +20,18 @@ export default async function ToolShedPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-4">
       {/* Page header */}
       <div>
-        <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+        <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
           <a href="/learning" className="hover:underline underline-offset-4">
             Learning
           </a>
           <span className="text-muted-foreground/50 select-none">/</span>
           <span className="text-foreground">Tool Shed</span>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">Tool Shed</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl font-bold tracking-tight">Tool Shed</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
           Share and discover insights from training events and conferences
         </p>
       </div>

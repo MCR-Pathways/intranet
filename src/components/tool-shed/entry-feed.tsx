@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition, useCallback } from "react";
+import { useState, useEffect, useRef, useTransition, useCallback, createElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/ui/empty-state";
-import { BookOpen, Loader2, Plus, Search } from "lucide-react";
+import { Lightbulb, Loader2, Plus, Search } from "lucide-react";
 import { toolShedFormatConfig, type ToolShedFormat } from "@/lib/learning";
+import { cn } from "@/lib/utils";
 import { EntryCard } from "./entry-card";
 import { ShareInsightDialog } from "./share-insight-dialog";
 import { DeleteEntryDialog } from "./delete-entry-dialog";
@@ -26,6 +26,59 @@ interface EntryFeedProps {
 }
 
 type FormatFilter = "all" | ToolShedFormat;
+
+// ─── Empty State ────────────────────────────────────────────────────────────
+
+function ToolShedEmptyState({ onShare }: { onShare: () => void }) {
+  const formatEntries = Object.entries(toolShedFormatConfig) as [
+    ToolShedFormat,
+    (typeof toolShedFormatConfig)[ToolShedFormat],
+  ][];
+
+  return (
+    <Card className="bg-card shadow-md rounded-xl overflow-clip">
+      <CardContent className="py-12 px-6">
+        <div className="flex flex-col items-center text-center max-w-md mx-auto">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mb-4">
+            <Lightbulb className="h-7 w-7 text-primary" />
+          </div>
+
+          <h3 className="text-base font-semibold mb-1">
+            Share what you&apos;ve learned
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+            Attended a training event or conference? Share your insights so the whole team benefits.
+          </p>
+
+          {/* Format preview chips */}
+          <div className="flex gap-2 mb-6">
+            {formatEntries.map(([key, config]) => (
+              <div
+                key={key}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5",
+                  config.accent.bg
+                )}
+              >
+                {createElement(config.icon, {
+                  className: cn("h-3.5 w-3.5", config.accent.text),
+                })}
+                <span className={cn("text-xs font-medium", config.accent.text)}>
+                  {config.shortLabel}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <Button onClick={onShare}>
+            <Plus className="h-4 w-4 mr-2" />
+            Share an Insight
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -120,15 +173,6 @@ export function EntryFeed({
     });
   };
 
-  // Edit/delete handlers
-  const handleEdit = (entry: ToolShedEntryWithAuthor) => {
-    setEditEntry(entry);
-  };
-
-  const handleDelete = (id: string) => {
-    setDeleteEntryId(id);
-  };
-
   const clearFilters = () => {
     setActiveFormat("all");
     setSearchQuery("");
@@ -140,100 +184,82 @@ export function EntryFeed({
 
   return (
     <div className="space-y-4">
-      {/* Share button */}
-      <div className="flex justify-end">
-        <Button onClick={() => setShowShareDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Share an Insight
-        </Button>
+      {/* Toolbar: tabs left, search + share right */}
+      <div className="flex items-end justify-between gap-4">
+        <Tabs
+          value={activeFormat}
+          onValueChange={(v) => setActiveFormat(v as FormatFilter)}
+        >
+          <TabsList variant="line">
+            <TabsTrigger value="all">All</TabsTrigger>
+            {(Object.entries(toolShedFormatConfig) as [ToolShedFormat, (typeof toolShedFormatConfig)[ToolShedFormat]][]).map(
+              ([key, config]) => (
+                <TabsTrigger key={key} value={key}>
+                  {config.shortLabel}
+                </TabsTrigger>
+              )
+            )}
+          </TabsList>
+        </Tabs>
+
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-48 h-9 bg-card"
+            />
+          </div>
+          <Button size="sm" onClick={() => setShowShareDialog(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Share
+          </Button>
+        </div>
       </div>
 
-      {/* Filter tabs */}
-      <Tabs
-        value={activeFormat}
-        onValueChange={(v) => setActiveFormat(v as FormatFilter)}
-      >
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          {(Object.entries(toolShedFormatConfig) as [ToolShedFormat, (typeof toolShedFormatConfig)[ToolShedFormat]][]).map(
-            ([key, config]) => (
-              <TabsTrigger key={key} value={key}>
-                {config.shortLabel}
-              </TabsTrigger>
-            )
-          )}
-        </TabsList>
-      </Tabs>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search insights by title or event..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 bg-card"
-        />
-      </div>
-
-      {/* Tag chips */}
-      {popularTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {popularTags.slice(0, 8).map((tag) => (
-            <Badge
-              key={tag}
-              variant={activeTag === tag ? "default" : "muted"}
-              className="cursor-pointer"
-              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
-          {popularTags.length > 8 && !activeTag && (
-            <span className="text-xs text-muted-foreground self-center">
-              +{popularTags.length - 8} more
-            </span>
-          )}
+      {/* Active tag filter indicator */}
+      {activeTag && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Filtered by:</span>
+          <Badge
+            variant="default"
+            className="cursor-pointer"
+            onClick={() => setActiveTag(null)}
+          >
+            {activeTag} ✕
+          </Badge>
         </div>
       )}
 
       {/* Loading indicator for filter changes */}
       {isFiltering && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
       {/* Entry list */}
       {!isFiltering && entries.length === 0 && (
-        <Card className="bg-card shadow-md rounded-xl overflow-clip">
-          <CardContent className="p-0">
-            {hasFilters ? (
-              <EmptyState
-                icon={Search}
-                title="No insights match your filters"
-                description="Try adjusting your search or filters."
-                action={
-                  <Button variant="outline" size="sm" onClick={clearFilters}>
-                    Clear filters
-                  </Button>
-                }
-              />
-            ) : (
-              <EmptyState
-                icon={BookOpen}
-                title="No insights shared yet"
-                description="Be the first to share what you've learned from a training event."
-                action={
-                  <Button size="sm" onClick={() => setShowShareDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Share an Insight
-                  </Button>
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
+        hasFilters ? (
+          <Card className="bg-card shadow-md rounded-xl overflow-clip">
+            <CardContent className="py-12 flex flex-col items-center text-center">
+              <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">
+                No insights match your filters
+              </p>
+              <p className="text-sm text-muted-foreground/70 mt-1">
+                Try adjusting your search or filters.
+              </p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <ToolShedEmptyState onShare={() => setShowShareDialog(true)} />
+        )
       )}
 
       {!isFiltering &&
@@ -243,8 +269,9 @@ export function EntryFeed({
             entry={entry}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={(e) => setEditEntry(e)}
+            onDelete={(id) => setDeleteEntryId(id)}
+            onTagClick={(tag) => setActiveTag(tag)}
           />
         ))}
 
