@@ -20,6 +20,7 @@ import {
 import type { EnrolmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
 import { categoryConfig } from "@/lib/learning";
+import { getToolShedStats } from "./tool-shed/actions";
 
 export default async function LearningPage() {
   const { supabase, user } = await getCurrentUser();
@@ -280,20 +281,7 @@ export default async function LearningPage() {
           </Card>
         </Link>
 
-        <Link href="/learning/tool-shed">
-          <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Tool Shed</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Searchable library of insights, best practices, and practical
-                tools
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </Link>
+        <ToolShedCard />
       </div>
 
       {/* My courses section */}
@@ -387,5 +375,43 @@ export default async function LearningPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ─── Tool Shed Card (async server component) ────────────────────────────────
+
+async function ToolShedCard() {
+  const stats = await getToolShedStats();
+
+  return (
+    <Link href="/learning/tool-shed">
+      <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium">Tool Shed</CardTitle>
+          <BookOpen className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {stats.totalEntries > 0 ? (
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">{stats.totalEntries}</p>
+              <CardDescription>
+                {stats.thisMonthCount > 0
+                  ? `${stats.thisMonthCount} shared this month`
+                  : "Insights shared by the team"}
+              </CardDescription>
+              {stats.recentTitles.length > 0 && (
+                <p className="text-xs text-muted-foreground truncate mt-1">
+                  Latest: {stats.recentTitles[0]}
+                </p>
+              )}
+            </div>
+          ) : (
+            <CardDescription>
+              Share and discover insights from training events
+            </CardDescription>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
