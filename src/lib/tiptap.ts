@@ -98,6 +98,42 @@ export function isEmptyDocument(doc: TiptapDocument | null | undefined): boolean
 
 // ─── Heading extraction (for article outline / ToC) ─────────────────────
 
+// ─── Plain text → Tiptap JSON conversion ──────────────────────────
+
+/**
+ * Converts plain text to a Tiptap JSON document.
+ * Splits on double newlines for paragraphs, single newlines become hardBreak nodes.
+ */
+export function plainTextToTiptapDoc(text: string): TiptapDocument {
+  if (!text.trim()) {
+    return { type: "doc", content: [{ type: "paragraph" }] };
+  }
+
+  const paragraphs = text.split(/\n\n+/);
+  const content: TiptapNode[] = paragraphs.map((para) => {
+    const lines = para.split("\n");
+    const children: TiptapNode[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i]) {
+        children.push({ type: "text", text: lines[i] });
+      }
+      if (i < lines.length - 1) {
+        children.push({ type: "hardBreak" });
+      }
+    }
+
+    return {
+      type: "paragraph",
+      content: children.length > 0 ? children : undefined,
+    };
+  });
+
+  return { type: "doc", content };
+}
+
+// ─── Heading extraction ────────────────────────────────────────────
+
 export interface HeadingItem {
   id: string;
   text: string;

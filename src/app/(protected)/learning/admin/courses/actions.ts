@@ -925,3 +925,40 @@ export async function deleteQuizQuestion(questionId: string, courseId: string) {
   revalidatePath(`/learning/courses/${courseId}`);
   return { success: true, error: null };
 }
+
+// ===========================================
+// AUTO-SAVE (no revalidatePath — prevents page flicker)
+// ===========================================
+
+/**
+ * Auto-save lesson content without triggering page revalidation.
+ * Used by the debounced auto-save hook in the Tiptap editor.
+ * Only updates content_json and content (plain text fallback).
+ */
+export async function autoSaveLessonContent(
+  lessonId: string,
+  courseId: string,
+  data: {
+    content_json: Record<string, unknown>;
+    content: string;
+  }
+): Promise<{ success: boolean; error?: string; savedAt?: string }> {
+  const { supabase } = await requireLDAdmin();
+
+  const { error } = await supabase
+    .from("course_lessons")
+    .update({
+      content_json: data.content_json,
+      content: data.content,
+    })
+    .eq("id", lessonId)
+    .eq("course_id", courseId);
+
+  if (error) {
+    logger.error("Auto-save lesson content failed", { error });
+    return { success: false, error: "Failed to save" };
+  }
+
+  // Intentionally NO revalidatePath() — auto-save must not cause page flicker
+  return { success: true, savedAt: new Date().toISOString() };
+}
