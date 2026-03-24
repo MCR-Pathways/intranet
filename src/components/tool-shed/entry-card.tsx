@@ -210,7 +210,7 @@ export function EntryCard({
                 src={filterAvatarUrl(entry.author.avatar_url) ?? undefined}
                 alt={entry.author.full_name}
               />
-              <AvatarFallback style={{ backgroundColor: bg, color: fg }} className="text-xs font-semibold">
+              <AvatarFallback className={cn("text-xs font-semibold", bg, fg)}>
                 {getInitials(entry.author.full_name)}
               </AvatarFallback>
             </Avatar>
