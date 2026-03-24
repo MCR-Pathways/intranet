@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/process-emails",
+      "schedule": "7,22,37,52 7-19 * * 1-5"
+    },
+    {
+      "path": "/api/cron/daily-reminders",
+      "schedule": "3 7 * * 1-5"
+    }
+  ]
+}
