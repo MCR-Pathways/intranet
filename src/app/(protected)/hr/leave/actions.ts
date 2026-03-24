@@ -12,6 +12,9 @@ import type { LeaveType, Region } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
+import { queueEmail } from "@/lib/email-queue";
+import { baseTemplate } from "@/lib/email";
+import { formatDate } from "@/lib/utils";
 
 // =============================================
 // SELECT CONSTANTS
@@ -271,6 +274,42 @@ export async function approveLeave(requestId: string, notes?: string) {
     logger.warn("Failed to create leave location entries", { requestId, error: err instanceof Error ? err.message : String(err) });
   }
 
+  // Queue leave decision email (non-blocking)
+  try {
+    const { data: requester } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("id", request.profile_id)
+      .single();
+
+    if (requester) {
+      const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
+      const subject = `Leave approved: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;
+      const html = baseTemplate(
+        "Leave Approved",
+        `<h2 style="color: #166534; font-size: 18px; margin: 0 0 8px;">Leave Approved</h2>
+         <p style="color: #6b7280; font-size: 14px;">Hi ${requester.full_name},</p>
+         <p style="font-size: 14px; color: #213350;">Your ${leaveLabel} request has been <strong style="color: #166534;">approved</strong>.</p>
+         <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #bbf7d0;">
+           <p style="font-size: 14px; color: #166534; margin: 0;">${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}</p>
+           ${notes ? `<p style="font-size: 13px; color: #6b7280; margin: 8px 0 0;">Note: ${notes}</p>` : ""}
+         </div>`
+      );
+
+      await queueEmail({
+        userId: requester.id,
+        email: requester.email,
+        emailType: "leave_decision",
+        subject,
+        bodyHtml: html,
+        entityId: requestId,
+        entityType: "leave_request",
+      });
+    }
+  } catch (emailErr) {
+    logger.error("Failed to queue leave approval email", { error: emailErr });
+  }
+
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
   revalidatePath("/hr");
@@ -331,6 +370,41 @@ export async function rejectLeave(requestId: string, reason: string) {
   if (error) {
     logger.error("Failed to reject leave", { error });
     return { success: false, error: "Failed to reject leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  }
+
+  // Queue leave rejection email (non-blocking)
+  try {
+    const { data: requester } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, line_manager_id")
+      .eq("id", request.profile_id)
+      .single();
+
+    if (requester) {
+      const subject = "Leave request declined";
+      const html = baseTemplate(
+        "Leave Declined",
+        `<h2 style="color: #dc2626; font-size: 18px; margin: 0 0 8px;">Leave Request Declined</h2>
+         <p style="color: #6b7280; font-size: 14px;">Hi ${requester.full_name},</p>
+         <p style="font-size: 14px; color: #213350;">Unfortunately, your leave request has been <strong style="color: #dc2626;">declined</strong>.</p>
+         <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #fecaca;">
+           <p style="font-size: 14px; color: #991b1b; margin: 0;">Reason: ${reason.trim()}</p>
+         </div>
+         <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>`
+      );
+
+      await queueEmail({
+        userId: requester.id,
+        email: requester.email,
+        emailType: "leave_decision",
+        subject,
+        bodyHtml: html,
+        entityId: requestId,
+        entityType: "leave_request",
+      });
+    }
+  } catch (emailErr) {
+    logger.error("Failed to queue leave rejection email", { error: emailErr });
   }
 
   revalidatePath("/hr/leave");

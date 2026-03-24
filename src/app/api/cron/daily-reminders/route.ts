@@ -201,8 +201,190 @@ export async function GET(request: Request) {
     logger.error("Failed to generate learning reminders", { error: err });
   }
 
-  // HR reminders (added in PR 3)
-  const hrReminders = 0;
+  // ── HR: Compliance Expiry + Stale Leave + Key Dates ───────
+  let hrReminders = 0;
+
+  try {
+    // Compliance document expiry (30d, 7d, expired)
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000).toISOString().split("T")[0];
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 86400000).toISOString().split("T")[0];
+
+    const { data: expiringDocs } = await supabase
+      .from("compliance_documents")
+      .select("id, profile_id, expiry_date, document_type_id")
+      .not("expiry_date", "is", null)
+      .lte("expiry_date", thirtyDaysFromNow)
+      .not("status", "in", '("not_applicable")');
+
+    if (expiringDocs && expiringDocs.length > 0) {
+      const profileIds = [...new Set(expiringDocs.map((d) => d.profile_id))];
+      const docTypeIds = [...new Set(expiringDocs.map((d) => d.document_type_id))];
+
+      const [{ data: docProfiles }, { data: docTypes }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email").in("id", profileIds),
+        supabase.from("compliance_document_types").select("id, name").in("id", docTypeIds),
+      ]);
+
+      const profileLookup = new Map((docProfiles ?? []).map((p) => [p.id, p]));
+      const typeLookup = new Map((docTypes ?? []).map((t) => [t.id, t]));
+
+      // Fetch HR admins for escalation
+      const { data: hrAdmins } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("is_hr_admin", true)
+        .eq("status", "active");
+
+      for (const doc of expiringDocs) {
+        const profile = profileLookup.get(doc.profile_id);
+        const docType = typeLookup.get(doc.document_type_id);
+        if (!profile || !docType) continue;
+
+        const expiryDate = new Date(doc.expiry_date + "T00:00:00");
+        const daysUntil = Math.ceil((expiryDate.getTime() - now.getTime()) / 86400000);
+
+        // Employee notification (30d and 7d)
+        if (daysUntil > 0) {
+          const subject = `${docType.name} expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+          const html = baseTemplate(
+            "Compliance Reminder",
+            `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Document Expiry Reminder</h2>
+             <p style="color: #6b7280; font-size: 14px;">Hi ${profile.full_name},</p>
+             <p style="font-size: 14px; color: #213350;">Your <strong>${docType.name}</strong> expires in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange renewal.</p>`
+          );
+
+          await queueEmail({
+            userId: profile.id,
+            email: profile.email,
+            emailType: "compliance_expiry",
+            subject,
+            bodyHtml: html,
+            entityId: `${doc.id}-${daysUntil <= 7 ? "7d" : "30d"}`,
+            entityType: "compliance_document",
+          });
+          hrReminders++;
+        }
+
+        // HR admin escalation (7d or expired)
+        if (daysUntil <= 7) {
+          for (const admin of hrAdmins ?? []) {
+            const statusText = daysUntil <= 0 ? "has expired" : `expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+            const subject = `${profile.full_name}'s ${docType.name} ${statusText}`;
+            const html = baseTemplate(
+              "Compliance Alert",
+              `<h2 style="color: ${daysUntil <= 0 ? "#dc2626" : "#92400e"}; font-size: 18px; margin: 0 0 8px;">Compliance Document ${daysUntil <= 0 ? "Expired" : "Expiring"}</h2>
+               <p style="color: #6b7280; font-size: 14px;">Hi ${admin.full_name},</p>
+               <p style="font-size: 14px; color: #213350;"><strong>${profile.full_name}</strong>'s <strong>${docType.name}</strong> ${statusText}.</p>`
+            );
+
+            await queueEmail({
+              userId: admin.id,
+              email: admin.email,
+              emailType: "compliance_expiry",
+              subject,
+              bodyHtml: html,
+              entityId: `${doc.id}-admin-${daysUntil <= 0 ? "expired" : "7d"}`,
+              entityType: "compliance_document",
+            });
+            hrReminders++;
+          }
+        }
+      }
+    }
+
+    // Stale leave requests (pending > 7 days)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+    const { data: staleLeave } = await supabase
+      .from("leave_requests")
+      .select("id, profile_id, leave_type, created_at")
+      .eq("status", "pending")
+      .lt("created_at", sevenDaysAgo);
+
+    if (staleLeave && staleLeave.length > 0) {
+      for (const req of staleLeave) {
+        // Find the approver (line manager)
+        const { data: requester } = await supabase
+          .from("profiles")
+          .select("id, full_name, line_manager_id")
+          .eq("id", req.profile_id)
+          .single();
+
+        if (!requester?.line_manager_id) continue;
+
+        const { data: manager } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .eq("id", requester.line_manager_id)
+          .single();
+
+        if (!manager) continue;
+
+        const daysPending = Math.ceil((now.getTime() - new Date(req.created_at).getTime()) / 86400000);
+        const subject = `Leave request from ${requester.full_name} pending ${daysPending} days`;
+        const html = baseTemplate(
+          "Stale Leave Request",
+          `<h2 style="color: #92400e; font-size: 18px; margin: 0 0 8px;">Pending Leave Request</h2>
+           <p style="color: #6b7280; font-size: 14px;">Hi ${manager.full_name},</p>
+           <p style="font-size: 14px; color: #213350;"><strong>${requester.full_name}</strong> has a leave request that's been pending for <strong>${daysPending} days</strong>. Please review it.</p>
+           <a href="${appUrl}/hr/leave?tab=approvals" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">Review Requests →</a>`
+        );
+
+        await queueEmail({
+          userId: manager.id,
+          email: manager.email,
+          emailType: "stale_leave_reminder",
+          subject,
+          bodyHtml: html,
+          entityId: req.id,
+          entityType: "leave_request",
+        });
+        hrReminders++;
+      }
+    }
+
+    // Key dates: probation end (14d) and work anniversaries (7d)
+    const fourteenDaysFromNow = new Date(now.getTime() + 14 * 86400000).toISOString().split("T")[0];
+    const { data: probationProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, probation_end_date, line_manager_id")
+      .not("probation_end_date", "is", null)
+      .lte("probation_end_date", fourteenDaysFromNow)
+      .gte("probation_end_date", today)
+      .eq("status", "active");
+
+    for (const p of probationProfiles ?? []) {
+      if (!p.line_manager_id) continue;
+      const { data: mgr } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("id", p.line_manager_id)
+        .single();
+
+      if (!mgr) continue;
+
+      const daysUntil = Math.ceil((new Date(p.probation_end_date + "T00:00:00").getTime() - now.getTime()) / 86400000);
+      const subject = `${p.full_name}'s probation ends in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+      const html = baseTemplate(
+        "Probation Reminder",
+        `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Probation Period Ending</h2>
+         <p style="color: #6b7280; font-size: 14px;">Hi ${mgr.full_name},</p>
+         <p style="font-size: 14px; color: #213350;"><strong>${p.full_name}</strong>'s probation period ends in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange a review meeting.</p>`
+      );
+
+      await queueEmail({
+        userId: mgr.id,
+        email: mgr.email,
+        emailType: "key_date_reminder",
+        subject,
+        bodyHtml: html,
+        entityId: `probation-${p.id}`,
+        entityType: "key_date",
+      });
+      hrReminders++;
+    }
+  } catch (err) {
+    logger.error("Failed to generate HR reminders", { error: err });
+  }
 
   logger.info("Daily reminders generated", {
     learningReminders,
