@@ -45,18 +45,20 @@ function flattenContent(format, content) {
         content.programme_impact,
         content.golden_nugget,
       ]
-        .filter(Boolean)
+        .filter((v) => typeof v === "string")
         .join(" ");
     case "three_two_one":
       return [
-        ...(content.three_learned ?? []),
-        ...(content.two_changes ?? []),
-        content.one_question,
+        ...(Array.isArray(content.three_learned) ? content.three_learned : []),
+        ...(Array.isArray(content.two_changes) ? content.two_changes : []),
+        typeof content.one_question === "string" ? content.one_question : "",
       ]
         .filter(Boolean)
         .join(" ");
     case "takeover":
-      return (content.useful_things ?? []).filter(Boolean).join(" ");
+      return (Array.isArray(content.useful_things) ? content.useful_things : [])
+        .filter(Boolean)
+        .join(" ");
     default:
       return "";
   }
