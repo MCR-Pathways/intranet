@@ -92,9 +92,9 @@ This is **NOT a resource library**. It's a peer-to-peer knowledge sharing system
 - Profile integration (future): "Shared X insights" count on HR profile
 - Notifications: new entry optionally notifies team/manager (`email_notifications` type: `tool_shed_shared`)
 
-**Current state:** Tool Shed page has 12 hardcoded static resources — completely wrong. Needs full database-backed rewrite.
+**Current state:** ✅ COMPLETE (PR #176). Full database-backed social learning feed with all 3 formats, search, filter tabs, tag filtering, draft support, edit/delete, event name autocomplete. 6 components (1,526 lines), 634 lines of server actions, migration 00062.
 
-**Implementation order:** Feed page → Share form → Search + filter → Detail view → Draft support → Dashboard integration → Profile integration (future) → Manager workflow (future)
+**Implementation order (all done):** Feed page → Share dialog (2-step: format picker → content form) → Search + filter tabs → Tag filtering (click-on-card) → Draft support → Edit/delete via kebab menu → Event name autocomplete
 
 **Manager workflow (future):** Plan schema but defer implementation. Future: manager logs event attendance (`event_attendance` table) → system prompts staff → L&D dashboard tracks pending entries. Admin can merge/rename tags.
 
@@ -292,7 +292,7 @@ Interactive HTML mockups were created during planning:
 ⬜ Resume course — "Continue where you left off" on dashboard
 ⬜ Course search — Algolia InstantSearch on catalogue page
 ⬜ Course feedback dialog — 5 structured fields, shows once after completion
-⬜ Tool Shed rewrite — social learning feed (Digital Postcards, 3-2-1, Takeover)
+✅ Tool Shed rewrite — social learning feed (Digital Postcards, 3-2-1, Takeover) — PR #176
 ⬜ Global Cmd+K search — multi-index overlay in header (courses + resources)
 ⬜ HR profile Learning tab — certificates + course progress on profile page
 ⬜ Dashboard redesign — list-first layout (LinkedIn Learning pattern)
@@ -422,7 +422,7 @@ Interactive HTML mockups were created during planning:
 - `src/components/layout/sidebar.tsx` (lines 103-122) — update Learning children (add Certificates, rename Tool Shed)
 - `src/app/(protected)/learning/page.tsx` — dashboard redesign (list-first, compliance alerts, continue learning)
 - `src/app/(protected)/learning/courses/page.tsx` — add Algolia search bar above category tabs
-- `src/app/(protected)/learning/tool-shed/page.tsx` — complete rewrite (social learning feed, not static resources)
+- ~~`src/app/(protected)/learning/tool-shed/page.tsx`~~ — ✅ DONE (PR #176)
 - `src/app/(protected)/learning/my-courses/page.tsx` — add Certificates tab
 - `src/app/(protected)/learning/admin/reports/page.tsx` — add feedback/certs/tool shed tabs
 - `src/app/(protected)/hr/profile/page.tsx` — add Learning tab (certificates + course progress)
@@ -448,7 +448,7 @@ Interactive HTML mockups were created during planning:
 - **Branch:** `feature/learning-overhaul-migrations` — merged to main via PR #167. PR #168 pending on same branch.
 - **Database:** All 9 migrations (00060-00068) have been applied to production Supabase. All old learning seed data was deleted (no real users existed).
 - **What works now:** Admin can create courses with sections, lessons (text, video, slides, rich_text), and section quizzes. Learners see section-based course detail with accordion, can take section quizzes, complete lessons, and receive auto-generated PDF certificates on course completion. Completion notifications fire via DB trigger. All RPCs enforce `auth.uid()`.
-- **What doesn't work yet:** Feedback dialog not shown after completion, Tool Shed is still hardcoded static content, no global search, no course duplication, no "resume course" on dashboard.
+- **What doesn't work yet:** Feedback dialog not shown after completion, no global search, no "resume course" on dashboard.
 - **Open PRs:** #163 (rate limiting), #164 (resources UX), #168 (learning wire components).
 
 ### Recommended Next Steps (in order)
@@ -471,11 +471,11 @@ Interactive HTML mockups were created during planning:
 - `course-feedback-dialog.tsx` — 5 structured fields, shows once after completion
 - `feedback-dashboard.tsx` — admin aggregates + anonymous comments + CSV export
 
-**Tool Shed** (can be done in parallel)
-- Complete rewrite of `/learning/tool-shed` page — social learning feed
-- Entry form with 3 format sub-forms (Postcard, 3-2-1, Takeover)
-- Admin management page + `tool-shed/actions.ts`
-- See "Tool Shed Content JSON Structures" section above for JSONB formats
+**Tool Shed** ✅ COMPLETE (PR #176)
+- Full rewrite of `/learning/tool-shed` — social learning feed
+- 2-step share dialog (format picker → content form) with all 3 formats
+- 6 components, 634 lines of server actions, migration 00062
+- See PR #176 for full implementation details
 
 **Global Cmd+K Search**
 - `global-search.tsx` (multi-index overlay in header: courses + resources)
@@ -593,8 +593,8 @@ Group lessons by `section_id`, calculate per-section progress, determine locked 
 - [x] auth.uid() enforcement on all RPCs
 - [ ] Download certificate PDF (API route exists, UI pending)
 - [ ] Submit course feedback (verify anonymous)
-- [ ] Create Tool Shed entries in all 3 formats
-- [ ] Browse + filter Tool Shed feed
+- [x] Create Tool Shed entries in all 3 formats
+- [x] Browse + filter Tool Shed feed
 - [ ] Assign course to individual user → verify notification
 - [ ] Cmd+K search across courses + resources
 - [ ] Certificate wall shows internal + external certs
