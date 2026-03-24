@@ -90,7 +90,7 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
       <div className="space-y-2">
         <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <span className="text-base leading-none">📚</span>
-          3 Things I Learned
+          3 Key Takeaways
         </h4>
         <div className="space-y-2 pl-1">
           {content.three_learned.map((item, i) => (
@@ -108,7 +108,7 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
       <div className="border-t border-border/40 pt-4 space-y-2">
         <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <span className="text-base leading-none">🔄</span>
-          2 Things I&apos;ll Change
+          2 Actions I&apos;ll Take
         </h4>
         <div className="space-y-2 pl-1">
           {content.two_changes.map((item, i) => (
@@ -126,7 +126,7 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
       <div className="border-t border-border/40 pt-4 space-y-2">
         <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <span className="text-base leading-none">❓</span>
-          1 Question Raised
+          1 Question for the Team
         </h4>
         <blockquote className="ml-1 border-l-2 border-violet-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
           {content.one_question}

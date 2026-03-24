@@ -271,9 +271,9 @@ export function ShareInsightDialog({
             {/* Event details */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium text-muted-foreground">
-                Event Details (optional)
+                Event Details
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-[1fr_140px] gap-4">
                 <div className="space-y-1.5 relative">
                   <Label htmlFor="event-name">Event Name</Label>
                   <Input

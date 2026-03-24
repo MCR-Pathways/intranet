@@ -16,9 +16,9 @@ import {
   CheckCircle2,
   Lock,
   Circle,
-  Mail,
-  Mic,
-  Hash,
+  Send,
+  Layers,
+  Megaphone,
 } from "lucide-react";
 import type { CourseCategory } from "@/types/database.types";
 import type { BadgeProps } from "@/components/ui/badge";
@@ -146,7 +146,7 @@ export type ToolShedFormat = "postcard" | "three_two_one" | "takeover";
 export interface ToolShedFormatConfig {
   label: string;
   shortLabel: string;
-  icon: typeof Mail;
+  icon: typeof Send;
   description: string;
   badgeVariant: NonNullable<BadgeProps["variant"]>;
   /** Tailwind classes for format-specific accent colouring */
@@ -167,7 +167,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
     postcard: {
       label: "Digital Postcard",
       shortLabel: "Postcard",
-      icon: Mail,
+      icon: Send,
       description:
         "A brief 4-part reflection covering what you learned, your key insight, the impact, and a recommendation.",
       badgeVariant: "default",
@@ -184,7 +184,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
     three_two_one: {
       label: "3-2-1 Model",
       shortLabel: "3-2-1",
-      icon: Hash,
+      icon: Layers,
       description:
         "A structured reflection: 3 things learned, 2 changes you'll make, and 1 question for the team.",
       badgeVariant: "secondary",
@@ -201,7 +201,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
     takeover: {
       label: "10-Minute Takeover",
       shortLabel: "Takeover",
-      icon: Mic,
+      icon: Megaphone,
       description:
         "The 3 most useful takeaways, ready to share in your next team meeting.",
       badgeVariant: "warning",

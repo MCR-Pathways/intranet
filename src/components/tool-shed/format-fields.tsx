@@ -21,6 +21,25 @@ interface FormatFieldsProps {
   onChange: (content: FormatContent) => void;
 }
 
+// ─── Placeholder Config ─────────────────────────────────────────────────────
+
+const THREE_LEARNED_PLACEHOLDERS = [
+  "A key concept or idea that stuck with you...",
+  "Something that challenged your thinking...",
+  "A practical skill or technique you picked up...",
+];
+
+const TWO_CHANGES_PLACEHOLDERS = [
+  "One thing you'll start doing differently...",
+  "Another change you'll bring to your work...",
+];
+
+const TAKEOVER_PLACEHOLDERS = [
+  "The most impactful takeaway from the session...",
+  "Something that surprised you or shifted your perspective...",
+  "A practical tip the team can use straightaway...",
+];
+
 // ─── Postcard Fields ────────────────────────────────────────────────────────
 
 function PostcardFields({
@@ -92,14 +111,14 @@ function ThreeTwoOneFields({
     <div className="space-y-6">
       {/* 3 Things Learned */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">📚 3 Things I Learned</Label>
+        <Label className="text-base font-medium">📚 3 Key Takeaways</Label>
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex items-start gap-3">
             <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
               {i + 1}
             </span>
             <Input
-              placeholder={`Thing ${i + 1} you learned...`}
+              placeholder={THREE_LEARNED_PLACEHOLDERS[i]}
               value={three[i] ?? ""}
               onChange={(e) => updateThree(i, e.target.value)}
               maxLength={300}
@@ -111,14 +130,14 @@ function ThreeTwoOneFields({
 
       {/* 2 Things to Change */}
       <div className="space-y-3">
-        <Label className="text-base font-medium">🔄 2 Things I&apos;ll Change</Label>
+        <Label className="text-base font-medium">🔄 2 Actions I&apos;ll Take</Label>
         {[0, 1].map((i) => (
           <div key={i} className="flex items-start gap-3">
             <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning">
               {i + 1}
             </span>
             <Input
-              placeholder={`Change ${i + 1} you will make...`}
+              placeholder={TWO_CHANGES_PLACEHOLDERS[i]}
               value={two[i] ?? ""}
               onChange={(e) => updateTwo(i, e.target.value)}
               maxLength={300}
@@ -131,11 +150,11 @@ function ThreeTwoOneFields({
       {/* 1 Question */}
       <div className="space-y-1.5">
         <Label htmlFor="one-question" className="text-base font-medium">
-          ❓ 1 Question Raised
+          ❓ 1 Question for the Team
         </Label>
         <Textarea
           id="one-question"
-          placeholder="One question the training raised that we should consider as a team..."
+          placeholder="What question did this raise that we should discuss as a team?"
           value={question}
           onChange={(e) =>
             onChange({ three_learned: three, two_changes: two, one_question: e.target.value })
@@ -168,9 +187,9 @@ function TakeoverFields({
 
   return (
     <div className="space-y-3">
-      <Label className="text-base font-medium">🎯 3 Most Useful Things</Label>
+      <Label className="text-base font-medium">🎯 3 Things Worth Sharing</Label>
       <p className="text-sm text-muted-foreground">
-        What would you share in a 10-minute team meeting slot?
+        If you had 10 minutes in a team meeting, what would you cover?
       </p>
       {[0, 1, 2].map((i) => (
         <div key={i} className="flex items-start gap-3">
@@ -178,7 +197,7 @@ function TakeoverFields({
             {i + 1}
           </span>
           <Textarea
-            placeholder={`Most useful thing ${i + 1}...`}
+            placeholder={TAKEOVER_PLACEHOLDERS[i]}
             value={things[i] ?? ""}
             onChange={(e) => update(i, e.target.value)}
             rows={2}
