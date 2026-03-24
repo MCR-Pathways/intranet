@@ -481,8 +481,16 @@ export async function assignCourse(data: {
 }) {
   const { supabase, user } = await requireLDAdmin();
 
-  if (!["team", "user_type", "is_external"].includes(data.assign_type)) {
+  if (!["team", "user_type", "is_external", "user"].includes(data.assign_type)) {
     return { success: false, error: "Invalid assignment type" };
+  }
+
+  // Validate UUID format for user assignments
+  if (data.assign_type === "user") {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(data.assign_value)) {
+      return { success: false, error: "Invalid user ID" };
+    }
   }
 
   const { error } = await supabase.from("course_assignments").insert({
@@ -569,6 +577,68 @@ export async function removeAssignment(assignmentId: string, courseId: string) {
 
   revalidatePath(`/learning/admin/courses/${courseId}`);
   return { success: true, error: null };
+}
+
+/** Preview how many users would be affected by an assignment before creating it. */
+export async function previewAssignment(data: {
+  course_id: string;
+  assign_type: string;
+  assign_value: string;
+}): Promise<{
+  success: boolean;
+  matchCount?: number;
+  alreadyEnrolled?: number;
+  sampleNames?: string[];
+  error?: string;
+}> {
+  const { supabase } = await requireLDAdmin();
+
+  if (!["team", "user_type", "is_external", "user"].includes(data.assign_type)) {
+    return { success: false, error: "Invalid assignment type" };
+  }
+
+  // Build query to find matching users
+  let query = supabase
+    .from("profiles")
+    .select("id, full_name")
+    .neq("status", "inactive")
+    .order("full_name");
+
+  if (data.assign_type === "team") {
+    query = query.eq("team_id", data.assign_value);
+  } else if (data.assign_type === "user_type") {
+    query = query.eq("user_type", data.assign_value);
+  } else if (data.assign_type === "is_external") {
+    query = query.eq("is_external", data.assign_value === "true");
+  } else if (data.assign_type === "user") {
+    query = query.eq("id", data.assign_value);
+  }
+
+  const { data: matchingUsers, error: matchError } = await query;
+
+  if (matchError) {
+    logger.error("Failed to preview assignment", { error: matchError });
+    return { success: false, error: "Failed to preview assignment" };
+  }
+
+  if (!matchingUsers || matchingUsers.length === 0) {
+    return { success: true, matchCount: 0, alreadyEnrolled: 0, sampleNames: [] };
+  }
+
+  // Check how many are already enrolled
+  const userIds = matchingUsers.map((u) => u.id);
+  const { count: enrolledCount } = await supabase
+    .from("course_enrolments")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", data.course_id)
+    .in("user_id", userIds);
+
+  return {
+    success: true,
+    matchCount: matchingUsers.length,
+    alreadyEnrolled: enrolledCount ?? 0,
+    sampleNames: matchingUsers.slice(0, 5).map((u) => u.full_name),
+  };
 }
 
 // ===========================================

@@ -13,6 +13,7 @@ import { CourseDangerZone } from "./course-danger-zone";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
 import type { Course, CourseAssignment, Team } from "@/types/database.types";
+import type { PersonOption } from "@/components/hr/person-combobox";
 
 interface CourseSettingsSheetProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface CourseSettingsSheetProps {
   course: Course;
   assignments: CourseAssignment[];
   teams: Pick<Team, "id" | "name">[];
+  profiles: PersonOption[];
   enrolments: {
     id: string;
     status: string;
@@ -38,6 +40,7 @@ export function CourseSettingsSheet({
   course,
   assignments,
   teams,
+  profiles,
   enrolments,
   enrolmentCount,
   creatorName,
@@ -66,6 +69,7 @@ export function CourseSettingsSheet({
             courseId={course.id}
             assignments={assignments}
             teams={teams}
+            profiles={profiles}
           />
 
           <Separator />

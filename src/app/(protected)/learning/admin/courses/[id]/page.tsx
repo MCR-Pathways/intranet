@@ -49,6 +49,7 @@ export default async function CourseDetailPage({
     { data: enrolments },
     { data: assignments },
     { data: teams },
+    { data: activeProfiles },
   ] = await Promise.all([
     supabase
       .from("course_sections")
@@ -75,6 +76,11 @@ export default async function CourseDetailPage({
       )
       .eq("course_id", id),
     supabase.from("teams").select("id, name").order("name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name, job_title")
+      .eq("status", "active")
+      .order("full_name"),
   ]);
 
   const typedSections = (sections ?? []) as CourseSection[];
@@ -267,6 +273,11 @@ export default async function CourseDetailPage({
         course={course}
         assignments={assignments ?? []}
         teams={teams ?? []}
+        profiles={(activeProfiles ?? []).map((p) => ({
+          id: p.id as string,
+          full_name: p.full_name as string,
+          job_title: p.job_title as string | null,
+        }))}
         enrolments={enrolments ?? []}
         enrolmentCount={enrolmentCount}
         creatorName={
