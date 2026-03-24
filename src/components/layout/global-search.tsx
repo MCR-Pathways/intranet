@@ -283,6 +283,7 @@ function GlobalSearchInner() {
                         <span className="flex items-center justify-between">
                           <span>Recent</span>
                           <button
+                            type="button"
                             onClick={handleClearRecent}
                             className="text-[11px] font-normal normal-case tracking-normal text-muted-foreground/50 hover:text-foreground transition-colors"
                           >
@@ -304,6 +305,7 @@ function GlobalSearchInner() {
                             {search}
                           </span>
                           <button
+                            type="button"
                             onPointerDown={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
