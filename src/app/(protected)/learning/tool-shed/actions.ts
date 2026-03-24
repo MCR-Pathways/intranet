@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import {
+  indexToolShedEntry,
+  removeToolShedEntryFromIndex,
+} from "@/lib/algolia";
+import { toolShedFormatConfig } from "@/lib/learning";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ToolShedFormat,
@@ -49,6 +54,41 @@ const AUTHOR_SELECT = "id, full_name, preferred_name, avatar_url, job_title";
 const VALID_FORMATS: ToolShedFormat[] = ["postcard", "three_two_one", "takeover"];
 
 const PAGE_SIZE = 10;
+
+// ─── Algolia helpers ────────────────────────────────────────────────────────
+
+/** Flatten JSONB content into a single plaintext string for Algolia search. */
+function flattenContent(
+  format: ToolShedFormat,
+  content: unknown
+): string {
+  const c = content as Record<string, unknown>;
+  switch (format) {
+    case "postcard":
+      return [
+        c.elevator_pitch,
+        c.lightbulb_moment,
+        c.programme_impact,
+        c.golden_nugget,
+      ]
+        .filter((v): v is string => typeof v === "string")
+        .join(" ");
+    case "three_two_one":
+      return [
+        ...((c.three_learned as string[] | undefined) ?? []),
+        ...((c.two_changes as string[] | undefined) ?? []),
+        typeof c.one_question === "string" ? c.one_question : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+    case "takeover":
+      return ((c.useful_things as string[] | undefined) ?? [])
+        .filter(Boolean)
+        .join(" ");
+    default:
+      return "";
+  }
+}
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -418,7 +458,7 @@ export async function createEntry(data: {
   tags?: string[];
   is_published?: boolean;
 }): Promise<{ success: boolean; error: string | null; entryId?: string }> {
-  const { supabase, user } = await getCurrentUser();
+  const { supabase, user, profile } = await getCurrentUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
   // Validate format
@@ -475,6 +515,28 @@ export async function createEntry(data: {
   if (error) {
     logger.error("Failed to create tool shed entry", { error });
     return { success: false, error: "Failed to share insight" };
+  }
+
+  // Index in Algolia if published (non-critical)
+  if (data.is_published !== false) {
+    try {
+      const formatConf = toolShedFormatConfig[format];
+      const authorName =
+        profile?.preferred_name || profile?.full_name || "Unknown";
+      await indexToolShedEntry(
+        entry.id,
+        title,
+        format,
+        formatConf?.label ?? format,
+        eventName,
+        tagsResult.data,
+        flattenContent(format, contentResult.data),
+        authorName,
+        new Date().toISOString()
+      );
+    } catch {
+      // Non-critical
+    }
   }
 
   revalidatePath("/learning/tool-shed");
@@ -590,6 +652,46 @@ export async function updateEntry(
     return { success: false, error: "Failed to update insight" };
   }
 
+  // Update Algolia index (non-critical)
+  try {
+    const isPublished =
+      data.is_published !== undefined ? data.is_published : true;
+
+    if (isPublished) {
+      // Re-fetch updated entry to get all current fields
+      const { data: updated } = await supabase
+        .from("tool_shed_entries")
+        .select(ENTRY_SELECT)
+        .eq("id", id)
+        .single();
+
+      if (updated) {
+        const entryFormat = updated.format as ToolShedFormat;
+        const formatConf = toolShedFormatConfig[entryFormat];
+        const authorName =
+          profile?.preferred_name || profile?.full_name || "Unknown";
+        await indexToolShedEntry(
+          id,
+          updated.title,
+          entryFormat,
+          formatConf?.label ?? entryFormat,
+          updated.event_name,
+          updated.tags as string[],
+          flattenContent(
+            entryFormat,
+            updated.content as Record<string, unknown>
+          ),
+          authorName,
+          updated.updated_at
+        );
+      }
+    } else {
+      await removeToolShedEntryFromIndex(id);
+    }
+  } catch {
+    // Non-critical
+  }
+
   revalidatePath("/learning/tool-shed");
   revalidatePath("/learning");
 
@@ -625,6 +727,13 @@ export async function deleteEntry(
   if (error) {
     logger.error("Failed to delete tool shed entry", { error, id });
     return { success: false, error: "Failed to delete insight" };
+  }
+
+  // Remove from Algolia (non-critical)
+  try {
+    await removeToolShedEntryFromIndex(id);
+  } catch {
+    // Non-critical
   }
 
   revalidatePath("/learning/tool-shed");

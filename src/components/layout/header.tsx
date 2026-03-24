@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
@@ -92,8 +93,11 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
           </Link>
         </div>
 
-        {/* Right side - Notifications and user menu */}
+        {/* Right side - Search, notifications, and user menu */}
         <div className="flex items-center gap-2 pr-4 md:pr-6">
+          {/* Global search */}
+          <GlobalSearch />
+
           {/* Notifications */}
           <div className="relative">
             <NotificationBell initialNotifications={initialNotifications} />
