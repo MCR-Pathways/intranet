@@ -256,32 +256,39 @@ export async function fetchGroupedSubcategoryArticles(
   // Fetch subcategories
   const subcats = await fetchSubcategoriesWithClient(supabase, parentId);
 
-  // For each subcategory with articles, fetch the articles
-  const groups = await Promise.all(
-    subcats.map(async (sub) => {
-      let query = supabase
-        .from("resource_articles")
-        .select("id, title, slug, updated_at")
-        .eq("category_id", sub.id)
-        .is("deleted_at", null)
-        .order("updated_at", { ascending: false });
+  if (subcats.length === 0) return [];
 
-      if (!canEdit) {
-        query = query.eq("status", "published");
-      }
+  // Single query for all articles across all subcategories (avoids N+1)
+  const subcatIds = subcats.map((s) => s.id);
+  let articlesQuery = supabase
+    .from("resource_articles")
+    .select("id, title, slug, updated_at, category_id")
+    .in("category_id", subcatIds)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false });
 
-      const { data: articles } = await query;
-      return {
-        subcategory: sub,
-        articles: (articles ?? []) as Array<{
-          id: string;
-          title: string;
-          slug: string;
-          updated_at: string;
-        }>,
-      };
-    })
-  );
+  if (!canEdit) {
+    articlesQuery = articlesQuery.eq("status", "published");
+  }
+
+  const { data: allArticles } = await articlesQuery;
+
+  // Group articles by subcategory
+  const articlesBySubcat = new Map<
+    string,
+    Array<{ id: string; title: string; slug: string; updated_at: string }>
+  >();
+  for (const article of allArticles ?? []) {
+    const { category_id, ...rest } = article;
+    const list = articlesBySubcat.get(category_id) ?? [];
+    list.push(rest);
+    articlesBySubcat.set(category_id, list);
+  }
+
+  const groups = subcats.map((sub) => ({
+    subcategory: sub,
+    articles: articlesBySubcat.get(sub.id) ?? [],
+  }));
 
   // Hide subcategories with no articles (unless editor can see drafts)
   return canEdit ? groups : groups.filter((g) => g.articles.length > 0);
