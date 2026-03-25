@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth";
 import {
   fetchCategoryBySlugPath,
-  fetchSubcategoriesWithClient,
+  fetchGroupedSubcategoryArticles,
   fetchCategoryArticlesWithClient,
 } from "../actions";
 import { CategoryContent } from "@/components/resources/category-content";
@@ -36,9 +36,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category, ancestors } = result;
   const slugPath = slug.join("/");
 
-  // Fetch subcategories and articles in parallel
-  const [subcategories, { articles }] = await Promise.all([
-    fetchSubcategoriesWithClient(supabase, category.id),
+  // Fetch grouped subcategory articles and direct articles in parallel
+  const [subcategoryGroups, { articles: directArticles }] = await Promise.all([
+    fetchGroupedSubcategoryArticles(supabase, category.id, canEdit),
     fetchCategoryArticlesWithClient(supabase, category.slug, canEdit),
   ]);
 
@@ -47,8 +47,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       category={category}
       categorySlugPath={slugPath}
       ancestors={ancestors}
-      subcategories={subcategories}
-      articles={articles}
+      subcategoryGroups={subcategoryGroups}
+      directArticles={directArticles}
       canEdit={canEdit}
     />
   );

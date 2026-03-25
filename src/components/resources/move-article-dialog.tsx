@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition, createElement } from "react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   moveArticle,
@@ -15,6 +19,7 @@ import {
   fetchTopLevelCategories,
 } from "@/app/(protected)/resources/actions";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import type { MoveCategoryOption } from "@/app/(protected)/resources/actions";
 
@@ -41,6 +46,7 @@ export function MoveArticleDialog({
   const [categories, setCategories] = useState<MoveCategoryOption[]>([]);
   const [parents, setParents] = useState<ParentInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
 
@@ -58,6 +64,7 @@ export function MoveArticleDialog({
           setCategories(cats);
           setParents(topLevel);
           setSelectedId(null);
+          setSearch("");
         }
       })
       .finally(() => {
@@ -66,13 +73,20 @@ export function MoveArticleDialog({
     return () => { cancelled = true; };
   }, [open, currentCategoryId]);
 
+  // Filter by search query
+  const filtered = useMemo(() => {
+    if (!search.trim()) return categories;
+    const q = search.toLowerCase();
+    return categories.filter((c) => c.name.toLowerCase().includes(q));
+  }, [categories, search]);
+
   // Group categories: top-level (no parent) + grouped under parent names
   const grouped = useMemo(() => {
     const parentMap = new Map(parents.map((p) => [p.id, p.name]));
     const topLevel: MoveCategoryOption[] = [];
     const byParent = new Map<string, MoveCategoryOption[]>();
 
-    for (const cat of categories) {
+    for (const cat of filtered) {
       if (cat.parent_id) {
         const group = byParent.get(cat.parent_id) ?? [];
         group.push(cat);
@@ -82,7 +96,6 @@ export function MoveArticleDialog({
       }
     }
 
-    // Build ordered list: top-level first, then each parent group
     const result: { label?: string; items: MoveCategoryOption[] }[] = [];
 
     if (topLevel.length > 0) {
@@ -97,7 +110,7 @@ export function MoveArticleDialog({
     }
 
     return result;
-  }, [categories, parents]);
+  }, [filtered, parents]);
 
   function handleMove() {
     if (!selectedId) return;
@@ -113,34 +126,54 @@ export function MoveArticleDialog({
     });
   }
 
+  const totalFiltered = filtered.length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Move Article</DialogTitle>
+          <DialogDescription>
+            Move &ldquo;{articleTitle}&rdquo; to a different category.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Move &ldquo;{articleTitle}&rdquo; to a different category.
-        </p>
 
+        {/* Search filter */}
+        {!loading && categories.length > 6 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter categories..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+        )}
+
+        {/* Category list */}
         {loading ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             Loading categories...
           </div>
         ) : categories.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             No other categories available.
           </div>
+        ) : totalFiltered === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            No categories match &ldquo;{search}&rdquo;
+          </div>
         ) : (
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-72 overflow-y-auto rounded-lg border border-border bg-background">
             {grouped.map((group, gi) => (
               <div key={group.label ?? `top-${gi}`}>
                 {group.label && (
-                  <div className="px-3 pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-3 pt-3 pb-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
                     {group.label}
                   </div>
                 )}
-                <div className="space-y-1 p-1">
+                <div className="p-1">
                   {group.items.map((cat) => {
                     const Icon = resolveIcon(cat.icon);
                     const colour = resolveIconColour(cat.icon_colour);
@@ -153,21 +186,23 @@ export function MoveArticleDialog({
                         className={cn(
                           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                           isSelected
-                            ? "bg-primary/10 ring-1 ring-primary/30"
-                            : "hover:bg-muted"
+                            ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
+                            : "hover:bg-muted text-foreground/80"
                         )}
                         onClick={() => setSelectedId(cat.id)}
                       >
                         <div
                           className={cn(
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
                             colour.bg,
                             colour.fg
                           )}
                         >
-                          <Icon className="h-4 w-4" />
+                          {createElement(Icon, { className: "h-3.5 w-3.5" })}
                         </div>
-                        <span className="font-medium">{cat.name}</span>
+                        <span className={cn("font-medium", isSelected && "font-semibold")}>
+                          {cat.name}
+                        </span>
                       </button>
                     );
                   })}
@@ -177,7 +212,10 @@ export function MoveArticleDialog({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <LoadingButton
             onClick={handleMove}
             loading={isPending}
@@ -185,7 +223,7 @@ export function MoveArticleDialog({
           >
             Move
           </LoadingButton>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

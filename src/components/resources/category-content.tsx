@@ -4,7 +4,7 @@ import { createElement } from "react";
 import Link from "next/link";
 import { Folder, FolderOpen } from "lucide-react";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
-import { SubcategoryGrid } from "./subcategory-grid";
+import { GroupedIndex } from "./grouped-index";
 import { ArticlesList } from "./articles-list";
 import { AdminBar } from "./admin-bar";
 import type {
@@ -13,12 +13,19 @@ import type {
   ArticleWithAuthor,
 } from "@/types/database.types";
 
+interface SubcategoryGroup {
+  subcategory: CategoryWithCount;
+  articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+}
+
 interface CategoryContentProps {
   category: ResourceCategory;
   categorySlugPath: string;
   ancestors: Array<{ name: string; slug: string; slugPath: string }>;
-  subcategories: CategoryWithCount[];
-  articles: ArticleWithAuthor[];
+  /** Subcategories with their articles for the grouped index */
+  subcategoryGroups: SubcategoryGroup[];
+  /** Articles directly in this category (not in subcategories) */
+  directArticles: ArticleWithAuthor[];
   canEdit: boolean;
 }
 
@@ -26,28 +33,22 @@ export function CategoryContent({
   category,
   categorySlugPath,
   ancestors,
-  subcategories,
-  articles,
+  subcategoryGroups,
+  directArticles,
   canEdit,
 }: CategoryContentProps) {
   const colour = resolveIconColour(category.icon_colour);
 
   // macOS-style: FolderOpen when category has articles, Folder when empty
   const baseIcon = resolveIcon(category.icon);
+  const hasContent = directArticles.length > 0 || subcategoryGroups.length > 0;
   const categoryIcon =
-    baseIcon === Folder && articles.length > 0 ? FolderOpen : baseIcon;
+    baseIcon === Folder && hasContent ? FolderOpen : baseIcon;
 
   return (
-    <div className="space-y-5">
-      {/* Breadcrumbs */}
+    <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5" style={{ minHeight: "calc(100vh - 14rem)" }}>
+      {/* Breadcrumbs — no "Home", starts from Resources */}
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/intranet"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Home
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
         <Link
           href="/resources"
           className="hover:text-foreground hover:underline underline-offset-4"
@@ -93,37 +94,33 @@ export function CategoryContent({
         </div>
       </div>
 
-      {/* Subcategory cards */}
-      {subcategories.length > 0 && (
+      {/* Direct articles in this category (not in subcategories) */}
+      {directArticles.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-            Subcategories
-          </h3>
-          <SubcategoryGrid
-            subcategories={subcategories}
-            parentSlugPath={categorySlugPath}
-            parentIconColour={category.icon_colour}
+          <ArticlesList
+            articles={directArticles}
+            categoryId={category.id}
+            categorySlug={category.slug}
+            canEdit={canEdit}
           />
         </section>
       )}
 
-      {/* Article list */}
-      <section>
-        <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-          Articles
-          {articles.length > 0 && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-              {articles.length}
-            </span>
-          )}
-        </h3>
-        <ArticlesList
-          articles={articles}
-          categoryId={category.id}
-          categorySlug={category.slug}
-          canEdit={canEdit}
+      {/* Grouped index — subcategories as expandable sections with articles */}
+      {subcategoryGroups.length > 0 && (
+        <GroupedIndex
+          groups={subcategoryGroups}
+          parentSlugPath={categorySlugPath}
+          parentIconColour={category.icon_colour}
         />
-      </section>
+      )}
+
+      {/* Empty state */}
+      {!hasContent && (
+        <div className="text-sm text-muted-foreground py-8 text-center">
+          No content in this category yet.
+        </div>
+      )}
     </div>
   );
 }

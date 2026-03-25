@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { DailyBanner } from "@/components/sign-in/daily-banner";
@@ -67,10 +66,8 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, user, profile, initialNotifications, dailyBannerType }: AppLayoutProps) {
-  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
-  const isFullWidth = pathname.startsWith("/resources");
 
   const toggleSidebar = useCallback(() => {
     try {
@@ -126,7 +123,7 @@ export function AppLayout({ children, user, profile, initialNotifications, daily
             isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
         >
-          <div className={cn("container mx-auto p-4 md:p-6 lg:p-8", isFullWidth ? "max-w-none" : "max-w-7xl")}>
+          <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
             {dailyBannerType && (
               <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
             )}

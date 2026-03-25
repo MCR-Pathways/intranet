@@ -4,7 +4,7 @@ import {
   isHRAdminEffective,
   isContentEditorEffective,
 } from "@/lib/auth";
-import { fetchArticleBySlugOnly } from "../../actions";
+import { fetchArticleBySlugOnly, fetchSiblingArticles } from "../../actions";
 import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
 import { ComponentArticleView } from "@/components/resources/component-article-view";
@@ -27,6 +27,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!article || !category) notFound();
 
+  // Fetch sibling articles for "More in [folder]" section
+  const siblings = await fetchSiblingArticles(supabase, category.id);
+  const categoryPath = parentCategory
+    ? `${parentCategory.slug}/${category.slug}`
+    : category.slug;
+
   // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
     return (
@@ -35,6 +41,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         category={category}
         parentCategory={parentCategory}
         canEdit={canEdit}
+        siblings={siblings}
+        categoryPath={categoryPath}
       />
     );
   }

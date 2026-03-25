@@ -32,6 +32,7 @@ import type {
   AlgoliaToolShedRecord,
 } from "@/lib/algolia";
 import { cn, formatDuration } from "@/lib/utils";
+import { getRecentlyViewed } from "@/lib/recently-viewed";
 
 const APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
 const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY;
@@ -107,12 +108,40 @@ function GlobalSearchInner() {
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<
+    Array<{ id: string; title: string; slug: string }>
+  >([]);
   const router = useRouter();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  // Load recent searches when dialog opens
+  // Keyboard shortcut: Cmd+K (Mac) / Ctrl+K (Windows/Linux)
   useEffect(() => {
-    if (open) setRecentSearches(getRecentSearches());
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Custom event: allows other components to open search programmatically
+  useEffect(() => {
+    function handleOpenSearch() {
+      setOpen(true);
+    }
+    document.addEventListener("open-global-search", handleOpenSearch);
+    return () =>
+      document.removeEventListener("open-global-search", handleOpenSearch);
+  }, []);
+
+  // Load recent searches and recently viewed when dialog opens
+  useEffect(() => {
+    if (open) {
+      setRecentSearches(getRecentSearches());
+      setRecentlyViewed(getRecentlyViewed());
+    }
   }, [open]);
 
   // Debounced Algolia multi-index search
@@ -277,11 +306,38 @@ function GlobalSearchInner() {
               {/* ─── Initial state: Recent searches or empty ─── */}
               {!hasQuery && !isSearching && (
                 <>
+                  {/* Recently viewed articles (Notion pattern) */}
+                  {recentlyViewed.length > 0 && (
+                    <CommandPrimitive.Group
+                      heading="Recently Viewed"
+                      className={groupClassName}
+                    >
+                      {recentlyViewed.map((item) => (
+                        <CommandPrimitive.Item
+                          key={item.id}
+                          value={`viewed-${item.id}`}
+                          onSelect={() =>
+                            handleSelect(`/resources/article/${item.slug}`)
+                          }
+                          className={itemClassName}
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <span className="flex-1 truncate font-medium">
+                            {item.title}
+                          </span>
+                        </CommandPrimitive.Item>
+                      ))}
+                    </CommandPrimitive.Group>
+                  )}
+
+                  {/* Recent search queries */}
                   {recentSearches.length > 0 ? (
                     <CommandPrimitive.Group
                       heading={
                         <span className="flex items-center justify-between">
-                          <span>Recent</span>
+                          <span>Recent Searches</span>
                           <button
                             type="button"
                             onClick={handleClearRecent}
@@ -318,11 +374,11 @@ function GlobalSearchInner() {
                         </CommandPrimitive.Item>
                       ))}
                     </CommandPrimitive.Group>
-                  ) : (
+                  ) : recentlyViewed.length === 0 ? (
                     <div className="py-10 text-center text-sm text-muted-foreground/50">
                       Search across resources, courses, and insights
                     </div>
-                  )}
+                  ) : null}
                 </>
               )}
 

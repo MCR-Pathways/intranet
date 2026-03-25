@@ -219,6 +219,74 @@ export async function fetchSubcategoriesWithClient(
   });
 }
 
+/**
+ * Fetch sibling articles in the same category (for "More in [folder]" on article pages).
+ */
+export async function fetchSiblingArticles(
+  supabase: SupabaseClient,
+  categoryId: string
+): Promise<Array<{ id: string; title: string; slug: string }>> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select("id, title, slug")
+    .eq("category_id", categoryId)
+    .is("deleted_at", null)
+    .eq("status", "published")
+    .order("title");
+
+  if (error || !data) return [];
+  return data as Array<{ id: string; title: string; slug: string }>;
+}
+
+/**
+ * Fetch subcategories with their articles for the grouped index view.
+ * Returns subcategories that have articles (empty ones hidden), each with
+ * their articles array. Used on category pages to show grouped content.
+ */
+export async function fetchGroupedSubcategoryArticles(
+  supabase: SupabaseClient,
+  parentId: string,
+  canEdit: boolean
+): Promise<
+  Array<{
+    subcategory: CategoryWithCount;
+    articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+  }>
+> {
+  // Fetch subcategories
+  const subcats = await fetchSubcategoriesWithClient(supabase, parentId);
+
+  // For each subcategory with articles, fetch the articles
+  const groups = await Promise.all(
+    subcats.map(async (sub) => {
+      let query = supabase
+        .from("resource_articles")
+        .select("id, title, slug, updated_at")
+        .eq("category_id", sub.id)
+        .is("deleted_at", null)
+        .order("updated_at", { ascending: false });
+
+      if (!canEdit) {
+        query = query.eq("status", "published");
+      }
+
+      const { data: articles } = await query;
+      return {
+        subcategory: sub,
+        articles: (articles ?? []) as Array<{
+          id: string;
+          title: string;
+          slug: string;
+          updated_at: string;
+        }>,
+      };
+    })
+  );
+
+  // Hide subcategories with no articles (unless editor can see drafts)
+  return canEdit ? groups : groups.filter((g) => g.articles.length > 0);
+}
+
 // ─── Tree + flat article helpers (for resources redesign) ────────────────────
 
 /**
@@ -330,6 +398,7 @@ export async function fetchArticleBySlugOnly(
 
 /**
  * Fetch recently updated published articles for the landing page.
+ * Uses a nested join to resolve parent category names in a single query.
  */
 export async function fetchRecentlyUpdatedArticles(
   supabase: SupabaseClient,
@@ -340,7 +409,6 @@ export async function fetchRecentlyUpdatedArticles(
     title: string;
     slug: string;
     updated_at: string;
-    synced_html: string | null;
     category_name: string;
     category_slug: string;
     parent_category_name: string | null;
@@ -349,7 +417,7 @@ export async function fetchRecentlyUpdatedArticles(
   const { data, error } = await supabase
     .from("resource_articles")
     .select(
-      "id, title, slug, updated_at, synced_html, category:resource_categories!category_id(name, slug, parent_id)"
+      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:resource_categories!parent_id(name))"
     )
     .is("deleted_at", null)
     .eq("status", "published")
@@ -358,44 +426,29 @@ export async function fetchRecentlyUpdatedArticles(
 
   if (error || !data) return [];
 
-  // Supabase joined tables return arrays — unwrap to single object
-  type CatJoin = { name: string; slug: string; parent_id: string | null };
-  function unwrapCat(raw: unknown): CatJoin | null {
-    if (!raw) return null;
-    const arr = raw as CatJoin[];
-    return Array.isArray(arr) ? arr[0] ?? null : (raw as CatJoin);
-  }
-
-  // Collect parent IDs that need resolving
-  const parentIds = new Set<string>();
-  for (const row of data) {
-    const cat = unwrapCat(row.category);
-    if (cat?.parent_id) parentIds.add(cat.parent_id);
-  }
-
-  // Fetch parent category names in one query
-  let parentNames = new Map<string, string>();
-  if (parentIds.size > 0) {
-    const { data: parents } = await supabase
-      .from("resource_categories")
-      .select("id, name")
-      .in("id", Array.from(parentIds));
-    if (parents) {
-      parentNames = new Map(parents.map((p: { id: string; name: string }) => [p.id, p.name]));
-    }
-  }
-
   return data.map((row: Record<string, unknown>) => {
-    const cat = unwrapCat(row.category);
+    // Supabase joined tables may return arrays — unwrap to single object
+    const rawCat = row.category;
+    const cat = (Array.isArray(rawCat) ? rawCat[0] : rawCat) as {
+      name: string;
+      slug: string;
+      parent: { name: string } | { name: string }[] | null;
+    } | null;
+
+    // Parent is also a join — unwrap if array
+    const rawParent = cat?.parent;
+    const parent = rawParent
+      ? (Array.isArray(rawParent) ? rawParent[0] : rawParent)
+      : null;
+
     return {
       id: row.id as string,
       title: row.title as string,
       slug: row.slug as string,
       updated_at: row.updated_at as string,
-      synced_html: row.synced_html as string | null,
       category_name: cat?.name ?? "",
       category_slug: cat?.slug ?? "",
-      parent_category_name: cat?.parent_id ? (parentNames.get(cat.parent_id) ?? null) : null,
+      parent_category_name: parent?.name ?? null,
     };
   });
 }
