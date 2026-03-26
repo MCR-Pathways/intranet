@@ -13,7 +13,6 @@ AS $$
     count(*) AS usage_count
   FROM public.tool_shed_entries t
   WHERE t.is_published = true
-    AND array_length(t.tags, 1) > 0
   GROUP BY tag
   ORDER BY usage_count DESC, tag ASC
   LIMIT limit_count;
