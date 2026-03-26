@@ -314,8 +314,9 @@ export async function getEntriesWithClient(
   }
 
   if (search?.trim()) {
-    // Sanitise search query — remove special Supabase filter characters
-    const q = search.trim().replace(/[%_\\]/g, "");
+    // Sanitise search query — remove special Supabase/PostgREST filter characters
+    // Commas and periods are PostgREST .or() separators/operators
+    const q = search.trim().replace(/[%_\\,.()"']/g, "");
     if (q) {
       query = query.or(`title.ilike.%${q}%,event_name.ilike.%${q}%`);
     }
