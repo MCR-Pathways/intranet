@@ -104,7 +104,7 @@ export function ArticleView({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-4" style={{ minHeight: "calc(100vh - 14rem)" }}>
       {/* Admin toolbar */}
       {canEdit && (
         <div className="flex items-center gap-2">

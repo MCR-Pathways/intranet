@@ -1,26 +1,21 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ResourceTree } from "./resource-tree";
 import { EditorModeProvider, useEditorMode } from "./editor-mode-context";
-import type { CategoryTreeNode } from "@/types/database.types";
 
 interface ResourcesShellProps {
-  categories: CategoryTreeNode[];
   canEdit: boolean;
   children: React.ReactNode;
 }
 
 export function ResourcesShell({
-  categories,
   canEdit,
   children,
 }: ResourcesShellProps) {
   return (
     <EditorModeProvider canEdit={canEdit}>
-      <ResourcesShellInner categories={categories} canEdit={canEdit}>
+      <ResourcesShellInner canEdit={canEdit}>
         {children}
       </ResourcesShellInner>
     </EditorModeProvider>
@@ -28,16 +23,14 @@ export function ResourcesShell({
 }
 
 function ResourcesShellInner({
-  categories,
   canEdit,
   children,
 }: ResourcesShellProps) {
-  const pathname = usePathname();
   const { editorMode, toggleEditorMode } = useEditorMode();
 
   return (
-    <div className="space-y-3">
-      {/* Editor mode toggle — above the card, matching mockup breadcrumbs row */}
+    <div className="space-y-5">
+      {/* Editor mode toggle — positioned inline, not floating */}
       {canEdit && (
         <div className="flex justify-end">
           <button
@@ -55,20 +48,8 @@ function ResourcesShellInner({
         </div>
       )}
 
-      {/* Card panel with tree + content */}
-      <div
-        className="flex bg-card shadow-md rounded-xl overflow-clip"
-        style={{ minHeight: "calc(100vh - 14rem)" }}
-      >
-        <ResourceTree
-          categories={categories}
-          currentPath={pathname}
-          canEdit={canEdit}
-        />
-        <div className="flex-1 p-6 md:p-7 overflow-y-auto min-w-0">
-          {children}
-        </div>
-      </div>
+      {/* Content — each page manages its own card surfaces */}
+      {children}
     </div>
   );
 }

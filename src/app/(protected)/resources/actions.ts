@@ -219,6 +219,81 @@ export async function fetchSubcategoriesWithClient(
   });
 }
 
+/**
+ * Fetch sibling articles in the same category (for "More in [folder]" on article pages).
+ */
+export async function fetchSiblingArticles(
+  supabase: SupabaseClient,
+  categoryId: string
+): Promise<Array<{ id: string; title: string; slug: string }>> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select("id, title, slug")
+    .eq("category_id", categoryId)
+    .is("deleted_at", null)
+    .eq("status", "published")
+    .order("title");
+
+  if (error || !data) return [];
+  return data as Array<{ id: string; title: string; slug: string }>;
+}
+
+/**
+ * Fetch subcategories with their articles for the grouped index view.
+ * Returns subcategories that have articles (empty ones hidden), each with
+ * their articles array. Used on category pages to show grouped content.
+ */
+export async function fetchGroupedSubcategoryArticles(
+  supabase: SupabaseClient,
+  parentId: string,
+  canEdit: boolean
+): Promise<
+  Array<{
+    subcategory: CategoryWithCount;
+    articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+  }>
+> {
+  // Fetch subcategories
+  const subcats = await fetchSubcategoriesWithClient(supabase, parentId);
+
+  if (subcats.length === 0) return [];
+
+  // Single query for all articles across all subcategories (avoids N+1)
+  const subcatIds = subcats.map((s) => s.id);
+  let articlesQuery = supabase
+    .from("resource_articles")
+    .select("id, title, slug, updated_at, category_id")
+    .in("category_id", subcatIds)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false });
+
+  if (!canEdit) {
+    articlesQuery = articlesQuery.eq("status", "published");
+  }
+
+  const { data: allArticles } = await articlesQuery;
+
+  // Group articles by subcategory
+  const articlesBySubcat = new Map<
+    string,
+    Array<{ id: string; title: string; slug: string; updated_at: string }>
+  >();
+  for (const article of allArticles ?? []) {
+    const { category_id, ...rest } = article;
+    const list = articlesBySubcat.get(category_id) ?? [];
+    list.push(rest);
+    articlesBySubcat.set(category_id, list);
+  }
+
+  const groups = subcats.map((sub) => ({
+    subcategory: sub,
+    articles: articlesBySubcat.get(sub.id) ?? [],
+  }));
+
+  // Hide subcategories with no articles (unless editor can see drafts)
+  return canEdit ? groups : groups.filter((g) => g.articles.length > 0);
+}
+
 // ─── Tree + flat article helpers (for resources redesign) ────────────────────
 
 /**
@@ -293,7 +368,7 @@ export async function fetchArticleBySlugOnly(
   let query = supabase
     .from("resource_articles")
     .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT})`
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT}, parent:resource_categories!parent_id(name, slug))`
     )
     .eq("slug", articleSlug)
     .is("deleted_at", null);
@@ -312,14 +387,20 @@ export async function fetchArticleBySlugOnly(
     string,
     unknown
   >;
-  const category = categoryData as ResourceCategory | null;
+  const rawCategory = categoryData as (ResourceCategory & {
+    parent: { name: string; slug: string } | { name: string; slug: string }[] | null;
+  }) | null;
 
-  // Fetch parent category for breadcrumbs
-  let parentCategory: { name: string; slug: string } | null = null;
-  if (category?.parent_id) {
-    const parent = await fetchParentCategory(supabase, category.parent_id);
-    parentCategory = parent ? { name: parent.name, slug: parent.slug } : null;
-  }
+  // Extract parent from nested join (Supabase may return array for joins)
+  const rawParent = rawCategory?.parent;
+  const parentCategory = rawParent
+    ? (Array.isArray(rawParent) ? rawParent[0] : rawParent)
+    : null;
+
+  // Strip parent from category to match ResourceCategory type
+  const category = rawCategory
+    ? (({ parent: _, ...rest }) => rest)(rawCategory) as ResourceCategory
+    : null;
 
   return {
     article: articleData as unknown as ArticleWithAuthor,
@@ -330,6 +411,7 @@ export async function fetchArticleBySlugOnly(
 
 /**
  * Fetch recently updated published articles for the landing page.
+ * Uses a nested join to resolve parent category names in a single query.
  */
 export async function fetchRecentlyUpdatedArticles(
   supabase: SupabaseClient,
@@ -342,12 +424,13 @@ export async function fetchRecentlyUpdatedArticles(
     updated_at: string;
     category_name: string;
     category_slug: string;
+    parent_category_name: string | null;
   }>
 > {
   const { data, error } = await supabase
     .from("resource_articles")
     .select(
-      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug)"
+      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:resource_categories!parent_id(name))"
     )
     .is("deleted_at", null)
     .eq("status", "published")
@@ -357,7 +440,20 @@ export async function fetchRecentlyUpdatedArticles(
   if (error || !data) return [];
 
   return data.map((row: Record<string, unknown>) => {
-    const cat = row.category as { name: string; slug: string } | null;
+    // Supabase joined tables may return arrays — unwrap to single object
+    const rawCat = row.category;
+    const cat = (Array.isArray(rawCat) ? rawCat[0] : rawCat) as {
+      name: string;
+      slug: string;
+      parent: { name: string } | { name: string }[] | null;
+    } | null;
+
+    // Parent is also a join — unwrap if array
+    const rawParent = cat?.parent;
+    const parent = rawParent
+      ? (Array.isArray(rawParent) ? rawParent[0] : rawParent)
+      : null;
+
     return {
       id: row.id as string,
       title: row.title as string,
@@ -365,6 +461,7 @@ export async function fetchRecentlyUpdatedArticles(
       updated_at: row.updated_at as string,
       category_name: cat?.name ?? "",
       category_slug: cat?.slug ?? "",
+      parent_category_name: parent?.name ?? null,
     };
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useMemo, useState, useTransition } from "react";
+import { createElement, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import parse, { type DOMNode, type Element, domToReact } from "html-react-parser";
 import {
@@ -12,6 +12,7 @@ import {
   FolderInput,
   Unlink,
   Loader2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,21 +23,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MoreInSection } from "./more-in-section";
 import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { useEditorMode } from "./editor-mode-context";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { toggleArticleFeatured } from "@/app/(protected)/resources/actions";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
+import { recordArticleView } from "@/lib/recently-viewed";
 import { toast } from "sonner";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
+
+interface SiblingArticle {
+  id: string;
+  title: string;
+  slug: string;
+}
 
 interface GoogleDocArticleViewProps {
   article: ArticleWithAuthor;
   category: ResourceCategory;
   parentCategory: { name: string; slug: string } | null;
   canEdit: boolean;
+  siblings?: SiblingArticle[];
+  categoryPath?: string;
 }
 
 export function GoogleDocArticleView({
@@ -44,6 +56,8 @@ export function GoogleDocArticleView({
   category,
   parentCategory,
   canEdit,
+  siblings = [],
+  categoryPath = "",
 }: GoogleDocArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -56,6 +70,11 @@ export function GoogleDocArticleView({
   useEffect(() => {
     setArticle(initialArticle);
   }, [initialArticle]);
+
+  // Track recently viewed articles for the global search overlay
+  useEffect(() => {
+    recordArticleView({ id: article.id, title: article.title, slug: article.slug });
+  }, [article.id, article.title, article.slug]);
 
   // ─── Parse HTML into React elements with heading IDs ───────────────────────
 
@@ -88,7 +107,17 @@ export function GoogleDocArticleView({
 
             return createElement(
               tagName,
-              { ...el.attribs, id: slug, key: slug },
+              { ...el.attribs, id: slug, key: slug, className: "group relative scroll-mt-20" },
+              createElement(
+                "a",
+                {
+                  href: `#${slug}`,
+                  "aria-hidden": true,
+                  tabIndex: -1,
+                  className: "absolute -left-5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity select-none [text-decoration:none] [color:var(--color-muted-foreground)]",
+                },
+                createElement(LinkIcon, { className: "h-3.5 w-3.5" })
+              ),
               domToReact(el.children as DOMNode[])
             );
           }
@@ -98,6 +127,36 @@ export function GoogleDocArticleView({
 
     return { parsedContent: content, headings: extractedHeadings };
   }, [article.synced_html]);
+
+  // ─── Scroll-spy: highlight active heading in TOC ───────────────────────────
+
+  const [activeHeadingId, setActiveHeadingId] = useState("");
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    if (headings.length < 2) return;
+
+    observerRef.current?.disconnect();
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveHeadingId(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -80% 0px" }
+    );
+
+    for (const h of headings) {
+      const el = document.getElementById(h.slug);
+      if (el) observerRef.current.observe(el);
+    }
+
+    return () => observerRef.current?.disconnect();
+  }, [headings]);
 
   // ─── Supabase Realtime: live updates when synced_html changes ──────────────
 
@@ -175,17 +234,17 @@ export function GoogleDocArticleView({
     ? formatDate(new Date(article.last_synced_at))
     : null;
 
+  // Content freshness — flag articles not updated in 12+ months
+  const updatedAt = new Date(article.updated_at);
+  const monthsOld = Math.floor(
+    (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
+  );
+  const isStale = monthsOld >= 12;
+
   return (
-    <div className="space-y-5">
-      {/* Breadcrumbs */}
+    <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5" style={{ minHeight: "calc(100vh - 14rem)" }}>
+      {/* Breadcrumbs — no "Home", starts from Resources */}
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/intranet"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Home
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
         <Link
           href="/resources"
           className="hover:text-foreground hover:underline underline-offset-4"
@@ -206,8 +265,11 @@ export function GoogleDocArticleView({
         <span className="text-muted-foreground/50 select-none">/</span>
         <Link
           href={`/resources/${parentCategory ? `${parentCategory.slug}/${category.slug}` : category.slug}`}
-          className="hover:text-foreground hover:underline underline-offset-4"
+          className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline underline-offset-4"
         >
+          {createElement(resolveIcon(category.icon), {
+            className: cn("h-3.5 w-3.5", resolveIconColour(category.icon_colour).fg),
+          })}
           {category.name}
         </Link>
         <span className="text-muted-foreground/50 select-none">/</span>
@@ -309,9 +371,10 @@ export function GoogleDocArticleView({
 
         {/* Article meta */}
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
-          <span>{category.name}</span>
-          <span className="text-border">&middot;</span>
-          <span>Updated {formatDate(new Date(article.updated_at))}</span>
+          <span className={isStale ? "text-amber-600" : undefined}>
+            Updated {formatDate(updatedAt)}
+            {isStale && " — may need review"}
+          </span>
           {editorMode && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
@@ -326,7 +389,7 @@ export function GoogleDocArticleView({
       {/* Article body — two-column: content + outline sidebar */}
       {article.synced_html ? (
         <div className="flex gap-8">
-          <article className="prose prose-sm max-w-[720px] flex-1 min-w-0 prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80">
+          <article className="prose prose-sm max-w-[720px] flex-1 min-w-0 prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border">
             {parsedContent}
           </article>
 
@@ -336,12 +399,22 @@ export function GoogleDocArticleView({
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                 On this page
               </h4>
-              <ul className="space-y-1.5">
+              <ul className="space-y-1">
                 {headings.map((h) => (
                   <li key={h.slug}>
                     <a
                       href={`#${h.slug}`}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors block truncate"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth" });
+                        setActiveHeadingId(h.slug);
+                      }}
+                      className={cn(
+                        "text-xs block truncate py-1 transition-colors",
+                        activeHeadingId === h.slug
+                          ? "text-primary font-medium"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                       style={h.level > 2 ? { paddingLeft: `${(h.level - 2) * 12}px` } : undefined}
                     >
                       {h.text}
@@ -357,6 +430,14 @@ export function GoogleDocArticleView({
           This document has no content yet. Click &ldquo;Sync now&rdquo; to fetch content from Google Docs.
         </div>
       )}
+
+      {/* More in [folder] — sibling article navigation */}
+      <MoreInSection
+        categoryName={category.name}
+        categoryPath={categoryPath}
+        siblings={siblings}
+        currentArticleId={article.id}
+      />
 
       {/* Unlink confirmation */}
       <UnlinkDialog
