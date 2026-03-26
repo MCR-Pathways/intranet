@@ -10,6 +10,7 @@ import {
   type ThreeTwoOneContent,
   type TakeoverContent,
 } from "@/lib/learning";
+import { cn } from "@/lib/utils";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -61,23 +62,32 @@ function PostcardFields({
 
   return (
     <div className="space-y-4">
-      {postcardFields.map((field) => (
-        <div key={field.key} className="space-y-1.5">
-          <Label htmlFor={`postcard-${field.key}`} className="flex items-center gap-1.5">
-            <span>{field.emoji}</span>
-            <span>{field.label}</span>
-          </Label>
-          <Textarea
-            id={`postcard-${field.key}`}
-            placeholder={field.hint}
-            value={content[field.key] ?? ""}
-            onChange={(e) => update(field.key, e.target.value)}
-            rows={3}
-            maxLength={500}
-            className="bg-card resize-none"
-          />
-        </div>
-      ))}
+      {postcardFields.map((field) => {
+        const isGoldenNugget = field.key === "golden_nugget";
+        return (
+          <div
+            key={field.key}
+            className={cn(
+              "space-y-1.5",
+              isGoldenNugget && "rounded-lg bg-amber-50/50 p-3"
+            )}
+          >
+            <Label htmlFor={`postcard-${field.key}`} className="flex items-center gap-1.5">
+              <span>{field.emoji}</span>
+              <span>{field.label}</span>
+            </Label>
+            <Textarea
+              id={`postcard-${field.key}`}
+              placeholder={field.hint}
+              value={content[field.key] ?? ""}
+              onChange={(e) => update(field.key, e.target.value)}
+              rows={3}
+              maxLength={500}
+              className="bg-card resize-none"
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
