@@ -157,6 +157,7 @@ export interface ToolShedFormatConfig {
     iconBg: string;
     sectionBg: string;
     number: string;
+    ring: string;
   };
   /** Short structural summary for format picker */
   structure: string;
@@ -178,6 +179,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
         iconBg: "bg-blue-100",
         sectionBg: "bg-blue-50/50",
         number: "bg-blue-100 text-blue-700",
+        ring: "ring-blue-400",
       },
       structure: "4 reflective sections",
     },
@@ -195,6 +197,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
         iconBg: "bg-violet-100",
         sectionBg: "bg-violet-50/50",
         number: "bg-violet-100 text-violet-700",
+        ring: "ring-violet-400",
       },
       structure: "3 + 2 + 1 items",
     },
@@ -212,6 +215,7 @@ export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> 
         iconBg: "bg-amber-100",
         sectionBg: "bg-amber-50/50",
         number: "bg-amber-100 text-amber-700",
+        ring: "ring-amber-400",
       },
       structure: "3 key takeaways",
     },
