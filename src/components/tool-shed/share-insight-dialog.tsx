@@ -12,9 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   toolShedFormatConfig,
@@ -53,7 +52,6 @@ export function ShareInsightDialog({
   popularTags = [],
 }: ShareInsightDialogProps) {
   const isEditing = !!editEntry;
-  const [step, setStep] = useState<1 | 2>(isEditing ? 2 : 1);
   const [format, setFormat] = useState<ToolShedFormat | null>(
     editEntry?.format ?? null
   );
@@ -63,7 +61,9 @@ export function ShareInsightDialog({
   const [eventName, setEventName] = useState(editEntry?.event_name ?? "");
   const [eventDate, setEventDate] = useState(editEntry?.event_date ?? "");
   const [tags, setTags] = useState<string[]>(editEntry?.tags ?? []);
-  const [isDraft, setIsDraft] = useState(editEntry ? !editEntry.is_published : false);
+  const [isDraft, setIsDraft] = useState(
+    editEntry ? !editEntry.is_published : false
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -71,11 +71,10 @@ export function ShareInsightDialog({
   const [eventSuggestions, setEventSuggestions] = useState<string[]>([]);
   const [showEventSuggestions, setShowEventSuggestions] = useState(false);
 
-  // Reset form when dialog closes or editEntry changes
+  // Reset form when dialog opens/closes or editEntry changes
   useEffect(() => {
     if (open) {
       if (editEntry) {
-        setStep(2);
         setFormat(editEntry.format);
         setContent(editEntry.content as Partial<FormatContent>);
         setEventName(editEntry.event_name ?? "");
@@ -84,7 +83,6 @@ export function ShareInsightDialog({
         setIsDraft(!editEntry.is_published);
         setError(null);
       } else {
-        setStep(1);
         setFormat(null);
         setContent({});
         setEventName("");
@@ -114,6 +112,7 @@ export function ShareInsightDialog({
   }, [eventName]);
 
   const handleSelectFormat = (key: ToolShedFormat) => {
+    if (isEditing) return;
     setFormat(key);
     // Initialise empty content for the selected format
     if (key === "postcard") {
@@ -132,7 +131,6 @@ export function ShareInsightDialog({
     } else if (key === "takeover") {
       setContent({ useful_things: ["", "", ""] });
     }
-    setStep(2);
   };
 
   const handleSubmit = useCallback(() => {
@@ -163,7 +161,9 @@ export function ShareInsightDialog({
           }));
 
       if (result.success) {
-        toast.success(isEditing ? "Insight updated" : isDraft ? "Draft saved" : "Insight shared!");
+        toast.success(
+          isEditing ? "Insight updated" : isDraft ? "Draft saved" : "Insight shared!"
+        );
         onOpenChange(false);
       } else {
         setError(result.error ?? "Something went wrong");
@@ -177,227 +177,222 @@ export function ShareInsightDialog({
     (typeof toolShedFormatConfig)[ToolShedFormat],
   ][];
 
+  const selectedConfig = format ? toolShedFormatConfig[format] : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card sm:max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">
-            {isEditing
-              ? "Edit Insight"
-              : step === 1
-                ? "Share an Insight"
-                : format
-                  ? toolShedFormatConfig[format].label
-                  : "Share an Insight"}
+            {isEditing ? "Edit Insight" : "Share an Insight"}
           </DialogTitle>
-          {step === 1 && !isEditing && (
+          {!isEditing && (
             <DialogDescription>
-              Choose a format that suits what you'd like to share. Each one takes just a few minutes.
+              Share your reflections from a training event so the whole team
+              benefits.
             </DialogDescription>
           )}
         </DialogHeader>
 
-        {/* Step 1: Format Picker */}
-        {step === 1 && !isEditing && (
-          <div className="space-y-3 pt-1">
-            {formatEntries.map(([key, config]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => handleSelectFormat(key)}
+        <div className="space-y-5">
+          {/* ── Event context ── */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-foreground">
+              What did you attend?
+            </h3>
+            <div className="grid grid-cols-[1fr_140px] gap-3">
+              <div className="relative">
+                <Input
+                  id="event-name"
+                  placeholder="e.g. Trauma-Informed Practice Workshop"
+                  value={eventName}
+                  onChange={(e) => {
+                    setEventName(e.target.value);
+                    setShowEventSuggestions(true);
+                  }}
+                  onFocus={() => setShowEventSuggestions(true)}
+                  onBlur={() =>
+                    setTimeout(() => setShowEventSuggestions(false), 200)
+                  }
+                  maxLength={200}
+                  className="bg-card"
+                  aria-label="Event name"
+                />
+                {showEventSuggestions && eventSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-popover p-1 shadow-md">
+                    {eventSuggestions
+                      .filter(
+                        (s) =>
+                          s.toLowerCase() !== eventName.trim().toLowerCase()
+                      )
+                      .slice(0, 5)
+                      .map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setEventName(suggestion);
+                            setShowEventSuggestions(false);
+                          }}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <Input
+                id="event-date"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className="bg-card"
+                aria-label="Event date"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* ── Format picker ── */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-foreground">
+              {isEditing ? "Format" : "Pick a format"}
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {formatEntries.map(([key, config]) => {
+                const isSelected = format === key;
+                const isDisabled = isEditing && !isSelected;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSelectFormat(key)}
+                    disabled={isDisabled}
+                    title={config.description}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all",
+                      isSelected
+                        ? cn(
+                            "ring-2 ring-offset-1",
+                            config.accent.ring,
+                            config.accent.bg
+                          )
+                        : "border-border hover:border-primary/30 hover:bg-accent/20",
+                      isDisabled &&
+                        "opacity-35 cursor-not-allowed hover:border-border hover:bg-transparent"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                        isSelected ? config.accent.iconBg : "bg-muted"
+                      )}
+                    >
+                      {createElement(config.icon, {
+                        className: cn(
+                          "h-4 w-4",
+                          isSelected
+                            ? config.accent.text
+                            : "text-muted-foreground"
+                        ),
+                      })}
+                    </div>
+                    <div className="text-center">
+                      <span
+                        className={cn(
+                          "text-xs font-semibold block",
+                          isSelected && config.accent.text
+                        )}
+                      >
+                        {config.shortLabel}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight">
+                        {config.structure}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Format-specific fields ── */}
+          {format && selectedConfig && (
+            <>
+              <Separator />
+              <div
                 className={cn(
-                  "w-full flex items-start gap-4 rounded-xl border p-4 text-left transition-colors",
-                  "hover:border-primary/50 hover:bg-accent/30",
-                  format === key
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border"
+                  "border-l-4 pl-4",
+                  selectedConfig.accent.border
                 )}
               >
-                {/* Format icon */}
-                <div className={cn(
-                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
-                  config.accent.iconBg
-                )}>
-                  {createElement(config.icon, {
-                    className: cn("h-5.5 w-5.5", config.accent.text),
-                  })}
-                </div>
+                <FormatFields
+                  format={format}
+                  content={content}
+                  onChange={setContent as (c: FormatContent) => void}
+                />
+              </div>
+            </>
+          )}
 
-                {/* Format info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-semibold">{config.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      · {config.structure}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {config.description}
-                  </p>
-                </div>
-
-                {/* Arrow */}
-                <ArrowRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Step 2: Content Form */}
-        {step === 2 && format && (
-          <div className="space-y-6">
-            {/* Format badge */}
-            <div className="flex items-center gap-2">
-              <Badge variant={toolShedFormatConfig[format].badgeVariant} className="gap-1">
-                {createElement(toolShedFormatConfig[format].icon, { className: "h-3 w-3" })}
-                {toolShedFormatConfig[format].shortLabel}
-              </Badge>
-              {isEditing && (
-                <span className="text-xs text-muted-foreground">
-                  Format cannot be changed
-                </span>
-              )}
-            </div>
-
-            {/* Format-specific fields */}
-            <FormatFields
-              format={format}
-              content={content}
-              onChange={setContent as (c: FormatContent) => void}
+          {/* ── Tags ── */}
+          <div className="space-y-1.5">
+            <Label>Tags</Label>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+              suggestions={popularTags}
+              maxTags={5}
+              placeholder="Add tags to help others find your insight..."
             />
-
-            <Separator />
-
-            {/* Event details */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Event Details
-              </h3>
-              <div className="grid grid-cols-[1fr_140px] gap-4">
-                <div className="space-y-1.5 relative">
-                  <Label htmlFor="event-name">Event Name</Label>
-                  <Input
-                    id="event-name"
-                    placeholder="e.g. Trauma-Informed Practice Workshop"
-                    value={eventName}
-                    onChange={(e) => {
-                      setEventName(e.target.value);
-                      setShowEventSuggestions(true);
-                    }}
-                    onFocus={() => setShowEventSuggestions(true)}
-                    onBlur={() =>
-                      setTimeout(() => setShowEventSuggestions(false), 200)
-                    }
-                    maxLength={200}
-                    className="bg-card"
-                  />
-                  {showEventSuggestions && eventSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border bg-popover p-1 shadow-md">
-                      {eventSuggestions
-                        .filter(
-                          (s) =>
-                            s.toLowerCase() !== eventName.trim().toLowerCase()
-                        )
-                        .slice(0, 5)
-                        .map((suggestion) => (
-                          <button
-                            key={suggestion}
-                            type="button"
-                            className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setEventName(suggestion);
-                              setShowEventSuggestions(false);
-                            }}
-                          >
-                            {suggestion}
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="event-date">Event Date</Label>
-                  <Input
-                    id="event-date"
-                    type="date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    max={new Date().toISOString().split("T")[0]}
-                    className="bg-card"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-1.5">
-              <Label>Tags</Label>
-              <TagInput
-                tags={tags}
-                onChange={setTags}
-                suggestions={popularTags}
-                maxTags={5}
-                placeholder="Add tags to help others find your insight..."
-              />
-            </div>
-
-            {/* Draft toggle */}
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="draft-toggle" className="cursor-pointer">
-                  Save as draft
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Only you can see drafts. Share when you&apos;re ready.
-                </p>
-              </div>
-              <Switch
-                id="draft-toggle"
-                checked={isDraft}
-                onCheckedChange={setIsDraft}
-              />
-            </div>
-
-            {/* Error */}
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-
-            {/* Footer */}
-            <div className="flex items-center justify-between">
-              {!isEditing && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setStep(1)}
-                  disabled={isPending}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              )}
-              <div className="flex gap-2 ml-auto">
-                <Button
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isPending}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit} disabled={isPending}>
-                  {isPending && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  {isEditing
-                    ? "Save Changes"
-                    : isDraft
-                      ? "Save Draft"
-                      : "Share"}
-                </Button>
-              </div>
-            </div>
           </div>
-        )}
+
+          {/* ── Draft toggle ── */}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="draft-toggle" className="cursor-pointer">
+                Save as draft
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Only you can see drafts. Share when you&apos;re ready.
+              </p>
+            </div>
+            <Switch
+              id="draft-toggle"
+              checked={isDraft}
+              onCheckedChange={setIsDraft}
+            />
+          </div>
+
+          {/* Error */}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* ── Footer ── */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isPending || !format}>
+              {isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {isEditing
+                ? "Save Changes"
+                : isDraft
+                  ? "Save Draft"
+                  : "Share"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
