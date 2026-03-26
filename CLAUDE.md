@@ -141,7 +141,7 @@ Domain-specific lessons and patterns live in nested CLAUDE.md files that auto-lo
 |-----------|----------|
 | `src/app/(protected)/resources/CLAUDE.md` | Google Docs integration, Algolia indexing, category hierarchy, HTML sanitisation |
 | `src/app/(protected)/learning/CLAUDE.md` | Course/quiz architecture, Tool Shed, feedback, admin builder |
-| `src/components/hr/CLAUDE.md` | HR module patterns, action file structure, config-driven badges |
+| `src/app/(protected)/hr/CLAUDE.md` | HR module patterns, action file structure, config-driven badges |
 | `src/app/(protected)/sign-in/CLAUDE.md` | Working location, Google Calendar sync, CSV export |
 | `src/lib/CLAUDE.md` | Shared utilities, security, Supabase patterns, design tokens, table patterns |
 | `src/__mocks__/CLAUDE.md` | Testing patterns, Supabase mocking strategy, reference test files |
