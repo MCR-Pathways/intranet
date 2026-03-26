@@ -117,7 +117,7 @@
 - [ ] Rate limiting on API endpoints (requires Upstash Redis)
 - [ ] Error monitoring integration (swap logger transport)
 - [ ] Mobile responsiveness
-- [ ] Tool Shed popular tags DB aggregation (JS-side OK for ~80 staff, move to PostgreSQL RPC if volume grows)
+- [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
 
 ---
 
