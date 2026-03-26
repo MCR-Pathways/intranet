@@ -368,7 +368,7 @@ export async function fetchArticleBySlugOnly(
   let query = supabase
     .from("resource_articles")
     .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT})`
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT}, parent:resource_categories!parent_id(name, slug))`
     )
     .eq("slug", articleSlug)
     .is("deleted_at", null);
@@ -387,14 +387,20 @@ export async function fetchArticleBySlugOnly(
     string,
     unknown
   >;
-  const category = categoryData as ResourceCategory | null;
+  const rawCategory = categoryData as (ResourceCategory & {
+    parent: { name: string; slug: string } | { name: string; slug: string }[] | null;
+  }) | null;
 
-  // Fetch parent category for breadcrumbs
-  let parentCategory: { name: string; slug: string } | null = null;
-  if (category?.parent_id) {
-    const parent = await fetchParentCategory(supabase, category.parent_id);
-    parentCategory = parent ? { name: parent.name, slug: parent.slug } : null;
-  }
+  // Extract parent from nested join (Supabase may return array for joins)
+  const rawParent = rawCategory?.parent;
+  const parentCategory = rawParent
+    ? (Array.isArray(rawParent) ? rawParent[0] : rawParent)
+    : null;
+
+  // Strip parent from category to match ResourceCategory type
+  const category = rawCategory
+    ? (({ parent: _, ...rest }) => rest)(rawCategory) as ResourceCategory
+    : null;
 
   return {
     article: articleData as unknown as ArticleWithAuthor,
