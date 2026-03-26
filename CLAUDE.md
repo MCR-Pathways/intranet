@@ -6,6 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Use British English** in all user-facing text, error messages, comments, and documentation. Examples: colour, organise, catalogue, defence, unauthorised, enrolment. CSS/Tailwind class names and framework terms (e.g. `text-center`, `color` CSS property) are exempt.
 
+### Writing — avoid AI patterns
+
+Apply the humanizer skill (`~/.claude/skills/humanizer/SKILL.md`) to all text output. Key rules:
+
+- **No significance inflation.** Don't say "pivotal", "testament", "vital role", "evolving landscape", "marks a shift". Just state the fact.
+- **No AI vocabulary.** Avoid: additionally, crucial, delve, enhance, foster, garner, highlight, intricate, key (adj), landscape (abstract), pivotal, showcase, tapestry, testament, underscore, valuable, vibrant.
+- **No promotional tone.** Drop: boasts, vibrant, rich (figurative), profound, nestled, in the heart of, groundbreaking, renowned, breathtaking, stunning.
+- **No -ing padding.** Don't tack "highlighting...", "ensuring...", "reflecting...", "contributing to..." onto sentences for fake depth.
+- **No copula avoidance.** Use "is" and "has", not "serves as", "stands as", "features", "boasts".
+- **No rule of three.** Don't force ideas into triplets. Two is fine. Four is fine. Whatever fits.
+- **No negative parallelisms.** Drop "not only X but also Y" and "it's not just X, it's Y".
+- **No synonym cycling.** If you said "the function", say "the function" again. Don't rotate through "the method", "the routine", "the procedure".
+- **No false ranges.** Don't use "from X to Y" unless X and Y are on a real scale.
+- **No em dash overuse.** Use commas or full stops instead. One em dash per page max.
+- **No mechanical boldface.** Don't bold every key term.
+- **No inline-header lists.** Don't start list items with `**Bold Header:** description`. Just write the point.
+- **No filler.** Cut "in order to", "due to the fact that", "it is important to note that", "at its core".
+- **No hedging.** Don't say "it could potentially be argued that". Say the thing.
+- **No sycophancy.** Drop "Great question!", "Absolutely!", "You're right that...". Just answer.
+- **No generic conclusions.** Don't end with "the future looks bright" or "exciting times ahead".
+- **No curly quotes.** Use straight quotes ("") not smart quotes.
+- **Have a voice.** Vary sentence length. Be direct. Have opinions when appropriate. Short sentences work. So do longer ones that take a different shape.
+
 ## Development Commands
 
 ```bash
