@@ -358,28 +358,14 @@ export async function getPopularTagsWithClient(
   limit: number = 20
 ): Promise<string[]> {
   const { data, error } = await supabase
-    .from("tool_shed_entries")
-    .select("tags")
-    .eq("is_published", true);
+    .rpc("get_popular_tags", { limit_count: limit });
 
   if (error || !data) {
-    logger.error("Failed to fetch tags", { error });
+    logger.error("Failed to fetch popular tags", { error });
     return [];
   }
 
-  // Flatten all tags and count frequency
-  const tagCounts = new Map<string, number>();
-  for (const row of data as { tags: string[] }[]) {
-    for (const tag of row.tags) {
-      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-    }
-  }
-
-  // Sort by frequency descending, return top N
-  return [...tagCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([tag]) => tag);
+  return (data as { tag: string; usage_count: number }[]).map((row) => row.tag);
 }
 
 export async function getEventSuggestions(
