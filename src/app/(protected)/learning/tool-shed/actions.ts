@@ -365,7 +365,7 @@ export async function getPopularTagsWithClient(
     return [];
   }
 
-  return (data as { tag: string; usage_count: number }[]).map((row) => row.tag);
+  return data.map((row: { tag: string; usage_count: number }) => row.tag);
 }
 
 export async function getEventSuggestions(
