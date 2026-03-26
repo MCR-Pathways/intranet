@@ -221,6 +221,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Guard Record lookups from user input with `Object.hasOwn()`.** Keys like `"constructor"` or `"__proto__"` return `Object.prototype` properties instead of `undefined`.
 
+**Never interpolate user input into PostgREST `.or()` filter strings.** Commas, periods, and parentheses are PostgREST operators. A user searching for `x,is_published.eq.false` can inject extra filter conditions and bypass visibility rules. Strip `,%_\\.()\"'` from any value interpolated into `.or()` template literals, or use parameterised methods (`.eq()`, `.ilike()`, `.contains()`) instead.
+
 ### React & Radix UI
 
 **Use `onSelect` not `onClick` for Radix UI `DropdownMenuItem`.** Radix primitives have specific event handler contracts.

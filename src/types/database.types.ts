@@ -1079,6 +1079,15 @@ export interface Database {
         };
         Returns: number;
       };
+      get_popular_tags: {
+        Args: {
+          limit_count?: number;
+        };
+        Returns: {
+          tag: string;
+          usage_count: number;
+        }[];
+      };
     };
     Enums: {
       // user_type and user_status are now TEXT columns, not enums
