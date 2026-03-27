@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { syncUserCalendar } from "@/lib/calendar-sync";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { rateLimiters } from "@/lib/ratelimit";
 
 /**
  * Google Calendar push notification webhook.
@@ -47,6 +48,15 @@ export async function POST(request: NextRequest) {
     // Only process "exists" (resource changed) notifications
     if (resourceState !== "exists") {
       return NextResponse.json({ ok: true });
+    }
+
+    // Rate limit by userId — prevents calendar API quota exhaustion
+    if (rateLimiters) {
+      const { success } = await rateLimiters.webhook.limit(`cal:${userId}`);
+      if (!success) {
+        logger.warn("Calendar webhook rate limited", { userId });
+        return NextResponse.json({ ok: true }); // 200 to prevent Google retries
+      }
     }
 
     // Look up user to get email and sync token

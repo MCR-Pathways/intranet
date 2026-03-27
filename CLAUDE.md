@@ -132,6 +132,8 @@ Required in `.env.local`:
 - `KIOSK_TOKEN` — Shared secret for kiosk confirmation endpoint (server-only)
 - `RESEND_API_KEY` — Resend email API key (server-only, dormant until setup)
 - `CRON_SECRET` — Vercel Cron job authentication (server-only, dormant until setup)
+- `UPSTASH_REDIS_REST_URL` — Upstash Redis REST URL (server-only, optional — rate limiting disabled without it)
+- `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis REST token (server-only, optional)
 
 ## Workflow
 

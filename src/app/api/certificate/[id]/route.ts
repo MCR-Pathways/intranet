@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateCertificatePdf } from "@/lib/certificates";
 import { logger } from "@/lib/logger";
+import { rateLimiters, createRateLimitResponse, getClientIp } from "@/lib/ratelimit";
 
 /**
  * GET /api/certificate/[id]
@@ -22,6 +23,13 @@ export async function GET(
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  // Rate limit by IP + user ID — PDF generation is CPU-heavy
+  if (rateLimiters) {
+    const ip = getClientIp(request);
+    const { success, reset } = await rateLimiters.ogImage.limit(`${ip}:${user.id}`);
+    if (!success) return createRateLimitResponse(reset);
   }
 
   // Fetch the certificate record
