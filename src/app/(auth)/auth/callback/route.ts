@@ -2,9 +2,22 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { sanitizeRedirectPath } from "@/lib/url";
+import { rateLimiters, getClientIp } from "@/lib/ratelimit";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+
+  // Rate limit by IP — prevents OAuth code replay attacks
+  if (rateLimiters) {
+    const ip = getClientIp(request);
+    const { success } = await rateLimiters.auth.limit(ip);
+    if (!success) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent("Too many attempts. Please try again later.")}`
+      );
+    }
+  }
+
   const code = searchParams.get("code");
   const next = sanitizeRedirectPath(searchParams.get("next") ?? "/intranet");
   const error = searchParams.get("error");

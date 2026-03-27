@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { syncDocumentContent } from "@/lib/google-drive";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { rateLimiters } from "@/lib/ratelimit";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest) {
     // Only process "exists" (resource changed) notifications
     if (resourceState !== "exists") {
       return NextResponse.json({ ok: true });
+    }
+
+    // Rate limit by doc ID — prevents Drive API quota exhaustion
+    if (rateLimiters) {
+      const { success } = await rateLimiters.webhook.limit(`drive:${googleDocId}`);
+      if (!success) {
+        logger.warn("Drive webhook rate limited", { googleDocId });
+        return NextResponse.json({ ok: true }); // 200 to prevent Google retries
+      }
     }
 
     // Look up article by Google Doc ID
