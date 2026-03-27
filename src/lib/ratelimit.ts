@@ -39,7 +39,7 @@ export const rateLimiters = redis
         prefix: "rl:webhook",
       }),
 
-      /** OG image proxy — moderate, prevents SSRF abuse. 50 requests per minute per user. */
+      /** OG image proxy + certificate PDF — moderate, prevents SSRF/CPU abuse. 50 requests per minute per IP + user. */
       ogImage: new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(50, "1 m"),

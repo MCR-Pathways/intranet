@@ -25,7 +25,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  // Rate limit by user ID — PDF generation is CPU-heavy
+  // Rate limit by IP + user ID — PDF generation is CPU-heavy
   if (rateLimiters) {
     const ip = getClientIp(request);
     const { success, reset } = await rateLimiters.ogImage.limit(`${ip}:${user.id}`);
