@@ -12,6 +12,23 @@ import {
 } from "@/lib/learning";
 import { cn } from "@/lib/utils";
 
+// ─── Character Counter ──────────────────────────────────────────────────────
+
+function CharCounter({ value, max }: { value: string; max: number }) {
+  if (!value) return null;
+  return (
+    <p
+      className={cn(
+        "mt-1 text-right text-xs text-muted-foreground",
+        value.length > max * 0.9 && "text-amber-500",
+        value.length >= max && "text-destructive"
+      )}
+    >
+      {value.length} / {max}
+    </p>
+  );
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type FormatContent = PostcardContent | ThreeTwoOneContent | TakeoverContent;
@@ -85,6 +102,7 @@ function PostcardFields({
               maxLength={500}
               className="bg-card resize-none"
             />
+            <CharCounter value={content[field.key] ?? ""} max={500} />
           </div>
         );
       })}
@@ -127,13 +145,16 @@ function ThreeTwoOneFields({
             <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
               {i + 1}
             </span>
-            <Input
-              placeholder={THREE_LEARNED_PLACEHOLDERS[i]}
-              value={three[i] ?? ""}
-              onChange={(e) => updateThree(i, e.target.value)}
-              maxLength={300}
-              className="bg-card"
-            />
+            <div className="flex-1">
+              <Input
+                placeholder={THREE_LEARNED_PLACEHOLDERS[i]}
+                value={three[i] ?? ""}
+                onChange={(e) => updateThree(i, e.target.value)}
+                maxLength={300}
+                className="bg-card"
+              />
+              <CharCounter value={three[i] ?? ""} max={300} />
+            </div>
           </div>
         ))}
       </div>
@@ -146,13 +167,16 @@ function ThreeTwoOneFields({
             <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning">
               {i + 1}
             </span>
-            <Input
-              placeholder={TWO_CHANGES_PLACEHOLDERS[i]}
-              value={two[i] ?? ""}
-              onChange={(e) => updateTwo(i, e.target.value)}
-              maxLength={300}
-              className="bg-card"
-            />
+            <div className="flex-1">
+              <Input
+                placeholder={TWO_CHANGES_PLACEHOLDERS[i]}
+                value={two[i] ?? ""}
+                onChange={(e) => updateTwo(i, e.target.value)}
+                maxLength={300}
+                className="bg-card"
+              />
+              <CharCounter value={two[i] ?? ""} max={300} />
+            </div>
           </div>
         ))}
       </div>
@@ -173,6 +197,7 @@ function ThreeTwoOneFields({
           maxLength={500}
           className="bg-card resize-none"
         />
+        <CharCounter value={question} max={500} />
       </div>
     </div>
   );
@@ -206,14 +231,17 @@ function TakeoverFields({
           <span className="mt-2.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning">
             {i + 1}
           </span>
-          <Textarea
-            placeholder={TAKEOVER_PLACEHOLDERS[i]}
-            value={things[i] ?? ""}
-            onChange={(e) => update(i, e.target.value)}
-            rows={2}
-            maxLength={500}
-            className="bg-card resize-none"
-          />
+          <div className="flex-1">
+            <Textarea
+              placeholder={TAKEOVER_PLACEHOLDERS[i]}
+              value={things[i] ?? ""}
+              onChange={(e) => update(i, e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="bg-card resize-none"
+            />
+            <CharCounter value={things[i] ?? ""} max={500} />
+          </div>
         </div>
       ))}
     </div>
