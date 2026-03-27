@@ -2,7 +2,7 @@
 
 > **Owner:** Abdul-Muiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-26
+> **Last reviewed:** 2026-03-27
 > **Document updated during:** Periodic syncs
 
 ---
@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (69 files, `00001` through `00068` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (71 files, `00001` through `00070` plus a combined migration).
 
 ### Local Supabase
 
@@ -203,7 +203,7 @@ Config is in `supabase/config.toml`. Local ports: API 54321, DB 54322, Studio 54
 
 The largest module. Provides employee self-service and HR admin functionality.
 
-**Routes:** 22 pages under `/hr`
+**Routes:** 21 pages under `/hr`
 
 | Feature | Route | Key Files |
 |---|---|---|
@@ -222,8 +222,8 @@ The largest module. Provides employee self-service and HR admin functionality.
 | Org Chart | `/resources/article/org-chart` | Visual tree (react-d3-tree), relocated to Resources as component page. 308 redirect from `/hr/org-chart`. |
 | My Team | `/hr/team` | Line manager team view |
 
-**Server Actions:** 11 action files, 84+ server actions total
-**Components:** 59 files in `src/components/hr/`
+**Server Actions:** 12 action files
+**Components:** 68 files in `src/components/hr/`
 **Shared config:** `src/lib/hr.ts` (938 lines — leave types, statuses, formatters, constants)
 
 For the detailed HR roadmap, see `docs/hr-plan.md`.
@@ -232,7 +232,7 @@ For the detailed HR roadmap, see `docs/hr-plan.md`.
 
 Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based courses with section quizzes, learner UI, certificate auto-issue, completion notifications, 4 lesson types (text, video, slides, rich_text), and `auth.uid()` RPC enforcement. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Status:** Phase 1 (schema + utilities + actions), Phase 2 (admin UI), and Phase 3 (learner UI + certificates + security) complete. PR #167 merged to main. PR #168 (wire components into pages + slides/rich_text admin support) pending. Migrations 00060-00068 applied to production Supabase. PRs #165 and #166 (Colin's) closed and superseded by #167.
+**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications dormant until Resend setup.
 
 **Routes:** 12 pages under `/learning`
 
@@ -250,11 +250,11 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 | Admin: Reports | `/learning/admin/reports` |
 | Certificate PDF | `/api/certificate/[id]/route` |
 
-**New routes (planned, not yet built):** `/learning/certificates` (certificate wall), `/learning/certificates/[id]`, `/learning/tool-shed/new`, `/learning/tool-shed/[id]`, `/learning/tool-shed/[id]/edit`, `/learning/admin/tool-shed`
+**Planned routes (not yet built):** `/learning/certificates` (certificate wall), `/learning/certificates/[id]`
 
 **Key components (Phase 3):** `section-accordion.tsx` (expandable sections in course detail), `section-quiz-player.tsx` (quiz UI with `submit_section_quiz_attempt` RPC), `lesson-renderer.tsx` (renders text/video/slides/rich_text lessons), rewritten `lesson-sidebar.tsx` (section-grouped, LinkedIn-style checkmarks).
 
-**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs. Remaining: course feedback dialog, Tool Shed social learning rewrite, global Cmd+K search (Algolia), email notifications (Resend), course duplication, resume course, dashboard redesign.
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), Tool Shed social learning feed, individual assignment, course duplication, manager compliance views, Algolia search (course + Tool Shed indices), global Cmd+K search. Email notifications built but dormant until Resend setup.
 
 **New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00068.
 
@@ -306,9 +306,11 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**69 migration files** in `supabase/migrations/`, numbered `00001` through `00068` plus a combined migration.
+**71 migration files** in `supabase/migrations/`, numbered `00001` through `00070` plus a combined migration.
 
-**26+ tables** — key ones:
+**Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
+
+**40+ tables** — key ones:
 
 | Table | Purpose |
 |---|---|
@@ -325,11 +327,11 @@ PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 | `weekly_roundups` | Auto-generated roundups |
 | `resource_categories`, `resource_articles` | Resources section |
 
-Plus HR-specific tables added via migrations (leave, absence, assets, compliance, key dates, flexible working, onboarding, leaving).
+Plus HR tables (leave_requests, absence_records, return_to_work_forms, assets, asset_types, compliance_types, compliance_documents, key_dates, staff_leaving_forms, flexible_working_requests, fwr_appeals, onboarding_templates, onboarding_template_items, onboarding_checklists, onboarding_checklist_items, departments, employment_history, emergency_contacts), L&D overhaul tables (course_sections, section_quizzes, section_quiz_questions, section_quiz_options, section_quiz_attempts, certificates, course_feedback, tool_shed_entries), email tables (email_notifications, email_preferences), and mention tables (post_mentions, comment_mentions).
 
 ### Database Functions (RPCs)
 
-Key functions: `complete_lesson_and_update_progress`, `submit_section_quiz_attempt`, `generate_certificate_on_completion` (trigger), `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `unpin_expired_roundups`. All RPCs enforce `auth.uid()` for identity.
+Key functions: `complete_lesson_and_update_progress`, `submit_section_quiz_attempt`, `generate_certificate_on_completion` (trigger), `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `unpin_expired_roundups`, `get_popular_tags`, `is_hr_admin_effective`, `is_ld_admin_effective`, `is_systems_admin_effective`, `is_internal_staff`, `resolve_article_visibility`. All RPCs enforce `auth.uid()` for identity.
 
 ### Key Conventions
 
@@ -468,7 +470,7 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows
+- No E2E tests for multi-step HR workflows (18 E2E tests total for a 56-page app)
 
 ---
 
@@ -678,16 +680,18 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 ### High Priority
 
 - **No error monitoring** — `src/lib/logger.ts` is a console stub. No Sentry/Datadog integration.
-- **No rate limiting** — API endpoints have no request throttling. Requires Upstash Redis for Vercel serverless (in-memory limiters don't persist across cold starts).
+- **No server action rate limiting** — API routes are rate-limited (PR #163), but server actions are not. Deferred to hardening phase (see `memory/rate-limiting.md`).
 
 ### Medium Priority
 
-- **Large action files** — `absence/actions.ts` (966 lines), `flexible-working/actions.ts` (1167 lines), `onboarding/actions.ts` (1140 lines) could benefit from splitting.
-- **Flat HR component structure** — all 59 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
+- **`database.types.ts` is stale** — only 25 of 40+ tables present. Missing HR, L&D overhaul, email, and mention tables. Regenerate from Supabase.
+- **Large action files** — `flexible-working/actions.ts` (1,167 lines), `onboarding/actions.ts` (1,140 lines), `absence/actions.ts` (966 lines) could benefit from splitting.
+- **Flat HR component structure** — all 68 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
-- **Absence hard-deletes** — line 381 of `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
-- **No scheduled notifications** — key dates, compliance expiry, stale leave requests require manual dashboard checks. A daily digest would help.
+- **Absence hard-deletes** — `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
+- **No scheduled notifications** — key dates, compliance expiry, stale leave requests require manual dashboard checks. Email notification system built (PR #175) but dormant until Resend setup.
 - **No bulk operations** — leave entitlements, compliance assignments, onboarding checklists are all one-at-a-time.
+- **Google Drive webhook expiry** — watch channels expire after 7 days; no auto-renewal cron configured.
 
 ### Low Priority / UX
 
@@ -716,10 +720,12 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ### Infrastructure
 
-- Rate limiting on API endpoints (Upstash Redis for Vercel serverless). Priority: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`, `/api/drive/webhook`
 - Error monitoring integration (Sentry or Datadog)
-- CI/CD pipeline (GitHub Actions)
+- CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - Scheduled notification jobs (daily digest for HR)
+- Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
+- Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
+- Resend email activation (domain verification + env vars: `RESEND_API_KEY`, `CRON_SECRET`)
 
 ---
 
@@ -727,6 +733,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-27 | Abdulmuiz Adaranijo | API route rate limiting merged (PR #163): Upstash Redis on 7 endpoints. Project review: fixed 8 doc inaccuracies, flagged database.types.ts staleness, added tech debt items. Server action rate limiting investigated and deferred — full analysis in memory/rate-limiting.md. |
 | 2026-03-26 | Abdul-Muiz Adaranijo | Tool Shed popular tags moved to PostgreSQL RPC (PR #180, migration 00070). JS-side tag aggregation replaced with `get_popular_tags` DB function (unnest + GROUP BY + COUNT). Added function to database.types.ts. Fixed PostgREST .or() filter injection in Tool Shed search (commas could inject extra conditions to view unpublished drafts). Added security lesson to root CLAUDE.md. |
 | 2026-03-26 | Abdul-Muiz Adaranijo | CLAUDE.md restructured into nested domain-specific files (PR #179). 7 nested CLAUDE.md files auto-load by directory. 8 memory files retired. Humanizer writing patterns added. Resources UX redesign merged (PR #164): sidebar tree removed, grouped index, category grid, "More in [folder]" sibling nav, scroll-spy TOC, recently viewed in search, nested join for parent category. docs/plan.md rewritten. Workflow rules expanded for full knowledge file lifecycle. |
 | 2026-03-23 | Abdul-Muiz Adaranijo | Learning overhaul Phase 3 complete. PR #167 merged: learner UI (section-accordion.tsx, section-quiz-player.tsx, lesson-renderer.tsx), certificate auto-issue via DB trigger, completion notifications via DB trigger, auth.uid() RPC enforcement, 4 lesson types (text, video, slides, rich_text). Migrations 00065-00068 applied to production. PR #168 pending (wire components into pages + slides/rich_text admin support). PRs #165, #166 (Colin's) closed and superseded. Open PRs: #163 (rate limiting), #164 (resources UX), #168 (learning wire components). 1,267 tests, 53 files. |

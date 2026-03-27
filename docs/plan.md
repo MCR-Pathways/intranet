@@ -95,10 +95,14 @@
 - [ ] Theme/display preferences
 
 ### Infrastructure & Testing
-- [ ] Rate limiting (Upstash Redis for Vercel serverless). Priority: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`, `/api/drive/webhook`
+- [x] Rate limiting on API routes (Upstash Redis, PR #163). Server action rate limiting deferred — see `memory/rate-limiting.md`
 - [ ] Error monitoring integration (Sentry/Datadog swap for `src/lib/logger.ts`)
-- [ ] E2E test phases 2-3 (core module + HR module tests)
+- [ ] E2E test phases 2-3 (core module + HR module tests — currently 18 E2E tests for 56 pages)
 - [ ] Mobile responsiveness pass (currently desktop/laptop only)
+- [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
+- [ ] Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
+- [ ] Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
+- [ ] Resend email activation (domain verification + env vars: `RESEND_API_KEY`, `CRON_SECRET`)
 
 ### Larger Features
 - [ ] Kiosk PWA — see `memory/kiosk-overhaul.md` for full requirements
@@ -114,9 +118,15 @@
 ---
 
 ## Technical Debt
-- [ ] Rate limiting on API endpoints (requires Upstash Redis)
+- [x] Rate limiting on API routes (Upstash Redis, PR #163)
+- [ ] Server action rate limiting (deferred — needs try/catch in 13 action files first, see `memory/rate-limiting.md`)
 - [ ] Error monitoring integration (swap logger transport)
 - [ ] Mobile responsiveness
+- [ ] `database.types.ts` regeneration — stale, missing 15+ tables (HR, L&D overhaul, email, mentions)
+- [ ] Google Drive webhook renewal cron (watch channels expire after 7 days)
+- [ ] CI/CD pipeline (GitHub Actions — currently relies on Vercel Git integration only)
+- [ ] Absence records soft-delete (currently hard-deletes, no audit trail)
+- [ ] Large action file splitting — flexible-working (1,167 lines), onboarding (1,140 lines), absence (966 lines)
 - [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
 
 ---
