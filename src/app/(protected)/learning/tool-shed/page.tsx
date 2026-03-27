@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, isLDAdminEffective, isHRAdminEffective } from "@/lib/auth";
 import { EntryFeed } from "@/components/tool-shed/entry-feed";
@@ -24,9 +25,9 @@ export default async function ToolShedPage() {
       {/* Page header */}
       <div>
         <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-          <a href="/learning" className="hover:underline underline-offset-4">
+          <Link href="/learning" className="hover:underline underline-offset-4">
             Learning
-          </a>
+          </Link>
           <span className="text-muted-foreground/50 select-none">/</span>
           <span className="text-foreground">Tool Shed</span>
         </nav>
