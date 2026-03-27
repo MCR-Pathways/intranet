@@ -261,6 +261,10 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Use specific sr-only text on row action buttons.** Include the entity name: `Actions for {dept.name}`, not generic "Actions".
 
+### Server Actions & Middleware
+
+**Middleware cannot safely block server actions.** Returning non-200 from Next.js middleware during a server action throws E394 ("An unexpected response was received from the server"), which propagates to the Error Boundary and replaces the page. Rate limiting or blocking server actions must happen inside the action (e.g., in auth helpers), not in the proxy.
+
 ### Deployment & Infrastructure
 
 **Never put server-only packages in `devDependencies` if production code imports them.** Vercel prunes devDependencies after build.
@@ -269,7 +273,11 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Verify Tailwind plugins are installed, not just referenced.** `prose` classes do nothing if `@tailwindcss/typography` isn't installed and registered via `@plugin` in `globals.css`.
 
-**Rate limiting on Vercel serverless requires an external store.** Use Upstash Redis (`@upstash/ratelimit`). Priority: `/api/kiosk/confirm`, `/auth/confirm`, `/api/calendar/webhook`, `/api/drive/webhook`.
+**Rate limiting on Vercel serverless requires an external store.** Use Upstash Redis (`@upstash/ratelimit`). API routes rate-limited via PR #163. Server action rate limiting deferred — see `memory/rate-limiting.md`.
+
+**`NextRequest.ip` was removed in Next.js 16.** Use `x-forwarded-for` header parsing. AI tools still suggest it — verify against the actual runtime.
+
+**Return 200 (not 429) when rate-limiting webhook endpoints.** Google retries failed webhooks with exponential backoff. A 429 causes retry storms that compound the problem.
 
 **Always verify exploration agent claims against actual code.** Agents report false negatives AND false positives. Run your own `git log`, `grep`, and `read` to verify before acting.
 
