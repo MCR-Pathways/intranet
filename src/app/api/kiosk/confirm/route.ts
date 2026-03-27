@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getUKToday } from "@/lib/sign-in";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { rateLimiters, createRateLimitResponse, getClientIp } from "@/lib/ratelimit";
 import type { WorkLocation } from "@/types/database.types";
 
 /**
@@ -12,6 +13,13 @@ import type { WorkLocation } from "@/types/database.types";
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP — prevents token brute-force from kiosk tablet
+    if (rateLimiters) {
+      const ip = getClientIp(request);
+      const { success, reset } = await rateLimiters.kiosk.limit(ip);
+      if (!success) return createRateLimitResponse(reset);
+    }
+
     const body = await request.json();
     const { userId, token } = body;
 

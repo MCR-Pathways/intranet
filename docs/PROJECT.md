@@ -1,8 +1,8 @@
 # MCR Pathways Intranet — Project Documentation
 
-> **Owner:** Abdul-Muiz Adaranijo
+> **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-26
+> **Last reviewed:** 2026-03-27
 > **Document updated during:** Periodic syncs
 
 ---
@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (69 files, `00001` through `00068` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (71 files, `00001` through `00070` plus a combined migration).
 
 ### Local Supabase
 
@@ -203,7 +203,7 @@ Config is in `supabase/config.toml`. Local ports: API 54321, DB 54322, Studio 54
 
 The largest module. Provides employee self-service and HR admin functionality.
 
-**Routes:** 22 pages under `/hr`
+**Routes:** 21 pages under `/hr`
 
 | Feature | Route | Key Files |
 |---|---|---|
@@ -222,8 +222,8 @@ The largest module. Provides employee self-service and HR admin functionality.
 | Org Chart | `/resources/article/org-chart` | Visual tree (react-d3-tree), relocated to Resources as component page. 308 redirect from `/hr/org-chart`. |
 | My Team | `/hr/team` | Line manager team view |
 
-**Server Actions:** 11 action files, 84+ server actions total
-**Components:** 59 files in `src/components/hr/`
+**Server Actions:** 12 action files
+**Components:** 68 files in `src/components/hr/`
 **Shared config:** `src/lib/hr.ts` (938 lines — leave types, statuses, formatters, constants)
 
 For the detailed HR roadmap, see `docs/hr-plan.md`.
@@ -232,7 +232,7 @@ For the detailed HR roadmap, see `docs/hr-plan.md`.
 
 Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based courses with section quizzes, learner UI, certificate auto-issue, completion notifications, 4 lesson types (text, video, slides, rich_text), and `auth.uid()` RPC enforcement. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Status:** Phase 1 (schema + utilities + actions), Phase 2 (admin UI), and Phase 3 (learner UI + certificates + security) complete. PR #167 merged to main. PR #168 (wire components into pages + slides/rich_text admin support) pending. Migrations 00060-00068 applied to production Supabase. PRs #165 and #166 (Colin's) closed and superseded by #167.
+**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications dormant until Resend setup.
 
 **Routes:** 12 pages under `/learning`
 
@@ -250,11 +250,11 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 | Admin: Reports | `/learning/admin/reports` |
 | Certificate PDF | `/api/certificate/[id]/route` |
 
-**New routes (planned, not yet built):** `/learning/certificates` (certificate wall), `/learning/certificates/[id]`, `/learning/tool-shed/new`, `/learning/tool-shed/[id]`, `/learning/tool-shed/[id]/edit`, `/learning/admin/tool-shed`
+**Planned routes (not yet built):** `/learning/certificates` (certificate wall), `/learning/certificates/[id]`
 
 **Key components (Phase 3):** `section-accordion.tsx` (expandable sections in course detail), `section-quiz-player.tsx` (quiz UI with `submit_section_quiz_attempt` RPC), `lesson-renderer.tsx` (renders text/video/slides/rich_text lessons), rewritten `lesson-sidebar.tsx` (section-grouped, LinkedIn-style checkmarks).
 
-**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs. Remaining: course feedback dialog, Tool Shed social learning rewrite, global Cmd+K search (Algolia), email notifications (Resend), course duplication, resume course, dashboard redesign.
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), Tool Shed social learning feed, individual assignment, course duplication, manager compliance views, Algolia search (course + Tool Shed indices), global Cmd+K search. Email notifications built but dormant until Resend setup.
 
 **New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00068.
 
@@ -306,9 +306,11 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**69 migration files** in `supabase/migrations/`, numbered `00001` through `00068` plus a combined migration.
+**71 migration files** in `supabase/migrations/`, numbered `00001` through `00070` plus a combined migration.
 
-**26+ tables** — key ones:
+**Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
+
+**40+ tables** — key ones:
 
 | Table | Purpose |
 |---|---|
@@ -325,11 +327,11 @@ PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 | `weekly_roundups` | Auto-generated roundups |
 | `resource_categories`, `resource_articles` | Resources section |
 
-Plus HR-specific tables added via migrations (leave, absence, assets, compliance, key dates, flexible working, onboarding, leaving).
+Plus HR tables (leave_requests, absence_records, return_to_work_forms, assets, asset_types, compliance_types, compliance_documents, key_dates, staff_leaving_forms, flexible_working_requests, fwr_appeals, onboarding_templates, onboarding_template_items, onboarding_checklists, onboarding_checklist_items, departments, employment_history, emergency_contacts), L&D overhaul tables (course_sections, section_quizzes, section_quiz_questions, section_quiz_options, section_quiz_attempts, certificates, course_feedback, tool_shed_entries), email tables (email_notifications, email_preferences), and mention tables (post_mentions, comment_mentions).
 
 ### Database Functions (RPCs)
 
-Key functions: `complete_lesson_and_update_progress`, `submit_section_quiz_attempt`, `generate_certificate_on_completion` (trigger), `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `unpin_expired_roundups`. All RPCs enforce `auth.uid()` for identity.
+Key functions: `complete_lesson_and_update_progress`, `submit_section_quiz_attempt`, `generate_certificate_on_completion` (trigger), `generate_weekly_roundup`, `has_module_access`, `is_hr_admin`, `is_line_manager`, `notify_course_published`, `unpin_expired_roundups`, `get_popular_tags`, `is_hr_admin_effective`, `is_ld_admin_effective`, `is_systems_admin_effective`, `is_internal_staff`, `resolve_article_visibility`. All RPCs enforce `auth.uid()` for identity.
 
 ### Key Conventions
 
@@ -426,9 +428,27 @@ Row Level Security on all tables with ownership-based policies. Junction tables 
 
 All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET search_path = ''` with fully qualified table references (early functions fixed in migration `00048`, PR #107).
 
+### Rate Limiting
+
+API routes are rate-limited via Upstash Redis (`@upstash/ratelimit`). Graceful degradation when env vars are missing (local dev works without Redis).
+
+| Endpoint | Limit | Key | Response |
+|---|---|---|---|
+| `/auth/confirm` | 5/15min | IP | Redirect to `/login?error=...` |
+| `/auth/callback` | 5/15min | IP | Redirect to `/login?error=...` |
+| `/api/kiosk/confirm` | 30/min | IP | 429 + Retry-After |
+| `/api/calendar/webhook` | 100/min | resource | 200 (prevents Google retries) |
+| `/api/drive/webhook` | 100/min | resource | 200 (prevents Google retries) |
+| `/api/og-image` | 50/min | IP:user | 429 + Retry-After |
+| `/api/certificate/[id]` | 50/min | IP:user | 429 + Retry-After |
+
+Server action rate limiting deferred to a hardening phase — see `memory/rate-limiting.md` for architecture analysis.
+
+Key files: `src/lib/ratelimit.ts` (presets, helpers), `src/lib/ratelimit.test.ts`.
+
 ### Remaining Security Work
 
-- **Rate limiting** — no request throttling on API endpoints. Requires Upstash Redis for Vercel serverless.
+- **Server action rate limiting** — deferred to hardening phase (proxy approach breaks client UX, auth helper approach needs try/catch prerequisite). See `memory/rate-limiting.md`.
 - **Nonce-based CSP** — replace `unsafe-inline` with nonce-based CSP when the performance trade-off (forced dynamic rendering) is acceptable.
 
 ---
@@ -468,7 +488,8 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows
+- No E2E tests for multi-step HR workflows (18 E2E tests total for a 56-page app)
+- Missing action tests for flexible-working and onboarding (component tests exist via PR #135, but no action-level test files)
 
 ---
 
@@ -678,16 +699,18 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 ### High Priority
 
 - **No error monitoring** — `src/lib/logger.ts` is a console stub. No Sentry/Datadog integration.
-- **No rate limiting** — API endpoints have no request throttling. Requires Upstash Redis for Vercel serverless (in-memory limiters don't persist across cold starts).
+- **No server action rate limiting** — API routes are rate-limited, but server actions are not. Deferred to hardening phase (see `memory/rate-limiting.md`).
 
 ### Medium Priority
 
-- **Large action files** — `absence/actions.ts` (966 lines), `flexible-working/actions.ts` (1167 lines), `onboarding/actions.ts` (1140 lines) could benefit from splitting.
-- **Flat HR component structure** — all 59 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
+- **`database.types.ts` is stale** — only 25 of 40+ tables present. Missing HR, L&D overhaul, email, and mention tables. Regenerate from Supabase.
+- **Large action files** — `flexible-working/actions.ts` (1,167 lines), `onboarding/actions.ts` (1,140 lines), `absence/actions.ts` (966 lines) could benefit from splitting.
+- **Flat HR component structure** — all 68 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
-- **Absence hard-deletes** — line 381 of `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
-- **No scheduled notifications** — key dates, compliance expiry, stale leave requests require manual dashboard checks. A daily digest would help.
+- **Absence hard-deletes** — `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
+- **No scheduled notifications** — key dates, compliance expiry, stale leave requests require manual dashboard checks. Email notification system built (PR #175) but dormant until Resend setup.
 - **No bulk operations** — leave entitlements, compliance assignments, onboarding checklists are all one-at-a-time.
+- **Google Drive webhook expiry** — watch channels expire after 7 days; no auto-renewal cron configured.
 
 ### Low Priority / UX
 
@@ -720,6 +743,9 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - Error monitoring integration (Sentry or Datadog)
 - CI/CD pipeline (GitHub Actions)
 - Scheduled notification jobs (daily digest for HR)
+- Regenerate `database.types.ts` from production Supabase
+- Google Drive webhook renewal cron (7-day expiry)
+- Resend email setup (domain verification, API key, Cron secret)
 
 ---
 
@@ -727,23 +753,26 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
-| 2026-03-26 | Abdul-Muiz Adaranijo | Tool Shed popular tags moved to PostgreSQL RPC (PR #180, migration 00070). JS-side tag aggregation replaced with `get_popular_tags` DB function (unnest + GROUP BY + COUNT). Added function to database.types.ts. Fixed PostgREST .or() filter injection in Tool Shed search (commas could inject extra conditions to view unpublished drafts). Added security lesson to root CLAUDE.md. |
-| 2026-03-26 | Abdul-Muiz Adaranijo | CLAUDE.md restructured into nested domain-specific files (PR #179). 7 nested CLAUDE.md files auto-load by directory. 8 memory files retired. Humanizer writing patterns added. Resources UX redesign merged (PR #164): sidebar tree removed, grouped index, category grid, "More in [folder]" sibling nav, scroll-spy TOC, recently viewed in search, nested join for parent category. docs/plan.md rewritten. Workflow rules expanded for full knowledge file lifecycle. |
-| 2026-03-23 | Abdul-Muiz Adaranijo | Learning overhaul Phase 3 complete. PR #167 merged: learner UI (section-accordion.tsx, section-quiz-player.tsx, lesson-renderer.tsx), certificate auto-issue via DB trigger, completion notifications via DB trigger, auth.uid() RPC enforcement, 4 lesson types (text, video, slides, rich_text). Migrations 00065-00068 applied to production. PR #168 pending (wire components into pages + slides/rich_text admin support). PRs #165, #166 (Colin's) closed and superseded. Open PRs: #163 (rate limiting), #164 (resources UX), #168 (learning wire components). 1,267 tests, 53 files. |
-| 2026-03-19 | Abdul-Muiz Adaranijo | Learning overhaul Phase 1+2. PR 1: 5 migrations (00060-00064), 4 utility files, section-actions.ts. PR 2: admin UI — section-manager.tsx (~350 lines), section-quiz-editor.tsx (~500 lines), rewritten course detail page for section-based hierarchy, combined quiz actions with rollback. LessonType "quiz" removed (knock-on fixes in 4 learner files). All 5 migrations applied to production Supabase. Build + lint clean, all CRUD verified live. Branch: `feature/learning-overhaul-migrations`. |
-| 2026-03-19 | Abdul-Muiz Adaranijo | Resources post-launch fixes + enhancements. PR #162: Google Docs formatting preservation in HTML sanitiser (bold/italic spans → `<strong>`/`<em>`, first-row `<td>` → `<th>`, column widths converted to responsive percentages). PR #161: cascading category selection (Category → Subcategory → Folder). PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,266 tests, 53 files. |
-| 2026-03-18 | Abdul-Muiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |
-| 2026-03-13 | Abdul-Muiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
-| 2026-03-13 | Abdul-Muiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
-| 2026-03-13 | Abdul-Muiz Adaranijo | Resources restructure PR D: 9-category taxonomy (migration 00056). Soft-deleted old 3 categories (Policies, Guides, Templates), seeded 9 top-level + 43 subcategories with icons, colours, visibility. Fixed article/editor breadcrumbs for subcategories (parent chain). Updated legacy redirect pages. Route promotion (PR C): `/intranet/resources` → `/resources` top-level sidebar with BookOpen icon. Gemini review fixes: removed 3 redundant type casts. 1119 tests, 50 files. |
-| 2026-03-12 | Abdul-Muiz Adaranijo | Resources restructure PRs #127, #130, #128 merged. Systems admin permissions broadened (migration 00052). PC user type removed — `pathways_coordinator` → `staff` + `is_external` (migration 00053). Content editor permission added (migration 00054). Proxy redirect loop fix for new_user after induction. Gemini review fixes across all 3 PRs (accessible switch tests, VisibilityBadge extraction, toggle mapping). PR #131 open for subcategories + visibility. 1118 tests, 50 files. |
-| 2026-03-12 | Abdul-Muiz Adaranijo | Brand colour refinement (4 PRs #121-123, #125): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C), Google default avatar filter (`filterAvatarUrl()`). 16 avatar files, 7 link files, 2 icon files + CSS tokens. 1112 tests, 50 files. |
-| 2026-03-12 | Abdul-Muiz Adaranijo | Input validation hardening (PRs #115-120): SVG upload removal + DB migration, CSS hex colour validation, leave type validation (LEAVE_TYPE_CONFIG), generic error messages (95 instances, 17 files), path traversal + UUID validation, 3-tier string length limits on all HR free-text fields. Shared `src/lib/validation.ts` (isValidHexColour, isValidUUID, validateTextLength). 37 client-side maxLength attributes. 1099 tests, 50 files. Design system doc created (`docs/design-system.md`). |
-| 2026-03-11 | Abdul-Muiz Adaranijo | Auto-save (PR #114): Notion-style debounced saves (5s), useAutoSave hook with state machine + concurrent save protection, SaveStatusIndicator, create→edit transition, beforeunload safety net. 15 tests, 1073 total. |
-| 2026-03-11 | Abdul-Muiz Adaranijo | Editor tooltips + toolbar (PR #113): 25+ toolbar buttons with Google Docs-style tooltips, heading dropdown (H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11), highlight (9), undo/redo, clear formatting. 8 new Tiptap extensions, 3 new files. Post-merge fixes: checklist CSS, Vercel build, reactive indent/outdent + heading state. |
-| 2026-03-11 | Abdul-Muiz Adaranijo | Breadcrumb consistency (PR #112): Standardised breadcrumbs across all 24 pages. Renamed stale root labels (HR→Admin, Intranet→Home), added breadcrumbs to 8 admin pages, replaced manual headers with PageHeader, visual refresh (/ separator, hover underlines). |
-| 2026-03-11 | Abdul-Muiz Adaranijo | Sidebar declutter (PR #111): semantic regrouping (Intranet→Home, HR→Me, Working Location→Location), admin separation (single Admin dashboard link), `/hr` now admin-only with non-admin redirect. Resources overhaul PRs #109-110 merged (soft-delete, kebab menus, featured articles, category management, icon picker). |
-| 2026-03-11 | Abdul-Muiz Adaranijo | Security audit remediation: PRs #106 (open redirect, error leakage, timing-safe webhook, article image proxy) + #107 (SET search_path on 8 early SECURITY DEFINER functions). Rate limiting documented as future work (requires Upstash Redis). |
-| 2026-03-10 | Abdul-Muiz Adaranijo | Resources editor overhaul: PRs #102-105 merged. Full formatting suite, full-page editor, article outline sidebar. 12 resource components, 5 resource routes, custom callout extension. |
-| 2026-03-10 | Abdul-Muiz Adaranijo | Sync: PRs #100 and #101 merged. All PRs #92-101 now merged. Clean main, 1057 tests. No open PRs. |
-| 2026-03-10 | Abdul-Muiz Adaranijo | Initial document creation |
+| 2026-03-27 | Abdulmuiz Adaranijo | API route rate limiting (PR TBD): Upstash Redis (@upstash/ratelimit) on 7 endpoints — auth confirm/callback (5/15min per IP), kiosk (30/min per IP), calendar/drive webhooks (100/min per resource, return 200 when limited), og-image + certificate (50/min per user). Graceful degradation without Redis. Server action rate limiting deferred to hardening phase. |
+| 2026-03-27 | Abdulmuiz Adaranijo | Project review: updated PROJECT.md stats (71 migrations, 68 HR components, 21 HR pages, 24 action files, 40+ tables). Flagged database.types.ts staleness (25 of 40+ tables). Updated plan.md with 5 new tech debt items. |
+| 2026-03-26 | Abdulmuiz Adaranijo | Tool Shed single-step creation flow (PR #181): collapsed 2-step format picker into one flowing form, event context first, compact inline format picker, accent border on format fields, amber highlight on golden nugget in form. |
+| 2026-03-26 | Abdulmuiz Adaranijo | Tool Shed popular tags moved to PostgreSQL RPC (PR #180, migration 00070). JS-side tag aggregation replaced with `get_popular_tags` DB function (unnest + GROUP BY + COUNT). Added function to database.types.ts. Fixed PostgREST .or() filter injection in Tool Shed search (commas could inject extra conditions to view unpublished drafts). Added security lesson to root CLAUDE.md. |
+| 2026-03-26 | Abdulmuiz Adaranijo | CLAUDE.md restructured into nested domain-specific files (PR #179). 7 nested CLAUDE.md files auto-load by directory. 8 memory files retired. Humanizer writing patterns added. Resources UX redesign merged (PR #164): sidebar tree removed, grouped index, category grid, "More in [folder]" sibling nav, scroll-spy TOC, recently viewed in search, nested join for parent category. docs/plan.md rewritten. Workflow rules expanded for full knowledge file lifecycle. |
+| 2026-03-23 | Abdulmuiz Adaranijo | Learning overhaul Phase 3 complete. PR #167 merged: learner UI (section-accordion.tsx, section-quiz-player.tsx, lesson-renderer.tsx), certificate auto-issue via DB trigger, completion notifications via DB trigger, auth.uid() RPC enforcement, 4 lesson types (text, video, slides, rich_text). Migrations 00065-00068 applied to production. PR #168 pending (wire components into pages + slides/rich_text admin support). PRs #165, #166 (Colin's) closed and superseded. Open PRs: #163 (rate limiting), #164 (resources UX), #168 (learning wire components). 1,267 tests, 53 files. |
+| 2026-03-19 | Abdulmuiz Adaranijo | Learning overhaul Phase 1+2. PR 1: 5 migrations (00060-00064), 4 utility files, section-actions.ts. PR 2: admin UI — section-manager.tsx (~350 lines), section-quiz-editor.tsx (~500 lines), rewritten course detail page for section-based hierarchy, combined quiz actions with rollback. LessonType "quiz" removed (knock-on fixes in 4 learner files). All 5 migrations applied to production Supabase. Build + lint clean, all CRUD verified live. Branch: `feature/learning-overhaul-migrations`. |
+| 2026-03-19 | Abdulmuiz Adaranijo | Resources post-launch fixes + enhancements. PR #162: Google Docs formatting preservation in HTML sanitiser (bold/italic spans → `<strong>`/`<em>`, first-row `<td>` → `<th>`, column widths converted to responsive percentages). PR #161: cascading category selection (Category → Subcategory → Folder). PR #160: prose rendering fix (`@tailwindcss/typography` was never installed). Earlier: jsdom→linkedom migration (PR #159), category dropdown error handling, error logging. 1,266 tests, 53 files. |
+| 2026-03-18 | Abdulmuiz Adaranijo | Resources module redesign (PR #157, 6 sub-PRs #151-156). Tiptap article editor replaced with Google Docs integration (Drive API, webhooks, HTML sanitisation). Category grid replaced with 3-level sidebar tree navigation. Component page system (org chart relocated from `/hr/org-chart`). Editor mode pencil toggle. Settings page (folder registration, featured curation, category management). Algolia search with section-level indexing. 3,081 lines of dead Tiptap code removed. 61 files changed, net +2,321 lines. Migrations 00058-00059. 1,257 tests, 52 files. |
+| 2026-03-13 | Abdulmuiz Adaranijo | Badge tonal redesign: Solid fills → subtle/tonal pills (bg-{colour}-50 + text-{colour}-700) across 4 core variants (default, success, warning, destructive). Aligns with Atlassian/Stripe/Shopify industry standard. Fixed 3 semantic variant mismatches (leave approved→success, onboarding Active→success, external-course-card uses shared categoryConfig). Design system §1.8 added. |
+| 2026-03-13 | Abdulmuiz Adaranijo | PRs #135-137 merged. PR #135: 132 tests for flexible-working (70) + onboarding (62) with rollback assertions. PR #136: React Compiler (`reactCompiler: true`) + Turbopack filesystem caching (dev-only). Radix unified package migration attempted and dropped (Turbopack dev-mode Module serialisation errors). PR #137 (CLI): HR-only leave types hidden from non-admin views, system permissions visibility fix, notification scroll. 1251 tests, 52 files, zero open PRs. |
+| 2026-03-13 | Abdulmuiz Adaranijo | Resources restructure PR D: 9-category taxonomy (migration 00056). Soft-deleted old 3 categories (Policies, Guides, Templates), seeded 9 top-level + 43 subcategories with icons, colours, visibility. Fixed article/editor breadcrumbs for subcategories (parent chain). Updated legacy redirect pages. Route promotion (PR C): `/intranet/resources` → `/resources` top-level sidebar with BookOpen icon. Gemini review fixes: removed 3 redundant type casts. 1119 tests, 50 files. |
+| 2026-03-12 | Abdulmuiz Adaranijo | Resources restructure PRs #127, #130, #128 merged. Systems admin permissions broadened (migration 00052). PC user type removed — `pathways_coordinator` → `staff` + `is_external` (migration 00053). Content editor permission added (migration 00054). Proxy redirect loop fix for new_user after induction. Gemini review fixes across all 3 PRs (accessible switch tests, VisibilityBadge extraction, toggle mapping). PR #131 open for subcategories + visibility. 1118 tests, 50 files. |
+| 2026-03-12 | Abdulmuiz Adaranijo | Brand colour refinement (4 PRs #121-123, #125): Link colour token (`--link` = teal/light-blue), icon palette (6 MCR brand swatches, darkened light-mode foregrounds, legacy key mapping), avatar hash (3-colour Navy/Teal/Wine djb2), pink WCAG fix (#FF82B2 → #DA417C), Google default avatar filter (`filterAvatarUrl()`). 16 avatar files, 7 link files, 2 icon files + CSS tokens. 1112 tests, 50 files. |
+| 2026-03-12 | Abdulmuiz Adaranijo | Input validation hardening (PRs #115-120): SVG upload removal + DB migration, CSS hex colour validation, leave type validation (LEAVE_TYPE_CONFIG), generic error messages (95 instances, 17 files), path traversal + UUID validation, 3-tier string length limits on all HR free-text fields. Shared `src/lib/validation.ts` (isValidHexColour, isValidUUID, validateTextLength). 37 client-side maxLength attributes. 1099 tests, 50 files. Design system doc created (`docs/design-system.md`). |
+| 2026-03-11 | Abdulmuiz Adaranijo | Auto-save (PR #114): Notion-style debounced saves (5s), useAutoSave hook with state machine + concurrent save protection, SaveStatusIndicator, create→edit transition, beforeunload safety net. 15 tests, 1073 total. |
+| 2026-03-11 | Abdulmuiz Adaranijo | Editor tooltips + toolbar (PR #113): 25+ toolbar buttons with Google Docs-style tooltips, heading dropdown (H1-H4), subscript/superscript, alignment, checklist, indent/outdent, text colour (11), highlight (9), undo/redo, clear formatting. 8 new Tiptap extensions, 3 new files. Post-merge fixes: checklist CSS, Vercel build, reactive indent/outdent + heading state. |
+| 2026-03-11 | Abdulmuiz Adaranijo | Breadcrumb consistency (PR #112): Standardised breadcrumbs across all 24 pages. Renamed stale root labels (HR→Admin, Intranet→Home), added breadcrumbs to 8 admin pages, replaced manual headers with PageHeader, visual refresh (/ separator, hover underlines). |
+| 2026-03-11 | Abdulmuiz Adaranijo | Sidebar declutter (PR #111): semantic regrouping (Intranet→Home, HR→Me, Working Location→Location), admin separation (single Admin dashboard link), `/hr` now admin-only with non-admin redirect. Resources overhaul PRs #109-110 merged (soft-delete, kebab menus, featured articles, category management, icon picker). |
+| 2026-03-11 | Abdulmuiz Adaranijo | Security audit remediation: PRs #106 (open redirect, error leakage, timing-safe webhook, article image proxy) + #107 (SET search_path on 8 early SECURITY DEFINER functions). Rate limiting documented as future work (requires Upstash Redis). |
+| 2026-03-10 | Abdulmuiz Adaranijo | Resources editor overhaul: PRs #102-105 merged. Full formatting suite, full-page editor, article outline sidebar. 12 resource components, 5 resource routes, custom callout extension. |
+| 2026-03-10 | Abdulmuiz Adaranijo | Sync: PRs #100 and #101 merged. All PRs #92-101 now merged. Clean main, 1057 tests. No open PRs. |
+| 2026-03-10 | Abdulmuiz Adaranijo | Initial document creation |

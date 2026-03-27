@@ -69,7 +69,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 - **Proxy** (`src/proxy.ts`): Checks auth, fetches profile, enforces module access by `user_type` + `is_external`, redirects users needing induction
 - **User types**: `staff` (full access for internal, restricted for external), `new_user` (induction only)
 - **External staff** (`is_external = true`): School-employed Pathways Coordinators — can access `/learning` and `/intranet` only
-- **Module access**: `/hr` and `/sign-in` → internal staff only; `/learning` and `/intranet` → all staff (internal + external)
+- **Module access**: `/hr` and `/sign-in` → internal staff only; `/learning`, `/intranet`, and `/resources` → all staff (internal + external)
 
 ### Supabase Client Pattern
 
@@ -90,14 +90,14 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 ### Server Actions Location
 
-Each route group has its own `actions.ts` (20 action files total):
+Each route group has its own `actions.ts` (24 action files total):
 - `src/app/(auth)/actions.ts` — sign out
 - `src/app/(protected)/hr/` — `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
 - `src/app/(protected)/intranet/actions.ts` — news feed posts, polls, comments, mentions
 - `src/app/(protected)/intranet/induction/actions.ts` — induction progress
 - `src/app/(protected)/notifications/actions.ts` — notification read status
 - `src/app/(protected)/sign-in/actions.ts` — sign-in entries, team history, Google Calendar sync
-- `src/app/(protected)/learning/` — `my-courses/actions.ts`, `admin/courses/actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
+- `src/app/(protected)/learning/` — `my-courses/actions.ts`, `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
 - `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks)
 
 ### Key Patterns
@@ -132,6 +132,8 @@ Required in `.env.local`:
 - `KIOSK_TOKEN` — Shared secret for kiosk confirmation endpoint (server-only)
 - `RESEND_API_KEY` — Resend email API key (server-only, dormant until setup)
 - `CRON_SECRET` — Vercel Cron job authentication (server-only, dormant until setup)
+- `UPSTASH_REDIS_REST_URL` — Upstash Redis REST URL (server-only, optional — rate limiting disabled without it)
+- `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis REST token (server-only, optional)
 
 ## Workflow
 
