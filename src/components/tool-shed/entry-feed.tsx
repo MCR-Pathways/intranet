@@ -233,37 +233,37 @@ export function EntryFeed({
         </div>
       )}
 
-      {/* Loading indicator for filter changes */}
-      {isFiltering && (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {/* Entry list (dimmed during filter transitions) */}
+      <div className={cn("space-y-4 transition-opacity", isFiltering && "opacity-50 pointer-events-none")}>
+        {/* Loading overlay */}
+        {isFiltering && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
-      {/* Entry list */}
-      {!isFiltering && entries.length === 0 && (
-        hasFilters ? (
-          <Card className="bg-card shadow-md rounded-xl overflow-clip">
-            <CardContent className="py-12 flex flex-col items-center text-center">
-              <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">
-                No insights match your filters
-              </p>
-              <p className="text-sm text-muted-foreground/70 mt-1">
-                Try adjusting your search or filters.
-              </p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-                Clear filters
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <ToolShedEmptyState onShare={() => setShowShareDialog(true)} />
-        )
-      )}
+        {entries.length === 0 && !isFiltering && (
+          hasFilters ? (
+            <Card className="bg-card shadow-md rounded-xl overflow-clip">
+              <CardContent className="py-12 flex flex-col items-center text-center">
+                <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  No insights match your filters
+                </p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Try adjusting your search or filters.
+                </p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <ToolShedEmptyState onShare={() => setShowShareDialog(true)} />
+          )
+        )}
 
-      {!isFiltering &&
-        entries.map((entry) => (
+        {entries.map((entry) => (
           <EntryCard
             key={entry.id}
             entry={entry}
@@ -274,6 +274,7 @@ export function EntryFeed({
             onTagClick={(tag) => setActiveTag(tag)}
           />
         ))}
+      </div>
 
       {/* Load more */}
       {!isFiltering && hasMore && (
@@ -293,6 +294,13 @@ export function EntryFeed({
             )}
           </Button>
         </div>
+      )}
+
+      {/* End-of-feed indicator */}
+      {!isFiltering && !hasMore && entries.length > 0 && (
+        <p className="text-center text-sm text-muted-foreground pt-2 pb-4">
+          You&apos;re all caught up!
+        </p>
       )}
 
       {/* Dialogs */}

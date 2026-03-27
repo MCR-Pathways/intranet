@@ -318,7 +318,7 @@ export async function getEntriesWithClient(
     // Commas and periods are PostgREST .or() separators/operators
     const q = search.trim().replace(/[%_\\,.()"']/g, "");
     if (q) {
-      query = query.or(`title.ilike.%${q}%,event_name.ilike.%${q}%`);
+      query = query.or(`title.ilike.%${q}%,event_name.ilike.%${q}%,search_text.ilike.%${q}%`);
     }
   }
 
@@ -484,6 +484,8 @@ export async function createEntry(data: {
 
   const title = generateTitle(format, eventName);
 
+  const searchText = flattenContent(format, contentResult.data);
+
   const { data: entry, error } = await supabase
     .from("tool_shed_entries")
     .insert({
@@ -495,6 +497,7 @@ export async function createEntry(data: {
       event_date: eventDate,
       tags: tagsResult.data,
       is_published: data.is_published !== false,
+      search_text: searchText,
     })
     .select("id")
     .single();
@@ -580,6 +583,7 @@ export async function updateEntry(
       return { success: false, error: contentResult.error };
     }
     update.content = contentResult.data;
+    update.search_text = flattenContent(format, contentResult.data);
   }
 
   // Validate tags if provided

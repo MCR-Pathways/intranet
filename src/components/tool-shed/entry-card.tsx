@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, createElement } from "react";
+import { useState, useRef, createElement } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Pencil, Trash2, ChevronDown, CalendarDays } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ChevronDown } from "lucide-react";
 import {
   toolShedFormatConfig,
   postcardFields,
@@ -95,7 +95,7 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
         <div className="space-y-2 pl-1">
           {content.three_learned.map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 mt-0.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 mt-0.5">
                 {i + 1}
               </span>
               <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
@@ -128,7 +128,7 @@ function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
           <span className="text-base leading-none">❓</span>
           1 Question for the Team
         </h4>
-        <blockquote className="ml-1 border-l-2 border-violet-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
+        <blockquote className="ml-1 border-l-2 border-emerald-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
           {content.one_question}
         </blockquote>
       </div>
@@ -187,13 +187,21 @@ export function EntryCard({
   onTagClick,
 }: EntryCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const config = toolShedFormatConfig[entry.format];
   const canManage = entry.user_id === currentUserId || isAdmin;
   const preview = getContentPreview(entry.format, entry.content);
   const { bg, fg } = getAvatarColour(entry.author.full_name);
 
+  const handleExpand = () => {
+    setExpanded(true);
+    requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   return (
-    <Card id={entry.id} className="bg-card shadow-md rounded-xl overflow-clip transition-shadow hover:shadow-lg">
+    <Card ref={cardRef} id={entry.id} className={cn("bg-card shadow-md rounded-xl overflow-clip transition-shadow hover:shadow-lg border-l-4", config.accent.border)}>
       <CardContent className="p-5">
         {/* Draft badge */}
         {!entry.is_published && (
@@ -265,47 +273,47 @@ export function EntryCard({
           </div>
         </div>
 
-        {/* Event info */}
+        {/* Event context */}
         {entry.event_name && (
-          <div className="flex items-center gap-1.5 text-sm mb-3">
-            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="font-medium truncate">{entry.event_name}</span>
+          <div className="flex items-baseline gap-2 mb-2 min-w-0">
+            <p className="text-[15px] font-semibold leading-snug truncate">
+              {entry.event_name}
+            </p>
             {entry.event_date && (
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                · {formatDate(new Date(entry.event_date))}
+              <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                &middot; {formatDate(new Date(entry.event_date))}
               </span>
             )}
           </div>
         )}
 
         {/* Content: preview or expanded */}
-        <div
-          className={cn(!expanded && "cursor-pointer group/preview")}
-          onClick={() => {
-            if (!expanded) setExpanded(true);
-          }}
-          role={expanded ? undefined : "button"}
-          tabIndex={expanded ? undefined : 0}
-          onKeyDown={(e) => {
-            if (!expanded && (e.key === "Enter" || e.key === " ")) {
-              e.preventDefault();
-              setExpanded(true);
-            }
-          }}
-        >
-          {expanded ? (
-            <div className="mt-1">
-              <ExpandedContent format={entry.format} content={entry.content} />
-            </div>
-          ) : (
+        {expanded ? (
+          <div className="mt-1">
+            <ExpandedContent format={entry.format} content={entry.content} />
+          </div>
+        ) : (
+          <div
+            className="cursor-pointer group/preview"
+            onClick={handleExpand}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleExpand();
+              }
+            }}
+          >
             <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {preview}
-              <span className="text-primary font-medium ml-1 group-hover/preview:underline">
-                ...see more
-              </span>
             </p>
-          )}
-        </div>
+            <span className="text-sm text-primary font-medium mt-1 inline-flex items-center gap-1 group-hover/preview:underline">
+              <ChevronDown className="h-3.5 w-3.5" />
+              Show more
+            </span>
+          </div>
+        )}
 
         {/* Tags */}
         {entry.tags.length > 0 && (
@@ -340,10 +348,10 @@ export function EntryCard({
         {expanded && (
           <button
             type="button"
-            className="flex items-center gap-1 mt-3 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 mt-3 text-sm font-medium text-primary hover:underline transition-colors"
             onClick={() => setExpanded(false)}
           >
-            <ChevronDown className="h-3 w-3 rotate-180 transition-transform" />
+            <ChevronDown className="h-3.5 w-3.5 rotate-180" />
             Show less
           </button>
         )}
