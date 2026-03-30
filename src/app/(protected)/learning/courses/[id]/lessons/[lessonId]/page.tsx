@@ -66,15 +66,23 @@ export default async function LessonPage({
     }
   }
 
-  // Fetch all active lessons for navigation and sidebar
-  const { data: allLessons } = await supabase
-    .from("course_lessons")
-    .select(
-      "id, course_id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
-    )
-    .eq("course_id", courseId)
-    .eq("is_active", true)
-    .order("sort_order");
+  // Fetch lessons and sections in parallel for navigation and sidebar
+  const [{ data: allLessons }, { data: courseSections }] = await Promise.all([
+    supabase
+      .from("course_lessons")
+      .select(
+        "id, course_id, section_id, title, content, content_json, slides_url, video_url, video_storage_path, lesson_type, passing_score, sort_order, is_active, created_at, updated_at"
+      )
+      .eq("course_id", courseId)
+      .eq("is_active", true)
+      .order("sort_order"),
+    supabase
+      .from("course_sections")
+      .select("id, title, sort_order")
+      .eq("course_id", courseId)
+      .eq("is_active", true)
+      .order("sort_order"),
+  ]);
 
   const lessons = (allLessons as CourseLesson[]) ?? [];
   const currentIndex = lessons.findIndex((l) => l.id === lessonId);
@@ -110,14 +118,21 @@ export default async function LessonPage({
     redirect(`/learning/courses/${courseId}`);
   }
 
-  // Build sidebar items
+  // Build sidebar items with section IDs for grouping
   const sidebarLessons = lessons.map((l) => ({
     id: l.id,
     title: l.title,
     lesson_type: (l.lesson_type ?? "text") as LessonType,
     sort_order: l.sort_order,
+    sectionId: l.section_id,
     isCompleted: completedLessonIds.includes(l.id),
     isLocked: lockedLessonIds.has(l.id),
+  }));
+
+  // Build sections list for sidebar grouping
+  const sidebarSections = (courseSections ?? []).map((s) => ({
+    id: s.id,
+    title: s.title,
   }));
 
   const isLastLesson = !nextLesson;
@@ -235,6 +250,7 @@ export default async function LessonPage({
         courseTitle={course.title}
         lessons={sidebarLessons}
         currentLessonId={lessonId}
+        sections={sidebarSections}
       />
 
       {/* Main content */}
