@@ -75,7 +75,12 @@ export function MarkCompleteButton({
             const result = await completeLesson(lessonId, courseId);
             if (result.success) {
               if (nextHref) {
-                window.location.href = nextHref;
+                // Append ?completed=true when navigating back to the course page
+                // (not to another lesson or quiz) to trigger celebration
+                const isCoursePageNav = nextHref === `/learning/courses/${courseId}`;
+                window.location.href = isCoursePageNav
+                  ? `${nextHref}?completed=true`
+                  : nextHref;
               } else {
                 toast.success("Lesson completed");
               }

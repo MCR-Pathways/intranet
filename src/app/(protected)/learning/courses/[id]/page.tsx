@@ -25,6 +25,7 @@ import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
 import { SectionAccordion } from "@/components/learning/section-accordion";
 import { PreviewModeBanner } from "@/components/learning/preview-mode-banner";
+import { CompletionCelebration } from "@/components/learning/completion-celebration";
 import type { LessonType } from "@/types/database.types";
 
 function formatDate(dateString: string | null): string {
@@ -219,6 +220,7 @@ export default async function CourseDetailPage({
 
   const isCompleted = enrolment?.status === "completed";
   const isInProgress = enrolment?.status === "in_progress";
+  const showCelebration = resolvedSearchParams.completed === "true" && isCompleted;
 
   // Calculate due date status
   let dueStatus: "overdue" | "due_soon" | "on_track" | null = null;
@@ -241,6 +243,14 @@ export default async function CourseDetailPage({
   return (
     <div className="space-y-6">
       {isPreview && <PreviewModeBanner courseId={id} />}
+
+      {/* Completion celebration */}
+      {showCelebration && (
+        <CompletionCelebration
+          courseTitle={course.title}
+          courseId={course.id}
+        />
+      )}
 
       {/* Course header */}
       <PageHeader
