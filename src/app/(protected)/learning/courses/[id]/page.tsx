@@ -13,6 +13,9 @@ import {
   Calendar,
   AlertTriangle,
   ExternalLink,
+  Award,
+  BookOpen,
+  HelpCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
@@ -56,7 +59,7 @@ export default async function CourseDetailPage({
   // Fetch course details — preview mode bypasses published+active filters
   let query = supabase
     .from("courses")
-    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, issue_certificate, created_by, updated_by, created_at, updated_at")
     .eq("id", id);
 
   if (!isPreview) {
@@ -71,8 +74,8 @@ export default async function CourseDetailPage({
 
   const course = courseData as Course;
 
-  // Fetch enrolment, lessons, and sections in parallel
-  const [{ data: enrolmentData }, { data: lessonsData }, { data: sectionsData }] =
+  // Fetch enrolment, lessons, sections, and certificate in parallel
+  const [{ data: enrolmentData }, { data: lessonsData }, { data: sectionsData }, { data: certificateData }] =
     await Promise.all([
       supabase
         .from("course_enrolments")
@@ -92,6 +95,12 @@ export default async function CourseDetailPage({
         .eq("course_id", id)
         .eq("is_active", true)
         .order("sort_order"),
+      supabase
+        .from("certificates")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("course_id", id)
+        .single(),
     ]);
 
   const enrolment = enrolmentData as CourseEnrolment | null;
@@ -99,6 +108,8 @@ export default async function CourseDetailPage({
   const sections = sectionsData ?? [];
   const hasLessons = lessons.length > 0;
   const hasSections = sections.length > 0;
+  const hasCertificate = !!certificateData?.id;
+  const courseIssuesCertificate = (course as Record<string, unknown>).issue_certificate !== false;
 
   // Fetch completions and section quizzes in parallel
   const lessonIds = lessons.map((l) => l.id);
@@ -303,6 +314,14 @@ export default async function CourseDetailPage({
               <EnrollButton courseId={course.id} hasLessons={hasLessons} />
             ) : isCompleted ? (
               <div className="space-y-2">
+                {hasCertificate && courseIssuesCertificate && (
+                  <Button asChild className="w-full">
+                    <a href={`/api/certificate/${course.id}`} download>
+                      <Award className="h-4 w-4 mr-2" />
+                      Download Certificate
+                    </a>
+                  </Button>
+                )}
                 {course.content_url && (
                   <Button asChild className="w-full" variant="outline">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">
@@ -368,20 +387,70 @@ export default async function CourseDetailPage({
         </Card>
       </div>
 
-      {/* Course content — sections or flat lesson list */}
-      {hasSections ? (
-        <SectionAccordion
-          courseId={course.id}
-          sections={sectionAccordionData}
-          isEnrolled={isEnrolled}
-        />
-      ) : hasLessons ? (
-        <LessonList
-          courseId={course.id}
-          lessons={lessons}
-          completedLessonIds={completedLessonIds}
-          isEnrolled={isEnrolled}
-        />
+      {/* Course content — interactive for enrolled, preview for unenrolled */}
+      {isEnrolled ? (
+        hasSections ? (
+          <SectionAccordion
+            courseId={course.id}
+            sections={sectionAccordionData}
+            isEnrolled={isEnrolled}
+          />
+        ) : hasLessons ? (
+          <LessonList
+            courseId={course.id}
+            lessons={lessons}
+            completedLessonIds={completedLessonIds}
+            isEnrolled={isEnrolled}
+          />
+        ) : null
+      ) : (hasLessons || hasSections) ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+              Course content
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hasSections ? (
+              <ul className="space-y-2">
+                {sections.map((section, i) => {
+                  const sectionLessonCount = lessons.filter(
+                    (l) => l.section_id === section.id
+                  ).length;
+                  const sectionHasQuiz = sectionAccordionData[i]?.hasQuiz;
+                  return (
+                    <li
+                      key={section.id}
+                      className="flex items-start justify-between py-2 border-b border-border last:border-b-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{section.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {sectionLessonCount}{" "}
+                          {sectionLessonCount === 1 ? "lesson" : "lessons"}
+                          {sectionHasQuiz && (
+                            <span className="inline-flex items-center gap-1 ml-2">
+                              <HelpCircle className="h-3 w-3" />
+                              Includes quiz
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}
+                {course.duration_minutes
+                  ? ` · ${formatDuration(course.duration_minutes, "long")}`
+                  : ""}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );
