@@ -97,7 +97,7 @@ Each route group has its own `actions.ts` (24 action files total):
 - `src/app/(protected)/intranet/induction/actions.ts` — induction progress
 - `src/app/(protected)/notifications/actions.ts` — notification read status
 - `src/app/(protected)/sign-in/actions.ts` — sign-in entries, team history, Google Calendar sync
-- `src/app/(protected)/learning/` — `my-courses/actions.ts`, `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
+- `src/app/(protected)/learning/` — `actions.ts` (external courses), `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
 - `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks)
 
 ### Key Patterns

@@ -80,7 +80,7 @@ export async function addExternalCourse(data: {
     return { success: false, error: "Failed to add external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/learning/my-courses");
+  revalidatePath("/learning");
   return { success: true, error: null };
 }
 
@@ -129,7 +129,7 @@ export async function updateExternalCourse(
     return { success: false, error: "Failed to update external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/learning/my-courses");
+  revalidatePath("/learning");
   return { success: true, error: null };
 }
 
@@ -151,6 +151,6 @@ export async function deleteExternalCourse(courseId: string) {
     return { success: false, error: "Failed to delete external course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/learning/my-courses");
+  revalidatePath("/learning");
   return { success: true, error: null };
 }

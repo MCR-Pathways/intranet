@@ -423,7 +423,7 @@ Interactive HTML mockups were created during planning:
 - `src/app/(protected)/learning/page.tsx` — dashboard redesign (list-first, compliance alerts, continue learning)
 - `src/app/(protected)/learning/courses/page.tsx` — add Algolia search bar above category tabs
 - ~~`src/app/(protected)/learning/tool-shed/page.tsx`~~ — ✅ DONE (PR #176)
-- `src/app/(protected)/learning/my-courses/page.tsx` — add Certificates tab
+- ~~`src/app/(protected)/learning/my-courses/page.tsx`~~ — merged into `/learning` dashboard (Phase F)
 - `src/app/(protected)/learning/admin/reports/page.tsx` — add feedback/certs/tool shed tabs
 - `src/app/(protected)/hr/profile/page.tsx` — add Learning tab (certificates + course progress)
 - `src/app/(protected)/hr/team/page.tsx` — add compliance summary for line managers

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { formatDate } from "@/lib/utils";
-import { deleteExternalCourse } from "@/app/(protected)/learning/my-courses/actions";
+import { deleteExternalCourse } from "@/app/(protected)/learning/actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
