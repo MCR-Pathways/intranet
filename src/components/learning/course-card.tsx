@@ -52,15 +52,13 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
             </Badge>
           </div>
         )}
-        {enrolment &&
-          enrolment.status !== "completed" &&
-          enrolment.status !== "in_progress" && (
-            <div className="absolute top-3 right-3">
-              <Badge variant="muted" className="text-xs">
-                Enrolled
-              </Badge>
-            </div>
-          )}
+        {enrolment?.status === "enrolled" && (
+          <div className="absolute top-3 right-3">
+            <Badge variant="muted" className="text-xs">
+              Enrolled
+            </Badge>
+          </div>
+        )}
         <CardHeader className="pb-3">
           <div className="pr-16">
             <div className="flex items-center gap-2">
