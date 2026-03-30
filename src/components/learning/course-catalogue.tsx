@@ -22,6 +22,8 @@ interface CourseCatalogueProps {
     category: string;
     duration_minutes: number | null;
     is_required: boolean;
+    sectionCount: number;
+    lessonCount: number;
   }>;
   /** User's enrolments keyed by course ID */
   enrolments: Record<string, CourseEnrolment>;
