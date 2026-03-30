@@ -309,6 +309,7 @@ export default async function LearningPage() {
                 <EnrolledCourseCard
                   key={enrolment.id}
                   enrolment={enrolment}
+                  now={now}
                 />
               ))}
             </div>
@@ -337,6 +338,7 @@ export default async function LearningPage() {
                 <EnrolledCourseCard
                   key={enrolment.id}
                   enrolment={enrolment}
+                  now={now}
                 />
               ))}
             </div>
