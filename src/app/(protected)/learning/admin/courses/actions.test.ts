@@ -351,6 +351,11 @@ describe("L&D Course Actions", () => {
       const mockSQQIn = vi.fn().mockResolvedValue({ data: sectionQuizQuestions, error: null });
       const mockSQQSelect = vi.fn().mockReturnValue({ in: mockSQQIn });
 
+      // Course duration check: .from("courses").select("duration_minutes").eq("id", ...).single()
+      const mockCourseDurationSingle = vi.fn().mockResolvedValue({ data: { duration_minutes: 45 }, error: null });
+      const mockCourseDurationEq = vi.fn().mockReturnValue({ single: mockCourseDurationSingle });
+      const mockCourseDurationSelect = vi.fn().mockReturnValue({ eq: mockCourseDurationEq });
+
       // Update course: .from("courses").update({}).eq("id", ...)
       const mockCourseEq = vi.fn().mockResolvedValue({ error: updateError });
       const mockCourseUpdate = vi.fn().mockReturnValue({ eq: mockCourseEq });
@@ -374,7 +379,7 @@ describe("L&D Course Actions", () => {
           case "section_quiz_questions":
             return { select: mockSQQSelect };
           case "courses":
-            return { update: mockCourseUpdate };
+            return { select: mockCourseDurationSelect, update: mockCourseUpdate };
           case "course_assignments":
             return { select: mockAssignSelect };
           default:
@@ -393,7 +398,9 @@ describe("L&D Course Actions", () => {
 
       const result = await publishCourse("course-001");
 
-      expect(result).toEqual({ success: true, error: null });
+      expect(result.success).toBe(true);
+      expect(result.error).toBeNull();
+      expect(result.warnings).toBeDefined();
       expect(mockCourseUpdate).toHaveBeenCalledWith({
         status: "published",
         is_active: true,
@@ -469,7 +476,8 @@ describe("L&D Course Actions", () => {
 
       const result = await publishCourse("course-001");
 
-      expect(result).toEqual({ success: true, error: null });
+      expect(result.success).toBe(true);
+      expect(result.warnings).toBeDefined();
     });
 
     it("returns error when DB update fails", async () => {
@@ -481,7 +489,7 @@ describe("L&D Course Actions", () => {
 
       const result = await publishCourse("course-001");
 
-      expect(result).toEqual({ success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." });
+      expect(result).toEqual({ success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", warnings: [] });
     });
 
     it("sends notifications when course has assignments", async () => {
@@ -494,7 +502,8 @@ describe("L&D Course Actions", () => {
 
       const result = await publishCourse("course-001");
 
-      expect(result).toEqual({ success: true, error: null });
+      expect(result.success).toBe(true);
+      expect(result.warnings).toBeDefined();
       // notifyCoursePublished is called which invokes the RPC
       expect(mockRpc).toHaveBeenCalledWith("notify_course_published", {
         p_course_id: "course-001",

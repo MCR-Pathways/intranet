@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -450,11 +451,11 @@ function SortableSectionRow({
             <Label htmlFor={`edit_desc_${section.id}`}>
               Description (optional)
             </Label>
-            <textarea
+            <Textarea
               id={`edit_desc_${section.id}`}
               value={editDescription}
               onChange={(e) => onEditDescriptionChange(e.target.value)}
-              className="flex min-h-[60px] w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder="Briefly describe what this section covers (visible to learners)"
               rows={2}
             />
           </div>
