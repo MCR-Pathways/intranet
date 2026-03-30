@@ -34,7 +34,7 @@ BEGIN
     FROM public.courses
     WHERE id = NEW.course_id;
 
-    IF NOT COALESCE(v_issue, true) THEN
+    IF NOT v_issue THEN
       RETURN NEW;
     END IF;
 
