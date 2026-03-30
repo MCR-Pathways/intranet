@@ -111,35 +111,23 @@ export default async function CourseDetailPage({
   const hasCertificate = !!certificateData?.id;
   const courseIssuesCertificate = (course as Course & { issue_certificate?: boolean }).issue_certificate !== false;
 
-  // Fetch completions and section quizzes in parallel
-  const lessonIds = lessons.map((l) => l.id);
+  const isEnrolled = !!enrolment;
   const sectionIds = sections.map((s) => s.id);
 
-  const [completionsResult, quizzesResult, attemptsResult] = await Promise.all([
-    lessonIds.length > 0
-      ? supabase
-          .from("lesson_completions")
-          .select("lesson_id")
-          .eq("user_id", user.id)
-          .in("lesson_id", lessonIds)
-      : Promise.resolve({ data: null }),
-    sectionIds.length > 0
-      ? supabase
-          .from("section_quizzes")
-          .select("id, section_id")
-          .in("section_id", sectionIds)
-          .eq("is_active", true)
-      : Promise.resolve({ data: null }),
-    supabase
-      .from("section_quiz_attempts")
-      .select("quiz_id, passed")
-      .eq("user_id", user.id),
-  ]);
+  // Always fetch which sections have quizzes (needed for both enrolled accordion AND unenrolled preview)
+  const { data: quizzesData } = sectionIds.length > 0
+    ? await supabase
+        .from("section_quizzes")
+        .select("id, section_id")
+        .in("section_id", sectionIds)
+        .eq("is_active", true)
+    : { data: null };
 
-  const completedLessonIds =
-    completionsResult.data?.map((c: { lesson_id: string }) => c.lesson_id) ?? [];
+  const quizzes = quizzesData ?? [];
+  const sectionsWithQuizzes = new Set(quizzes.map((q: { section_id: string }) => q.section_id));
 
-  // Build section accordion data
+  // Only fetch completions, attempts, and build full accordion data for enrolled users
+  let completedLessonIds: string[] = [];
   let sectionAccordionData: {
     id: string;
     title: string;
@@ -151,49 +139,69 @@ export default async function CourseDetailPage({
     isLocked: boolean;
   }[] = [];
 
-  if (hasSections) {
-    const quizzes = quizzesResult.data ?? [];
-    const sectionsWithQuizzes = new Set(quizzes.map((q: { section_id: string }) => q.section_id));
-    const quizIdToSectionId = new Map(quizzes.map((q: { id: string; section_id: string }) => [q.id, q.section_id]));
+  if (isEnrolled && hasLessons) {
+    const lessonIds = lessons.map((l) => l.id);
 
-    const passedQuizSectionIds = new Set(
-      (attemptsResult.data ?? [])
-        .filter((a: { passed: boolean }) => a.passed)
-        .map((a: { quiz_id: string }) => quizIdToSectionId.get(a.quiz_id))
-        .filter((id: string | undefined): id is string => !!id)
-    );
+    const [completionsResult, attemptsResult] = await Promise.all([
+      supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("user_id", user.id)
+        .in("lesson_id", lessonIds),
+      hasSections
+        ? supabase
+            .from("section_quiz_attempts")
+            .select("quiz_id, passed")
+            .eq("user_id", user.id)
+        : Promise.resolve({ data: null }),
+    ]);
 
-    const lockedSectionIds = getLockedSectionIds(
-      sections.map((s) => ({ id: s.id, sort_order: s.sort_order })),
-      passedQuizSectionIds,
-      sectionsWithQuizzes
-    );
+    completedLessonIds =
+      completionsResult.data?.map((c: { lesson_id: string }) => c.lesson_id) ?? [];
 
-    // Group lessons by section
-    const lessonsBySection = new Map<string, CourseLesson[]>();
-    for (const lesson of lessons) {
-      if (lesson.section_id) {
-        const list = lessonsBySection.get(lesson.section_id) ?? [];
-        list.push(lesson);
-        lessonsBySection.set(lesson.section_id, list);
+    // Build section accordion data only for section-based courses
+    if (hasSections) {
+      const quizIdToSectionId = new Map(quizzes.map((q: { id: string; section_id: string }) => [q.id, q.section_id]));
+
+      const passedQuizSectionIds = new Set(
+        (attemptsResult.data ?? [])
+          .filter((a: { passed: boolean }) => a.passed)
+          .map((a: { quiz_id: string }) => quizIdToSectionId.get(a.quiz_id))
+          .filter((id: string | undefined): id is string => !!id)
+      );
+
+      const lockedSectionIds = getLockedSectionIds(
+        sections.map((s) => ({ id: s.id, sort_order: s.sort_order })),
+        passedQuizSectionIds,
+        sectionsWithQuizzes
+      );
+
+      // Group lessons by section
+      const lessonsBySection = new Map<string, CourseLesson[]>();
+      for (const lesson of lessons) {
+        if (lesson.section_id) {
+          const list = lessonsBySection.get(lesson.section_id) ?? [];
+          list.push(lesson);
+          lessonsBySection.set(lesson.section_id, list);
+        }
       }
-    }
 
-    sectionAccordionData = sections.map((s) => ({
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      sort_order: s.sort_order,
-      lessons: (lessonsBySection.get(s.id) ?? []).map((l) => ({
-        id: l.id,
-        title: l.title,
-        lesson_type: (l.lesson_type ?? "text") as LessonType,
-        isCompleted: completedLessonIds.includes(l.id),
-      })),
-      hasQuiz: sectionsWithQuizzes.has(s.id),
-      quizPassed: passedQuizSectionIds.has(s.id),
-      isLocked: lockedSectionIds.has(s.id),
-    }));
+      sectionAccordionData = sections.map((s) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        sort_order: s.sort_order,
+        lessons: (lessonsBySection.get(s.id) ?? []).map((l) => ({
+          id: l.id,
+          title: l.title,
+          lesson_type: (l.lesson_type ?? "text") as LessonType,
+          isCompleted: completedLessonIds.includes(l.id),
+        })),
+        hasQuiz: sectionsWithQuizzes.has(s.id),
+        quizPassed: passedQuizSectionIds.has(s.id),
+        isLocked: lockedSectionIds.has(s.id),
+      }));
+    }
   }
 
   // Find the first incomplete, unlocked lesson for the "Continue Learning" button
@@ -209,7 +217,6 @@ export default async function CourseDetailPage({
   const config = categoryConfig[course.category];
   const Icon = config.icon;
 
-  const isEnrolled = !!enrolment;
   const isCompleted = enrolment?.status === "completed";
   const isInProgress = enrolment?.status === "in_progress";
 
@@ -418,7 +425,7 @@ export default async function CourseDetailPage({
                   const sectionLessonCount = lessons.filter(
                     (l) => l.section_id === section.id
                   ).length;
-                  const sectionHasQuiz = sectionAccordionData[i]?.hasQuiz;
+                  const sectionHasQuiz = sectionsWithQuizzes.has(section.id);
                   return (
                     <li
                       key={section.id}
