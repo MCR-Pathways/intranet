@@ -128,6 +128,8 @@
 - [ ] Absence records soft-delete (currently hard-deletes, no audit trail)
 - [ ] Large action file splitting — flexible-working (1,167 lines), onboarding (1,140 lines), absence (966 lines)
 - [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
+- [x] Tool Shed card & feed UX overhaul (PR #185): format accent borders, event title redesign, 3-2-1 violet→emerald, search_text column, end-of-feed indicator, filter transitions
+- [ ] Tool Shed dialog & draft UX (PR 2, planned): partial draft saves, character counters, unsaved changes warning, draft toggle discovery
 
 ---
 

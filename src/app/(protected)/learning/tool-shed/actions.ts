@@ -92,106 +92,123 @@ function flattenContent(
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
+type ValidationResult<T> = { valid: true; data: T } | { valid: false; error: string };
+
 function validatePostcardContent(
-  content: Record<string, unknown>
-): { valid: true; data: PostcardContent } | { valid: false; error: string } {
+  content: Record<string, unknown>,
+  isDraft: boolean
+): ValidationResult<PostcardContent> {
   const fields = ["elevator_pitch", "lightbulb_moment", "programme_impact", "golden_nugget"] as const;
   const data: Record<string, string> = {};
 
   for (const field of fields) {
     const val = content[field];
-    if (typeof val !== "string" || !val.trim()) {
+    const str = typeof val === "string" ? val : "";
+
+    if (!isDraft && !str.trim()) {
       return { valid: false, error: `${field.replace(/_/g, " ")} is required` };
     }
-    if (val.length > 500) {
+    if (str.length > 500) {
       return { valid: false, error: `${field.replace(/_/g, " ")} must be 500 characters or fewer` };
     }
-    data[field] = val.trim();
+    data[field] = str.trim();
   }
 
   return { valid: true, data: data as unknown as PostcardContent };
 }
 
 function validateThreeTwoOneContent(
-  content: Record<string, unknown>
-): { valid: true; data: ThreeTwoOneContent } | { valid: false; error: string } {
-  const { three_learned, two_changes, one_question } = content;
+  content: Record<string, unknown>,
+  isDraft: boolean
+): ValidationResult<ThreeTwoOneContent> {
+  const rawLearned = content.three_learned;
+  const rawChanges = content.two_changes;
+  const rawQuestion = content.one_question;
 
-  if (!Array.isArray(three_learned) || three_learned.length !== 3) {
-    return { valid: false, error: "Please provide exactly 3 things you learned" };
-  }
-  for (const item of three_learned) {
-    if (typeof item !== "string" || !item.trim()) {
-      return { valid: false, error: "All 3 'things learned' fields are required" };
+  // For drafts, accept partial/missing arrays and pad to expected length
+  const three: string[] = Array.isArray(rawLearned)
+    ? rawLearned.map((v: unknown) => (typeof v === "string" ? v : ""))
+    : ["", "", ""];
+  while (three.length < 3) three.push("");
+
+  const two: string[] = Array.isArray(rawChanges)
+    ? rawChanges.map((v: unknown) => (typeof v === "string" ? v : ""))
+    : ["", ""];
+  while (two.length < 2) two.push("");
+
+  const question = typeof rawQuestion === "string" ? rawQuestion : "";
+
+  if (!isDraft) {
+    if (three.length !== 3) return { valid: false, error: "Please provide exactly 3 things you learned" };
+    for (const item of three) {
+      if (!item.trim()) return { valid: false, error: "All 3 'things learned' fields are required" };
     }
-    if (item.length > 300) {
-      return { valid: false, error: "Each 'thing learned' must be 300 characters or fewer" };
+    if (two.length !== 2) return { valid: false, error: "Please provide exactly 2 things you will change" };
+    for (const item of two) {
+      if (!item.trim()) return { valid: false, error: "Both 'things to change' fields are required" };
     }
+    if (!question.trim()) return { valid: false, error: "The question field is required" };
   }
 
-  if (!Array.isArray(two_changes) || two_changes.length !== 2) {
-    return { valid: false, error: "Please provide exactly 2 things you will change" };
+  // Length limits apply to both drafts and published
+  for (const item of three) {
+    if (item.length > 300) return { valid: false, error: "Each 'thing learned' must be 300 characters or fewer" };
   }
-  for (const item of two_changes) {
-    if (typeof item !== "string" || !item.trim()) {
-      return { valid: false, error: "Both 'things to change' fields are required" };
-    }
-    if (item.length > 300) {
-      return { valid: false, error: "Each 'thing to change' must be 300 characters or fewer" };
-    }
+  for (const item of two) {
+    if (item.length > 300) return { valid: false, error: "Each 'thing to change' must be 300 characters or fewer" };
   }
-
-  if (typeof one_question !== "string" || !one_question.trim()) {
-    return { valid: false, error: "The question field is required" };
-  }
-  if (one_question.length > 500) {
-    return { valid: false, error: "The question must be 500 characters or fewer" };
-  }
+  if (question.length > 500) return { valid: false, error: "The question must be 500 characters or fewer" };
 
   return {
     valid: true,
     data: {
-      three_learned: three_learned.map((s: string) => s.trim()),
-      two_changes: two_changes.map((s: string) => s.trim()),
-      one_question: one_question.trim(),
+      three_learned: three.map((s) => s.trim()),
+      two_changes: two.map((s) => s.trim()),
+      one_question: question.trim(),
     },
   };
 }
 
 function validateTakeoverContent(
-  content: Record<string, unknown>
-): { valid: true; data: TakeoverContent } | { valid: false; error: string } {
-  const { useful_things } = content;
+  content: Record<string, unknown>,
+  isDraft: boolean
+): ValidationResult<TakeoverContent> {
+  const raw = content.useful_things;
 
-  if (!Array.isArray(useful_things) || useful_things.length !== 3) {
-    return { valid: false, error: "Please provide exactly 3 useful things" };
+  const things: string[] = Array.isArray(raw)
+    ? raw.map((v: unknown) => (typeof v === "string" ? v : ""))
+    : ["", "", ""];
+  while (things.length < 3) things.push("");
+
+  if (!isDraft) {
+    if (things.length !== 3) return { valid: false, error: "Please provide exactly 3 useful things" };
+    for (const item of things) {
+      if (!item.trim()) return { valid: false, error: "All 3 'useful things' fields are required" };
+    }
   }
-  for (const item of useful_things) {
-    if (typeof item !== "string" || !item.trim()) {
-      return { valid: false, error: "All 3 'useful things' fields are required" };
-    }
-    if (item.length > 500) {
-      return { valid: false, error: "Each 'useful thing' must be 500 characters or fewer" };
-    }
+
+  for (const item of things) {
+    if (item.length > 500) return { valid: false, error: "Each 'useful thing' must be 500 characters or fewer" };
   }
 
   return {
     valid: true,
-    data: { useful_things: useful_things.map((s: string) => s.trim()) },
+    data: { useful_things: things.map((s) => s.trim()) },
   };
 }
 
 function validateContent(
   format: ToolShedFormat,
-  content: Record<string, unknown>
-): { valid: true; data: PostcardContent | ThreeTwoOneContent | TakeoverContent } | { valid: false; error: string } {
+  content: Record<string, unknown>,
+  isDraft: boolean = false
+): ValidationResult<PostcardContent | ThreeTwoOneContent | TakeoverContent> {
   switch (format) {
     case "postcard":
-      return validatePostcardContent(content);
+      return validatePostcardContent(content, isDraft);
     case "three_two_one":
-      return validateThreeTwoOneContent(content);
+      return validateThreeTwoOneContent(content, isDraft);
     case "takeover":
-      return validateTakeoverContent(content);
+      return validateTakeoverContent(content, isDraft);
     default:
       return { valid: false, error: "Invalid format" };
   }
@@ -454,8 +471,9 @@ export async function createEntry(data: {
     return { success: false, error: "Invalid format" };
   }
 
-  // Validate content
-  const contentResult = validateContent(format, data.content);
+  // Validate content (drafts allow partial fields)
+  const isDraft = data.is_published === false;
+  const contentResult = validateContent(format, data.content, isDraft);
   if (!contentResult.valid) {
     return { success: false, error: contentResult.error };
   }
@@ -576,9 +594,10 @@ export async function updateEntry(
     update.format = format;
   }
 
-  // If content is provided, validate it
+  // If content is provided, validate it (drafts allow partial fields)
   if (data.content) {
-    const contentResult = validateContent(format, data.content);
+    const updateIsDraft = data.is_published === false;
+    const contentResult = validateContent(format, data.content, updateIsDraft);
     if (!contentResult.valid) {
       return { success: false, error: contentResult.error };
     }

@@ -28,7 +28,19 @@ Course management, section-level quizzes, Tool Shed social learning, and admin b
 
 **Use specific, inspiring placeholder text, not generic numbered prompts.** Each placeholder should prompt a different angle of reflection: "A key concept or idea that stuck with you...", "Something that challenged your thinking...", "A practical tip the team can use straightaway...".
 
-**Don't show unbounded user-generated data as top-level UI.** Make tags on cards clickable to activate a filter, show a dismissible "Filtered by: tag x" indicator only when active.
+**Don't show unbounded user-generated data as top-level UI.** Make tags on cards clickable to activate a filter, show a dismissible "Filtered by: tag x" indicator only when active. Don't show popular tags as a visible row below the toolbar either - tags grow unboundedly and eat up space.
+
+**Use maximally distinct colours for format accents.** Blue and violet are adjacent on the colour spectrum and look too similar on thin 4px borders. Changed 3-2-1 from violet to emerald. Blue (Postcard), emerald (3-2-1), amber (Takeover) are all clearly distinct. Update badge variant to match accent when changing accent colours.
+
+**Event names on cards are titles, not metadata.** Style them as `text-[15px] font-semibold` (matching category-grid pattern), not `text-sm font-medium`. The event name is the primary subject of the card. Dates are secondary and sit inline with a middot separator.
+
+**Keep expand/collapse toggles consistent.** "Show more" and "Show less" must match in wording pattern, icon (ChevronDown), size, and colour (text-primary). Don't use "See more" for one and "Show less" for the other.
+
+**Use `search_text` column for content-level feed search.** The `tool_shed_entries.search_text` column (migration 00071) stores flattened JSONB content. Populated by `flattenContent()` in the server action on create/update. Searched via `.ilike()` in the feed query alongside title and event_name.
+
+**End-of-feed messages should be simple and jargon-free.** "You're all caught up!" - no counts, no internal terminology. Same pattern as Instagram/Slack.
+
+**Don't use `justify-between` for related inline elements.** On wide layouts, it pushes a title and its date to opposite edges, creating visual disconnect. Use natural flex flow with `gap` instead.
 
 ## Email Notifications
 
