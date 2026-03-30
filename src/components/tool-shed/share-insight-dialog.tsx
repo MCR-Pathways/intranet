@@ -8,6 +8,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +74,32 @@ export function ShareInsightDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [showDiscardAlert, setShowDiscardAlert] = useState(false);
+
+  // Detect if user has entered any content (for unsaved changes warning)
+  const hasContent = !isEditing && (
+    !!format || !!eventName.trim() || tags.length > 0 ||
+    Object.values(content).some((v) =>
+      typeof v === "string" ? v.trim().length > 0 :
+      Array.isArray(v) ? v.some((item) => typeof item === "string" && item.trim().length > 0) :
+      false
+    )
+  );
+
+  const handleClose = useCallback(() => {
+    if (hasContent && !isPending) {
+      setShowDiscardAlert(true);
+    } else {
+      onOpenChange(false);
+    }
+  }, [hasContent, isPending, onOpenChange]);
+
+  const preventCloseIfDirty = useCallback((e: { preventDefault: () => void }) => {
+    if (hasContent) {
+      e.preventDefault();
+      setShowDiscardAlert(true);
+    }
+  }, [hasContent]);
 
   // Event name autocomplete
   const [eventSuggestions, setEventSuggestions] = useState<string[]>([]);
@@ -180,8 +214,13 @@ export function ShareInsightDialog({
   const selectedConfig = format ? toolShedFormatConfig[format] : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card sm:max-w-xl max-h-[85vh] overflow-y-auto">
+    <>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent
+        className="bg-card sm:max-w-xl max-h-[85vh] overflow-y-auto"
+        onInteractOutside={preventCloseIfDirty}
+        onEscapeKeyDown={preventCloseIfDirty}
+      >
         <DialogHeader>
           <DialogTitle className="text-lg">
             {isEditing ? "Edit Insight" : "Share an Insight"}
@@ -373,27 +412,68 @@ export function ShareInsightDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* ── Footer ── */}
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isPending || !format}>
-              {isPending && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {isEditing
-                ? "Save Changes"
-                : isDraft
-                  ? "Save Draft"
-                  : "Share"}
-            </Button>
+          <div className="flex items-center gap-2">
+            {!isEditing && !isDraft && (
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors mr-auto"
+                onClick={() => setIsDraft(true)}
+              >
+                or save as draft
+              </button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isPending || !format}>
+                {isPending && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {isEditing
+                  ? "Save Changes"
+                  : isDraft
+                    ? "Save Draft"
+                    : "Share"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Discard changes confirmation */}
+    <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved content. Are you sure you want to discard it?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowDiscardAlert(false)}
+          >
+            Keep Editing
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setShowDiscardAlert(false);
+              onOpenChange(false);
+            }}
+          >
+            Discard
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

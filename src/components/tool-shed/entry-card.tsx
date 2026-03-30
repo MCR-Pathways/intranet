@@ -37,29 +37,47 @@ interface EntryCardProps {
 
 // ─── Content Preview ────────────────────────────────────────────────────────
 
-function getContentPreview(format: ToolShedFormat, content: Record<string, unknown>): string {
+function getContentPreview(
+  format: ToolShedFormat,
+  content: Record<string, unknown>,
+  eventName?: string | null
+): string {
+  let preview = "";
   switch (format) {
-    case "postcard":
-      return (content as unknown as PostcardContent).elevator_pitch ?? "";
+    case "postcard": {
+      const pc = content as unknown as PostcardContent;
+      preview = [pc.elevator_pitch, pc.lightbulb_moment, pc.programme_impact, pc.golden_nugget]
+        .find((v) => typeof v === "string" && v.trim()) ?? "";
+      break;
+    }
     case "three_two_one": {
-      const learned = (content as unknown as ThreeTwoOneContent).three_learned;
-      return Array.isArray(learned) ? learned[0] ?? "" : "";
+      const tto = content as unknown as ThreeTwoOneContent;
+      const allItems = [
+        ...(Array.isArray(tto.three_learned) ? tto.three_learned : []),
+        ...(Array.isArray(tto.two_changes) ? tto.two_changes : []),
+        typeof tto.one_question === "string" ? tto.one_question : "",
+      ];
+      preview = allItems.find((v) => typeof v === "string" && v.trim()) ?? "";
+      break;
     }
     case "takeover": {
-      const things = (content as unknown as TakeoverContent).useful_things;
-      return Array.isArray(things) ? things[0] ?? "" : "";
+      const tk = content as unknown as TakeoverContent;
+      const items = Array.isArray(tk.useful_things) ? tk.useful_things : [];
+      preview = items.find((v) => typeof v === "string" && v.trim()) ?? "";
+      break;
     }
-    default:
-      return "";
   }
+  // Fallback for partial drafts
+  return preview || eventName || "Draft in progress";
 }
 
 // ─── Expanded Content Renderers ─────────────────────────────────────────────
 
 function PostcardExpanded({ content }: { content: PostcardContent }) {
+  const filledFields = postcardFields.filter((f) => content[f.key]?.trim());
   return (
     <div className="space-y-4">
-      {postcardFields.map((field, index) => {
+      {filledFields.map((field, index) => {
         const isGoldenNugget = field.key === "golden_nugget";
         return (
           <div
@@ -84,67 +102,80 @@ function PostcardExpanded({ content }: { content: PostcardContent }) {
 }
 
 function ThreeTwoOneExpanded({ content }: { content: ThreeTwoOneContent }) {
+  const learned = (content.three_learned ?? []).filter((s) => s?.trim());
+  const changes = (content.two_changes ?? []).filter((s) => s?.trim());
+  const question = content.one_question?.trim() || "";
+
   return (
     <div className="space-y-4">
       {/* 3 Things Learned */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-          <span className="text-base leading-none">📚</span>
-          3 Key Takeaways
-        </h4>
-        <div className="space-y-2 pl-1">
-          {content.three_learned.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 mt-0.5">
-                {i + 1}
-              </span>
-              <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
-            </div>
-          ))}
+      {learned.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <span className="text-base leading-none">📚</span>
+            {learned.length} Key Takeaway{learned.length !== 1 ? "s" : ""}
+          </h4>
+          <div className="space-y-2 pl-1">
+            {learned.map((item, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 mt-0.5">
+                  {i + 1}
+                </span>
+                <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2 Things to Change */}
-      <div className="border-t border-border/40 pt-4 space-y-2">
-        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-          <span className="text-base leading-none">🔄</span>
-          2 Actions I&apos;ll Take
-        </h4>
-        <div className="space-y-2 pl-1">
-          {content.two_changes.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
-                {i + 1}
-              </span>
-              <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
-            </div>
-          ))}
+      {changes.length > 0 && (
+        <div className={cn(learned.length > 0 && "border-t border-border/40 pt-4", "space-y-2")}>
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <span className="text-base leading-none">🔄</span>
+            {changes.length} Action{changes.length !== 1 ? "s" : ""} I&apos;ll Take
+          </h4>
+          <div className="space-y-2 pl-1">
+            {changes.map((item, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
+                  {i + 1}
+                </span>
+                <span className="text-sm text-foreground/80 leading-relaxed">{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 1 Question */}
-      <div className="border-t border-border/40 pt-4 space-y-2">
-        <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-          <span className="text-base leading-none">❓</span>
-          1 Question for the Team
-        </h4>
-        <blockquote className="ml-1 border-l-2 border-emerald-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
-          {content.one_question}
-        </blockquote>
-      </div>
+      {question && (
+        <div className={cn((learned.length > 0 || changes.length > 0) && "border-t border-border/40 pt-4", "space-y-2")}>
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <span className="text-base leading-none">❓</span>
+            1 Question for the Team
+          </h4>
+          <blockquote className="ml-1 border-l-2 border-emerald-300 pl-4 pr-3 text-sm text-foreground/80 italic leading-relaxed">
+            {question}
+          </blockquote>
+        </div>
+      )}
     </div>
   );
 }
 
 function TakeoverExpanded({ content }: { content: TakeoverContent }) {
+  const things = (content.useful_things ?? []).filter((s) => s?.trim());
+  if (things.length === 0) return null;
+
   return (
     <div className="space-y-2">
       <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
         <span className="text-base leading-none">🎯</span>
-        3 Most Useful Things
+        {things.length} Most Useful Thing{things.length !== 1 ? "s" : ""}
       </h4>
       <div className="space-y-2 pl-1">
-        {content.useful_things.map((item, i) => (
+        {things.map((item, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 mt-0.5">
               {i + 1}
@@ -190,7 +221,7 @@ export function EntryCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const config = toolShedFormatConfig[entry.format];
   const canManage = entry.user_id === currentUserId || isAdmin;
-  const preview = getContentPreview(entry.format, entry.content);
+  const preview = getContentPreview(entry.format, entry.content, entry.event_name);
   const { bg, fg } = getAvatarColour(entry.author.full_name);
 
   const handleExpand = () => {
