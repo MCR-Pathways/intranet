@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -43,6 +44,9 @@ export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps
     course.due_days_from_start?.toString() ?? ""
   );
   const [contentUrl, setContentUrl] = useState(course.content_url ?? "");
+  const [issueCertificate, setIssueCertificate] = useState(
+    (course as Record<string, unknown>).issue_certificate !== false
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +65,7 @@ export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps
           ? parseInt(dueDaysFromStart)
           : null,
         content_url: contentUrl || null,
+        issue_certificate: issueCertificate,
       });
 
       if (result.success) {
@@ -92,11 +97,10 @@ export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps
 
             <div className="grid gap-2">
               <Label htmlFor="edit_description">Description</Label>
-              <textarea
+              <Textarea
                 id="edit_description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 rows={3}
               />
             </div>
@@ -179,6 +183,18 @@ export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps
                 id="edit_is_required"
                 checked={isRequired}
                 onCheckedChange={setIsRequired}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit_issue_certificate">
+                Issue certificate on completion
+                <InfoTooltip text="Learners receive a PDF certificate when they complete this course" />
+              </Label>
+              <Switch
+                id="edit_issue_certificate"
+                checked={issueCertificate}
+                onCheckedChange={setIssueCertificate}
               />
             </div>
 
