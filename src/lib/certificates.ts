@@ -92,6 +92,22 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
+  dateLabel: {
+    fontSize: 10,
+    color: GREY,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  charityInfo: {
+    fontSize: 8,
+    color: LIGHT_GREY,
+  },
   certNumber: {
     fontSize: 10,
     color: LIGHT_GREY,
@@ -171,7 +187,8 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
           { style: styles.certificateLabel },
           "CERTIFICATE OF COMPLETION"
         ),
-        // Completion date
+        // Completion date with label
+        React.createElement(Text, { style: styles.dateLabel }, "Given on"),
         React.createElement(
           Text,
           { style: styles.date },
@@ -195,13 +212,22 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
           { style: styles.courseTitle },
           data.courseTitle
         ),
-        // Spacer pushes certificate number to bottom
+        // Spacer pushes footer to bottom
         React.createElement(View, { style: styles.spacer }),
-        // Certificate number (bottom-right)
+        // Footer: charity info left, certificate number right
         React.createElement(
-          Text,
-          { style: styles.certNumber },
-          `Certificate ${data.certificateNumber}`
+          View,
+          { style: styles.footer },
+          React.createElement(
+            Text,
+            { style: styles.charityInfo },
+            "MCR Pathways is a SCIO regulated by OSCR, Scottish Charity SC045816"
+          ),
+          React.createElement(
+            Text,
+            { style: styles.certNumber },
+            `Certificate ${data.certificateNumber}`
+          )
         )
       )
     )
