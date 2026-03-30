@@ -33,7 +33,7 @@ export function CompletionCelebration({
     // Strip ?completed=true from URL so refresh doesn't re-trigger
     const url = new URL(window.location.href);
     url.searchParams.delete("completed");
-    window.history.replaceState({}, "", url.pathname);
+    window.history.replaceState({}, "", url.toString());
   }, []);
 
   return (
