@@ -2,7 +2,7 @@
 
 > **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-27
+> **Last reviewed:** 2026-03-30
 > **Document updated during:** Periodic syncs
 
 ---
@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (71 files, `00001` through `00070` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (72 files, `00001` through `00071` plus a combined migration).
 
 ### Local Supabase
 
@@ -243,7 +243,7 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 | Course Detail | `/learning/courses/[id]` |
 | Lesson View | `/learning/courses/[id]/lessons/[lessonId]` |
 | Section Quiz | `/learning/courses/[id]/sections/[sectionId]/quiz` |
-| My Courses | `/learning/my-courses` |
+| My Learning | `/learning` |
 | Tool Shed | `/learning/tool-shed` |
 | Admin: Courses | `/learning/admin/courses` |
 | Admin: Course Detail | `/learning/admin/courses/[id]` |
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**71 migration files** in `supabase/migrations/`, numbered `00001` through `00070` plus a combined migration.
+**72 migration files** in `supabase/migrations/`, numbered `00001` through `00071` plus a combined migration.
 
 **Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
 
@@ -441,8 +441,8 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 53 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,267 tests across 53 files
+- **Files:** 54 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1,267 tests across 54 files
 
 ### Test Categories
 
@@ -470,7 +470,7 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows (18 E2E tests total for a 56-page app)
+- No E2E tests for multi-step HR workflows (18 E2E tests for a 56-page app)
 
 ---
 
@@ -733,6 +733,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-30 | Abdulmuiz Adaranijo | Tool Shed dialog & draft UX overhaul (PR #186): draft validation fix (partial content allowed), character counters with colour-coded warnings (amber 90%, red 100%), unsaved changes AlertDialog (Keep Editing / Discard), "or save as draft" footer link, partial draft card rendering (fallback preview, skip empty sections). 7 files, +348/-175. |
 | 2026-03-27 | Abdulmuiz Adaranijo | Tool Shed card & feed UX overhaul (PR #185): format-coloured left borders (blue/emerald/amber), event name as bold card title with middot date, 3-2-1 accent changed from violet to emerald (badge + all accent tokens), consistent Show more/Show less toggles, auto-scroll on expand, end-of-feed indicator, smoother filter transitions (dim not vanish), search_text column for content-level search (migration 00071), breadcrumb Link fix. Comprehensive UI/UX review identified 30+ issues, planned as 2 PRs. PR 2 (dialog/draft UX) next. |
 | 2026-03-27 | Abdulmuiz Adaranijo | API route rate limiting merged (PR #163): Upstash Redis on 7 endpoints. Project review: fixed 8 doc inaccuracies, flagged database.types.ts staleness, added tech debt items. Server action rate limiting investigated and deferred — full analysis in memory/rate-limiting.md. |
 | 2026-03-26 | Abdulmuiz Adaranijo | Tool Shed popular tags moved to PostgreSQL RPC (PR #180, migration 00070). JS-side tag aggregation replaced with `get_popular_tags` DB function (unnest + GROUP BY + COUNT). Added function to database.types.ts. Fixed PostgREST .or() filter injection in Tool Shed search (commas could inject extra conditions to view unpublished drafts). Added security lesson to root CLAUDE.md. |

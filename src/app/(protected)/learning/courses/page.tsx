@@ -78,9 +78,9 @@ export default async function CourseCatalogPage({
         subtitle="Browse and enrol in available courses"
         actions={
           <Button asChild variant="outline">
-            <Link href="/learning/my-courses">
+            <Link href="/learning">
               <BookOpen className="h-4 w-4 mr-2" />
-              My Courses
+              My Learning
             </Link>
           </Button>
         }

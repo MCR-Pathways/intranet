@@ -1,26 +1,32 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import {
   GraduationCap,
   Shield,
-  Lightbulb,
   BookOpen,
   ArrowRight,
-  Clock,
   AlertTriangle,
   PlayCircle,
   CheckCircle2,
+  Globe,
 } from "lucide-react";
-import type { EnrolmentWithCourse } from "@/types/database.types";
-import { formatDuration } from "@/lib/utils";
+import type { EnrolmentWithCourse, ExternalCourse } from "@/types/database.types";
 import { categoryConfig } from "@/lib/learning";
-import { getToolShedStats } from "./tool-shed/actions";
+import { EnrolledCourseCard } from "@/components/learning/enrolled-course-card";
+import { ExternalCourseDialog } from "@/components/learning/external-course-dialog";
+import { ExternalCourseCard } from "@/components/learning/external-course-card";
 
 export default async function LearningPage() {
   const { supabase, user } = await getCurrentUser();
@@ -29,21 +35,36 @@ export default async function LearningPage() {
     redirect("/login");
   }
 
-  // Fetch courses and enrolments in parallel for faster page loads
-  const [{ data: courses }, { data: enrolments }] = await Promise.all([
-    supabase
-      .from("courses")
-      .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at")
-      .eq("is_active", true)
-      .eq("status", "published"),
-    supabase
-      .from("course_enrolments")
-      .select(`
+  // Fetch courses, enrolments, and external courses in parallel
+  const [{ data: courses }, { data: enrolments }, { data: externalCoursesData }] =
+    await Promise.all([
+      supabase
+        .from("courses")
+        .select(
+          "id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, created_by, updated_by, created_at, updated_at"
+        )
+        .eq("is_active", true)
+        .eq("status", "published"),
+      supabase
+        .from("course_enrolments")
+        .select(
+          `
         id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at,
         course:courses(id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, created_by, updated_by, created_at, updated_at)
-      `)
-      .eq("user_id", user.id),
-  ]);
+      `
+        )
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("external_courses")
+        .select(
+          "id, user_id, title, provider, category, completed_at, duration_minutes, certificate_url, notes, created_at, updated_at"
+        )
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false }),
+    ]);
+
+  const externalCourses = (externalCoursesData ?? []) as ExternalCourse[];
 
   // Type and filter enrolments — only show enrolments for published, active courses
   const typedEnrolments = (enrolments || [])
@@ -57,66 +78,67 @@ export default async function LearningPage() {
       course: e.course as unknown as EnrolmentWithCourse["course"],
     })) as EnrolmentWithCourse[];
 
-  // Calculate stats by category
-  const coursesByCategory = {
-    compliance: courses?.filter((c) => c.category === "compliance") || [],
-    upskilling: courses?.filter((c) => c.category === "upskilling") || [],
-    soft_skills: courses?.filter((c) => c.category === "soft_skills") || [],
-  };
-
-  // Get enrolment stats
+  // Get enrolment map for compliance stats
   const enrolmentMap = new Map(
     typedEnrolments.map((e) => [e.course_id, e])
   );
 
   const now = Date.now(); // eslint-disable-line react-hooks/purity -- server component runs once per request
 
+  // Compliance stats
+  const complianceCourses =
+    courses?.filter((c) => c.category === "compliance") || [];
   const complianceStats = {
-    total: coursesByCategory.compliance.length,
-    completed: coursesByCategory.compliance.filter(
+    total: complianceCourses.length,
+    completed: complianceCourses.filter(
       (c) => enrolmentMap.get(c.id)?.status === "completed"
     ).length,
-    due: coursesByCategory.compliance.filter((c) => {
+    overdue: complianceCourses.filter((c) => {
+      const enrolment = enrolmentMap.get(c.id);
+      if (!enrolment?.due_date || enrolment.status === "completed") return false;
+      return (
+        Math.ceil(
+          (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
+        ) < 0
+      );
+    }).length,
+    dueSoon: complianceCourses.filter((c) => {
       const enrolment = enrolmentMap.get(c.id);
       if (!enrolment || enrolment.status === "completed") return false;
       if (!enrolment.due_date) return c.is_required;
       const daysUntilDue = Math.ceil(
         (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
       );
-      return daysUntilDue <= 14;
-    }).length,
-    overdue: coursesByCategory.compliance.filter((c) => {
-      const enrolment = enrolmentMap.get(c.id);
-      if (!enrolment?.due_date || enrolment.status === "completed") return false;
-      const daysUntilDue = Math.ceil(
-        (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
-      );
-      return daysUntilDue < 0;
+      return daysUntilDue >= 0 && daysUntilDue <= 14;
     }).length,
   };
 
-  // Get in-progress courses for display (show all, not truncated)
+  // Categorise enrolments
   const inProgressEnrolments = typedEnrolments
     .filter((e) => e.status === "in_progress" || e.status === "enrolled")
     .sort((a, b) => {
-      // Sort by due date (soonest first), then by progress (highest first)
-      if (a.due_date && b.due_date) {
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-      }
+      if (a.due_date && b.due_date)
+        return (
+          new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        );
       if (a.due_date) return -1;
       if (b.due_date) return 1;
       return b.progress_percent - a.progress_percent;
     });
 
+  const completedEnrolments = typedEnrolments.filter(
+    (e) => e.status === "completed"
+  );
+
   // Find the resume course — most recently started in-progress course
-  const resumeEnrolment = typedEnrolments
-    .filter((e) => e.status === "in_progress")
-    .sort((a, b) => {
-      // Most recently started first
-      const aStart = a.started_at ? new Date(a.started_at).getTime() : 0;
-      const bStart = b.started_at ? new Date(b.started_at).getTime() : 0;
-      return bStart - aStart;
-    })[0] ?? null;
+  const resumeEnrolment =
+    typedEnrolments
+      .filter((e) => e.status === "in_progress")
+      .sort((a, b) => {
+        const aStart = a.started_at ? new Date(a.started_at).getTime() : 0;
+        const bStart = b.started_at ? new Date(b.started_at).getTime() : 0;
+        return bStart - aStart;
+      })[0] ?? null;
 
   // Fetch the next incomplete lesson for the resume course
   let resumeLessonHref: string | null = null;
@@ -133,9 +155,14 @@ export default async function LearningPage() {
         .from("lesson_completions")
         .select("lesson_id")
         .eq("user_id", user.id)
-        .in("lesson_id", resumeLessons.map((l) => l.id));
+        .in(
+          "lesson_id",
+          resumeLessons.map((l) => l.id)
+        );
 
-      const completedIds = new Set(completions?.map((c) => c.lesson_id) ?? []);
+      const completedIds = new Set(
+        completions?.map((c) => c.lesson_id) ?? []
+      );
       const nextLesson = resumeLessons.find((l) => !completedIds.has(l.id));
       if (nextLesson) {
         resumeLessonHref = `/learning/courses/${resumeEnrolment.course_id}/lessons/${nextLesson.id}`;
@@ -143,71 +170,27 @@ export default async function LearningPage() {
     }
   }
 
-  const hasComplianceDue = complianceStats.due > 0 || complianceStats.overdue > 0;
+  // Stats for compact bar
+  const totalEnrolled = typedEnrolments.length;
+  const totalInProgress = inProgressEnrolments.length;
+  const totalCompleted = completedEnrolments.length;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Learning"
-        subtitle="Develop your skills and complete required training"
+        title="My Learning"
+        subtitle="Track your progress and develop your skills"
+        actions={
+          <Button asChild>
+            <Link href="/learning/courses">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Browse Catalogue
+            </Link>
+          </Button>
+        }
       />
 
-      {/* Compliance alert */}
-      {complianceStats.overdue > 0 ? (
-        <Card className="border-destructive bg-destructive/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-lg text-destructive">Overdue Compliance Training</CardTitle>
-            </div>
-            <CardDescription className="text-destructive/80">
-              You have {complianceStats.overdue} overdue compliance course{complianceStats.overdue > 1 ? "s" : ""} that must be completed immediately.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="destructive">
-              <Link href="/learning/courses?category=compliance">
-                Complete Now
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : hasComplianceDue ? (
-        <Card className="border-mcr-orange bg-mcr-orange/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-mcr-orange" />
-              <CardTitle className="text-lg">Compliance Training Due</CardTitle>
-            </div>
-            <CardDescription>
-              You have {complianceStats.due} compliance course{complianceStats.due > 1 ? "s" : ""} due soon. Complete them to stay compliant.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/learning/courses?category=compliance">
-                View Compliance Courses
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : complianceStats.total > 0 && complianceStats.completed === complianceStats.total ? (
-        <Card className="border-green-500 bg-green-50">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-lg text-green-700">All Compliance Training Complete</CardTitle>
-            </div>
-            <CardDescription className="text-green-600">
-              You have completed all {complianceStats.total} required compliance courses.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : null}
-
-      {/* Continue Learning hero card */}
+      {/* Continue Learning hero */}
       {resumeEnrolment && resumeLessonHref && (
         <Link href={resumeLessonHref} className="block">
           <Card className="border-primary/20 bg-primary/5 transition-shadow hover:shadow-md cursor-pointer">
@@ -217,11 +200,18 @@ export default async function LearningPage() {
                   <PlayCircle className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-primary mb-0.5">Continue Learning</p>
-                  <p className="font-semibold truncate">{resumeEnrolment.course.title}</p>
+                  <p className="text-sm font-medium text-primary mb-0.5">
+                    Continue where you left off
+                  </p>
+                  <p className="font-semibold truncate">
+                    {resumeEnrolment.course.title}
+                  </p>
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex-1">
-                      <Progress value={resumeEnrolment.progress_percent} className="h-1.5" />
+                      <Progress
+                        value={resumeEnrolment.progress_percent}
+                        className="h-1.5"
+                      />
                     </div>
                     <span className="text-sm text-muted-foreground shrink-0">
                       {resumeEnrolment.progress_percent}%
@@ -235,183 +225,165 @@ export default async function LearningPage() {
         </Link>
       )}
 
-      {/* Course categories */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/learning/courses?category=compliance">
-          <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Compliance Courses
+      {/* Compliance alert — overdue takes priority */}
+      {complianceStats.overdue > 0 ? (
+        <Card className="border-destructive bg-destructive/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-lg text-destructive">
+                {complianceStats.overdue} compliance{" "}
+                {complianceStats.overdue === 1 ? "course" : "courses"} overdue
               </CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 mb-2">
-                {complianceStats.overdue > 0 && (
-                  <Badge variant="destructive">{complianceStats.overdue} overdue</Badge>
-                )}
-                {complianceStats.due > 0 && complianceStats.overdue === 0 && (
-                  <Badge variant="warning">{complianceStats.due} due</Badge>
-                )}
-                <Badge variant="muted">{complianceStats.completed} completed</Badge>
-              </div>
-              <CardDescription>
-                Required training for all staff
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/learning/courses?category=upskilling">
-          <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Upskilling
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="destructive">
+              <Link href="/learning/courses?category=compliance">
+                Complete Now
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : complianceStats.dueSoon > 0 ? (
+        <Card className="border-mcr-orange bg-mcr-orange/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-mcr-orange" />
+              <CardTitle className="text-lg">
+                {complianceStats.dueSoon} compliance{" "}
+                {complianceStats.dueSoon === 1 ? "course" : "courses"} due soon
               </CardTitle>
-              <Lightbulb className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="muted">{coursesByCategory.upskilling.length} available</Badge>
-              </div>
-              <CardDescription>
-                Optional courses to develop new skills
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/learning/courses?category=compliance">
+                View Compliance Courses
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : complianceStats.total > 0 &&
+        complianceStats.completed === complianceStats.total ? (
+        <Card className="border-green-500 bg-green-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-lg text-green-700">
+                All compliance training complete
+              </CardTitle>
+            </div>
+          </CardHeader>
+        </Card>
+      ) : null}
 
-        <ToolShedCard />
-      </div>
+      {/* Compact stats bar */}
+      {totalEnrolled > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {totalEnrolled} enrolled &middot; {totalInProgress} in progress
+          &middot; {totalCompleted} completed
+        </p>
+      )}
 
-      {/* My courses section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>My Courses</CardTitle>
-            <CardDescription>
-              {inProgressEnrolments.length > 0
-                ? `${inProgressEnrolments.length} course${inProgressEnrolments.length !== 1 ? "s" : ""} in progress`
-                : "Courses you\u2019re currently working on"}
-            </CardDescription>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/learning/my-courses">All Courses</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
+      {/* Course tabs */}
+      <Tabs defaultValue="in_progress" className="w-full">
+        <TabsList variant="line">
+          <TabsTrigger value="in_progress">
+            In Progress ({totalInProgress})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Completed ({totalCompleted})
+          </TabsTrigger>
+          <TabsTrigger value="external">
+            External ({externalCourses.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="in_progress" className="mt-6">
           {inProgressEnrolments.length > 0 ? (
-            <div className="space-y-4">
-              {inProgressEnrolments.map((enrolment) => {
-                const config = categoryConfig[enrolment.course.category];
-                const Icon = config.icon;
-
-                // Calculate due date status
-                let dueStatus: "overdue" | "due_soon" | null = null;
-                let daysUntilDue: number | null = null;
-
-                if (enrolment.due_date) {
-                  daysUntilDue = Math.ceil(
-                    (new Date(enrolment.due_date).getTime() - now) / (1000 * 60 * 60 * 24)
-                  );
-                  if (daysUntilDue < 0) dueStatus = "overdue";
-                  else if (daysUntilDue <= 7) dueStatus = "due_soon";
-                }
-
-                return (
-                  <Link
-                    key={enrolment.id}
-                    href={`/learning/courses/${enrolment.course_id}`}
-                    className="block"
-                  >
-                    <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <Icon className={`h-8 w-8 ${config.color} shrink-0`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium truncate">{enrolment.course.title}</p>
-                          {dueStatus === "overdue" && (
-                            <Badge variant="destructive" className="shrink-0">Overdue</Badge>
-                          )}
-                          {dueStatus === "due_soon" && (
-                            <Badge variant="warning" className="shrink-0">Due in {daysUntilDue}d</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex-1">
-                            <Progress value={enrolment.progress_percent} className="h-2" />
-                          </div>
-                          <span className="text-sm text-muted-foreground shrink-0">
-                            {enrolment.progress_percent}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1 shrink-0">
-                        <Clock className="h-4 w-4" />
-                        {formatDuration(enrolment.course.duration_minutes)}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {inProgressEnrolments.map((enrolment) => (
+                <EnrolledCourseCard
+                  key={enrolment.id}
+                  enrolment={enrolment}
+                />
+              ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8">
-              <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground text-center max-w-sm mb-4">
-                {courses && courses.length > 0
-                  ? "Browse the course catalogue to find courses relevant to your role."
-                  : "No courses are available yet. Check back soon."}
-              </p>
-              {courses && courses.length > 0 && (
-                <Button asChild>
-                  <Link href="/learning/courses">
-                    <PlayCircle className="h-4 w-4 mr-2" />
-                    Browse Courses
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Tool Shed Card (async server component) ────────────────────────────────
-
-async function ToolShedCard() {
-  const stats = await getToolShedStats();
-
-  return (
-    <Link href="/learning/tool-shed">
-      <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">Tool Shed</CardTitle>
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          {stats.totalEntries > 0 ? (
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{stats.totalEntries}</p>
-              <CardDescription>
-                {stats.thisMonthCount > 0
-                  ? `${stats.thisMonthCount} shared this month`
-                  : "Insights shared by the team"}
-              </CardDescription>
-              {stats.recentTitles.length > 0 && (
-                <p className="text-xs text-muted-foreground truncate mt-1">
-                  Latest: {stats.recentTitles[0]}
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <PlayCircle className="h-10 w-10 text-muted-foreground/50 mb-4" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  No courses in progress yet.
                 </p>
-              )}
+                <p className="text-sm text-muted-foreground/70 mb-4">
+                  Browse the catalogue to find something new.
+                </p>
+                <Button asChild>
+                  <Link href="/learning/courses">Browse Catalogue</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="completed" className="mt-6">
+          {completedEnrolments.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {completedEnrolments.map((enrolment) => (
+                <EnrolledCourseCard
+                  key={enrolment.id}
+                  enrolment={enrolment}
+                />
+              ))}
             </div>
           ) : (
-            <CardDescription>
-              Share and discover insights from training events
-            </CardDescription>
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <GraduationCap className="h-10 w-10 text-muted-foreground/50 mb-4" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  No completed courses yet.
+                </p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
-    </Link>
+        </TabsContent>
+
+        <TabsContent value="external" className="mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Track courses you've completed outside the platform.
+              </p>
+              <ExternalCourseDialog mode="create" />
+            </div>
+
+            {externalCourses.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {externalCourses.map((course) => (
+                  <ExternalCourseCard key={course.id} course={course} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Globe className="h-10 w-10 text-muted-foreground/50 mb-4" />
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    No external courses logged yet.
+                  </p>
+                  <p className="text-sm text-muted-foreground/70 mb-4">
+                    Track courses you've completed outside the platform.
+                  </p>
+                  <ExternalCourseDialog mode="create" />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

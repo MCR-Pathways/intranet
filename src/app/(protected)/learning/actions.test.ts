@@ -31,7 +31,7 @@ import {
   addExternalCourse,
   updateExternalCourse,
   deleteExternalCourse,
-} from "@/app/(protected)/learning/my-courses/actions";
+} from "@/app/(protected)/learning/actions";
 import { getCurrentUser } from "@/lib/auth";
 
 describe("External Course Actions", () => {

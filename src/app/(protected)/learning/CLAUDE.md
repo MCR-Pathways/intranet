@@ -42,6 +42,10 @@ Course management, section-level quizzes, Tool Shed social learning, and admin b
 
 **Don't use `justify-between` for related inline elements.** On wide layouts, it pushes a title and its date to opposite edges, creating visual disconnect. Use natural flex flow with `gap` instead.
 
+**Draft validation must be a separate path from publish validation.** Drafts allow partial content (any subset of fields). Published entries require all fields. Don't try to share one validation function with a `isDraft` flag that skips checks — use two distinct validation blocks. The share dialog's `handleSubmit` checks `isDraft` and branches to `validateDraft()` (format required, at least one field) vs `validatePublish()` (all fields required).
+
+**Use `preventCloseIfDirty` pattern for unsaved changes in Radix Dialogs.** A single `useCallback` handles both `onInteractOutside` and `onEscapeKeyDown` — call `e.preventDefault()` then show an AlertDialog. Track dirty state via a `hasContent` derived value that checks format, event name, tags, and content fields. Skip the check in edit mode (`!isEditing`).
+
 ## Email Notifications
 
 Phase D (PR #175) is DORMANT until Resend account setup (`RESEND_API_KEY` + `CRON_SECRET` + domain verification). Queue + Cron + preferences + 11 email types across L&D/HR/Intranet.

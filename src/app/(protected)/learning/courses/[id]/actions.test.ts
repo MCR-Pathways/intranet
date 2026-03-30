@@ -128,7 +128,6 @@ describe("Course Learner Actions", () => {
 
       expect(revalidatePath).toHaveBeenCalledWith("/learning/courses/course-1");
       expect(revalidatePath).toHaveBeenCalledWith("/learning");
-      expect(revalidatePath).toHaveBeenCalledWith("/learning/my-courses");
     });
 
     it("returns 'Already enrolled' for duplicate enrolment (code 23505)", async () => {
@@ -214,7 +213,6 @@ describe("Course Learner Actions", () => {
 
       expect(revalidatePath).toHaveBeenCalledWith("/learning/courses/course-1");
       expect(revalidatePath).toHaveBeenCalledWith("/learning");
-      expect(revalidatePath).toHaveBeenCalledWith("/learning/my-courses");
     });
 
     it("returns error on RPC failure", async () => {
@@ -297,8 +295,7 @@ describe("Course Learner Actions", () => {
         "/learning/courses/course-1/lessons/lesson-1"
       );
       expect(revalidatePath).toHaveBeenCalledWith("/learning");
-      expect(revalidatePath).toHaveBeenCalledWith("/learning/my-courses");
-      expect(revalidatePath).toHaveBeenCalledTimes(4);
+      expect(revalidatePath).toHaveBeenCalledTimes(3);
     });
 
     it("returns error on RPC failure", async () => {

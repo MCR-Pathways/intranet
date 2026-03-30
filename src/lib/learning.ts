@@ -30,6 +30,7 @@ export interface CategoryConfig {
   icon: typeof Shield;
   color: string;
   bgColor: string;
+  borderColor: string;
   badgeVariant: NonNullable<BadgeProps["variant"]>;
 }
 
@@ -39,6 +40,7 @@ export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
     icon: Shield,
     color: "text-red-600",
     bgColor: "bg-red-50",
+    borderColor: "border-l-red-500",
     badgeVariant: "destructive",
   },
   upskilling: {
@@ -46,6 +48,7 @@ export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
     icon: Lightbulb,
     color: "text-blue-600",
     bgColor: "bg-blue-50",
+    borderColor: "border-l-blue-500",
     badgeVariant: "default",
   },
   soft_skills: {
@@ -53,6 +56,7 @@ export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
     icon: Users,
     color: "text-purple-600",
     bgColor: "bg-purple-50",
+    borderColor: "border-l-purple-500",
     badgeVariant: "secondary",
   },
 };
