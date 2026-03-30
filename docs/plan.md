@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-03-26
+> Last updated: 2026-03-30
 
 ---
 

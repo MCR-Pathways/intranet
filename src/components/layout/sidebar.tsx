@@ -105,7 +105,7 @@ function getNavigation(
     {
       label: null,
       items: [
-        { name: "My Courses", href: "/learning/my-courses" },
+        { name: "Catalogue", href: "/learning/courses" },
         { name: "Compliance", href: "/learning/courses?category=compliance" },
         { name: "Upskilling", href: "/learning/courses?category=upskilling" },
         { name: "Tool Shed", href: "/learning/tool-shed" },

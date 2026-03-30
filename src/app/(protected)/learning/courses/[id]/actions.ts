@@ -38,7 +38,6 @@ export async function enrollInCourse(courseId: string) {
 
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath("/learning");
-  revalidatePath("/learning/my-courses");
   return { success: true, error: null, firstLessonId: firstLesson?.id ?? null };
 }
 
@@ -66,7 +65,6 @@ export async function completeLesson(lessonId: string, courseId: string) {
 
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath("/learning");
-  revalidatePath("/learning/my-courses");
   return { success: true, error: null, progressPercent };
 }
 
@@ -96,7 +94,6 @@ export async function submitQuiz(
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath(`/learning/courses/${courseId}/lessons/${lessonId}`);
   revalidatePath("/learning");
-  revalidatePath("/learning/my-courses");
   return { success: true, error: null, result: result as {
     score: number;
     passed: boolean;
@@ -158,7 +155,6 @@ export async function submitSectionQuiz(
   revalidatePath(`/learning/courses/${courseId}`);
   revalidatePath(`/learning/courses/${courseId}/sections/${sectionId}/quiz`);
   revalidatePath("/learning");
-  revalidatePath("/learning/my-courses");
   return { success: true, error: null, result: result as {
     score: number;
     passed: boolean;
