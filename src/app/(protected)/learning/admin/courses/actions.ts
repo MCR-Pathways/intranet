@@ -126,6 +126,7 @@ export async function updateCourse(
     content_url?: string | null;
     is_active?: boolean;
     status?: "draft" | "published";
+    issue_certificate?: boolean;
   }
 ) {
   const { supabase, user } = await requireLDAdmin();
@@ -141,6 +142,7 @@ export async function updateCourse(
     "content_url",
     "is_active",
     "status",
+    "issue_certificate",
   ] as const;
 
   const sanitized: Record<string, unknown> = {};
@@ -422,10 +424,17 @@ export async function duplicateCourse(courseId: string): Promise<{
 export async function publishCourse(courseId: string) {
   const { supabase, user } = await requireLDAdmin();
 
+  // Fetch course details for validation + warnings
+  const { data: courseForPublish } = await supabase
+    .from("courses")
+    .select("duration_minutes")
+    .eq("id", courseId)
+    .single();
+
   // Validate: course must have at least 1 active section with at least 1 active lesson
   const { data: sections } = await supabase
     .from("course_sections")
-    .select("id, title")
+    .select("id, title, description")
     .eq("course_id", courseId)
     .eq("is_active", true);
 
@@ -484,6 +493,26 @@ export async function publishCourse(courseId: string) {
     }
   }
 
+  // Soft warnings (non-blocking) — content quality checks
+  const warnings: string[] = [];
+  const untitledSections = sections.filter((s) => s.title === "Untitled Section");
+  if (untitledSections.length > 0) {
+    warnings.push(
+      untitledSections.length === 1
+        ? `Section "${untitledSections[0].title}" still has the default name`
+        : `${untitledSections.length} sections still have the default name "Untitled Section"`
+    );
+  }
+  if (!courseForPublish?.duration_minutes) {
+    warnings.push("No estimated duration set");
+  }
+  const sectionsWithoutDesc = sections.filter((s) => !s.description?.trim());
+  if (sectionsWithoutDesc.length > 0) {
+    warnings.push(
+      `${sectionsWithoutDesc.length} ${sectionsWithoutDesc.length === 1 ? "section has" : "sections have"} no description`
+    );
+  }
+
   const { error } = await supabase
     .from("courses")
     .update({ status: "published", is_active: true, updated_by: user.id })
@@ -491,7 +520,7 @@ export async function publishCourse(courseId: string) {
 
   if (error) {
     logger.error("Failed to publish course", { error });
-    return { success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+    return { success: false, error: "Failed to publish course. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", warnings: [] };
   }
 
   // Send notifications to assigned users
@@ -530,7 +559,7 @@ export async function publishCourse(courseId: string) {
   revalidatePath(`/learning/admin/courses/${courseId}`);
   revalidatePath("/learning/courses");
   revalidatePath("/learning");
-  return { success: true, error: null };
+  return { success: true, error: null, warnings };
 }
 
 export async function unpublishCourse(courseId: string) {
