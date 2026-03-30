@@ -366,8 +366,6 @@ describe("L&D Course Actions", () => {
 
       mockRpc.mockResolvedValue(rpcResult);
 
-      // Track course table calls to alternate between select (duration) and update
-      let courseCallCount = 0;
       mockFrom.mockImplementation((table: string) => {
         switch (table) {
           case "course_sections":
@@ -380,14 +378,8 @@ describe("L&D Course Actions", () => {
             return { select: mockSQSelect };
           case "section_quiz_questions":
             return { select: mockSQQSelect };
-          case "courses": {
-            courseCallCount++;
-            // First call: select duration_minutes; second call: update
-            if (courseCallCount === 1) {
-              return { select: mockCourseDurationSelect };
-            }
-            return { update: mockCourseUpdate };
-          }
+          case "courses":
+            return { select: mockCourseDurationSelect, update: mockCourseUpdate };
           case "course_assignments":
             return { select: mockAssignSelect };
           default:
