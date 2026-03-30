@@ -20,8 +20,8 @@ export default async function CourseCatalogPage({
     redirect("/login");
   }
 
-  // Fetch courses and enrolments in parallel
-  const [{ data: courses }, { data: enrolments }] = await Promise.all([
+  // Fetch courses, enrolments, and content counts in parallel
+  const [{ data: courses }, { data: enrolments }, { data: sections }, { data: lessons }] = await Promise.all([
     supabase
       .from("courses")
       .select(
@@ -37,6 +37,14 @@ export default async function CourseCatalogPage({
         "id, user_id, course_id, status, progress_percent, score, enrolled_at, started_at, completed_at, due_date, created_at, updated_at"
       )
       .eq("user_id", user.id),
+    supabase
+      .from("course_sections")
+      .select("id, course_id")
+      .eq("is_active", true),
+    supabase
+      .from("course_lessons")
+      .select("id, course_id")
+      .eq("is_active", true),
   ]);
 
   // Build enrolment map as a serialisable object (Maps can't cross server→client boundary)
@@ -61,6 +69,16 @@ export default async function CourseCatalogPage({
     return daysUntilDue <= 14 && daysUntilDue >= 0;
   }).length;
 
+  // Build section/lesson counts per course
+  const sectionCounts: Record<string, number> = {};
+  for (const s of sections ?? []) {
+    sectionCounts[s.course_id] = (sectionCounts[s.course_id] ?? 0) + 1;
+  }
+  const lessonCounts: Record<string, number> = {};
+  for (const l of lessons ?? []) {
+    lessonCounts[l.course_id] = (lessonCounts[l.course_id] ?? 0) + 1;
+  }
+
   // Serialisable course data for the client component
   const catalogueCourses = (courses ?? []).map((c) => ({
     id: c.id,
@@ -69,6 +87,8 @@ export default async function CourseCatalogPage({
     category: c.category,
     duration_minutes: c.duration_minutes,
     is_required: c.is_required,
+    sectionCount: sectionCounts[c.id] ?? 0,
+    lessonCount: lessonCounts[c.id] ?? 0,
   }));
 
   return (
