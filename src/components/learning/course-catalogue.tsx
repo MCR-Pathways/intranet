@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Search, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { CourseCard } from "./course-card";
 import type { CourseEnrolment } from "@/types/database.types";
 import { cn } from "@/lib/utils";
@@ -40,9 +41,21 @@ export function CourseCatalogue({
     initialCategory && initialCategory !== "all" ? initialCategory : "all"
   );
   const [requiredOnly, setRequiredOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = useMemo(() => {
     let result = courses;
+
+    // Text search on title and description
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      result = result.filter(
+        (c) =>
+          c.title.toLowerCase().includes(query) ||
+          (c.description?.toLowerCase().includes(query) ?? false)
+      );
+    }
+
     if (activeCategory !== "all") {
       result = result.filter((c) => c.category === activeCategory);
     }
@@ -50,7 +63,7 @@ export function CourseCatalogue({
       result = result.filter((c) => c.is_required);
     }
     return result;
-  }, [courses, activeCategory, requiredOnly]);
+  }, [courses, activeCategory, requiredOnly, searchQuery]);
 
   // Count courses per category for the chip labels
   const categoryCounts = useMemo(() => {
@@ -61,8 +74,31 @@ export function CourseCatalogue({
     return counts;
   }, [courses]);
 
+  const hasSearch = searchQuery.trim().length > 0;
+
   return (
     <div className="space-y-4">
+      {/* Search input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search courses..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-9 bg-card"
+        />
+        {hasSearch && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Clear search</span>
+          </button>
+        )}
+      </div>
+
       {/* Filter chips */}
       <div className="flex flex-wrap items-center gap-2">
         {CATEGORIES.map((cat) => {
@@ -114,16 +150,20 @@ export function CourseCatalogue({
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              No courses match your filters.
+            <BookOpen className="h-10 w-10 text-muted-foreground/50 mb-4" />
+            <p className="text-sm font-medium text-muted-foreground">
+              {hasSearch
+                ? "No courses match your search."
+                : "No courses match your filters."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "course" : "courses"}
+            {hasSearch
+              ? `${filtered.length} ${filtered.length === 1 ? "result" : "results"}`
+              : `${filtered.length} ${filtered.length === 1 ? "course" : "courses"}`}
           </p>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((course) => (
