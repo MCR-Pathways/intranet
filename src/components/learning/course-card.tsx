@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock } from "lucide-react";
 import type { CourseEnrolment } from "@/types/database.types";
@@ -18,6 +24,8 @@ interface CourseCardProps {
     category: string;
     duration_minutes?: number | null;
     is_required?: boolean;
+    sectionCount?: number;
+    lessonCount?: number;
   };
   enrolment?: CourseEnrolment | null;
 }
@@ -28,8 +36,10 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
 
   return (
     <Link href={`/learning/courses/${course.id}`}>
-      <Card className="transition-shadow hover:shadow-md cursor-pointer h-full flex flex-col relative">
-        {/* Minimal enrolment indicator */}
+      <Card
+        className={`border-l-4 ${config?.borderColor ?? "border-l-muted"} shadow-sm overflow-clip rounded-xl transition-shadow hover:shadow-md cursor-pointer h-full flex flex-col relative`}
+      >
+        {/* Enrolment status indicator */}
         {enrolment?.status === "completed" && (
           <div className="absolute top-3 right-3">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -37,23 +47,30 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
         )}
         {enrolment?.status === "in_progress" && (
           <div className="absolute top-3 right-3">
-            <div
-              className="h-5 w-5 rounded-full border-2 border-blue-500"
-              style={{
-                background: `conic-gradient(rgb(59 130 246) ${(enrolment.progress_percent ?? 0) * 3.6}deg, transparent 0deg)`,
-              }}
-              title={`${enrolment.progress_percent}% complete`}
-            />
+            <Badge variant="default" className="text-xs tabular-nums">
+              {enrolment.progress_percent}%
+            </Badge>
+          </div>
+        )}
+        {enrolment?.status === "enrolled" && (
+          <div className="absolute top-3 right-3">
+            <Badge variant="muted" className="text-xs">
+              Enrolled
+            </Badge>
           </div>
         )}
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2 pr-6">
+          <div className="pr-16">
             <div className="flex items-center gap-2">
-              {Icon && <Icon className={`h-5 w-5 ${config.color}`} />}
-              <CardTitle className="text-base line-clamp-2">{course.title}</CardTitle>
+              {Icon && <Icon className={`h-5 w-5 ${config.color} shrink-0`} />}
+              <CardTitle className="text-[15px] font-semibold line-clamp-2">
+                {course.title}
+              </CardTitle>
             </div>
             {course.is_required && (
-              <Badge variant="destructive" className="shrink-0">Required</Badge>
+              <Badge variant="destructive" className="mt-2">
+                Required
+              </Badge>
             )}
           </div>
         </CardHeader>
@@ -62,15 +79,25 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
             {course.description}
           </CardDescription>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {formatDuration(course.duration_minutes ?? null)}
+            <div className="flex items-center gap-3">
+              {course.duration_minutes ? (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {formatDuration(course.duration_minutes)}
+                </span>
+              ) : null}
+              {(course.sectionCount ?? 0) > 0 && (
+                <span>
+                  {course.sectionCount} {course.sectionCount === 1 ? "section" : "sections"} &middot;{" "}
+                  {course.lessonCount} {course.lessonCount === 1 ? "lesson" : "lessons"}
+                </span>
+              )}
+              {(course.sectionCount ?? 0) === 0 && (course.lessonCount ?? 0) > 0 && (
+                <span>
+                  {course.lessonCount} {course.lessonCount === 1 ? "lesson" : "lessons"}
+                </span>
+              )}
             </div>
-            {config && (
-              <Badge variant="outline" className="text-xs">
-                {config.label}
-              </Badge>
-            )}
           </div>
         </CardContent>
       </Card>
