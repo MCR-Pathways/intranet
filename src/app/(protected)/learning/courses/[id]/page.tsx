@@ -109,7 +109,7 @@ export default async function CourseDetailPage({
   const hasLessons = lessons.length > 0;
   const hasSections = sections.length > 0;
   const hasCertificate = !!certificateData?.id;
-  const courseIssuesCertificate = (course as Record<string, unknown>).issue_certificate !== false;
+  const courseIssuesCertificate = (course as Course & { issue_certificate?: boolean }).issue_certificate !== false;
 
   // Fetch completions and section quizzes in parallel
   const lessonIds = lessons.map((l) => l.id);
