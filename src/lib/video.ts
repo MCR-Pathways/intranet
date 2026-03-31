@@ -8,8 +8,9 @@ export function getEmbedUrl(url: string): string {
   }
 
   // YouTube — handles watch, embed, shorts, live, and youtu.be
+  // watch\?.*v= handles v= at any position in the query string (e.g. ?feature=shared&v=ID)
   const ytMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/
+    /(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/
   );
   if (ytMatch) {
     // Use youtube-nocookie.com — privacy-enhanced mode, no tracking cookies until play
@@ -20,10 +21,13 @@ export function getEmbedUrl(url: string): string {
     return embedUrl;
   }
 
-  // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch)
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  // Vimeo — captures optional private hash (e.g. vimeo.com/123456789/abcdef)
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)(?:\/([a-zA-Z0-9]+))?/);
+  if (vimeoMatch) {
+    let embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    if (vimeoMatch[2]) embedUrl += `?h=${vimeoMatch[2]}`;
+    return embedUrl;
+  }
 
   return "";
 }

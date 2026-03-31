@@ -16,6 +16,12 @@ describe("getEmbedUrl", () => {
     ).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
   });
 
+  it("handles v= not being the first query param", () => {
+    expect(
+      getEmbedUrl("https://www.youtube.com/watch?feature=shared&v=dQw4w9WgXcQ")
+    ).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+  });
+
   it("converts youtu.be short URL", () => {
     expect(getEmbedUrl("https://youtu.be/dQw4w9WgXcQ")).toBe(
       "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
@@ -66,9 +72,9 @@ describe("getEmbedUrl", () => {
     );
   });
 
-  it("converts Vimeo URL with path suffix", () => {
+  it("converts Vimeo private URL with hash", () => {
     expect(getEmbedUrl("https://vimeo.com/123456789/abcdef")).toBe(
-      "https://player.vimeo.com/video/123456789"
+      "https://player.vimeo.com/video/123456789?h=abcdef"
     );
   });
 
