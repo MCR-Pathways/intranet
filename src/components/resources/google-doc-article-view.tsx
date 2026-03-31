@@ -3,6 +3,7 @@
 import { createElement, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import parse, { type DOMNode, type Element, domToReact } from "html-react-parser";
+import { getEmbedUrl } from "@/lib/video";
 import {
   ExternalLink,
   RefreshCw,
@@ -96,6 +97,34 @@ export function GoogleDocArticleView({
         if (domNode.type !== "tag") return;
         const el = domNode as Element;
         const tagName = el.name?.toLowerCase();
+
+        // Convert paragraphs containing only a YouTube/Vimeo link into responsive embeds
+        if (tagName === "p") {
+          const meaningful = el.children.filter(
+            (c) => c.type === "tag" || (c.type === "text" && (c as unknown as { data: string }).data.trim())
+          );
+          if (meaningful.length === 1 && meaningful[0].type === "tag") {
+            const child = meaningful[0] as Element;
+            if (child.name === "a" && child.attribs?.href) {
+              const embedUrl = getEmbedUrl(child.attribs.href);
+              if (embedUrl) {
+                return createElement(
+                  "div",
+                  { className: "not-prose my-4 aspect-video w-full overflow-hidden rounded-lg bg-muted", key: embedUrl },
+                  createElement("iframe", {
+                    src: embedUrl,
+                    title: "Video",
+                    className: "h-full w-full",
+                    sandbox: "allow-scripts allow-same-origin allow-presentation",
+                    allowFullScreen: true,
+                    allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+                    loading: "lazy",
+                  })
+                );
+              }
+            }
+          }
+        }
 
         // Add IDs to headings for deep linking + TOC
         if (/^h[1-4]$/.test(tagName)) {

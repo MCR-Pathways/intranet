@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { completeLesson } from "@/app/(protected)/learning/courses/[id]/actions";
+import { getEmbedUrl } from "@/lib/video";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
@@ -14,35 +15,6 @@ interface VideoPlayerProps {
   /** Public URL for the storage video (pre-computed server-side) */
   storagePublicUrl?: string | null;
   isLastLesson?: boolean;
-}
-
-/** Convert YouTube/Vimeo URLs to embeddable URLs */
-function getEmbedUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return "";
-    }
-  } catch {
-    return "";
-  }
-
-  // YouTube
-  const ytMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/
-  );
-  if (ytMatch) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  }
-
-  // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) {
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  }
-
-  // Return as-is for direct video URLs (mp4 etc.)
-  return url;
 }
 
 export function VideoPlayer({
