@@ -16,6 +16,7 @@
   - Phase 3 ✅: Reporting & assignments (individual assignment, course duplication, manager compliance)
   - Tool Shed ✅: Social learning feed (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). 6 components, JSONB content, format configs. PR #176.
   - Email notifications: DORMANT until Resend account setup (RESEND_API_KEY + CRON_SECRET + domain verification). PR #175.
+  - Phase F ✅: Learner polish (PRs #187-194). Dashboard merge, catalogue card polish, lesson sidebar sections, catalogue search, certificate redesign (Coursera-inspired), admin guardrails (certificate toggle, publish warnings), syllabus preview, completion celebration (confetti). Migration 00072.
   - Key changes: Course→Sections→Lessons, section quizzes, certificates (PDF), Tool Shed, global Cmd+K search, private course feedback
 
 ### Sign-In / Working Location ✅ (v2 complete)
@@ -97,7 +98,7 @@
 ### Infrastructure & Testing
 - [x] Rate limiting on API routes (Upstash Redis, PR #163). Server action rate limiting deferred — see `memory/rate-limiting.md`
 - [ ] Error monitoring integration (Sentry/Datadog swap for `src/lib/logger.ts`)
-- [ ] E2E test phases 2-3 (core module + HR module tests — currently 18 E2E tests for 56 pages)
+- [ ] E2E test phases 2-3 (core module + HR module tests — currently 18 E2E tests for 55 pages)
 - [ ] Mobile responsiveness pass (currently desktop/laptop only)
 - [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - [ ] Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
