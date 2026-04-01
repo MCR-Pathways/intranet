@@ -115,7 +115,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (72 files, `00001` through `00071` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (73 files, `00001` through `00072` plus a combined migration).
 
 ### Local Supabase
 
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**72 migration files** in `supabase/migrations/`, numbered `00001` through `00071` plus a combined migration.
+**73 migration files** in `supabase/migrations/`, numbered `00001` through `00072` plus a combined migration.
 
 **Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
 
@@ -442,7 +442,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 54 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,267 tests across 54 files
+- **Coverage:** 1,274 tests across 54 files
 
 ### Test Categories
 
@@ -470,7 +470,7 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows (18 E2E tests for a 56-page app)
+- No E2E tests for multi-step HR workflows (18 E2E tests for a 55-page app)
 
 ---
 
@@ -733,6 +733,8 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-03-30 | Abdulmuiz Adaranijo | Phase F COMPLETE (PRs #187-194, 8 PRs). Learner UX overhaul: merged Landing + My Courses into single dashboard (#187), catalogue card polish with left-border accents (#188), lesson sidebar section grouping (#189), catalogue search (#190), Coursera-inspired certificate redesign with Playfair Display + MCR logo + charity registration (#191), admin guardrails with certificate toggle + publish warnings + migration 00072 (#192), syllabus preview for unenrolled users + certificate download (#193), completion celebration with confetti (#194). Removed 8 redundancies, deleted /my-courses page, added canvas-confetti dependency. |
+| 2026-03-30 | Abdulmuiz Adaranijo | Phase F PR 1: Merge Learning dashboard (PR #187). Deleted /learning/my-courses page. Merged Landing + My Courses into single /learning with tabs (In Progress, Completed, External). Extracted EnrolledCourseCard with category left-border accents. Replaced 4 stat cards with compact inline bar. Removed 8 redundancies. Moved external course actions to learning/actions.ts. Updated sidebar: "My Courses" → "Catalogue". Added borderColor to CategoryConfig. Fixed hydration mismatch (server timestamp for due date calc). 18 files, +385/-707. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Tool Shed dialog & draft UX overhaul (PR #186): draft validation fix (partial content allowed), character counters with colour-coded warnings (amber 90%, red 100%), unsaved changes AlertDialog (Keep Editing / Discard), "or save as draft" footer link, partial draft card rendering (fallback preview, skip empty sections). 7 files, +348/-175. |
 | 2026-03-27 | Abdulmuiz Adaranijo | Tool Shed card & feed UX overhaul (PR #185): format-coloured left borders (blue/emerald/amber), event name as bold card title with middot date, 3-2-1 accent changed from violet to emerald (badge + all accent tokens), consistent Show more/Show less toggles, auto-scroll on expand, end-of-feed indicator, smoother filter transitions (dim not vanish), search_text column for content-level search (migration 00071), breadcrumb Link fix. Comprehensive UI/UX review identified 30+ issues, planned as 2 PRs. PR 2 (dialog/draft UX) next. |
 | 2026-03-27 | Abdulmuiz Adaranijo | API route rate limiting merged (PR #163): Upstash Redis on 7 endpoints. Project review: fixed 8 doc inaccuracies, flagged database.types.ts staleness, added tech debt items. Server action rate limiting investigated and deferred — full analysis in memory/rate-limiting.md. |

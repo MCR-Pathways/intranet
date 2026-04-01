@@ -46,6 +46,10 @@ Course management, section-level quizzes, Tool Shed social learning, and admin b
 
 **Use `preventCloseIfDirty` pattern for unsaved changes in Radix Dialogs.** A single `useCallback` handles both `onInteractOutside` and `onEscapeKeyDown` — call `e.preventDefault()` then show an AlertDialog. Track dirty state via a `hasContent` derived value that checks format, event name, tags, and content fields. Skip the check in edit mode (`!isEditing`).
 
+**Fetch data conditionally based on user enrolment state.** The course detail page fetches completions, quiz attempts, and builds sectionAccordionData — but unenrolled users only need section names and quiz indicators for the syllabus preview. Always-fetch-and-ignore-empty is architecturally wrong even when fast. Split into: always-fetch (sections, quizzes) and enrolled-only (completions, attempts, accordion data).
+
+**Include charity registration on certificates.** "MCR Pathways is a SCIO regulated by OSCR, Scottish Charity SC045816" in small text at the bottom. Adds legitimacy for a registered charity. Cherry-picked from NSPCC Learning certificate design.
+
 ## Email Notifications
 
 Phase D (PR #175) is DORMANT until Resend account setup (`RESEND_API_KEY` + `CRON_SECRET` + domain verification). Queue + Cron + preferences + 11 email types across L&D/HR/Intranet.

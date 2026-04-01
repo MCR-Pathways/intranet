@@ -187,6 +187,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Split large action files by feature area.** When an actions.ts file exceeds ~800 lines, create a separate actions file for the new feature (e.g. `section-actions.ts` alongside `actions.ts`).
 
+**When moving or deleting pages, trace all `revalidatePath` calls and test assertions.** A page deletion can leave orphaned `revalidatePath("/old-route")` calls across multiple action files and duplicate assertions in test files. Grep the full codebase for the old path before committing.
+
 **Always add `.catch()` and `.finally()` to server action promises in client components.** Without `.catch()`, a rejected server action leaves UI state stuck (loading spinners, disabled inputs).
 
 **Don't block user actions on non-critical follow-up failures.** Log a warning but don't return an error when a non-critical follow-up (e.g. `refreshSession()`) fails after the core action succeeded.
@@ -238,6 +240,14 @@ These are universal rules that apply to every task regardless of which module yo
 **Use `createElement()` for dynamic Lucide icons to satisfy React Compiler.** `createElement(resolveIcon(name), props)` avoids the `react-hooks/static-components` lint violation.
 
 **Use `suppressHydrationWarning` for platform-specific rendering.** Values that depend on `navigator.platform` differ between server and client.
+
+**Pass server timestamps to client components for date calculations.** `new Date()` inside a `"use client"` component can differ between server render and client hydration (e.g. crossing midnight changes due date status). Pass `Date.now()` from the server component as a prop.
+
+**Use `url.toString()` not `url.pathname` when stripping query params.** `url.pathname` drops ALL params, not just the one you deleted via `searchParams.delete()`. Always use `url.toString()` after modifying searchParams.
+
+**Use `window.location.href` for post-action navigation that needs fresh server data.** `router.push()` does client-side navigation that may serve stale cached data. For flows where the destination page must re-fetch (e.g. completion status, certificates), a full page reload via `window.location.href` is intentional.
+
+**Use intersection types for columns missing from stale `database.types.ts`.** `(course as Course & { issue_certificate?: boolean })` is safer than `(course as Record<string, unknown>)`. Preserves existing type properties while adding the new column.
 
 **Use custom DOM events, not synthetic KeyboardEvents, for cross-component communication.** Synthetic `KeyboardEvent` dispatch is fragile across browsers.
 

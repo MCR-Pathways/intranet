@@ -10,6 +10,8 @@ Vitest 4 + React Testing Library + jsdom. See root `CLAUDE.md` for basic setup.
 
 **For proxy tests** — mock `@/lib/supabase/middleware` (`updateSession`) to control auth state, then mock the `.from().select().eq().single()` chain for profile fetching.
 
+**When a table needs multiple operations in one action (select + update), return both methods on the same mock object.** Don't use call counting (`courseCallCount++`) to alternate between select and update — it's brittle and couples the test to implementation order. Instead: `case "courses": return { select: mockSelect, update: mockUpdate }`. The caller picks the method it needs.
+
 ## Reference Files
 
 - `src/__mocks__/supabase.ts` — mock factory documenting the full Supabase mocking strategy
