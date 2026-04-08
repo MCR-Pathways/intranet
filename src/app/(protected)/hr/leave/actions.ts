@@ -344,7 +344,7 @@ export async function rejectLeave(requestId: string, reason: string) {
   // Fetch the request
   const { data: request } = await supabase
     .from("leave_requests")
-    .select("id, profile_id, status")
+    .select("id, profile_id, status, leave_type, start_date, end_date")
     .eq("id", requestId)
     .single();
 
