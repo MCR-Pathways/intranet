@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Send } from "lucide-react";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { addComment } from "@/app/(protected)/intranet/actions";
 import { CommentItem } from "./comment-item";
+import { TiptapComposer } from "./tiptap-composer";
 import type { MentionUser } from "./mention-list";
+import type { TiptapDocument } from "@/lib/tiptap";
 import type {
   CommentWithAuthor,
   PostAuthor,
@@ -41,7 +43,7 @@ export function CommentSection({
   currentUserId,
   currentUserProfile,
   isHRAdmin,
-  mentionUsers: _mentionUsers,
+  mentionUsers,
   expanded: controlledExpanded,
   onToggleExpanded,
   onOptimisticComment,
@@ -49,8 +51,12 @@ export function CommentSection({
 }: CommentSectionProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [newComment, setNewComment] = useState("");
+  const [newCommentJson, setNewCommentJson] = useState<TiptapDocument | null>(null);
+  const [commentResetKey, setCommentResetKey] = useState(0);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  const [replyContentJson, setReplyContentJson] = useState<TiptapDocument | null>(null);
+  const [replyResetKey, setReplyResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
 
   // Use controlled state if provided, otherwise internal state
@@ -64,13 +70,14 @@ export function CommentSection({
 
   const buildOptimisticComment = (
     content: string,
-    parentId?: string
+    parentId?: string,
+    contentJson?: TiptapDocument | null
   ): CommentWithAuthor => ({
     id: `optimistic-${crypto.randomUUID()}`,
     post_id: postId,
     author_id: currentUserId,
     content,
-    content_json: null,
+    content_json: contentJson ? (contentJson as unknown as Record<string, unknown>) : null,
     parent_id: parentId ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -92,17 +99,32 @@ export function CommentSection({
     replies: [],
   });
 
+  const handleCommentChange = useCallback((json: TiptapDocument, text: string) => {
+    setNewCommentJson(json);
+    setNewComment(text);
+  }, []);
+
+  const handleReplyChange = useCallback((json: TiptapDocument, text: string) => {
+    setReplyContentJson(json);
+    setReplyContent(text);
+  }, []);
+
   const handleSubmit = () => {
     const trimmed = newComment.trim();
     if (!trimmed) return;
 
-    const optimistic = buildOptimisticComment(trimmed);
+    const json = newCommentJson;
+    const optimistic = buildOptimisticComment(trimmed, undefined, json);
     setNewComment("");
+    setNewCommentJson(null);
+    setCommentResetKey((k) => k + 1);
     setExpanded(true);
     onOptimisticComment(optimistic);
 
     startTransition(async () => {
-      await addComment(postId, trimmed);
+      // Serialise to plain object to avoid React server component reference issues
+      const safeJson = json ? JSON.parse(JSON.stringify(json)) : undefined;
+      await addComment(postId, trimmed, undefined, safeJson);
     });
   };
 
@@ -110,13 +132,17 @@ export function CommentSection({
     const trimmed = replyContent.trim();
     if (!trimmed) return;
 
-    const optimistic = buildOptimisticComment(trimmed, parentId);
+    const json = replyContentJson;
+    const optimistic = buildOptimisticComment(trimmed, parentId, json);
     setReplyContent("");
+    setReplyContentJson(null);
+    setReplyResetKey((k) => k + 1);
     setReplyingTo(null);
     onOptimisticComment(optimistic, parentId);
 
     startTransition(async () => {
-      await addComment(postId, trimmed, parentId);
+      const safeJson = json ? JSON.parse(JSON.stringify(json)) : undefined;
+      await addComment(postId, trimmed, parentId, safeJson);
     });
   };
 
@@ -176,30 +202,23 @@ export function CommentSection({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-1 gap-1.5">
-                    <input
-                      type="text"
-                      value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      placeholder={`Reply to ${getReplyToName(comment.id)}...`}
-                      className="flex-1 rounded-full border border-input bg-muted/50 px-3 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      maxLength={2000}
-                      disabled={isPending}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleReplySubmit(comment.id);
-                        }
-                        if (e.key === "Escape") {
-                          setReplyingTo(null);
-                          setReplyContent("");
-                        }
-                      }}
-                    />
+                    <div className="flex-1">
+                      <TiptapComposer
+                        mentionUsers={mentionUsers ?? []}
+                        placeholder={`Reply to ${getReplyToName(comment.id)}...`}
+                        onChange={handleReplyChange}
+                        onSubmit={() => handleReplySubmit(comment.id)}
+                        maxLength={2000}
+                        disabled={isPending}
+                        resetKey={replyResetKey}
+                        minimal
+                        autoFocus
+                      />
+                    </div>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 shrink-0"
+                      className="h-7 w-7 shrink-0 self-end"
                       onClick={() => handleReplySubmit(comment.id)}
                       disabled={isPending || !replyContent.trim()}
                     >
@@ -229,25 +248,22 @@ export function CommentSection({
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-1 gap-1.5">
-          <input
-            type="text"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
-            className="flex-1 rounded-full border border-input bg-muted/50 px-3 py-1.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            maxLength={2000}
-            disabled={isPending}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-          />
+          <div className="flex-1">
+            <TiptapComposer
+              mentionUsers={mentionUsers ?? []}
+              placeholder="Write a comment..."
+              onChange={handleCommentChange}
+              onSubmit={handleSubmit}
+              maxLength={2000}
+              disabled={isPending}
+              resetKey={commentResetKey}
+              minimal
+            />
+          </div>
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 shrink-0"
+            className="h-8 w-8 shrink-0 self-end"
             onClick={handleSubmit}
             disabled={isPending || !newComment.trim()}
           >

@@ -60,13 +60,32 @@ export async function GET(request: Request) {
     return Response.json({ retried: 0, sent: 0, failed: 0 });
   }
 
+  // ── Batch-fetch fallback emails for entries missing metadata ──
+  const missingRecipientIds = [...new Set(
+    failed
+      .filter((e) => !(e.metadata as { recipient_email?: string })?.recipient_email)
+      .map((e) => e.user_id)
+  )];
+
+  const { data: fallbackProfiles } = missingRecipientIds.length > 0
+    ? await supabase.from("profiles").select("id, email").in("id", missingRecipientIds)
+    : { data: [] };
+
+  const profileEmailMap = new Map(
+    (fallbackProfiles ?? []).map((p) => [p.id, p.email])
+  );
+
   // ── Retry sends ─────────────────────────────────────────────
   let sent = 0;
   let stillFailed = 0;
 
   for (const email of failed) {
-    const toEmail =
-      (email.metadata as Record<string, unknown>)?.recipient_email as string | undefined;
+    let toEmail =
+      (email.metadata as { recipient_email?: string })?.recipient_email;
+
+    if (!toEmail) {
+      toEmail = profileEmailMap.get(email.user_id) ?? undefined;
+    }
 
     if (!toEmail) {
       await supabase
@@ -103,7 +122,7 @@ export async function GET(request: Request) {
       stillFailed++;
     }
 
-    if (failed.indexOf(email) < failed.length - 1) {
+    if (email !== failed[failed.length - 1]) {
       await sleep(SEND_DELAY_MS);
     }
   }

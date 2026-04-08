@@ -33,6 +33,8 @@ interface TiptapComposerProps {
   minimal?: boolean;
   /** Remove border and focus ring — used inside dialogs where the editor is the main content area */
   borderless?: boolean;
+  /** Focus the editor on mount */
+  autoFocus?: boolean;
 }
 
 /**
@@ -57,6 +59,7 @@ export function TiptapComposer({
   resetKey,
   minimal = false,
   borderless = false,
+  autoFocus = false,
 }: TiptapComposerProps) {
   // Stable suggestion config — only recreate when user list changes
   const suggestion = useMemo(
@@ -122,7 +125,7 @@ export function TiptapComposer({
       }),
       Mention.configure({
         HTMLAttributes: {
-          class: "text-primary font-medium",
+          class: "font-semibold text-foreground",
         },
         suggestion,
         renderText({ node }) {
@@ -144,6 +147,7 @@ export function TiptapComposer({
     extensions,
     content: initialContent ?? "",
     immediatelyRender: false,
+    autofocus: autoFocus,
     editable: !disabled,
     editorProps: {
       attributes: {

@@ -285,7 +285,7 @@ function threadComments(
 
   // Enrich each comment with reactions
   const enrichedComments: CommentWithAuthor[] = flatComments.map((c) => {
-    const comment = c as { id: string; post_id: string; author_id: string; content: string; parent_id: string | null; created_at: string; updated_at: string; author: unknown };
+    const comment = c as { id: string; post_id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; parent_id: string | null; created_at: string; updated_at: string; author: unknown };
     const cReactions = reactionsByComment.get(comment.id) ?? [];
     const userCReaction = cReactions.find((r) => r.user_id === userId);
 
@@ -294,6 +294,7 @@ function threadComments(
       post_id: comment.post_id,
       author_id: comment.author_id,
       content: comment.content,
+      content_json: comment.content_json ?? null,
       parent_id: comment.parent_id,
       created_at: comment.created_at,
       updated_at: comment.updated_at,
