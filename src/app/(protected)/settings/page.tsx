@@ -9,9 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Bell } from "lucide-react";
+import { Shield } from "lucide-react";
 import { getMyPatterns } from "@/app/(protected)/sign-in/actions";
 import { DefaultWeekEditor } from "@/components/sign-in/default-week-editor";
+import { EmailPreferences } from "@/components/settings/email-preferences";
 import type { WeeklyPatternEntry } from "@/lib/sign-in";
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -26,8 +27,8 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Fetch user profile — explicit columns, never select("*")
-  const [{ data: profile }, patternData] = await Promise.all([
+  // Fetch user profile, patterns, and email preferences in parallel
+  const [{ data: profile }, patternData, { data: emailPrefs }] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -36,7 +37,17 @@ export default async function SettingsPage() {
       .eq("id", user.id)
       .single(),
     getMyPatterns(),
+    supabase
+      .from("email_preferences")
+      .select("email_type, enabled")
+      .eq("user_id", user.id),
   ]);
+
+  // Build preferences map: emailType → enabled (missing = default true)
+  const preferencesMap: Record<string, boolean> = {};
+  for (const pref of emailPrefs ?? []) {
+    preferencesMap[pref.email_type] = pref.enabled;
+  }
 
   const statusVariant =
     profile?.status === "active"
@@ -124,24 +135,8 @@ export default async function SettingsPage() {
         initialPatterns={patternData.patterns as WeeklyPatternEntry[]}
       />
 
-      {/* Preferences - Placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Preferences
-          </CardTitle>
-          <CardDescription>
-            Notification and display preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Preference settings will be available soon. You&apos;ll be able to
-            customise your notification preferences, display options, and more.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Email notification preferences */}
+      <EmailPreferences preferences={preferencesMap} />
     </div>
   );
 }

@@ -3,6 +3,71 @@
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { queueEmail } from "@/lib/email-queue";
+import { buildCertificateEarnedEmail, buildCourseCompletedEmail } from "@/lib/email";
+import { createServiceClient } from "@/lib/supabase/service";
+
+/** Queue course completion + certificate emails (non-blocking). */
+async function queueCompletionEmails(userId: string, courseId: string) {
+  try {
+    const service = createServiceClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
+
+    // Fetch user profile and course title
+    const [{ data: profile }, { data: course }] = await Promise.all([
+      service.from("profiles").select("id, full_name, email").eq("id", userId).single(),
+      service.from("courses").select("title").eq("id", courseId).single(),
+    ]);
+
+    if (!profile || !course) return;
+
+    // Check if a certificate was generated (by DB trigger)
+    const { data: cert } = await service
+      .from("certificates")
+      .select("certificate_number")
+      .eq("user_id", userId)
+      .eq("course_id", courseId)
+      .single();
+
+    if (cert) {
+      const { subject, html } = buildCertificateEarnedEmail(
+        profile.full_name,
+        course.title,
+        cert.certificate_number,
+        `${appUrl}/api/certificate/${userId}`
+      );
+
+      await queueEmail({
+        userId: profile.id,
+        email: profile.email,
+        emailType: "certificate_earned",
+        subject,
+        bodyHtml: html,
+        entityId: courseId,
+        entityType: "course",
+      });
+    } else {
+      // No certificate — send a simpler completion email
+      const { subject, html } = buildCourseCompletedEmail(
+        profile.full_name,
+        course.title,
+        `${appUrl}/learning/courses/${courseId}`
+      );
+
+      await queueEmail({
+        userId: profile.id,
+        email: profile.email,
+        emailType: "course_completed",
+        subject,
+        bodyHtml: html,
+        entityId: courseId,
+        entityType: "course",
+      });
+    }
+  } catch (err) {
+    logger.error("Failed to queue completion emails", { error: err, userId, courseId });
+  }
+}
 
 export async function enrollInCourse(courseId: string) {
   const { supabase, user } = await getCurrentUser();
@@ -61,6 +126,11 @@ export async function completeLesson(lessonId: string, courseId: string) {
   if (error) {
     logger.error("Failed to complete lesson", { error });
     return { success: false, error: "Failed to complete lesson. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.", progressPercent: null };
+  }
+
+  // Queue completion emails if course is now 100% complete
+  if (progressPercent === 100) {
+    queueCompletionEmails(user.id, courseId);
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
@@ -150,6 +220,18 @@ export async function submitSectionQuiz(
       list.push(opt.id);
       correctOptionMap[opt.question_id] = list;
     }
+  }
+
+  // Check if quiz completion triggered course completion
+  const { data: enrolment } = await supabase
+    .from("course_enrolments")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("course_id", courseId)
+    .single();
+
+  if (enrolment?.status === "completed") {
+    queueCompletionEmails(user.id, courseId);
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
