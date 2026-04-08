@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { sendAndLogEmail } from "@/lib/email-queue";
-import { baseTemplate } from "@/lib/email";
+import { baseTemplate, escapeHtml } from "@/lib/email";
 import { formatDate } from "@/lib/utils";
 
 // =============================================
@@ -284,15 +284,16 @@ export async function approveLeave(requestId: string, notes?: string) {
 
     if (requester) {
       const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
+      const safeName = escapeHtml(requester.full_name);
       const subject = `Leave approved: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;
       const html = baseTemplate(
         "Leave Approved",
         `<h2 style="color: #166534; font-size: 18px; margin: 0 0 8px;">Leave Approved</h2>
-         <p style="color: #6b7280; font-size: 14px;">Hi ${requester.full_name},</p>
-         <p style="font-size: 14px; color: #213350;">Your ${leaveLabel} request has been <strong style="color: #166534;">approved</strong>.</p>
+         <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
+         <p style="font-size: 14px; color: #213350;">Your ${escapeHtml(leaveLabel)} request has been <strong style="color: #166534;">approved</strong>.</p>
          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #bbf7d0;">
            <p style="font-size: 14px; color: #166534; margin: 0;">${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}</p>
-           ${notes ? `<p style="font-size: 13px; color: #6b7280; margin: 8px 0 0;">Note: ${notes}</p>` : ""}
+           ${notes ? `<p style="font-size: 13px; color: #6b7280; margin: 8px 0 0;">Note: ${escapeHtml(notes)}</p>` : ""}
          </div>`
       );
 
@@ -381,14 +382,15 @@ export async function rejectLeave(requestId: string, reason: string) {
       .single();
 
     if (requester) {
+      const safeName = escapeHtml(requester.full_name);
       const subject = "Leave request declined";
       const html = baseTemplate(
         "Leave Declined",
         `<h2 style="color: #dc2626; font-size: 18px; margin: 0 0 8px;">Leave Request Declined</h2>
-         <p style="color: #6b7280; font-size: 14px;">Hi ${requester.full_name},</p>
+         <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
          <p style="font-size: 14px; color: #213350;">Unfortunately, your leave request has been <strong style="color: #dc2626;">declined</strong>.</p>
          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #fecaca;">
-           <p style="font-size: 14px; color: #991b1b; margin: 0;">Reason: ${reason.trim()}</p>
+           <p style="font-size: 14px; color: #991b1b; margin: 0;">Reason: ${escapeHtml(reason.trim())}</p>
          </div>
          <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>`
       );

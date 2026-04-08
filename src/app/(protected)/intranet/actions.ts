@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { resolveExternalUrl } from "@/lib/ssrf";
 import { sendAndLogEmail } from "@/lib/email-queue";
-import { baseTemplate } from "@/lib/email";
+import { baseTemplate, escapeHtml } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ReactionType,
@@ -44,19 +44,26 @@ async function sendMentionEmails(
   const preview = contentPreview.slice(0, 100);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
 
+  // Filter out the author — don't email yourself about your own mention
+  const recipientIds = mentionIds.filter((id) => id !== authorId);
+  if (recipientIds.length === 0) return;
+
   const { data: mentionedProfiles } = await supabase
     .from("profiles")
     .select("id, full_name, email")
-    .in("id", mentionIds);
+    .in("id", recipientIds);
 
   for (const mp of mentionedProfiles ?? []) {
+    const safeAuthor = escapeHtml(authorName);
+    const safeName = escapeHtml(mp.full_name);
+    const safePreview = escapeHtml(preview);
     const subject = `${authorName} mentioned you in a ${entityType}`;
     const html = baseTemplate(
       "You were mentioned",
       `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">You were mentioned</h2>
-       <p style="color: #6b7280; font-size: 14px;">Hi ${mp.full_name},</p>
-       <p style="font-size: 14px; color: #213350;"><strong>${authorName}</strong> mentioned you in a ${entityType}${preview ? ":" : "."}</p>
-       ${preview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${preview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
+       <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
+       <p style="font-size: 14px; color: #213350;"><strong>${safeAuthor}</strong> mentioned you in a ${entityType}${safePreview ? ":" : "."}</p>
+       ${safePreview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${safePreview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
        <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`
     );
 
