@@ -286,15 +286,17 @@ export async function approveLeave(requestId: string, notes?: string) {
       const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
       const safeName = escapeHtml(requester.full_name);
       const subject = `Leave approved: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
       const html = baseTemplate(
         "Leave Approved",
         `<h2 style="color: #166534; font-size: 18px; margin: 0 0 8px;">Leave Approved</h2>
-         <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
          <p style="font-size: 14px; color: #213350;">Your ${escapeHtml(leaveLabel)} request has been <strong style="color: #166534;">approved</strong>.</p>
          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #bbf7d0;">
            <p style="font-size: 14px; color: #166534; margin: 0;">${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}</p>
            ${notes ? `<p style="font-size: 13px; color: #6b7280; margin: 8px 0 0;">Note: ${escapeHtml(notes)}</p>` : ""}
-         </div>`
+         </div>
+         <a href="${appUrl}/hr/leave" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500;">View Leave →</a>`,
+        { preheader: `Your ${leaveLabel} has been approved` }
       );
 
       await sendAndLogEmail({
@@ -342,7 +344,7 @@ export async function rejectLeave(requestId: string, reason: string) {
   // Fetch the request
   const { data: request } = await supabase
     .from("leave_requests")
-    .select("id, profile_id, status")
+    .select("id, profile_id, status, leave_type, start_date, end_date")
     .eq("id", requestId)
     .single();
 
@@ -383,16 +385,19 @@ export async function rejectLeave(requestId: string, reason: string) {
 
     if (requester) {
       const safeName = escapeHtml(requester.full_name);
-      const subject = "Leave request declined";
+      const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
+      const subject = `Leave request declined: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;
       const html = baseTemplate(
         "Leave Declined",
         `<h2 style="color: #dc2626; font-size: 18px; margin: 0 0 8px;">Leave Request Declined</h2>
-         <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
-         <p style="font-size: 14px; color: #213350;">Unfortunately, your leave request has been <strong style="color: #dc2626;">declined</strong>.</p>
+         <p style="font-size: 14px; color: #213350;">Your ${escapeHtml(leaveLabel)} request for <strong>${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}</strong> has been <strong style="color: #dc2626;">declined</strong>.</p>
          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #fecaca;">
            <p style="font-size: 14px; color: #991b1b; margin: 0;">Reason: ${escapeHtml(reason.trim())}</p>
          </div>
-         <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>`
+         <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>
+         <a href="${appUrl}/hr/leave" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Leave →</a>`,
+        { preheader: `Your ${leaveLabel} request was declined` }
       );
 
       await sendAndLogEmail({
