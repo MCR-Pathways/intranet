@@ -97,7 +97,8 @@ describe("sendAndLogEmail", () => {
     expect(mockSendEmail).toHaveBeenCalledWith(
       "test@mcrpathways.co.uk",
       "Leave approved",
-      "<p>Your leave was approved</p>"
+      "<p>Your leave was approved</p>",
+      expect.objectContaining({ headers: expect.any(Object) })
     );
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
