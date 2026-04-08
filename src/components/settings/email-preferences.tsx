@@ -58,9 +58,9 @@ export function EmailPreferences({ preferences }: EmailPreferencesProps) {
   // Group by module
   const grouped = new Map<string, { type: EmailType; config: (typeof EMAIL_TYPES)[EmailType] }[]>();
   for (const [type, config] of Object.entries(EMAIL_TYPES)) {
-    const module = config.module;
-    if (!grouped.has(module)) grouped.set(module, []);
-    grouped.get(module)!.push({ type: type as EmailType, config });
+    const groupName = config.module;
+    if (!grouped.has(groupName)) grouped.set(groupName, []);
+    grouped.get(groupName)!.push({ type: type as EmailType, config });
   }
 
   return (
