@@ -28,6 +28,18 @@ async function getResendClient() {
   return resendClient;
 }
 
+// ─── Utilities ──────────────────────────────────────────────────────────────
+
+/** Escape user-supplied strings for safe HTML interpolation. */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // ─── Email Templates ────────────────────────────────────────────────────────
 
 const FROM_ADDRESS = "MCR Pathways <noreply@mcrpathways.co.uk>";
@@ -64,8 +76,10 @@ export function buildCourseAssignedEmail(
   dueDate: string | null,
   courseUrl: string
 ): { subject: string; html: string } {
+  const safeName = escapeHtml(learnerName);
+  const safeTitle = escapeHtml(courseTitle);
   const dueLine = dueDate
-    ? `<p style="color: #92400e; font-size: 14px;">Due by: <strong>${dueDate}</strong></p>`
+    ? `<p style="color: #92400e; font-size: 14px;">Due by: <strong>${escapeHtml(dueDate)}</strong></p>`
     : "";
 
   return {
@@ -74,10 +88,10 @@ export function buildCourseAssignedEmail(
       "Course Assigned",
       `
         <h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">New Course Assigned</h2>
-        <p style="color: #6b7280; font-size: 14px;">Hi ${learnerName},</p>
+        <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
         <p style="font-size: 14px; color: #213350;">You've been assigned a new course:</p>
         <div style="background: #F2F4F7; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p style="font-size: 16px; font-weight: 600; color: #213350; margin: 0;">${courseTitle}</p>
+          <p style="font-size: 16px; font-weight: 600; color: #213350; margin: 0;">${safeTitle}</p>
           ${dueLine}
         </div>
         <a href="${courseUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Course →</a>
@@ -92,6 +106,8 @@ export function buildCourseOverdueEmail(
   daysRemaining: number,
   courseUrl: string
 ): { subject: string; html: string } {
+  const safeName = escapeHtml(learnerName);
+  const safeTitle = escapeHtml(courseTitle);
   const urgency = daysRemaining <= 1 ? "due tomorrow" : `due in ${daysRemaining} days`;
 
   return {
@@ -100,8 +116,8 @@ export function buildCourseOverdueEmail(
       "Course Reminder",
       `
         <h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Course Reminder</h2>
-        <p style="color: #6b7280; font-size: 14px;">Hi ${learnerName},</p>
-        <p style="font-size: 14px; color: #213350;">Your course <strong>${courseTitle}</strong> is ${urgency}. Please complete it to stay compliant.</p>
+        <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
+        <p style="font-size: 14px; color: #213350;">Your course <strong>${safeTitle}</strong> is ${urgency}. Please complete it to stay compliant.</p>
         <a href="${courseUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">Continue Course →</a>
       `
     ),
@@ -114,17 +130,19 @@ export function buildCertificateEarnedEmail(
   certificateNumber: string,
   certificateUrl: string
 ): { subject: string; html: string } {
+  const safeName = escapeHtml(learnerName);
+  const safeTitle = escapeHtml(courseTitle);
   return {
     subject: `Certificate earned: ${courseTitle}`,
     html: baseTemplate(
       "Certificate Earned",
       `
         <h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Congratulations!</h2>
-        <p style="color: #6b7280; font-size: 14px;">Hi ${learnerName},</p>
-        <p style="font-size: 14px; color: #213350;">You've completed <strong>${courseTitle}</strong> and earned a certificate.</p>
+        <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
+        <p style="font-size: 14px; color: #213350;">You've completed <strong>${safeTitle}</strong> and earned a certificate.</p>
         <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #bbf7d0;">
           <p style="font-size: 14px; font-weight: 600; color: #166534; margin: 0;">Certificate of Completion</p>
-          <p style="font-size: 12px; color: #166534; margin: 4px 0 0;">${certificateNumber}</p>
+          <p style="font-size: 12px; color: #166534; margin: 4px 0 0;">${escapeHtml(certificateNumber)}</p>
         </div>
         <a href="${certificateUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">View Certificate →</a>
       `
@@ -137,14 +155,16 @@ export function buildCourseCompletedEmail(
   courseTitle: string,
   courseUrl: string
 ): { subject: string; html: string } {
+  const safeName = escapeHtml(learnerName);
+  const safeTitle = escapeHtml(courseTitle);
   return {
     subject: `Course completed: ${courseTitle}`,
     html: baseTemplate(
       "Course Completed",
       `
         <h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Well done!</h2>
-        <p style="color: #6b7280; font-size: 14px;">Hi ${learnerName},</p>
-        <p style="font-size: 14px; color: #213350;">You've completed <strong>${courseTitle}</strong>.</p>
+        <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
+        <p style="font-size: 14px; color: #213350;">You've completed <strong>${safeTitle}</strong>.</p>
         <a href="${courseUrl}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">View Course →</a>
       `
     ),
