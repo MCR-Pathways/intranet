@@ -59,12 +59,11 @@ async function sendMentionEmails(
     const safePreview = escapeHtml(preview);
     const subject = `${authorName} mentioned you in a ${entityType}`;
     const html = baseTemplate(
-      "You were mentioned",
-      `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">You were mentioned</h2>
-       <p style="color: #6b7280; font-size: 14px;">Hi ${safeName},</p>
-       <p style="font-size: 14px; color: #213350;"><strong>${safeAuthor}</strong> mentioned you in a ${entityType}${safePreview ? ":" : "."}</p>
+      `${authorName} mentioned you`,
+      `<p style="font-size: 14px; color: #213350;"><strong>${safeAuthor}</strong> mentioned you in a ${entityType}${safePreview ? ":" : "."}</p>
        ${safePreview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${safePreview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
-       <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`
+       <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`,
+      { preheader: `${authorName} mentioned you: ${preview || ""}`.trim() }
     );
 
     await sendAndLogEmail({
