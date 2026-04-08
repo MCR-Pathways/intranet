@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { indexCourse, removeCourseFromIndex } from "@/lib/algolia";
 import { categoryConfig } from "@/lib/learning";
-import { queueEmail } from "@/lib/email-queue";
+import { sendAndLogEmail } from "@/lib/email-queue";
 import { buildCourseAssignedEmail } from "@/lib/email";
 import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
@@ -901,7 +901,9 @@ export async function assignCourse(data: {
             `${appUrl}/learning/courses/${data.course_id}`
           );
 
-          await queueEmail({
+          // Fire-and-forget — don't block the server action for bulk sends.
+          // Audit log + retry cron track individual failures.
+          void sendAndLogEmail({
             userId: profile.id,
             email: profile.email,
             emailType: "course_assigned",
@@ -914,7 +916,7 @@ export async function assignCourse(data: {
       }
     } catch (emailErr) {
       // Non-blocking: email failures should not break course assignment
-      logger.error("Failed to queue assignment emails", { error: emailErr });
+      logger.error("Failed to send assignment emails", { error: emailErr });
     }
   }
 

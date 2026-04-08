@@ -1,9 +1,9 @@
 /**
  * Email notification utilities using Resend.
  *
- * Emails are queued in the `email_notifications` table and processed
- * by a Vercel Cron job. This module provides template functions for
- * building email HTML and the send function for processing the queue.
+ * Provides email template builders and the sendEmail() function.
+ * Emails are sent immediately via sendAndLogEmail() in email-queue.ts
+ * and logged to the email_notifications table as an audit trail.
  *
  * Server-only — requires RESEND_API_KEY environment variable.
  */

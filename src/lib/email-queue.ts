@@ -1,13 +1,15 @@
 /**
- * Email queue utilities for the platform-wide notification system.
+ * Email sending and audit utilities for the platform-wide notification system.
  *
- * Emails are queued in the `email_notifications` table and processed
- * by a Vercel Cron job at /api/cron/process-emails every ~15 minutes.
+ * Action-triggered emails send immediately via Resend and log to
+ * `email_notifications` as an audit trail. The daily-reminders cron
+ * also sends directly. A retry cron picks up failed sends.
  *
  * Server-only — uses service role client to bypass RLS.
  */
 
 import { createServiceClient } from "@/lib/supabase/service";
+import { sendEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
 // ─── Email Type Configuration ────────────────────────────────────────────────
@@ -132,4 +134,66 @@ export async function queueEmail(
   }
 
   return { success: true, queued: true };
+}
+
+// ─── Send Email Immediately ─────────────────────────────────────────────────
+
+/**
+ * Send an email immediately via Resend and log the result to
+ * `email_notifications` as an audit trail.
+ *
+ * - Checks user preferences (skipped for mandatory types)
+ * - Sends via Resend API directly (no queue delay)
+ * - Logs to email_notifications with status "sent" or "failed"
+ * - If the DB insert fails after a successful send, logs a warning
+ *   but returns success (the email was delivered)
+ */
+export async function sendAndLogEmail(
+  params: QueueEmailParams
+): Promise<{ success: boolean; sent: boolean; error?: string }> {
+  const enabled = await isEmailEnabled(params.userId, params.emailType);
+  if (!enabled) {
+    return { success: true, sent: false };
+  }
+
+  const result = await sendEmail(params.email, params.subject, params.bodyHtml);
+
+  // Log to email_notifications as audit trail
+  const supabase = createServiceClient();
+  const { error: insertError } = await supabase.from("email_notifications").insert({
+    user_id: params.userId,
+    email_type: params.emailType,
+    subject: params.subject,
+    body_html: params.bodyHtml,
+    entity_id: params.entityId ?? null,
+    entity_type: params.entityType ?? null,
+    metadata: {
+      ...params.metadata,
+      recipient_email: params.email,
+    },
+    status: result.success ? "sent" : "failed",
+    sent_at: result.success ? new Date().toISOString() : null,
+    error_message: result.error ?? null,
+    retry_count: 0,
+  });
+
+  if (insertError) {
+    logger.warn("Email sent but audit log insert failed", {
+      emailType: params.emailType,
+      userId: params.userId,
+      sendSuccess: result.success,
+      insertError: insertError.message,
+    });
+  }
+
+  if (!result.success) {
+    logger.error("Failed to send email", {
+      emailType: params.emailType,
+      userId: params.userId,
+      error: result.error,
+    });
+    return { success: false, sent: false, error: result.error };
+  }
+
+  return { success: true, sent: true };
 }

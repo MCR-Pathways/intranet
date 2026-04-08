@@ -12,7 +12,7 @@ import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { resolveExternalUrl } from "@/lib/ssrf";
-import { queueEmail } from "@/lib/email-queue";
+import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
@@ -27,7 +27,7 @@ import type {
  * Queue mention notification emails for a list of mentioned user IDs.
  * Used by both createPost and addComment to avoid duplication.
  */
-async function queueMentionEmails(
+async function sendMentionEmails(
   supabase: SupabaseClient,
   authorId: string,
   mentionIds: string[],
@@ -60,7 +60,7 @@ async function queueMentionEmails(
        <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`
     );
 
-    await queueEmail({
+    await sendAndLogEmail({
       userId: mp.id,
       email: mp.email,
       emailType: "mention",
@@ -728,7 +728,7 @@ export async function createPost(data: {
 
       // Queue mention emails (non-blocking)
       try {
-        await queueMentionEmails(supabase, user.id, mentionIds, post.id, "post", data.content ?? "");
+        await sendMentionEmails(supabase, user.id, mentionIds, post.id, "post", data.content ?? "");
       } catch (emailErr) {
         logger.error("Failed to queue mention emails", { error: emailErr });
       }
@@ -1264,7 +1264,7 @@ export async function addComment(
 
       // Queue mention emails for comments (non-blocking)
       try {
-        await queueMentionEmails(supabase, user.id, mentionIds, comment.id, "comment", trimmed);
+        await sendMentionEmails(supabase, user.id, mentionIds, comment.id, "comment", trimmed);
       } catch (emailErr) {
         logger.error("Failed to queue comment mention emails", { error: emailErr });
       }

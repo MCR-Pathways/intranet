@@ -3,12 +3,12 @@
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import { queueEmail } from "@/lib/email-queue";
+import { sendAndLogEmail } from "@/lib/email-queue";
 import { buildCertificateEarnedEmail, buildCourseCompletedEmail } from "@/lib/email";
 import { createServiceClient } from "@/lib/supabase/service";
 
-/** Queue course completion + certificate emails (non-blocking). */
-async function queueCompletionEmails(userId: string, courseId: string) {
+/** Send course completion + certificate emails (non-blocking). */
+async function sendCompletionEmails(userId: string, courseId: string) {
   try {
     const service = createServiceClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
@@ -37,7 +37,7 @@ async function queueCompletionEmails(userId: string, courseId: string) {
         `${appUrl}/api/certificate/${userId}`
       );
 
-      await queueEmail({
+      await sendAndLogEmail({
         userId: profile.id,
         email: profile.email,
         emailType: "certificate_earned",
@@ -54,7 +54,7 @@ async function queueCompletionEmails(userId: string, courseId: string) {
         `${appUrl}/learning/courses/${courseId}`
       );
 
-      await queueEmail({
+      await sendAndLogEmail({
         userId: profile.id,
         email: profile.email,
         emailType: "course_completed",
@@ -130,7 +130,7 @@ export async function completeLesson(lessonId: string, courseId: string) {
 
   // Queue completion emails if course is now 100% complete
   if (progressPercent === 100) {
-    queueCompletionEmails(user.id, courseId);
+    sendCompletionEmails(user.id, courseId);
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
@@ -231,7 +231,7 @@ export async function submitSectionQuiz(
     .single();
 
   if (enrolment?.status === "completed") {
-    queueCompletionEmails(user.id, courseId);
+    sendCompletionEmails(user.id, courseId);
   }
 
   revalidatePath(`/learning/courses/${courseId}`);
