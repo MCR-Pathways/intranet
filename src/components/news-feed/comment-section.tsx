@@ -70,13 +70,14 @@ export function CommentSection({
 
   const buildOptimisticComment = (
     content: string,
-    parentId?: string
+    parentId?: string,
+    contentJson?: TiptapDocument | null
   ): CommentWithAuthor => ({
     id: `optimistic-${crypto.randomUUID()}`,
     post_id: postId,
     author_id: currentUserId,
     content,
-    content_json: null,
+    content_json: contentJson ?? null,
     parent_id: parentId ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -113,7 +114,7 @@ export function CommentSection({
     if (!trimmed) return;
 
     const json = newCommentJson;
-    const optimistic = buildOptimisticComment(trimmed);
+    const optimistic = buildOptimisticComment(trimmed, undefined, json);
     setNewComment("");
     setNewCommentJson(null);
     setCommentResetKey((k) => k + 1);
@@ -132,7 +133,7 @@ export function CommentSection({
     if (!trimmed) return;
 
     const json = replyContentJson;
-    const optimistic = buildOptimisticComment(trimmed, parentId);
+    const optimistic = buildOptimisticComment(trimmed, parentId, json);
     setReplyContent("");
     setReplyContentJson(null);
     setReplyResetKey((k) => k + 1);
@@ -211,6 +212,7 @@ export function CommentSection({
                         disabled={isPending}
                         resetKey={replyResetKey}
                         minimal
+                        autoFocus
                       />
                     </div>
                     <Button

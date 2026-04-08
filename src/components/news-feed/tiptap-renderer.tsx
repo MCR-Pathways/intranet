@@ -105,7 +105,7 @@ function RenderInline({ node }: { node: TiptapNode }) {
   if (node.type === "mention") {
     const label = (node.attrs?.label as string) ?? (node.attrs?.id as string) ?? "";
     return (
-      <span className="text-primary font-medium">@{label}</span>
+      <span className="font-semibold text-foreground">@{label}</span>
     );
   }
 
