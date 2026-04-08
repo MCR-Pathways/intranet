@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { indexCourse, removeCourseFromIndex } from "@/lib/algolia";
 import { categoryConfig } from "@/lib/learning";
+import { queueEmail } from "@/lib/email-queue";
+import { buildCourseAssignedEmail } from "@/lib/email";
 import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
 // ===========================================
@@ -865,6 +867,54 @@ export async function assignCourse(data: {
     if (rpcError) {
       // Non-blocking: notification failures should not break course assignment
       logger.error("Failed to send course notifications on assignment", { error: rpcError.message });
+    }
+
+    // Queue assignment emails for enrolled users (non-blocking)
+    try {
+      const { data: courseData } = await supabase
+        .from("courses")
+        .select("title, due_days_from_start")
+        .eq("id", data.course_id)
+        .single();
+
+      if (courseData) {
+        // Query users actually enrolled in this course (via enrolments table)
+        const { data: enrolments } = await supabase
+          .from("course_enrolments")
+          .select("user_id, profiles!user_id(id, full_name, email)")
+          .eq("course_id", data.course_id)
+          .not("status", "eq", "dropped");
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
+
+        for (const enrolment of enrolments ?? []) {
+          const profile = Array.isArray(enrolment.profiles) ? enrolment.profiles[0] : enrolment.profiles;
+          if (!profile) continue;
+
+          const dueDate = courseData.due_days_from_start
+            ? new Date(Date.now() + courseData.due_days_from_start * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+            : null;
+          const { subject, html } = buildCourseAssignedEmail(
+            profile.full_name,
+            courseData.title,
+            dueDate,
+            `${appUrl}/learning/courses/${data.course_id}`
+          );
+
+          await queueEmail({
+            userId: profile.id,
+            email: profile.email,
+            emailType: "course_assigned",
+            subject,
+            bodyHtml: html,
+            entityId: data.course_id,
+            entityType: "course",
+          });
+        }
+      }
+    } catch (emailErr) {
+      // Non-blocking: email failures should not break course assignment
+      logger.error("Failed to queue assignment emails", { error: emailErr });
     }
   }
 
