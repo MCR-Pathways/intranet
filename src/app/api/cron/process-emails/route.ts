@@ -65,8 +65,18 @@ export async function GET(request: Request) {
   let stillFailed = 0;
 
   for (const email of failed) {
-    const toEmail =
+    let toEmail =
       (email.metadata as Record<string, unknown>)?.recipient_email as string | undefined;
+
+    // Fallback: look up recipient email from profile if missing from metadata
+    if (!toEmail) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", email.user_id)
+        .single();
+      toEmail = profile?.email ?? undefined;
+    }
 
     if (!toEmail) {
       await supabase
@@ -103,7 +113,7 @@ export async function GET(request: Request) {
       stillFailed++;
     }
 
-    if (failed.indexOf(email) < failed.length - 1) {
+    if (email !== failed[failed.length - 1]) {
       await sleep(SEND_DELAY_MS);
     }
   }
