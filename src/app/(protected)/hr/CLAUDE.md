@@ -21,6 +21,6 @@ User management, profile, leave, absence, assets, compliance, key dates, departm
 ## Known Improvement Areas
 
 - **Large action files**: `absence/actions.ts` (966 lines), `flexible-working/actions.ts` (1167 lines), `onboarding/actions.ts` (1140 lines) could benefit from splitting
-- **No scheduled notifications**: Key dates, compliance expiry, stale leave requests — HR admins must manually check dashboards
+- **Scheduled notifications active** (PRs #175, #198, #200, #201): leave decisions (immediate), compliance expiry + stale leave + probation (daily cron). XSS-safe, branded templates with CTA buttons.
 - **No bulk operations**: Leave entitlements, compliance assignments, onboarding checklists all one-at-a-time
 - **Absence hard-deletes** (line 381 of absence/actions.ts) — soft-delete with `deleted_at` safer for tribunal audit

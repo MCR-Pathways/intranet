@@ -52,4 +52,4 @@ Course management, section-level quizzes, Tool Shed social learning, and admin b
 
 ## Email Notifications
 
-Phase D (PR #175) is DORMANT until Resend account setup (`RESEND_API_KEY` + `CRON_SECRET` + domain verification). Queue + Cron + preferences + 11 email types across L&D/HR/Intranet.
+Phase D is ACTIVE. Emails send immediately via Resend (PRs #175, #198). XSS-safe templates with escapeHtml (PR #200). Branded logo, preheaders, CTA buttons (PR #201). 11 email types, preferences UI on Settings page. L&D triggers: `course_assigned` (admin assigns), `course_completed` and `certificate_earned` (learner finishes), `course_overdue_digest` and `course_overdue_manager` (daily cron).

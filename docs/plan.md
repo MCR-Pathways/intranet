@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-03-30
+> Last updated: 2026-04-08
 
 ---
 
@@ -15,7 +15,7 @@
   - Phase 2 ✅: Admin UI (Tiptap editor, DnD, auto-save, preview), learner UI (Complete and Continue, progress bars), certificates (PDF), section quizzes
   - Phase 3 ✅: Reporting & assignments (individual assignment, course duplication, manager compliance)
   - Tool Shed ✅: Social learning feed (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). 6 components, JSONB content, format configs. PR #176.
-  - Email notifications: DORMANT until Resend account setup (RESEND_API_KEY + CRON_SECRET + domain verification). PR #175.
+  - Email notifications: ACTIVE (PRs #175, #198, #200, #201). Immediate send, XSS-safe, branded logo + preheaders.
   - Phase F ✅: Learner polish (PRs #187-194). Dashboard merge, catalogue card polish, lesson sidebar sections, catalogue search, certificate redesign (Coursera-inspired), admin guardrails (certificate toggle, publish warnings), syllabus preview, completion celebration (confetti). Migration 00072.
   - Key changes: Course→Sections→Lessons, section quizzes, certificates (PDF), Tool Shed, global Cmd+K search, private course feedback
 
@@ -91,7 +91,7 @@
 - See [docs/hr-plan.md](./hr-plan.md) for full details
 
 ### Settings Preferences
-- [ ] Notification preferences (email/in-app toggles)
+- [x] Notification preferences (email/in-app toggles) — PR #175
 - [ ] Google Calendar connection toggle
 - [ ] Theme/display preferences
 
@@ -103,7 +103,7 @@
 - [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - [ ] Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
 - [ ] Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
-- [ ] Resend email activation (domain verification + env vars: `RESEND_API_KEY`, `CRON_SECRET`)
+- [x] Resend email activation (domain verification + env vars) — PRs #175, #198, #200, #201
 
 ### Larger Features
 - [ ] Kiosk PWA — see `memory/kiosk-overhaul.md` for full requirements

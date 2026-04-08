@@ -90,7 +90,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 ### Server Actions Location
 
-Each route group has its own `actions.ts` (24 action files total):
+Each route group has its own `actions.ts` (25 action files total):
 - `src/app/(auth)/actions.ts` — sign out
 - `src/app/(protected)/hr/` — `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
 - `src/app/(protected)/intranet/actions.ts` — news feed posts, polls, comments, mentions
@@ -98,6 +98,7 @@ Each route group has its own `actions.ts` (24 action files total):
 - `src/app/(protected)/notifications/actions.ts` — notification read status
 - `src/app/(protected)/sign-in/actions.ts` — sign-in entries, team history, Google Calendar sync
 - `src/app/(protected)/learning/` — `actions.ts` (external courses), `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
+- `src/app/(protected)/settings/actions.ts` — email preferences
 - `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks)
 
 ### Key Patterns
@@ -109,7 +110,7 @@ Each route group has its own `actions.ts` (24 action files total):
 
 ### Database
 
-Types auto-generated in `src/types/database.types.ts`. Key tables: `profiles`, `teams`, `manager_teams`, `courses`, `course_enrolments`, `section_quizzes`, `induction_progress`, `notifications`, `resource_articles`, `resource_categories`, `tool_shed_entries`, `course_feedback`, `leave_requests`, `absence_records`, `sign_in_entries`.
+Types auto-generated in `src/types/database.types.ts`. Key tables: `profiles`, `teams`, `manager_teams`, `courses`, `course_enrolments`, `section_quizzes`, `induction_progress`, `notifications`, `email_notifications`, `email_preferences`, `resource_articles`, `resource_categories`, `tool_shed_entries`, `course_feedback`, `leave_requests`, `absence_records`, `sign_in_entries`.
 
 ### Path Alias
 
@@ -130,8 +131,8 @@ Required in `.env.local`:
 - `GOOGLE_CALENDAR_WEBHOOK_SECRET` — Secret for Calendar webhook verification (server-only)
 - `GOOGLE_DRIVE_ADMIN_EMAIL` — Email to impersonate for Drive API (server-only)
 - `KIOSK_TOKEN` — Shared secret for kiosk confirmation endpoint (server-only)
-- `RESEND_API_KEY` — Resend email API key (server-only, dormant until setup)
-- `CRON_SECRET` — Vercel Cron job authentication (server-only, dormant until setup)
+- `RESEND_API_KEY` — Resend email API key (server-only, sends from `noreply@mcrpathways.co.uk`)
+- `CRON_SECRET` — Vercel Cron job authentication (server-only, used by `/api/cron/*` routes)
 - `UPSTASH_REDIS_REST_URL` — Upstash Redis REST URL (server-only, optional — rate limiting disabled without it)
 - `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis REST token (server-only, optional)
 
@@ -290,6 +291,22 @@ These are universal rules that apply to every task regardless of which module yo
 **Return 200 (not 429) when rate-limiting webhook endpoints.** Google retries failed webhooks with exponential backoff. A 429 causes retry storms that compound the problem.
 
 **Always verify exploration agent claims against actual code.** Agents report false negatives AND false positives. Run your own `git log`, `grep`, and `read` to verify before acting.
+
+**Resend FROM address must match the verified domain.** `mcrpathways.co.uk` is verified, not `mcrpathways.org`. Resend rejects sends from unverified domains silently.
+
+**Check migration numbers on `main` before merging long-lived branches.** A branch created weeks ago will have stale migration numbers. Renumber before rebasing.
+
+**`module` is a reserved variable in Next.js.** Assigning to `module` in any component triggers `@next/next/no-assign-module-variable`. Use a different name.
+
+**Vercel Hobby plan limits cron to daily schedules.** For sub-daily processing, upgrade to Pro. Only `vercel.json` schedule changes.
+
+**Vercel TypeScript checks are stricter than local.** `npm test` passes but `next build` catches type errors (e.g. `TiptapDocument` not assignable to `Record<string, unknown>`). Always verify type-critical changes deploy successfully.
+
+**Serialise Tiptap JSON before passing to server actions.** `JSON.parse(JSON.stringify(json))` strips React internal references that cause "Cannot access on the server" errors when Tiptap objects cross the client-server boundary.
+
+**Check Supabase `.select()` columns when adding email template fields.** If the email body references `request.leave_type` but the query only selects `id, profile_id, status`, Vercel build fails.
+
+**RFC 8058 `List-Unsubscribe` requires both headers + unauthenticated POST endpoint.** Just the header without `List-Unsubscribe-Post` and a POST handler is non-compliant. Deferred until signed-token endpoint is built.
 
 ### Process
 
