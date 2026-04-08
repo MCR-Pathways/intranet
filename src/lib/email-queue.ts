@@ -156,14 +156,7 @@ export async function sendAndLogEmail(
     return { success: true, sent: false };
   }
 
-  // Add List-Unsubscribe header for optional email types (Gmail shows one-click unsubscribe)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
-  const headers: Record<string, string> = {};
-  if (!MANDATORY_EMAIL_TYPES.has(params.emailType)) {
-    headers["List-Unsubscribe"] = `<${appUrl}/settings?unsubscribe=${encodeURIComponent(params.emailType)}>`;
-  }
-
-  const result = await sendEmail(params.email, params.subject, params.bodyHtml, { headers });
+  const result = await sendEmail(params.email, params.subject, params.bodyHtml);
 
   // Log to email_notifications as audit trail
   const supabase = createServiceClient();

@@ -176,8 +176,7 @@ export function buildCourseCompletedEmail(
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string,
-  options?: { headers?: Record<string, string> }
+  html: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const client = await getResendClient();
@@ -190,7 +189,6 @@ export async function sendEmail(
       to,
       subject,
       html,
-      ...(options?.headers ? { headers: options.headers } : {}),
     });
 
     if (error) {
