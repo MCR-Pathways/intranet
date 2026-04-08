@@ -1,9 +1,10 @@
 /**
- * Vercel Cron job: Generate daily reminder emails.
+ * Vercel Cron job: Generate and send daily reminder emails.
  *
  * Runs daily at ~7am UTC Mon-Fri (7am GMT winter, 8am BST summer).
- * Queries overdue/approaching courses and queues digest emails.
- * The process-emails Cron job sends them on the next ~15-min run.
+ * Scans for overdue courses, expiring compliance docs, stale leave
+ * requests, and approaching probation dates. Sends via Resend
+ * immediately and logs to email_notifications as audit trail.
  *
  * Security: Requires CRON_SECRET Bearer token (set by Vercel automatically).
  */
@@ -11,7 +12,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 import { timingSafeTokenCompare } from "@/lib/auth";
-import { queueEmail } from "@/lib/email-queue";
+import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -144,7 +145,7 @@ export async function GET(request: Request) {
            <a href="${appUrl}/learning/my-courses" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View My Courses →</a>`
         );
 
-        await queueEmail({
+        await sendAndLogEmail({
           userId,
           email: profile.email,
           emailType: "course_overdue_digest",
@@ -185,7 +186,7 @@ export async function GET(request: Request) {
            <a href="${appUrl}/hr/team" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Team →</a>`
         );
 
-        await queueEmail({
+        await sendAndLogEmail({
           userId: managerId,
           email: manager.email,
           emailType: "course_overdue_manager",
@@ -253,7 +254,7 @@ export async function GET(request: Request) {
              <p style="font-size: 14px; color: #213350;">Your <strong>${docType.name}</strong> expires in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange renewal.</p>`
           );
 
-          await queueEmail({
+          await sendAndLogEmail({
             userId: profile.id,
             email: profile.email,
             emailType: "compliance_expiry",
@@ -277,7 +278,7 @@ export async function GET(request: Request) {
                <p style="font-size: 14px; color: #213350;"><strong>${profile.full_name}</strong>'s <strong>${docType.name}</strong> ${statusText}.</p>`
             );
 
-            await queueEmail({
+            await sendAndLogEmail({
               userId: admin.id,
               email: admin.email,
               emailType: "compliance_expiry",
@@ -339,7 +340,7 @@ export async function GET(request: Request) {
            <a href="${appUrl}/hr/leave?tab=approvals" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">Review Requests →</a>`
         );
 
-        await queueEmail({
+        await sendAndLogEmail({
           userId: manager.id,
           email: manager.email,
           emailType: "stale_leave_reminder",
@@ -389,7 +390,7 @@ export async function GET(request: Request) {
            <p style="font-size: 14px; color: #213350;"><strong>${p.full_name}</strong>'s probation period ends in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange a review meeting.</p>`
         );
 
-        await queueEmail({
+        await sendAndLogEmail({
           userId: mgr.id,
           email: mgr.email,
           emailType: "key_date_reminder",

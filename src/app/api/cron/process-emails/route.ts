@@ -1,9 +1,10 @@
 /**
- * Vercel Cron job: Process the email notification queue.
+ * Vercel Cron job: Retry failed email sends.
  *
- * Runs once daily at 8:03 AM UTC (Vercel Hobby plan limit).
- * Upgrade to Pro for ~15-minute scheduling.
- * Claims pending/failed emails, sends via Resend, updates status.
+ * Runs daily at 8:03 AM UTC, after daily-reminders (7:47 UTC).
+ * Picks up emails that failed to send (from action triggers or
+ * daily-reminders) and retries via Resend. Safety net only —
+ * emails are sent immediately at trigger time by sendAndLogEmail().
  *
  * Security: Requires CRON_SECRET Bearer token (set by Vercel automatically).
  */
@@ -18,7 +19,7 @@ export const maxDuration = 60;
 
 const BATCH_SIZE = 50;
 const MAX_RETRIES = 3;
-const SEND_DELAY_MS = 500; // 2 emails/sec to respect Resend rate limits
+const SEND_DELAY_MS = 500;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,61 +40,43 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  // ── Claim batch ─────────────────────────────────────────────
+  // ── Fetch failed emails for retry ───────────────────────────
   const supabase = createServiceClient();
 
-  // Fetch pending or retryable failed emails
-  const { data: pending, error: fetchError } = await supabase
+  const { data: failed, error: fetchError } = await supabase
     .from("email_notifications")
     .select("id, user_id, email_type, subject, body_html, metadata, retry_count")
-    .or(`status.eq.pending,and(status.eq.failed,retry_count.lt.${MAX_RETRIES})`)
+    .eq("status", "failed")
+    .lt("retry_count", MAX_RETRIES)
     .order("created_at", { ascending: true })
     .limit(BATCH_SIZE);
 
   if (fetchError) {
-    logger.error("Failed to fetch email queue", { error: fetchError.message });
+    logger.error("Failed to fetch retry queue", { error: fetchError.message });
     return Response.json({ error: "Queue fetch failed" }, { status: 500 });
   }
 
-  if (!pending || pending.length === 0) {
-    return Response.json({ processed: 0, sent: 0, failed: 0 });
+  if (!failed || failed.length === 0) {
+    return Response.json({ retried: 0, sent: 0, failed: 0 });
   }
 
-  // Mark as processing
-  const ids = pending.map((e) => e.id);
-  await supabase
-    .from("email_notifications")
-    .update({ status: "processing" })
-    .in("id", ids);
-
-  // ── Send emails ─────────────────────────────────────────────
+  // ── Retry sends ─────────────────────────────────────────────
   let sent = 0;
-  let failed = 0;
+  let stillFailed = 0;
 
-  for (const email of pending) {
-    // Resolve recipient email: metadata first, then profile lookup
-    let toEmail =
+  for (const email of failed) {
+    const toEmail =
       (email.metadata as Record<string, unknown>)?.recipient_email as string | undefined;
-
-    if (!toEmail) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("id", email.user_id)
-        .single();
-      toEmail = profile?.email ?? undefined;
-    }
 
     if (!toEmail) {
       await supabase
         .from("email_notifications")
         .update({
-          status: "failed",
           error_message: "No recipient email found",
           retry_count: (email.retry_count ?? 0) + 1,
         })
         .eq("id", email.id);
-      failed++;
+      stillFailed++;
       continue;
     }
 
@@ -102,32 +85,34 @@ export async function GET(request: Request) {
     if (result.success) {
       await supabase
         .from("email_notifications")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          error_message: null,
+        })
         .eq("id", email.id);
       sent++;
     } else {
       await supabase
         .from("email_notifications")
         .update({
-          status: "failed",
           error_message: result.error ?? "Unknown error",
           retry_count: (email.retry_count ?? 0) + 1,
         })
         .eq("id", email.id);
-      failed++;
+      stillFailed++;
     }
 
-    // Rate limit: 500ms between sends
-    if (pending.indexOf(email) < pending.length - 1) {
+    if (failed.indexOf(email) < failed.length - 1) {
       await sleep(SEND_DELAY_MS);
     }
   }
 
-  logger.info("Email queue processed", {
-    processed: pending.length,
+  logger.info("Email retry processed", {
+    retried: failed.length,
     sent,
-    failed,
+    stillFailed,
   });
 
-  return Response.json({ processed: pending.length, sent, failed });
+  return Response.json({ retried: failed.length, sent, stillFailed });
 }

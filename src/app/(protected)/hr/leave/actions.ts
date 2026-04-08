@@ -12,7 +12,7 @@ import type { LeaveType, Region } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
-import { queueEmail } from "@/lib/email-queue";
+import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate } from "@/lib/email";
 import { formatDate } from "@/lib/utils";
 
@@ -296,7 +296,7 @@ export async function approveLeave(requestId: string, notes?: string) {
          </div>`
       );
 
-      await queueEmail({
+      await sendAndLogEmail({
         userId: requester.id,
         email: requester.email,
         emailType: "leave_decision",
@@ -393,7 +393,7 @@ export async function rejectLeave(requestId: string, reason: string) {
          <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>`
       );
 
-      await queueEmail({
+      await sendAndLogEmail({
         userId: requester.id,
         email: requester.email,
         emailType: "leave_decision",
