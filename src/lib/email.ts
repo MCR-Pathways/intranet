@@ -30,7 +30,7 @@ async function getResendClient() {
 
 // ─── Email Templates ────────────────────────────────────────────────────────
 
-const FROM_ADDRESS = "MCR Pathways <noreply@mcrpathways.org>";
+const FROM_ADDRESS = "MCR Pathways <noreply@mcrpathways.co.uk>";
 
 export function baseTemplate(title: string, body: string): string {
   return `
