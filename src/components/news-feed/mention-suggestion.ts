@@ -38,8 +38,8 @@ export function createMentionSuggestion(
 
           const rect = props.clientRect?.();
           if (rect && popup) {
-            popup.style.left = `${rect.left}px`;
-            popup.style.top = `${rect.bottom + 4}px`;
+            popup.style.left = `${rect.left + window.scrollX}px`;
+            popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
           }
         },
 
@@ -48,8 +48,8 @@ export function createMentionSuggestion(
 
           const rect = props.clientRect?.();
           if (rect && popup) {
-            popup.style.left = `${rect.left}px`;
-            popup.style.top = `${rect.bottom + 4}px`;
+            popup.style.left = `${rect.left + window.scrollX}px`;
+            popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
           }
         },
 
