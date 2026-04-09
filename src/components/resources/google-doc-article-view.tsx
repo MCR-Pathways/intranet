@@ -108,12 +108,18 @@ export function GoogleDocArticleView({
             if (child.name === "a" && child.attribs?.href) {
               const embedUrl = getEmbedUrl(child.attribs.href);
               if (embedUrl) {
+                // Extract link text for accessible iframe title
+                const linkText = child.children
+                  .filter((c) => c.type === "text")
+                  .map((c) => (c as unknown as { data: string }).data)
+                  .join("")
+                  .trim();
                 return createElement(
                   "div",
                   { className: "not-prose my-4 aspect-video w-full overflow-hidden rounded-lg bg-muted", key: embedUrl },
                   createElement("iframe", {
                     src: embedUrl,
-                    title: "Video",
+                    title: linkText || "Embedded video",
                     className: "h-full w-full",
                     sandbox: "allow-scripts allow-same-origin allow-presentation",
                     allowFullScreen: true,
