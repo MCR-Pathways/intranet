@@ -359,7 +359,7 @@ Colours map to intent: Wine = social, Teal = assignment, Pink = urgency, Dark Bl
 
 Logo variants: `public/mcr-logo-email.png` (dark, Group B) and `public/mcr-logo-email-white.png` (white, Group A). Both displayed at 120x36.
 
-When adding a new email type to `EMAIL_TYPES` in `email-queue.ts`, also add it to `EMAIL_THEME_CONFIG`. Missing entries fall back to Dark Blue and log a warning.
+When adding a new email type to `EMAIL_TYPES` in `email-queue.ts`, also add it to `EMAIL_THEME_CONFIG` in `src/lib/email.ts`. Missing entries fall back to Dark Blue and log a warning.
 
 ---
 

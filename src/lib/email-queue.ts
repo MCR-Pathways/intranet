@@ -9,7 +9,7 @@
  */
 
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, buildWelcomeEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
 // ─── Email Type Configuration ────────────────────────────────────────────────
@@ -222,7 +222,6 @@ export async function sendWelcomeEmailIfNeeded(
 
   if (existing) return;
 
-  const { buildWelcomeEmail } = await import("@/lib/email");
   const { subject, html } = buildWelcomeEmail(fullName || "there");
   await sendAndLogEmail({
     userId,
