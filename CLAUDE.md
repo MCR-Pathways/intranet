@@ -81,6 +81,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 - `getCurrentUser()` — Returns `{ supabase, user, profile }`. Uses `PROFILE_SELECT` to exclude sensitive fields.
 - `requireHRAdmin()` — Gate for admin-only server actions. Throws if not authenticated or not `is_hr_admin`.
+- `requireContentEditor()` — Returns `{ supabase, user }` (no `profile`). Use `user.id` for author/ownership checks.
 
 ### Data Flow Pattern
 
@@ -90,7 +91,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 ### Server Actions Location
 
-Each route group has its own `actions.ts` (25 action files total):
+Each route group has its own `actions.ts` (26 action files total):
 - `src/app/(auth)/actions.ts` — sign out
 - `src/app/(protected)/hr/` — `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
 - `src/app/(protected)/intranet/actions.ts` — news feed posts, polls, comments, mentions
@@ -99,7 +100,7 @@ Each route group has its own `actions.ts` (25 action files total):
 - `src/app/(protected)/sign-in/actions.ts` — sign-in entries, team history, Google Calendar sync
 - `src/app/(protected)/learning/` — `actions.ts` (external courses), `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
 - `src/app/(protected)/settings/actions.ts` — email preferences
-- `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks)
+- `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks), `native-actions.ts` (native article CRUD, auto-save, publish, reindex)
 
 ### Key Patterns
 
@@ -110,7 +111,7 @@ Each route group has its own `actions.ts` (25 action files total):
 
 ### Database
 
-Types auto-generated in `src/types/database.types.ts`. Key tables: `profiles`, `teams`, `manager_teams`, `courses`, `course_enrolments`, `section_quizzes`, `induction_progress`, `notifications`, `email_notifications`, `email_preferences`, `resource_articles`, `resource_categories`, `tool_shed_entries`, `course_feedback`, `leave_requests`, `absence_records`, `sign_in_entries`.
+Types auto-generated in `src/types/database.types.ts` (70+ tables). All three Supabase clients (`server.ts`, `client.ts`, `service.ts`) pass the `Database` generic for compile-time query checking.
 
 ### Path Alias
 
@@ -130,6 +131,7 @@ Required in `.env.local`:
 - `GOOGLE_DRIVE_WEBHOOK_SECRET` — Secret for Drive webhook verification (server-only)
 - `GOOGLE_CALENDAR_WEBHOOK_SECRET` — Secret for Calendar webhook verification (server-only)
 - `GOOGLE_DRIVE_ADMIN_EMAIL` — Email to impersonate for Drive API (server-only)
+- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` — Drive folder ID for intranet file uploads (server-only)
 - `KIOSK_TOKEN` — Shared secret for kiosk confirmation endpoint (server-only)
 - `RESEND_API_KEY` — Resend email API key (server-only, sends from `noreply@mcrpathways.co.uk`)
 - `CRON_SECRET` — Vercel Cron job authentication (server-only, used by `/api/cron/*` routes)
@@ -196,6 +198,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Order multi-step mutations: update "main" record first, dependent records second.** Add rollback logic for multi-step Supabase mutations. Wrap non-critical follow-up operations in try/catch. Delete DB records before files, not after.
 
+**Cast `Record<string, unknown>` insert payloads to `Database["public"]["Tables"]["..."]["Insert"]`.** Typed Supabase clients reject `Record<string, unknown>` for `.insert()` and `.update()`. Applies to whitelist-loop sanitised payloads.
+
 ### Database & Migrations
 
 **Make all migrations idempotent.** Use `IF NOT EXISTS` / `DROP IF EXISTS` guards so migrations can be re-run safely.
@@ -207,6 +211,8 @@ These are universal rules that apply to every task regardless of which module yo
 **Raise exceptions for invalid inputs in DB functions, don't silently return.** Use `RAISE EXCEPTION` to make programming errors immediately obvious.
 
 **Split RPCs into single-responsibility functions.** More modular — admin can recalculate without completing a lesson (data fixes, bulk ops).
+
+**Don't use `.returns<T>()` with typed Supabase clients.** The `Database` generic makes `.returns<>()` redundant and can produce `CheckMatchingArrayTypes` errors. Let the client infer types from the select string. If a table isn't in `database.types.ts`, add it rather than using `as any`.
 
 ### Security
 
@@ -248,8 +254,6 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Use `window.location.href` for post-action navigation that needs fresh server data.** `router.push()` does client-side navigation that may serve stale cached data. For flows where the destination page must re-fetch (e.g. completion status, certificates), a full page reload via `window.location.href` is intentional.
 
-**Use intersection types for columns missing from stale `database.types.ts`.** `(course as Course & { issue_certificate?: boolean })` is safer than `(course as Record<string, unknown>)`. Preserves existing type properties while adding the new column.
-
 **Use custom DOM events, not synthetic KeyboardEvents, for cross-component communication.** Synthetic `KeyboardEvent` dispatch is fragile across browsers.
 
 **Don't nest interactive elements — use sibling layout instead.** A `<Link>` inside a `<button>` is invalid HTML. Split into sibling elements.
@@ -275,6 +279,10 @@ These are universal rules that apply to every task regardless of which module yo
 ### Server Actions & Middleware
 
 **Middleware cannot safely block server actions.** Returning non-200 from Next.js middleware during a server action throws E394 ("An unexpected response was received from the server"), which propagates to the Error Boundary and replaces the page. Rate limiting or blocking server actions must happen inside the action (e.g., in auth helpers), not in the proxy.
+
+### Next.js Config
+
+**`serverActions.bodySizeLimit` goes inside `experimental` in Next.js 16.** Not a top-level config property. Linters will revert if placed at the top level. Correct: `experimental: { serverActions: { bodySizeLimit: "50mb" } }`.
 
 ### Deployment & Infrastructure
 

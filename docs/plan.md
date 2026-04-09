@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-08
+> Last updated: 2026-04-09
 
 ---
 
@@ -48,13 +48,23 @@
 - Phase 2: Absence, RTW, leaving, flexible working, permissions, org chart, my team, onboarding
 - See [docs/hr-plan.md](./hr-plan.md) for Phase 3 roadmap
 
-### Resources ✅ (complete)
+### Resources — Google Docs ✅ (complete)
 - Google Docs integration (link, sync, webhook auto-update)
 - Category hierarchy (9 top-level, 43+ subcategories, cascading selects)
 - Component pages (org chart under Org Structure)
 - Algolia search (section-level indexing, deep linking)
 - Editor mode, settings page, featured articles
 - UX redesign: grouped index, scroll-spy TOC, freshness indicators, "More in [folder]" sibling nav
+
+### Resources — Native Editor (in progress)
+- Plate editor for creating articles directly on the intranet (not linked from Google Docs)
+- Two content paths coexist: Google Docs for living documents, native editor for static reference content
+- WS2 ✅: Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
+- WS3: Block plugins (accordion, columns, callout, tabs, button/CTA, tables)
+- WS4: Media and files (Google Drive upload/proxy, image/file blocks, video embed, external embeds)
+- WS5: Visual parity and cross-linking (shared prose styling, HTML serialisation, Google Doc cross-link rewriting)
+- WS6: Content migration (create articles from old WordPress intranet pages)
+- Files stored on Google Drive via service account impersonation, served through proxy API route
 
 ### Algolia Search ✅
 - 3 indices: resources_articles, learning_courses, tool_shed_entries
@@ -66,7 +76,7 @@
 - Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,267 tests across 53 files (Vitest + RTL + jsdom)
+- 1,330 tests across 57 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
@@ -101,7 +111,7 @@
 - [ ] E2E test phases 2-3 (core module + HR module tests — currently 18 E2E tests for 55 pages)
 - [ ] Mobile responsiveness pass (currently desktop/laptop only)
 - [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
-- [ ] Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
+- [x] Regenerate `database.types.ts` from production Supabase — 70+ tables, typed clients, 72 type errors fixed
 - [ ] Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
 - [x] Resend email activation (domain verification + env vars) — PRs #175, #198, #200, #201
 
@@ -123,7 +133,7 @@
 - [ ] Server action rate limiting (deferred — needs try/catch in 13 action files first, see `memory/rate-limiting.md`)
 - [ ] Error monitoring integration (swap logger transport)
 - [ ] Mobile responsiveness
-- [ ] `database.types.ts` regeneration — stale, missing 15+ tables (HR, L&D overhaul, email, mentions)
+- [x] `database.types.ts` regeneration — 70+ tables, typed clients, post-process script
 - [ ] Google Drive webhook renewal cron (watch channels expire after 7 days)
 - [ ] CI/CD pipeline (GitHub Actions — currently relies on Vercel Git integration only)
 - [ ] Absence records soft-delete (currently hard-deletes, no audit trail)
