@@ -296,7 +296,7 @@ export async function approveLeave(requestId: string, notes?: string) {
            ${notes ? `<p style="font-size: 13px; color: #6b7280; margin: 8px 0 0;">Note: ${escapeHtml(notes)}</p>` : ""}
          </div>
          <a href="${appUrl}/hr/leave" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500;">View Leave →</a>`,
-        { preheader: `Your ${leaveLabel} has been approved` }
+        { preheader: `Your ${leaveLabel} has been approved`, emailType: "leave_decision" }
       );
 
       await sendAndLogEmail({
@@ -397,7 +397,7 @@ export async function rejectLeave(requestId: string, reason: string) {
          </div>
          <p style="font-size: 13px; color: #6b7280;">Please speak to your line manager if you have any questions.</p>
          <a href="${appUrl}/hr/leave" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Leave →</a>`,
-        { preheader: `Your ${leaveLabel} request was declined` }
+        { preheader: `Your ${leaveLabel} request was declined`, emailType: "leave_decision" }
       );
 
       await sendAndLogEmail({

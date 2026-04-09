@@ -9,7 +9,7 @@
  */
 
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, buildWelcomeEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 
 // ─── Email Type Configuration ────────────────────────────────────────────────
@@ -196,4 +196,40 @@ export async function sendAndLogEmail(
   }
 
   return { success: true, sent: true };
+}
+
+/**
+ * Send the welcome email if one hasn't already been sent.
+ *
+ * Checks email_notifications for an existing "sent" welcome entry before
+ * dispatching — sendAndLogEmail sends via Resend before logging, so the
+ * DB constraint alone can't prevent duplicate sends.
+ */
+export async function sendWelcomeEmailIfNeeded(
+  userId: string,
+  email: string,
+  fullName: string,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { data: existing } = await supabase
+    .from("email_notifications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("email_type", "welcome")
+    .eq("status", "sent")
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return;
+
+  const { subject, html } = buildWelcomeEmail(fullName || "there");
+  await sendAndLogEmail({
+    userId,
+    email,
+    emailType: "welcome",
+    subject,
+    bodyHtml: html,
+    entityId: userId,
+    entityType: "welcome",
+  });
 }

@@ -62,9 +62,9 @@ async function sendMentionEmails(
     const html = baseTemplate(
       `${authorName} mentioned you`,
       `<p style="font-size: 14px; color: #213350;"><strong>${safeAuthor}</strong> mentioned you in a ${entityType}${safePreview ? ":" : "."}</p>
-       ${safePreview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${safePreview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
+       ${safePreview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #751B48;">${safePreview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
        <a href="${appUrl}/intranet/post/${postId}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`,
-      { preheader: `${authorName} mentioned you: ${preview || ""}`.trim() }
+      { preheader: `${authorName} mentioned you: ${preview || ""}`.trim(), emailType: "mention" }
     );
 
     await sendAndLogEmail({

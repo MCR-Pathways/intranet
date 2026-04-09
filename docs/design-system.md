@@ -335,7 +335,35 @@ The public website's ivory background suits its emotional, charity-marketing pur
 
 ---
 
-## 6. File Reference
+## 6. Email Colour System
+
+Email notifications use colour-coded header bars for instant recognition. Each email type maps to a brand colour via `EMAIL_THEME_CONFIG` in `src/lib/email.ts`.
+
+**Group A — dark headers, white logo:**
+
+| Colour | Hex | Email Types |
+|--------|-----|-------------|
+| Wine | `#751B48` | `mention` |
+| Teal | `#2A6075` | `course_assigned` |
+| Pink | `#DA417C` | `course_overdue_digest`, `course_overdue_manager` |
+| Dark Blue | `#213350` | `leave_decision`, `stale_leave_reminder` |
+
+**Group B — bright headers, dark blue logo:**
+
+| Colour | Hex | Email Types |
+|--------|-----|-------------|
+| Orange | `#F09336` | `compliance_expiry`, `key_date_reminder` |
+| Green | `#B5E046` | `certificate_earned`, `course_completed`, `welcome` |
+
+Colours map to intent: Wine = social, Teal = assignment, Pink = urgency, Dark Blue = HR, Orange = compliance, Green = celebration. All CTA buttons use Dark Blue regardless of header colour.
+
+Logo variants: `public/mcr-logo-email.png` (dark, Group B) and `public/mcr-logo-email-white.png` (white, Group A). Both displayed at 120x36.
+
+When adding a new email type to `EMAIL_TYPES` in `email-queue.ts`, also add it to `EMAIL_THEME_CONFIG` in `src/lib/email.ts`. Missing entries fall back to Dark Blue and log a warning.
+
+---
+
+## 7. File Reference
 
 | File | Purpose |
 |------|---------|
@@ -347,3 +375,6 @@ The public website's ivory background suits its emotional, charity-marketing pur
 | `src/lib/hr.ts` | HR-specific constants (leave type colours, status colours) |
 | `src/lib/sign-in.ts` | Sign-in module constants |
 | `public/MCR_LOGO-1.svg` | Logo file (dark blue #213350) |
+| `public/mcr-logo-email.png` | Email logo — dark blue (Group B headers) |
+| `public/mcr-logo-email-white.png` | Email logo — white (Group A headers) |
+| `src/lib/email.ts` | Email templates, `baseTemplate()`, `EMAIL_THEME_CONFIG` |

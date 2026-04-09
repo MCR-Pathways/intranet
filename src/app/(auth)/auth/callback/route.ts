@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { sanitizeRedirectPath } from "@/lib/url";
 import { rateLimiters, getClientIp } from "@/lib/ratelimit";
+import { sendWelcomeEmailIfNeeded } from "@/lib/email-queue";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
       try {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("induction_completed_at, user_type, status")
+          .select("full_name, email, induction_completed_at, user_type, status")
           .eq("id", data.user.id)
           .single();
 
@@ -111,6 +112,9 @@ export async function GET(request: Request) {
         // If profile doesn't exist yet (first login), the trigger should create it
         // Redirect to induction if not completed
         if (profile && !profile.induction_completed_at) {
+          void sendWelcomeEmailIfNeeded(data.user.id, profile.email || email, profile.full_name)
+            .catch((err) => logger.error("Failed to send welcome email", { error: err }));
+
           return NextResponse.redirect(`${origin}/intranet/induction`);
         }
       } catch (err) {
