@@ -276,6 +276,7 @@ Internal communications — news feed, resources/knowledge base, and induction.
 | Resources Landing | `/resources` |
 | Category View | `/resources/[...slug]` (1-3 level catch-all) |
 | Article View | `/resources/article/[slug]` (flat, globally unique) |
+| Post Detail | `/intranet/post/[id]` (standalone permalink) |
 | Settings (editor) | `/resources/settings` |
 
 **Key features:** Rich text posts (Tiptap), @mentions with notifications, reactions, comments, link previews with SSRF protection, image lightbox, file attachments, pin/unpin (HR admin), weekly roundup.
@@ -441,7 +442,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 54 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Files:** 55 test files, co-located with source files (`.test.ts` / `.test.tsx`)
 - **Coverage:** 1,280 tests across 55 files
 
 ### Test Categories
@@ -470,7 +471,7 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows (18 E2E tests for a 55-page app)
+- No E2E tests for multi-step HR workflows (18 E2E tests for a 56-page app)
 
 ---
 
