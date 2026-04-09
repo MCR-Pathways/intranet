@@ -128,7 +128,6 @@ export function LessonSidebar({
       lessons: LessonSidebarItem[];
     }[] = [];
 
-    const _sectionMap = new Map(sections.map((s) => [s.id, s]));
     const lessonsBySection = new Map<string, LessonSidebarItem[]>();
 
     for (const lesson of lessons) {

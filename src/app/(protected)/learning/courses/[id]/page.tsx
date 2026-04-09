@@ -52,7 +52,7 @@ export default async function CourseDetailPage({
     redirect("/login");
   }
 
-  const { isPreview, searchParamString: _searchParamString } = getPreviewMode(
+  const { isPreview } = getPreviewMode(
     resolvedSearchParams,
     profile
   );
@@ -431,7 +431,7 @@ export default async function CourseDetailPage({
           <CardContent>
             {hasSections ? (
               <ul className="space-y-2">
-                {sections.map((section, _i) => {
+                {sections.map((section) => {
                   const sectionLessonCount = lessons.filter(
                     (l) => l.section_id === section.id
                   ).length;

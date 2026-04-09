@@ -84,7 +84,6 @@ export function FlexibleWorkingDetail({
   const [isPending, startTransition] = useTransition();
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [_appealReason, _setAppealReason] = useState("");
   const [appealDialogOpen, setAppealDialogOpen] = useState(false);
   const [consultationOpen, setConsultationOpen] = useState(false);
   const [trialOutcomeOpen, setTrialOutcomeOpen] = useState(false);
