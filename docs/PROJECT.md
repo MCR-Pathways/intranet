@@ -273,10 +273,10 @@ Internal communications — news feed, resources/knowledge base, and induction.
 | News Feed | `/intranet` |
 | Weekly Roundup | `/intranet/weekly-roundup` |
 | Induction Hub | `/intranet/induction` (9 sub-pages) |
+| Post Detail | `/intranet/post/[id]` (standalone permalink) |
 | Resources Landing | `/resources` |
 | Category View | `/resources/[...slug]` (1-3 level catch-all) |
 | Article View | `/resources/article/[slug]` (flat, globally unique) |
-| Post Detail | `/intranet/post/[id]` (standalone permalink) |
 | Settings (editor) | `/resources/settings` |
 
 **Key features:** Rich text posts (Tiptap), @mentions with notifications, reactions, comments, link previews with SSRF protection, image lightbox, file attachments, pin/unpin (HR admin), weekly roundup.
