@@ -203,7 +203,8 @@ export function LinkGoogleDocDialog({
           </DialogTitle>
           <DialogDescription>
             Paste a Google Docs URL to add it to Resources. The document will be
-            synced automatically.
+            synced automatically. Make sure the document is shared with &ldquo;Anyone
+            in MCR Pathways&rdquo; before linking.
           </DialogDescription>
         </DialogHeader>
 
