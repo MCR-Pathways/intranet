@@ -134,69 +134,57 @@ function StrikethroughLeaf(props: PlateLeafProps) {
 // =============================================
 
 function EditorToolbar({ editor }: { editor: NonNullable<ReturnType<typeof usePlateEditor>> }) {
-  const toggleMark = (key: string) => (e: React.MouseEvent) => {
+  const prevent = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
-    (editor.tf as Record<string, { toggle: () => void }>)[key]?.toggle();
-    editor.tf.focus();
-  };
-
-  const toggleBlock = (key: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    (editor.tf as Record<string, { toggle: () => void }>)[key]?.toggle();
-    editor.tf.focus();
-  };
-
-  const handleToggleList = (type: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    toggleList(editor, { listStyleType: type as ListStyleType });
+    fn();
     editor.tf.focus();
   };
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5">
       {/* Marks */}
-      <Toggle size="sm" onMouseDown={toggleMark("bold")} aria-label="Bold">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.bold.toggle())} aria-label="Bold">
         <Bold className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleMark("italic")} aria-label="Italic">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.italic.toggle())} aria-label="Italic">
         <Italic className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleMark("underline")} aria-label="Underline">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.underline.toggle())} aria-label="Underline">
         <Underline className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleMark("strikethrough")} aria-label="Strikethrough">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.strikethrough.toggle())} aria-label="Strikethrough">
         <Strikethrough className="h-4 w-4" />
       </Toggle>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       {/* Headings */}
-      <Toggle size="sm" onMouseDown={toggleBlock("h1")} aria-label="Heading 1">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.h1.toggle())} aria-label="Heading 1">
         <Heading1 className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleBlock("h2")} aria-label="Heading 2">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.h2.toggle())} aria-label="Heading 2">
         <Heading2 className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleBlock("h3")} aria-label="Heading 3">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.h3.toggle())} aria-label="Heading 3">
         <Heading3 className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleBlock("h4")} aria-label="Heading 4">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.h4.toggle())} aria-label="Heading 4">
         <Heading4 className="h-4 w-4" />
       </Toggle>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       {/* Blocks */}
-      <Toggle size="sm" onMouseDown={toggleBlock("blockquote")} aria-label="Quote">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.blockquote.toggle())} aria-label="Quote">
         <Quote className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={handleToggleList(ListStyleType.Disc)} aria-label="Bullet list">
+      <Toggle size="sm" onMouseDown={prevent(() => toggleList(editor, { listStyleType: ListStyleType.Disc }))} aria-label="Bullet list">
         <List className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={handleToggleList(ListStyleType.Decimal)} aria-label="Numbered list">
+      <Toggle size="sm" onMouseDown={prevent(() => toggleList(editor, { listStyleType: ListStyleType.Decimal }))} aria-label="Numbered list">
         <ListOrdered className="h-4 w-4" />
       </Toggle>
-      <Toggle size="sm" onMouseDown={toggleBlock("hr")} aria-label="Horizontal rule">
+      <Toggle size="sm" onMouseDown={prevent(() => editor.tf.hr.toggle())} aria-label="Horizontal rule">
         <Minus className="h-4 w-4" />
       </Toggle>
 
