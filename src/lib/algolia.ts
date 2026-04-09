@@ -149,9 +149,9 @@ export interface AlgoliaCourseRecord {
   category: string;
   categoryLabel: string;
   duration: number | null;
-  isRequired: boolean;
+  isRequired: boolean | null;
   sectionCount: number;
-  updatedAt: string;
+  updatedAt: string | null;
   /** Discriminator for global search result grouping */
   _type: "course";
 }
@@ -166,9 +166,9 @@ export async function indexCourse(
   category: string,
   categoryLabel: string,
   duration: number | null,
-  isRequired: boolean,
+  isRequired: boolean | null,
   sectionCount: number,
-  updatedAt: string
+  updatedAt: string | null
 ): Promise<void> {
   try {
     const client = getAdminClient();

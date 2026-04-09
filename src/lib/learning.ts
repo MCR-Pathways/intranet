@@ -361,7 +361,7 @@ export function getLockedLessonIds(
  */
 export function getPreviewMode(
   searchParams: Record<string, string | string[] | undefined>,
-  profile: { is_ld_admin?: boolean; status?: string } | null
+  profile: { is_ld_admin?: boolean | null; status?: string } | null
 ): { isPreview: boolean; searchParamString: string } {
   const previewParam = searchParams?.preview;
   const isPreviewRequested = previewParam === "true";

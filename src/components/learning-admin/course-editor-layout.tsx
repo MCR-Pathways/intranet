@@ -18,7 +18,7 @@ interface CourseEditorLayoutProps {
   enrolments: {
     id: string;
     status: string;
-    progress_percent: number;
+    progress_percent: number | null;
     completed_at: string | null;
     due_date: string | null;
   }[];

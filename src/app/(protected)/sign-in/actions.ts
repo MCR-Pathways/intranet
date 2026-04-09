@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { WorkLocation, TimeSlot } from "@/types/database.types";
+import type { Database, WorkLocation, TimeSlot } from "@/types/database.types";
 import { getUKToday, OFFICE_LOCATIONS, OFFICE_HEADCOUNT_TARGET } from "@/lib/sign-in";
 import { logger } from "@/lib/logger";
 
@@ -317,7 +317,7 @@ export async function saveWeeklyPattern(
         user_id: user.id,
         day_of_week: dayOfWeek,
         time_slot: timeSlot,
-        location,
+        location: location as Database["public"]["Tables"]["weekly_patterns"]["Insert"]["location"],
         other_location: sanitisedOtherLocation,
       },
       { onConflict: "user_id,day_of_week,time_slot" }

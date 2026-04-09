@@ -43,13 +43,23 @@ export async function GET(request: Request) {
   // ── Fetch failed emails for retry ───────────────────────────
   const supabase = createServiceClient();
 
-  const { data: failed, error: fetchError } = await supabase
+  // email_notifications has columns not yet in database.types.ts (body_html, status, retry_count, error_message)
+  type EmailNotificationRow = {
+    id: string;
+    user_id: string;
+    email_type: string;
+    subject: string;
+    body_html: string | null;
+    metadata: Record<string, unknown> | null;
+    retry_count: number;
+  };
+  const { data: failed, error: fetchError } = (await supabase
     .from("email_notifications")
     .select("id, user_id, email_type, subject, body_html, metadata, retry_count")
-    .eq("status", "failed")
-    .lt("retry_count", MAX_RETRIES)
+    .eq("status" as never, "failed")
+    .lt("retry_count" as never, MAX_RETRIES)
     .order("created_at", { ascending: true })
-    .limit(BATCH_SIZE);
+    .limit(BATCH_SIZE)) as { data: EmailNotificationRow[] | null; error: { message: string } | null };
 
   if (fetchError) {
     logger.error("Failed to fetch retry queue", { error: fetchError.message });
@@ -93,7 +103,7 @@ export async function GET(request: Request) {
         .update({
           error_message: "No recipient email found",
           retry_count: (email.retry_count ?? 0) + 1,
-        })
+        } as never)
         .eq("id", email.id);
       stillFailed++;
       continue;
@@ -108,7 +118,7 @@ export async function GET(request: Request) {
           status: "sent",
           sent_at: new Date().toISOString(),
           error_message: null,
-        })
+        } as never)
         .eq("id", email.id);
       sent++;
     } else {
@@ -117,7 +127,7 @@ export async function GET(request: Request) {
         .update({
           error_message: result.error ?? "Unknown error",
           retry_count: (email.retry_count ?? 0) + 1,
-        })
+        } as never)
         .eq("id", email.id);
       stillFailed++;
     }

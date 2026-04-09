@@ -192,7 +192,7 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-1">
-                        {timeAgo(notification.created_at)}
+                        {notification.created_at ? timeAgo(notification.created_at) : ""}
                       </p>
                     </div>
                   </div>

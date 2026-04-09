@@ -223,7 +223,7 @@ export function CommentItem({
                   </div>
                 </div>
               ) : (
-                <TiptapRenderer json={comment.content_json} fallback={comment.content} />
+                <TiptapRenderer json={comment.content_json as Record<string, unknown> | null} fallback={comment.content} />
               )}
             </div>
 

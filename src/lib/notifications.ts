@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import type { Json } from "@/types/database.types";
 
 interface CreateNotificationParams {
   userId: string;
@@ -23,7 +24,7 @@ export async function createNotification(params: CreateNotificationParams) {
     title: params.title,
     message: params.message,
     link: params.link ?? null,
-    metadata: params.metadata ?? null,
+    metadata: (params.metadata ?? null) as Json,
   });
 
   return { error };

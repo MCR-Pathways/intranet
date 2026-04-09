@@ -102,7 +102,7 @@ export function PeopleCalendar({
             : config?.label ?? leaveType,
           bgClass: config?.bgColour ?? "bg-gray-100",
           textClass: config?.colour ?? "text-gray-600",
-          isHalfDay: isStartHalf || isEndHalf,
+          isHalfDay: !!(isStartHalf || isEndHalf),
           employeeName: showEmployee
             ? (req as LeaveRequestWithEmployee).employee_name
             : undefined,

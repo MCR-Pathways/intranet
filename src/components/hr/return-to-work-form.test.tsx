@@ -35,7 +35,7 @@ function makeAbsence(overrides?: Partial<AbsenceRecord>): AbsenceRecord {
     id: "absence-1",
     profile_id: "employee-1",
     leave_request_id: null,
-    absence_type: "sickness",
+    absence_type: "sick_self_certified",
     start_date: "2026-02-01",
     end_date: "2026-02-05",
     total_days: 3,

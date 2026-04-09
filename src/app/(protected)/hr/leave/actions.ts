@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { sendAndLogEmail } from "@/lib/email-queue";
+import type { Database } from "@/types/database.types";
 import { baseTemplate, escapeHtml } from "@/lib/email";
 import { formatDate } from "@/lib/utils";
 
@@ -115,7 +116,7 @@ export async function requestLeave(data: {
 
   const { error } = await supabase.from("leave_requests").insert({
     profile_id: user.id,
-    leave_type: data.leave_type,
+    leave_type: data.leave_type as Database["public"]["Tables"]["leave_requests"]["Insert"]["leave_type"],
     start_date: data.start_date,
     end_date: data.end_date,
     start_half_day: data.start_half_day ?? false,
@@ -151,7 +152,7 @@ export async function withdrawLeave(requestId: string) {
 
   const { error } = await supabase
     .from("leave_requests")
-    .update({ status: "withdrawn" })
+    .update({ status: "withdrawn" as Database["public"]["Tables"]["leave_requests"]["Update"]["status"] })
     .eq("id", requestId)
     .eq("profile_id", user.id)
     .eq("status", "pending")
@@ -265,8 +266,8 @@ export async function approveLeave(requestId: string, notes?: string) {
       profileId: request.profile_id,
       startDate: request.start_date,
       endDate: request.end_date,
-      startHalfDay: request.start_half_day,
-      endHalfDay: request.end_half_day,
+      startHalfDay: request.start_half_day ?? false,
+      endHalfDay: request.end_half_day ?? false,
       leaveType: request.leave_type,
     });
   } catch (err) {
@@ -539,7 +540,7 @@ export async function recordLeave(data: {
     .from("leave_requests")
     .insert({
       profile_id: data.profile_id,
-      leave_type: data.leave_type,
+      leave_type: data.leave_type as Database["public"]["Tables"]["leave_requests"]["Insert"]["leave_type"],
       start_date: data.start_date,
       end_date: data.end_date,
       start_half_day: data.start_half_day ?? false,

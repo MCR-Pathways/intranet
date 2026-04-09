@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import type { Database } from "@/types/database.types";
 
 /**
  * Update the current user's own personal details (employee_details table).
@@ -127,7 +128,7 @@ export async function upsertEmergencyContact(data: {
 
     const { error } = await supabase
       .from("emergency_contacts")
-      .insert({ ...sanitized, profile_id: user.id });
+      .insert({ ...sanitized, profile_id: user.id } as Database["public"]["Tables"]["emergency_contacts"]["Insert"]);
 
     if (error) {
       logger.error("Failed to add emergency contact", { error });

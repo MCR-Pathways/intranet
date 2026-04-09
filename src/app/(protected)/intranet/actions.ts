@@ -16,6 +16,8 @@ import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate, escapeHtml } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  Database,
+  Json,
   ReactionType,
   PostWithRelations,
   PostAuthor,
@@ -291,7 +293,7 @@ function threadComments(
 
   // Enrich each comment with reactions
   const enrichedComments: CommentWithAuthor[] = flatComments.map((c) => {
-    const comment = c as { id: string; post_id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; parent_id: string | null; created_at: string; updated_at: string; author: unknown };
+    const comment = c as { id: string; post_id: string; author_id: string; content: string; content_json: Json | null; parent_id: string | null; created_at: string; updated_at: string; author: unknown };
     const cReactions = reactionsByComment.get(comment.id) ?? [];
     const userCReaction = cReactions.find((r) => r.user_id === userId);
 
@@ -447,7 +449,7 @@ async function enrichPosts(
   }
 
   return postRows.map((post) => {
-    const p = post as { id: string; author_id: string; content: string; content_json: Record<string, unknown> | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
+    const p = post as { id: string; author_id: string; content: string; content_json: Json | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
@@ -460,6 +462,9 @@ async function enrichPosts(
       is_pinned: p.is_pinned,
       is_weekly_roundup: p.is_weekly_roundup,
       weekly_roundup_id: p.weekly_roundup_id,
+      poll_question: p.poll_question,
+      poll_closes_at: p.poll_closes_at,
+      poll_allow_multiple: p.poll_allow_multiple,
       created_at: p.created_at,
       updated_at: p.updated_at,
       author: p.author as unknown as PostAuthor,
@@ -702,20 +707,16 @@ export async function createPost(data: {
   }
 
   // Build insert payload — include content_json if provided (Tiptap rich text)
-  const postInsert: Record<string, unknown> = {
+  const postInsert: Database["public"]["Tables"]["posts"]["Insert"] = {
     author_id: user.id,
     content,
+    ...(data.content_json ? { content_json: data.content_json as unknown as Json } : {}),
+    ...(data.poll?.question ? {
+      poll_question: data.poll.question,
+      poll_allow_multiple: data.poll.allow_multiple ?? false,
+      ...(data.poll.closes_at ? { poll_closes_at: data.poll.closes_at } : {}),
+    } : {}),
   };
-  if (data.content_json) {
-    postInsert.content_json = data.content_json;
-  }
-  if (data.poll?.question) {
-    postInsert.poll_question = data.poll.question;
-    postInsert.poll_allow_multiple = data.poll.allow_multiple ?? false;
-    if (data.poll.closes_at) {
-      postInsert.poll_closes_at = data.poll.closes_at;
-    }
-  }
 
   const { data: post, error: postError } = await supabase
     .from("posts")
@@ -783,7 +784,7 @@ export async function createPost(data: {
         }
       }
       return sanitized;
-    });
+    }) as Database["public"]["Tables"]["post_attachments"]["Insert"][];
 
     const { error: attError } = await supabase
       .from("post_attachments")
@@ -979,7 +980,7 @@ export async function editPost(
         }
         return sanitized;
       })
-      .filter((a): a is Record<string, unknown> => a !== null);
+      .filter((a): a is Record<string, unknown> => a !== null) as Database["public"]["Tables"]["post_attachments"]["Insert"][];
 
     if (newAttachments.length > 0) {
       const { error: attError } = await supabase
@@ -1256,18 +1257,13 @@ export async function addComment(
     }
   }
 
-  const insertData: Record<string, unknown> = {
+  const insertData: Database["public"]["Tables"]["post_comments"]["Insert"] = {
     post_id: postId,
     author_id: user.id,
     content: trimmed,
+    ...(parentId ? { parent_id: parentId } : {}),
+    ...(contentJson ? { content_json: contentJson as unknown as Json } : {}),
   };
-
-  if (parentId) {
-    insertData.parent_id = parentId;
-  }
-  if (contentJson) {
-    insertData.content_json = contentJson;
-  }
 
   const { data: comment, error } = await supabase
     .from("post_comments")
@@ -1313,7 +1309,7 @@ export async function addComment(
       await supabase.rpc("notify_post_comment", {
         p_comment_id: comment.id,
         p_post_id: postId,
-        p_parent_comment_id: parentId ?? null,
+        p_parent_comment_id: parentId,
         p_comment_preview: commentPreview,
       });
     } catch (err) {

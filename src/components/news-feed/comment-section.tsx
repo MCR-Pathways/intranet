@@ -12,6 +12,7 @@ import type { MentionUser } from "./mention-list";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type {
   CommentWithAuthor,
+  Json,
   PostAuthor,
   ReactionType,
 } from "@/types/database.types";
@@ -77,7 +78,7 @@ export function CommentSection({
     post_id: postId,
     author_id: currentUserId,
     content,
-    content_json: contentJson ? (contentJson as unknown as Record<string, unknown>) : null,
+    content_json: contentJson ? (contentJson as unknown as Json) : null,
     parent_id: parentId ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

@@ -13,9 +13,41 @@ import type {
   FWRConsultationFormat,
   FWRTrialOutcome,
 } from "@/lib/hr";
+import type { Database } from "@/types/database.types";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
+
+// =============================================
+// ROW TYPES (subset projections for queries)
+// =============================================
+
+/** Full row shape returned by FLEXIBLE_WORKING_REQUEST_SELECT. */
+type FWRRow = Database["public"]["Tables"]["flexible_working_requests"]["Row"];
+
+/** FWR row joined with employee + manager profiles (FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT). */
+type FWRWithPeopleRow = FWRRow & {
+  employee: { full_name: string; avatar_url: string | null; job_title: string | null; department: string | null } | null;
+  manager: { full_name: string } | null;
+};
+
+/** Minimal FWR columns used for status/ownership checks. */
+type FWRStatusRow = Pick<FWRRow, "id" | "profile_id" | "status">;
+
+/** FWR columns used for authority checks (includes manager_id). */
+type FWRAuthRow = Pick<FWRRow, "id" | "profile_id" | "status" | "manager_id">;
+
+/** FWR columns used for rejection checks (includes consultation_date). */
+type FWRRejectionCheckRow = Pick<FWRRow, "id" | "profile_id" | "status" | "manager_id" | "consultation_date">;
+
+/** Row returned by an insert/update that selects only the id. */
+type IdRow = { id: string };
+
+/** Full appeal row shape returned by FWR_APPEAL_SELECT. */
+type FWRAppealRow = Database["public"]["Tables"]["fwr_appeals"]["Row"];
+
+/** Supabase query result shape used for type assertions on tables missing from database.types.ts. */
+type QueryResult<T> = { data: T; error: null } | { data: null; error: { message: string; code?: string } };
 
 // =============================================
 // CONSTANTS
@@ -161,7 +193,7 @@ export async function fetchFlexibleWorkingRequests(): Promise<{
   const { data, error } = await supabase
     .from("flexible_working_requests")
     .select(FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) as unknown as QueryResult<FWRWithPeopleRow[]>;
 
   if (error) {
     logger.error("Failed to fetch flexible working requests", { error });
@@ -189,7 +221,7 @@ export async function fetchFlexibleWorkingRequest(requestId: string): Promise<{
     .from("flexible_working_requests")
     .select(FLEXIBLE_WORKING_REQUEST_WITH_PEOPLE_SELECT)
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRWithPeopleRow>;
 
   if (error) {
     return { data: null, appeal: null, error: "Request not found" };
@@ -197,7 +229,7 @@ export async function fetchFlexibleWorkingRequest(requestId: string): Promise<{
 
   // Fetch appeal if status is appealed/appeal_upheld/appeal_overturned
   let appeal: Record<string, unknown> | null = null;
-  const status = data.status as string;
+  const status = data.status;
   if (["appealed", "appeal_upheld", "appeal_overturned"].includes(status)) {
     const { data: appealData } = await supabase
       .from("fwr_appeals")
@@ -205,9 +237,9 @@ export async function fetchFlexibleWorkingRequest(requestId: string): Promise<{
       .eq("request_id", requestId)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single();
+      .single() as unknown as QueryResult<FWRAppealRow>;
 
-    appeal = appealData;
+    appeal = appealData as Record<string, unknown> | null;
   }
 
   return { data, appeal, error: null };
@@ -242,12 +274,12 @@ export async function checkFWREligibility(): Promise<{
       .select("id")
       .eq("profile_id", user.id)
       .neq("status", "withdrawn")
-      .gte("created_at", twelveMonthsAgo.toISOString()),
+      .gte("created_at", twelveMonthsAgo.toISOString()) as unknown as QueryResult<IdRow[]>,
     supabase
       .from("flexible_working_requests")
       .select("id")
       .eq("profile_id", user.id)
-      .in("status", ["submitted", "under_review", "appealed"]),
+      .in("status", ["submitted", "under_review", "appealed"]) as unknown as QueryResult<IdRow[]>,
   ]);
 
   const count = recentRequests?.length ?? 0;
@@ -315,17 +347,17 @@ export async function createFlexibleWorkingRequest(data: {
     .insert({
       profile_id: user.id,
       manager_id: profile.line_manager_id as string | null,
-      request_type: data.request_type,
+      request_type: data.request_type as FWRRequestType,
       current_working_pattern: data.current_working_pattern.trim(),
       requested_working_pattern: data.requested_working_pattern.trim(),
       proposed_start_date: data.proposed_start_date,
       reason: data.reason?.trim() || null,
-      status: "submitted",
+      status: "submitted" as const,
       response_deadline: deadline.toISOString().split("T")[0],
-      previous_work_pattern: (profile.work_pattern as string) ?? "standard",
+      previous_work_pattern: profile.work_pattern ?? "standard",
     })
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (insertError) {
     // Check for unique constraint (live request exists) or trigger exception (2 requests limit)
@@ -402,18 +434,17 @@ export async function withdrawFlexibleWorkingRequest(
     .from("flexible_working_requests")
     .select("id, profile_id, status")
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRStatusRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  if ((request.profile_id as string) !== user.id) {
+  if (request.profile_id !== user.id) {
     return { success: false, error: "You can only withdraw your own requests" };
   }
 
-  const status = request.status as string;
-  if (!["submitted", "under_review"].includes(status)) {
+  if (!["submitted", "under_review"].includes(request.status)) {
     return { success: false, error: "This request can no longer be withdrawn" };
   }
 
@@ -423,7 +454,7 @@ export async function withdrawFlexibleWorkingRequest(
     .eq("id", requestId)
     .in("status", ["submitted", "under_review"])
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (updateError) {
     return { success: false, error: "Could not withdraw request. It may have already been actioned." };
@@ -453,17 +484,17 @@ export async function markRequestUnderReview(
     .from("flexible_working_requests")
     .select("id, profile_id, manager_id, status")
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRAuthRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  if ((request.status as string) !== "submitted") {
+  if (request.status !== "submitted") {
     return { success: false, error: "This request is no longer in 'submitted' status" };
   }
 
-  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
+  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id, request.manager_id);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
@@ -474,13 +505,13 @@ export async function markRequestUnderReview(
     .eq("id", requestId)
     .eq("status", "submitted")
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (updateError) {
     return { success: false, error: "Could not update request status." };
   }
 
-  revalidateFWRPaths(request.profile_id as string);
+  revalidateFWRPaths(request.profile_id);
   return { success: true, error: null };
 }
 
@@ -505,18 +536,17 @@ export async function recordConsultation(
     .from("flexible_working_requests")
     .select("id, profile_id, manager_id, status")
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRAuthRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  const status = request.status as string;
-  if (!["submitted", "under_review"].includes(status)) {
+  if (!["submitted", "under_review"].includes(request.status)) {
     return { success: false, error: "Consultation can only be recorded on active requests" };
   }
 
-  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
+  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id, request.manager_id);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
@@ -546,14 +576,14 @@ export async function recordConsultation(
     .update(sanitised)
     .eq("id", requestId)
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (updateError) {
     logger.error("Failed to record consultation", { requestId, error: updateError.message });
     return { success: false, error: "Failed to record consultation. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidateFWRPaths(request.profile_id as string);
+  revalidateFWRPaths(request.profile_id);
   return { success: true, error: null };
 }
 
@@ -578,18 +608,17 @@ export async function approveFlexibleWorkingRequest(
     .from("flexible_working_requests")
     .select(FLEXIBLE_WORKING_REQUEST_SELECT)
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  const status = request.status as string;
-  if (!["submitted", "under_review"].includes(status)) {
+  if (!["submitted", "under_review"].includes(request.status)) {
     return { success: false, error: "This request can no longer be approved" };
   }
 
-  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
+  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id, request.manager_id);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
@@ -599,21 +628,18 @@ export async function approveFlexibleWorkingRequest(
     if (notesErr) return { success: false, error: notesErr };
   }
 
-  const profileId = request.profile_id as string;
+  const profileId = request.profile_id;
   const isTrial = data.trial_period === true && data.trial_end_date;
   const newStatus = isTrial ? "approved_trial" : "approved";
 
   // Step 1: Update request status
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: Database["public"]["Tables"]["flexible_working_requests"]["Update"] = {
     status: newStatus,
     decided_by: user.id,
     decided_at: new Date().toISOString(),
     decision_notes: data.decision_notes?.trim() || null,
+    ...(isTrial ? { trial_end_date: data.trial_end_date } : {}),
   };
-
-  if (isTrial) {
-    updatePayload.trial_end_date = data.trial_end_date;
-  }
 
   const { error: updateError } = await supabase
     .from("flexible_working_requests")
@@ -621,7 +647,7 @@ export async function approveFlexibleWorkingRequest(
     .eq("id", requestId)
     .in("status", ["submitted", "under_review"])
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (updateError) {
     logger.error("Failed to approve flexible working request", { requestId, error: updateError.message });
@@ -630,8 +656,7 @@ export async function approveFlexibleWorkingRequest(
 
   // Step 2: If not a trial, update the employee's profile work_pattern
   if (!isTrial) {
-    const requestType = request.request_type as string;
-    const newWorkPattern = mapRequestTypeToWorkPattern(requestType);
+    const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
 
     if (newWorkPattern) {
       const { error: profileError } = await supabase
@@ -648,7 +673,7 @@ export async function approveFlexibleWorkingRequest(
         // Rollback step 1
         await supabase
           .from("flexible_working_requests")
-          .update({ status, decided_by: null, decided_at: null, decision_notes: null })
+          .update({ status: request.status, decided_by: null, decided_at: null, decision_notes: null })
           .eq("id", requestId);
 
         return { success: false, error: "Failed to update employee's work pattern. Please try again." };
@@ -658,10 +683,10 @@ export async function approveFlexibleWorkingRequest(
       await supabase.from("employment_history").insert({
         profile_id: profileId,
         event_type: "work_pattern_change",
-        effective_date: (request.proposed_start_date as string) ?? new Date().toISOString().split("T")[0],
-        previous_value: (request.previous_work_pattern as string) ?? "standard",
+        effective_date: request.proposed_start_date ?? new Date().toISOString().split("T")[0],
+        previous_value: request.previous_work_pattern ?? "standard",
         new_value: newWorkPattern,
-        notes: `Flexible working request approved: ${request.requested_working_pattern as string}`,
+        notes: `Flexible working request approved: ${request.requested_working_pattern}`,
         recorded_by: user.id,
       });
     }
@@ -732,14 +757,13 @@ export async function rejectFlexibleWorkingRequest(
     .from("flexible_working_requests")
     .select("id, profile_id, manager_id, status, consultation_date")
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRRejectionCheckRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  const status = request.status as string;
-  if (!["submitted", "under_review"].includes(status)) {
+  if (!["submitted", "under_review"].includes(request.status)) {
     return { success: false, error: "This request can no longer be rejected" };
   }
 
@@ -751,7 +775,7 @@ export async function rejectFlexibleWorkingRequest(
     };
   }
 
-  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
+  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id, request.manager_id);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
@@ -769,14 +793,14 @@ export async function rejectFlexibleWorkingRequest(
     .eq("id", requestId)
     .in("status", ["submitted", "under_review"])
     .select("id")
-    .single();
+    .single() as unknown as QueryResult<IdRow>;
 
   if (updateError) {
     logger.error("Failed to reject flexible working request", { requestId, error: updateError.message });
     return { success: false, error: "Could not reject request. It may have already been actioned." };
   }
 
-  const profileId = request.profile_id as string;
+  const profileId = request.profile_id;
 
   // Notify employee (non-blocking — failure should not break the rejection)
   try {
@@ -821,22 +845,22 @@ export async function recordTrialOutcome(
     .from("flexible_working_requests")
     .select(FLEXIBLE_WORKING_REQUEST_SELECT)
     .eq("id", requestId)
-    .single();
+    .single() as unknown as QueryResult<FWRRow>;
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  if ((request.status as string) !== "approved_trial") {
+  if (request.status !== "approved_trial") {
     return { success: false, error: "This request is not in a trial period" };
   }
 
-  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id as string, request.manager_id as string | null);
+  const auth = await verifyFWRAuthority(supabase, user.id, request.profile_id, request.manager_id);
   if (!auth.authorised) {
     return { success: false, error: auth.error ?? "Not authorised" };
   }
 
-  const profileId = request.profile_id as string;
+  const profileId = request.profile_id;
 
   const updatePayload: Record<string, unknown> = {
     trial_outcome: data.outcome,
@@ -862,6 +886,7 @@ export async function recordTrialOutcome(
     .eq("id", requestId)
     .eq("status", "approved_trial")
     .select("id")
+
     .single();
 
   if (updateError) {
@@ -871,8 +896,7 @@ export async function recordTrialOutcome(
 
   // Step 2: If confirmed, update the employee's profile work_pattern
   if (data.outcome === "confirmed") {
-    const requestType = request.request_type as string;
-    const newWorkPattern = mapRequestTypeToWorkPattern(requestType);
+    const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
 
     if (newWorkPattern) {
       const { error: profileError } = await supabase
@@ -900,9 +924,9 @@ export async function recordTrialOutcome(
         profile_id: profileId,
         event_type: "work_pattern_change",
         effective_date: new Date().toISOString().split("T")[0],
-        previous_value: (request.previous_work_pattern as string) ?? "standard",
+        previous_value: request.previous_work_pattern ?? "standard",
         new_value: newWorkPattern,
-        notes: `Flexible working trial confirmed permanent: ${request.requested_working_pattern as string}`,
+        notes: `Flexible working trial confirmed permanent: ${request.requested_working_pattern}`,
         recorded_by: user.id,
       });
     }
@@ -953,17 +977,18 @@ export async function submitFWRAppeal(
     .from("flexible_working_requests")
     .select("id, profile_id, status")
     .eq("id", requestId)
+
     .single();
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  if ((request.profile_id as string) !== user.id) {
+  if (request.profile_id !== user.id) {
     return { success: false, error: "You can only appeal your own requests" };
   }
 
-  if ((request.status as string) !== "rejected") {
+  if (request.status !== "rejected") {
     return { success: false, error: "Only rejected requests can be appealed" };
   }
 
@@ -978,6 +1003,7 @@ export async function submitFWRAppeal(
       appeal_reason: appealReason.trim(),
     })
     .select("id")
+
     .single();
 
   if (appealError) {
@@ -992,6 +1018,7 @@ export async function submitFWRAppeal(
     .eq("id", requestId)
     .eq("status", "rejected")
     .select("id")
+
     .single();
 
   if (updateError) {
@@ -1059,23 +1086,25 @@ export async function decideFWRAppeal(
     .from("flexible_working_requests")
     .select(FLEXIBLE_WORKING_REQUEST_SELECT)
     .eq("id", requestId)
+
     .single();
 
   if (!request) {
     return { success: false, error: "Request not found" };
   }
 
-  if ((request.status as string) !== "appealed") {
+  if (request.status !== "appealed") {
     return { success: false, error: "This request is not in 'appealed' status" };
   }
 
-  const profileId = request.profile_id as string;
+  const profileId = request.profile_id;
 
   // Fetch the appeal record
   const { data: appeal } = await supabase
     .from("fwr_appeals")
     .select("id")
     .eq("request_id", requestId)
+
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
@@ -1102,8 +1131,9 @@ export async function decideFWRAppeal(
       decided_by: user.id,
       decided_at: new Date().toISOString(),
     })
-    .eq("id", appeal.id as string)
+    .eq("id", appeal.id)
     .select("id")
+
     .single();
 
   if (appealError) {
@@ -1120,6 +1150,7 @@ export async function decideFWRAppeal(
     .eq("id", requestId)
     .eq("status", "appealed")
     .select("id")
+
     .single();
 
   if (updateError) {
@@ -1129,8 +1160,7 @@ export async function decideFWRAppeal(
 
   // Step 3: If appeal overturned (i.e. approved), update profile + employment history
   if (data.outcome === "overturned") {
-    const requestType = request.request_type as string;
-    const newWorkPattern = mapRequestTypeToWorkPattern(requestType);
+    const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
 
     if (newWorkPattern) {
       const { error: profileError } = await supabase
@@ -1152,7 +1182,7 @@ export async function decideFWRAppeal(
         await supabase
           .from("fwr_appeals")
           .update({ outcome: null, outcome_notes: null, decided_by: null, decided_at: null })
-          .eq("id", appeal.id as string);
+          .eq("id", appeal.id);
 
         return { success: false, error: "Failed to update employee's work pattern. Please try again." };
       }
@@ -1160,10 +1190,10 @@ export async function decideFWRAppeal(
       await supabase.from("employment_history").insert({
         profile_id: profileId,
         event_type: "work_pattern_change",
-        effective_date: (request.proposed_start_date as string) ?? new Date().toISOString().split("T")[0],
-        previous_value: (request.previous_work_pattern as string) ?? "standard",
+        effective_date: request.proposed_start_date ?? new Date().toISOString().split("T")[0],
+        previous_value: request.previous_work_pattern ?? "standard",
         new_value: newWorkPattern,
-        notes: `Flexible working request approved on appeal: ${request.requested_working_pattern as string}`,
+        notes: `Flexible working request approved on appeal: ${request.requested_working_pattern}`,
         recorded_by: user.id,
       });
     }

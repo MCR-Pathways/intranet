@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
 
 /**
  * Supabase client with service_role privileges.
@@ -15,5 +16,5 @@ export function createServiceClient() {
     throw new Error("Missing Supabase service role environment variables");
   }
 
-  return createClient(url, key);
+  return createClient<Database>(url, key);
 }

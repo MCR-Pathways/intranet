@@ -4,6 +4,7 @@ import { requireHRAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
+import type { Database } from "@/types/database.types";
 
 // =============================================
 // CREATE ASSET
@@ -45,7 +46,7 @@ export async function createAsset(data: {
 
   sanitized.status = "available";
 
-  const { error } = await supabase.from("assets").insert(sanitized);
+  const { error } = await supabase.from("assets").insert(sanitized as Database["public"]["Tables"]["assets"]["Insert"]);
 
   if (error) {
     if (error.message.includes("duplicate") || error.message.includes("unique")) {

@@ -8,7 +8,7 @@ import { indexCourse, removeCourseFromIndex } from "@/lib/algolia";
 import { categoryConfig } from "@/lib/learning";
 import { sendAndLogEmail } from "@/lib/email-queue";
 import { buildCourseAssignedEmail } from "@/lib/email";
-import type { CourseCategory, LessonType, QuestionType } from "@/types/database.types";
+import type { Database, Json, CourseCategory, LessonType, QuestionType } from "@/types/database.types";
 
 // ===========================================
 // ALGOLIA INDEXING HELPER
@@ -101,7 +101,7 @@ export async function createCourse(data: {
 
   const { data: course, error } = await supabase
     .from("courses")
-    .insert(sanitized)
+    .insert(sanitized as Database["public"]["Tables"]["courses"]["Insert"])
     .select("id")
     .single();
 
@@ -668,7 +668,7 @@ export async function createLesson(data: {
 
   const { data: lesson, error } = await supabase
     .from("course_lessons")
-    .insert(sanitized)
+    .insert(sanitized as Database["public"]["Tables"]["course_lessons"]["Insert"])
     .select("id")
     .single();
 
@@ -838,7 +838,7 @@ export async function assignCourse(data: {
 
   const { error } = await supabase.from("course_assignments").insert({
     course_id: data.course_id,
-    assign_type: data.assign_type,
+    assign_type: data.assign_type as Database["public"]["Tables"]["course_assignments"]["Insert"]["assign_type"],
     assign_value: data.assign_value,
     assigned_by: user.id,
   });
@@ -1000,7 +1000,7 @@ export async function previewAssignment(data: {
   if (data.assign_type === "team") {
     query = query.eq("team_id", data.assign_value);
   } else if (data.assign_type === "user_type") {
-    query = query.eq("user_type", data.assign_value);
+    query = query.eq("user_type", data.assign_value as "staff" | "new_user");
   } else if (data.assign_type === "is_external") {
     query = query.eq("is_external", data.assign_value === "true");
   } else if (data.assign_type === "user") {
@@ -1411,7 +1411,7 @@ export async function autoSaveLessonContent(
   const { error } = await supabase
     .from("course_lessons")
     .update({
-      content_json: data.content_json,
+      content_json: data.content_json as unknown as Json,
       content: data.content,
     })
     .eq("id", lessonId)

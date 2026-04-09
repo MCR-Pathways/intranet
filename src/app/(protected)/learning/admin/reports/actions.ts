@@ -2,6 +2,7 @@
 
 import { requireLDAdmin } from "@/lib/auth";
 import { sanitiseCSVCell, buildCSVContent } from "@/lib/csv";
+import type { Database } from "@/types/database.types";
 
 interface ReportFilters {
   courseId?: string;
@@ -39,7 +40,7 @@ export async function exportReportCSV(filters: ReportFilters) {
     query = query.eq("course_id", filters.courseId);
   }
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    query = query.eq("status", filters.status as Database["public"]["Enums"]["enrolment_status"]);
   }
   if (userIdFilter) {
     query = query.in("user_id", userIdFilter);
@@ -105,7 +106,7 @@ export async function exportReportCSV(filters: ReportFilters) {
       sanitiseCSVCell(course?.title),
       sanitiseCSVCell(course?.category),
       e.status,
-      e.progress_percent.toString(),
+      (e.progress_percent ?? 0).toString(),
       e.score?.toString() ?? "",
       e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString("en-GB") : "",
       e.completed_at

@@ -108,10 +108,10 @@ export default async function ProfilePage({
         </p>
       </div>
       <ProfilePageContent
-        profile={profileData}
-        employeeDetails={employeeDetails ?? null}
+        profile={profileData as Parameters<typeof ProfilePageContent>[0]["profile"]}
+        employeeDetails={(employeeDetails ?? null) as Parameters<typeof ProfilePageContent>[0]["employeeDetails"]}
         emergencyContacts={emergencyContacts ?? []}
-        employmentHistory={employmentHistory ?? []}
+        employmentHistory={(employmentHistory ?? []) as Parameters<typeof ProfilePageContent>[0]["employmentHistory"]}
         complianceDocuments={complianceDocuments}
         activeTab={activeTab}
       />

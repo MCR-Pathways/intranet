@@ -14,17 +14,18 @@ export async function updateEmailPreference(
     return { success: false, error: "Not authenticated" };
   }
 
-  const { error } = await supabase
-    .from("email_preferences")
+  // email_preferences table exists in DB but is not yet in database.types.ts
+  const { error } = (await supabase
+    .from("email_preferences" as never)
     .upsert(
       {
         user_id: user.id,
         email_type: emailType,
         enabled,
         updated_at: new Date().toISOString(),
-      },
+      } as never,
       { onConflict: "user_id,email_type" }
-    );
+    )) as { error: { message: string } | null };
 
   if (error) {
     logger.error("Failed to update email preference", {

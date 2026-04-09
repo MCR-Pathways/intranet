@@ -23,11 +23,11 @@ interface PendingLeaveRequest {
   leave_type: string;
   start_date: string;
   end_date: string;
-  start_half_day: boolean;
-  end_half_day: boolean;
+  start_half_day: boolean | null;
+  end_half_day: boolean | null;
   total_days: number;
   status: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 interface WorkingLocationContentProps {

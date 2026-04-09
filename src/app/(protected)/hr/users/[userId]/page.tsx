@@ -6,7 +6,7 @@ import { EmployeeDetailContent } from "@/components/hr/employee-detail-content";
 import { PageHeader } from "@/components/layout/page-header";
 import { getHolidayCalendar, getLeaveYearForDate, ABSENCE_RECORD_SELECT, RTW_FORM_SELECT, STAFF_LEAVING_FORM_SELECT } from "@/lib/hr";
 import type { ComplianceStatus, ContractType, WorkPattern, LeaveType, Region, SicknessCategory } from "@/lib/hr";
-import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm } from "@/types/hr";
+import type { AbsenceType, ReturnToWorkForm, RTWStatus, StaffLeavingForm, EmployeeProfile, EmployeeDetails, EmploymentHistoryEntry } from "@/types/hr";
 import type { LeavingFormStatus, LeavingReason } from "@/lib/hr";
 import { fetchEmployeeOnboarding, fetchActiveTemplates } from "@/app/(protected)/hr/onboarding/actions";
 
@@ -435,10 +435,10 @@ export default async function EmployeeDetailPage({
       />
 
       <EmployeeDetailContent
-        profile={employeeProfile}
-        employeeDetails={employeeDetails ?? null}
+        profile={employeeProfile as EmployeeProfile}
+        employeeDetails={(employeeDetails ?? null) as EmployeeDetails | null}
         emergencyContacts={emergencyContacts ?? []}
-        employmentHistory={employmentHistory ?? []}
+        employmentHistory={(employmentHistory ?? []) as EmploymentHistoryEntry[]}
         complianceDocuments={complianceDocuments}
         complianceDocumentTypes={complianceDocumentTypes}
         isHRAdmin
