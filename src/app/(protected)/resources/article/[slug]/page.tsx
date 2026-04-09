@@ -8,6 +8,7 @@ import { fetchArticleBySlugOnly, fetchSiblingArticles } from "../../actions";
 import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
 import { ComponentArticleView } from "@/components/resources/component-article-view";
+import { NativeArticleView } from "@/components/resources/native-article-view";
 import { ArticleView } from "@/components/resources/article-view";
 
 interface ArticlePageProps {
@@ -65,6 +66,20 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         category={category}
         parentCategory={parentCategory}
         componentData={componentData}
+      />
+    );
+  }
+
+  // Native Plate articles — renders content_json via PlateStatic
+  if ((article as { content_type: string }).content_type === "native") {
+    return (
+      <NativeArticleView
+        article={article}
+        category={category}
+        parentCategory={parentCategory}
+        canEdit={canEdit}
+        siblings={siblings}
+        categoryPath={categoryPath}
       />
     );
   }
