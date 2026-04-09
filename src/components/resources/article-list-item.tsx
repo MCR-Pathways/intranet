@@ -24,7 +24,7 @@ interface ArticleListItemProps {
 
 export function ArticleListItem({
   article,
-  categorySlug,
+  categorySlug: _categorySlug,
   canEdit,
   onDelete,
   onMove,

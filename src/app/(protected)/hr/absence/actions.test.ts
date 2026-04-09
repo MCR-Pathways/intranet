@@ -32,19 +32,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Hoisted mocks (available inside vi.mock factories) ──
 
-const mockSingle = vi.hoisted(() => vi.fn());
-const mockMaybeSingle = vi.hoisted(() => vi.fn());
-const mockOrder = vi.hoisted(() => vi.fn());
-const mockLimit = vi.hoisted(() => vi.fn());
-const mockEq = vi.hoisted(() => vi.fn());
-const mockNeq = vi.hoisted(() => vi.fn());
-const mockIn = vi.hoisted(() => vi.fn());
-const mockLte = vi.hoisted(() => vi.fn());
-const mockGte = vi.hoisted(() => vi.fn());
-const mockSelect = vi.hoisted(() => vi.fn());
-const mockUpdate = vi.hoisted(() => vi.fn());
-const mockInsert = vi.hoisted(() => vi.fn());
-const mockDelete = vi.hoisted(() => vi.fn());
+const _mockSingle = vi.hoisted(() => vi.fn());
+const _mockMaybeSingle = vi.hoisted(() => vi.fn());
+const _mockOrder = vi.hoisted(() => vi.fn());
+const _mockLimit = vi.hoisted(() => vi.fn());
+const _mockEq = vi.hoisted(() => vi.fn());
+const _mockNeq = vi.hoisted(() => vi.fn());
+const _mockIn = vi.hoisted(() => vi.fn());
+const _mockLte = vi.hoisted(() => vi.fn());
+const _mockGte = vi.hoisted(() => vi.fn());
+const _mockSelect = vi.hoisted(() => vi.fn());
+const _mockUpdate = vi.hoisted(() => vi.fn());
+const _mockInsert = vi.hoisted(() => vi.fn());
+const _mockDelete = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
 
 // Storage mocks
@@ -705,6 +705,7 @@ describe("HR Absence Actions", () => {
     });
 
     it("returns error when user is not authorised (not manager or HR admin)", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;
@@ -854,6 +855,7 @@ describe("HR Absence Actions", () => {
     });
 
     it("returns error when no valid fields provided", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;
@@ -948,6 +950,7 @@ describe("HR Absence Actions", () => {
     });
 
     it("returns error when reason_for_absence is missing", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;

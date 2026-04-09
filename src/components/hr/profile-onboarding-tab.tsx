@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { ONBOARDING_STATUS_CONFIG, formatHRDate } from "@/lib/hr";
 import type { OnboardingChecklistWithProgress } from "@/types/hr";
 import type { PersonOption } from "@/components/hr/person-combobox";

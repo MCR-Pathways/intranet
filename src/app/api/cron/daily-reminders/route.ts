@@ -223,7 +223,6 @@ export async function GET(request: Request) {
   try {
     // Compliance document expiry (30d, 7d, expired)
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000).toISOString().split("T")[0];
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 86400000).toISOString().split("T")[0];
 
     const { data: expiringDocs } = await supabase
       .from("compliance_documents")

@@ -284,7 +284,6 @@ export async function approveLeave(requestId: string, notes?: string) {
 
     if (requester) {
       const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
-      const safeName = escapeHtml(requester.full_name);
       const subject = `Leave approved: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
       const html = baseTemplate(
@@ -384,7 +383,6 @@ export async function rejectLeave(requestId: string, reason: string) {
       .single();
 
     if (requester) {
-      const safeName = escapeHtml(requester.full_name);
       const leaveLabel = (LEAVE_TYPE_CONFIG[request.leave_type as LeaveType]?.label ?? request.leave_type).toLowerCase();
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
       const subject = `Leave request declined: ${leaveLabel} ${formatDate(new Date(request.start_date))} – ${formatDate(new Date(request.end_date))}`;

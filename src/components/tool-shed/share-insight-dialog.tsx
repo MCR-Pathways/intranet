@@ -109,6 +109,7 @@ export function ShareInsightDialog({
   useEffect(() => {
     if (open) {
       if (editEntry) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormat(editEntry.format);
         setContent(editEntry.content as Partial<FormatContent>);
         setEventName(editEntry.event_name ?? "");
@@ -131,6 +132,7 @@ export function ShareInsightDialog({
   // Debounced event name suggestions
   useEffect(() => {
     if (!eventName.trim() || eventName.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEventSuggestions([]);
       return;
     }

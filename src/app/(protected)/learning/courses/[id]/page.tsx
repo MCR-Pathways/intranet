@@ -1,4 +1,4 @@
-import { getCurrentUser, isLDAdminEffective } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { getPreviewMode } from "@/lib/learning";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +52,7 @@ export default async function CourseDetailPage({
     redirect("/login");
   }
 
-  const { isPreview, searchParamString } = getPreviewMode(
+  const { isPreview } = getPreviewMode(
     resolvedSearchParams,
     profile
   );
@@ -431,7 +431,7 @@ export default async function CourseDetailPage({
           <CardContent>
             {hasSections ? (
               <ul className="space-y-2">
-                {sections.map((section, i) => {
+                {sections.map((section) => {
                   const sectionLessonCount = lessons.filter(
                     (l) => l.section_id === section.id
                   ).length;

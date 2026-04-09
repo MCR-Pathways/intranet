@@ -48,7 +48,6 @@ import {
   Eye,
   AlertTriangle,
   Info,
-  Stethoscope,
 } from "lucide-react";
 
 // =============================================

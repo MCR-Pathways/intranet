@@ -87,6 +87,7 @@ export function CourseAssignmentManager({
 
     // Reset preview if no value selected
     if (!assignValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreview({ loading: false });
       return;
     }

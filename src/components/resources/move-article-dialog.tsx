@@ -138,6 +138,7 @@ export function MoveArticleDialog({
   // Reset when dialog closes
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMajorCategoryId("");
       setSubcategoryId("");
       setSubSubcategoryId("");

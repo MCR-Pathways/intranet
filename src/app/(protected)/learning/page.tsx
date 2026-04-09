@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -23,7 +22,6 @@ import {
   Globe,
 } from "lucide-react";
 import type { EnrolmentWithCourse, ExternalCourse } from "@/types/database.types";
-import { categoryConfig } from "@/lib/learning";
 import { EnrolledCourseCard } from "@/components/learning/enrolled-course-card";
 import { ExternalCourseDialog } from "@/components/learning/external-course-dialog";
 import { ExternalCourseCard } from "@/components/learning/external-course-card";
@@ -358,7 +356,7 @@ export default async function LearningPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Track courses you've completed outside the platform.
+                Track courses you&apos;ve completed outside the platform.
               </p>
               <ExternalCourseDialog mode="create" />
             </div>
@@ -377,7 +375,7 @@ export default async function LearningPage() {
                     No external courses logged yet.
                   </p>
                   <p className="text-sm text-muted-foreground/70 mb-4">
-                    Track courses you've completed outside the platform.
+                    Track courses you&apos;ve completed outside the platform.
                   </p>
                   <ExternalCourseDialog mode="create" />
                 </CardContent>

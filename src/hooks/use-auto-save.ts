@@ -35,7 +35,9 @@ export function useAutoSave<T>({
   const onSaveRef = useRef(onSave);
 
   // Keep onSave ref current without triggering effect
-  onSaveRef.current = onSave;
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
 
   const save = useCallback(
     async (dataToSave: T) => {

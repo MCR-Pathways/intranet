@@ -202,6 +202,7 @@ describe("HR Leave Actions", () => {
 
     it("returns error when no working days in range", async () => {
       // Weekend dates
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;
@@ -226,6 +227,7 @@ describe("HR Leave Actions", () => {
     });
 
     it("creates leave request successfully", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;
@@ -249,6 +251,7 @@ describe("HR Leave Actions", () => {
     });
 
     it("returns error when DB insert fails", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let callCount = 0;
       mockFrom.mockImplementation((table: string) => {
         callCount++;
