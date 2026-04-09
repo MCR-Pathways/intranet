@@ -9,6 +9,7 @@ async function globalTeardown() {
   const authDir = path.join(__dirname, ".auth");
   if (fs.existsSync(authDir)) {
     fs.rmSync(authDir, { recursive: true, force: true });
+    // eslint-disable-next-line no-console
     console.log("Cleaned up auth state files");
   }
 }

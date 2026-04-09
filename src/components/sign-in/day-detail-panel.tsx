@@ -242,6 +242,7 @@ export function DayDetailPanel({
                 return (
                   <div key={member.id} className="flex items-center gap-2 text-sm">
                     {member.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={member.avatarUrl}
                         alt={member.name}

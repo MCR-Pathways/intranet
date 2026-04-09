@@ -86,6 +86,7 @@ async function globalSetup() {
     await context.storageState({ path: authFile(role as TestUserRole) });
     await context.close();
 
+    // eslint-disable-next-line no-console
     console.log(`Auth state saved for: ${role} (${user.email})`);
   }
 

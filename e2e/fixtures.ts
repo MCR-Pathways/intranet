@@ -1,5 +1,5 @@
 import { test as base, type Page } from "@playwright/test";
-import { authFile, type TestUserRole } from "./global-setup";
+import { authFile } from "./global-setup";
 
 /**
  * Custom Playwright fixtures with pre-authenticated pages.
@@ -19,6 +19,7 @@ export const test = base.extend<{
   hrAdminPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({ storageState: authFile("hrAdmin") });
     const page = await ctx.newPage();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
     await ctx.close();
   },
@@ -27,12 +28,14 @@ export const test = base.extend<{
       storageState: authFile("lineManager"),
     });
     const page = await ctx.newPage();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
     await ctx.close();
   },
   staffPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({ storageState: authFile("staff") });
     const page = await ctx.newPage();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
     await ctx.close();
   },
@@ -41,6 +44,7 @@ export const test = base.extend<{
       storageState: authFile("coordinator"),
     });
     const page = await ctx.newPage();
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
     await ctx.close();
   },

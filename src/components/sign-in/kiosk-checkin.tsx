@@ -221,6 +221,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
           {/* Avatar */}
           <div className="mx-auto mb-6">
             {selectedPerson.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={selectedPerson.avatarUrl}
                 alt={selectedPerson.fullName}
@@ -308,6 +309,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
             >
               {/* Avatar */}
               {person.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={person.avatarUrl}
                   alt={person.fullName}

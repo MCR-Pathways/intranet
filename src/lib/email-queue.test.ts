@@ -7,8 +7,8 @@ const mockSendEmail = vi.hoisted(() =>
 );
 
 const mockInsert = vi.hoisted(() => vi.fn());
-const mockSelect = vi.hoisted(() => vi.fn());
-const mockEq = vi.hoisted(() => vi.fn());
+const _mockSelect = vi.hoisted(() => vi.fn());
+const _mockEq = vi.hoisted(() => vi.fn());
 const mockSingle = vi.hoisted(() => vi.fn());
 
 const mockFrom = vi.hoisted(() =>

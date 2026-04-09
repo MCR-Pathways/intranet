@@ -26,7 +26,6 @@ import {
   CalendarDays,
   Timer,
   Users,
-  Shield,
   Check,
   X,
 } from "lucide-react";

@@ -99,7 +99,7 @@ interface ResourceTreeProps {
 export function ResourceTree({
   categories,
   currentPath,
-  canEdit,
+  canEdit: _canEdit,
 }: ResourceTreeProps) {
   const router = useRouter();
 

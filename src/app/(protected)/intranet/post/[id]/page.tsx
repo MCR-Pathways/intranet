@@ -9,7 +9,7 @@ import type { PostAuthor } from "@/types/database.types";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
-  params,
+  params: _params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {

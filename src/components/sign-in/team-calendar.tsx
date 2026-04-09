@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useTransition, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -196,6 +195,7 @@ export function TeamCalendar({ initialMembers }: TeamCalendarProps) {
                   return (
                     <div key={member.id} className="flex items-center gap-2 py-1">
                       {member.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={member.avatarUrl}
                           alt={member.name}

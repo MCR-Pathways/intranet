@@ -552,7 +552,7 @@ describe("HR Leaving Actions", () => {
       updateError?: boolean;
     }) {
       const formCallCount = { value: 0 };
-      mockFrom.mockImplementation((table: string) => {
+      mockFrom.mockImplementation((_table: string) => {
         const c = chainable();
         formCallCount.value++;
         if (formCallCount.value === 1) {

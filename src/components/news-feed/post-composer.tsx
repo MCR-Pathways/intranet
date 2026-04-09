@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
-import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { createPost } from "@/app/(protected)/intranet/actions";
