@@ -8,7 +8,7 @@
  * - Managing Drive webhook watch channels
  *
  * Uses the same service account as Google Calendar (domain-wide delegation).
- * Requires Drive API scope: https://www.googleapis.com/auth/drive.readonly
+ * Requires Drive API scope: https://www.googleapis.com/auth/drive
  */
 
 import { google, drive_v3 } from "googleapis";
@@ -36,7 +36,7 @@ function getDriveClient(impersonateEmail?: string): drive_v3.Drive {
   const auth = new google.auth.JWT({
     email: keyJson.client_email,
     key: keyJson.private_key,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+    scopes: ["https://www.googleapis.com/auth/drive"],
     // Only impersonate if domain-wide delegation is configured
     ...(subject ? { subject } : {}),
   });
