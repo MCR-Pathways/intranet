@@ -18,7 +18,7 @@ import {
   updateEditingStatus,
 } from "@/app/(protected)/resources/native-actions";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import type { Value } from "platejs";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
@@ -40,11 +40,11 @@ export function NativeArticleEditor({
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string | null>(null);
 
-  const initialValue = (article as { content_json?: Value }).content_json ?? EMPTY_PLATE_VALUE;
+  const initialValue = ((article as unknown as { content_json?: unknown }).content_json as Value) ?? EMPTY_PLATE_VALUE;
   const isPublished = article.status === "published";
   const lastPublishedAt = (article as { last_published_at?: string }).last_published_at;
 
-  const iconColour = resolveIconColour(category.colour);
+  const iconFg = resolveIconColour(category.icon_colour).fg;
 
   // Check for concurrent editing on mount
   useEffect(() => {
@@ -123,7 +123,7 @@ export function NativeArticleEditor({
           This article is live — changes are visible immediately.
           {lastPublishedAt && (
             <span className="text-muted-foreground">
-              Last published {formatDate(lastPublishedAt)}
+              Last published {formatDate(new Date(lastPublishedAt))}
             </span>
           )}
         </div>
@@ -142,8 +142,7 @@ export function NativeArticleEditor({
           <span className="text-muted-foreground/50">/</span>
           <span className="inline-flex items-center gap-1.5">
             {createElement(resolveIcon(category.icon), {
-              className: "h-3.5 w-3.5",
-              style: { color: iconColour },
+              className: cn("h-3.5 w-3.5", iconFg),
             })}
             {category.name}
           </span>

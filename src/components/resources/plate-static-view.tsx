@@ -63,16 +63,14 @@ function HrStatic(props: SlateElementProps) {
   );
 }
 
-function LinkStatic(props: SlateElementProps) {
-  const url = (props.element as Record<string, unknown>).url as string;
+function LinkStatic({ children, element, ...props }: SlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
   return (
-    <SlateElement
-      {...props}
-      as="a"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-    />
+    <SlateElement element={element} {...props}>
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    </SlateElement>
   );
 }
 

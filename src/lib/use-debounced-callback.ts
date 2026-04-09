@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef } from "react";
  * Returns a debounced version of the callback.
  * The callback is invoked after `delay` ms of inactivity.
  */
-export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): (...args: Parameters<T>) => void {

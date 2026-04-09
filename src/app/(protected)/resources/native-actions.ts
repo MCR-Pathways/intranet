@@ -73,7 +73,7 @@ export async function createNativeArticle(
   categoryId: string
 ): Promise<{ success: boolean; slug?: string; error?: string }> {
   try {
-    const { profile } = await requireContentEditor();
+    const { user } = await requireContentEditor();
 
     if (!title.trim()) {
       return { success: false, error: "Title is required" };
@@ -100,7 +100,7 @@ export async function createNativeArticle(
         content_json: EMPTY_PLATE_VALUE,
         content: "",
         status: "draft",
-        author_id: profile.id,
+        author_id: user.id,
       })
       .select("slug")
       .single();
@@ -171,7 +171,7 @@ export async function updateEditingStatus(
   articleId: string
 ): Promise<{ editingBy?: string; editingAt?: string }> {
   try {
-    const { profile } = await requireContentEditor();
+    const { user } = await requireContentEditor();
     const supabase = createServiceClient();
 
     // Check if someone else is editing (within last 30 seconds)
@@ -185,19 +185,19 @@ export async function updateEditingStatus(
     const editingAt = article?.editing_at ? new Date(article.editing_at as string) : null;
     const isStale = !editingAt || now.getTime() - editingAt.getTime() > 30_000;
     const editingBy = article?.editing_by as string | null;
-    const isSomeoneElse = editingBy && editingBy !== profile.id && !isStale;
+    const isSomeoneElse = editingBy && editingBy !== user.id && !isStale;
 
     // Update editing status to current user
     await supabase
       .from("resource_articles")
       .update({
-        editing_by: profile.id,
+        editing_by: user.id,
         editing_at: now.toISOString(),
       })
       .eq("id", articleId);
 
     if (isSomeoneElse) {
-      const editorProfile = article?.profiles as { full_name: string } | null;
+      const editorProfile = article?.profiles as unknown as { full_name: string } | null;
       return {
         editingBy: editorProfile?.full_name ?? "Someone",
         editingAt: article?.editing_at as string,
@@ -230,7 +230,7 @@ export async function publishNativeArticle(
       })
       .eq("id", articleId)
       .eq("content_type", "native")
-      .select("id, title, slug, synced_html, resource_categories!category_id(name)")
+      .select("id, title, slug, synced_html, resource_categories!category_id(name, slug)")
       .single();
 
     if (error || !article) {
@@ -241,14 +241,18 @@ export async function publishNativeArticle(
     // Index in Algolia
     if (article.synced_html) {
       try {
-        const categoryName = (article.resource_categories as unknown as { name: string })?.name ?? "";
-        const sections = parseHtmlIntoSections(
-          article.synced_html,
-          article.title,
+        const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
+        const sections = parseHtmlIntoSections(article.synced_html);
+        await indexArticleSections(
+          article.id,
           article.slug,
-          categoryName
+          article.title,
+          "native",
+          cat?.name ?? "",
+          cat?.slug ?? "",
+          sections,
+          new Date().toISOString()
         );
-        await indexArticleSections(article.id, sections);
       } catch (err) {
         logger.error("Algolia indexing failed on publish", {
           error: err instanceof Error ? err.message : String(err),
@@ -322,7 +326,7 @@ export async function reindexNativeArticle(
 
     const { data: article, error } = await supabase
       .from("resource_articles")
-      .select("id, title, slug, synced_html, status, resource_categories!category_id(name)")
+      .select("id, title, slug, synced_html, status, resource_categories!category_id(name, slug)")
       .eq("id", articleId)
       .eq("content_type", "native")
       .single();
@@ -340,14 +344,18 @@ export async function reindexNativeArticle(
       return { success: true };
     }
 
-    const categoryName = (article.resource_categories as unknown as { name: string })?.name ?? "";
-    const sections = parseHtmlIntoSections(
-      article.synced_html,
-      article.title,
+    const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
+    const sections = parseHtmlIntoSections(article.synced_html);
+    await indexArticleSections(
+      article.id,
       article.slug,
-      categoryName
+      article.title,
+      "native",
+      cat?.name ?? "",
+      cat?.slug ?? "",
+      sections,
+      new Date().toISOString()
     );
-    await indexArticleSections(article.id, sections);
 
     return { success: true };
   } catch (error) {

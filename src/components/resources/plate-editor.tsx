@@ -93,17 +93,19 @@ function HrElement(props: PlateElementProps) {
   );
 }
 
-function LinkElement(props: PlateElementProps) {
-  const url = (props.element as Record<string, unknown>).url as string;
+function LinkElement({ children, element, ...props }: PlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
   return (
-    <PlateElement
-      {...props}
-      as="a"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-link underline underline-offset-4 hover:text-link/80"
-    />
+    <PlateElement element={element} {...props}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-link underline underline-offset-4 hover:text-link/80"
+      >
+        {children}
+      </a>
+    </PlateElement>
   );
 }
 
@@ -131,7 +133,7 @@ function StrikethroughLeaf(props: PlateLeafProps) {
 // TOOLBAR
 // =============================================
 
-function EditorToolbar({ editor }: { editor: ReturnType<typeof usePlateEditor> }) {
+function EditorToolbar({ editor }: { editor: NonNullable<ReturnType<typeof usePlateEditor>> }) {
   const toggleMark = (key: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     (editor.tf as Record<string, { toggle: () => void }>)[key]?.toggle();

@@ -41,7 +41,7 @@ import {
   publishNativeArticle,
   unpublishNativeArticle,
 } from "@/app/(protected)/resources/native-actions";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { PlateStaticView } from "./plate-static-view";
@@ -88,10 +88,7 @@ export function NativeArticleView({
 
   const handleToggleFeatured = () => {
     startTransition(async () => {
-      const result = await toggleArticleFeatured(
-        article.id,
-        !article.is_featured
-      );
+      const result = await toggleArticleFeatured(article.id);
       if (result.success) {
         setArticle((prev) => ({
           ...prev,
@@ -135,9 +132,9 @@ export function NativeArticleView({
   };
 
   const updatedAt = article.updated_at;
-  const contentJson = (article as { content_json?: Value }).content_json;
+  const contentJson = (article as unknown as { content_json?: unknown }).content_json as Value | undefined;
 
-  const iconColour = resolveIconColour(category.colour);
+  const iconFg = resolveIconColour(category.icon_colour).fg;
 
   // Edit URL — native articles open the Plate editor
   const editUrl = `/resources/article/${article.slug}/edit`;
@@ -166,8 +163,7 @@ export function NativeArticleView({
           className="hover:underline underline-offset-4 inline-flex items-center gap-1.5"
         >
           {createElement(resolveIcon(category.icon), {
-            className: "h-3.5 w-3.5",
-            style: { color: iconColour },
+            className: cn("h-3.5 w-3.5", iconFg),
           })}
           {category.name}
         </Link>
@@ -244,7 +240,7 @@ export function NativeArticleView({
         </div>
 
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
-          <span>Updated {formatDate(updatedAt)}</span>
+          <span>Updated {formatDate(new Date(updatedAt))}</span>
           {editorMode && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
@@ -300,7 +296,7 @@ export function NativeArticleView({
         onOpenChange={setShowMoveDialog}
       />
       <DeleteResourceDialog
-        title={article.title}
+        itemName={article.title}
         onConfirm={handleDelete}
         disabled={isPending}
         open={showDeleteDialog}
