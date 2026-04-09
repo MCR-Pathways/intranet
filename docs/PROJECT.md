@@ -442,8 +442,8 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 55 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,280 tests across 55 files
+- **Files:** 56 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1,311 tests across 56 files
 
 ### Test Categories
 
