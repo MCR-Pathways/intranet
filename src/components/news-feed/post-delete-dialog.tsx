@@ -19,12 +19,14 @@ interface PostDeleteDialogProps {
   postId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
 }
 
 export function PostDeleteDialog({
   postId,
   open,
   onOpenChange,
+  onDeleted,
 }: PostDeleteDialogProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -33,6 +35,7 @@ export function PostDeleteDialog({
       await deletePost(postId);
       toast.success("Post deleted");
       onOpenChange(false);
+      onDeleted?.();
     });
   };
 
