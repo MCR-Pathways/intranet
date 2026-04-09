@@ -169,7 +169,7 @@ export function CommentItem({
   const avatarSize = isReply ? "h-6 w-6" : "h-7 w-7";
 
   return (
-    <div className="flex gap-2 group">
+    <div id={`comment-${comment.id}`} className="flex gap-2 group">
       <Avatar className={cn(avatarSize, "shrink-0")}>
         <AvatarImage
           src={filterAvatarUrl(comment.author.avatar_url)}
