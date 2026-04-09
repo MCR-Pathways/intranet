@@ -31,6 +31,7 @@ import { LinkPlugin } from "@platejs/link/react";
 import { ListPlugin } from "@platejs/list/react";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
+import { ArticleLinkPopover } from "./article-link-popover";
 import {
   Bold,
   Italic,
@@ -196,6 +197,23 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof usePlateEditor> }
       <Toggle size="sm" onMouseDown={toggleBlock("hr")} aria-label="Horizontal rule">
         <Minus className="h-4 w-4" />
       </Toggle>
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      {/* Article link */}
+      <ArticleLinkPopover
+        onInsertLink={(url, title) => {
+          editor.tf.insert.nodes(
+            {
+              type: "a",
+              url,
+              children: [{ text: title }],
+            },
+            { select: true }
+          );
+          editor.tf.focus();
+        }}
+      />
     </div>
   );
 }
