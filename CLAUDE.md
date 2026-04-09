@@ -308,6 +308,10 @@ These are universal rules that apply to every task regardless of which module yo
 
 **RFC 8058 `List-Unsubscribe` requires both headers + unauthenticated POST endpoint.** Just the header without `List-Unsubscribe-Post` and a POST handler is non-compliant. Deferred until signed-token endpoint is built.
 
+**Use `revalidatePath("/path", "layout")` when child routes exist.** `revalidatePath("/intranet")` only revalidates the feed page, not `/intranet/post/[id]`. Layout-level revalidation covers all pages under that path.
+
+**Gemini's Next.js knowledge is outdated.** It flags `params: Promise<>` and `searchParams: Promise<>` as incorrect, but these ARE Promises in Next.js 15+/16. Always verify Gemini suggestions against the actual runtime version.
+
 ### Process
 
 **Extract shared logic to `src/lib/` immediately, not after review.** Don't wait for duplication to happen — extract on first write when the logic is non-trivial or security-sensitive.

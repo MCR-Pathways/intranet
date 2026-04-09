@@ -232,7 +232,7 @@ For the detailed HR roadmap, see `docs/hr-plan.md`.
 
 Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based courses with section quizzes, learner UI, certificate auto-issue, completion notifications, 4 lesson types (text, video, slides, rich_text), and `auth.uid()` RPC enforcement. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications dormant until Resend setup.
+**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications active.
 
 **Routes:** 12 pages under `/learning`
 
@@ -254,7 +254,7 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 
 **Key components (Phase 3):** `section-accordion.tsx` (expandable sections in course detail), `section-quiz-player.tsx` (quiz UI with `submit_section_quiz_attempt` RPC), `lesson-renderer.tsx` (renders text/video/slides/rich_text lessons), rewritten `lesson-sidebar.tsx` (section-grouped, LinkedIn-style checkmarks).
 
-**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), Tool Shed social learning feed, individual assignment, course duplication, manager compliance views, Algolia search (course + Tool Shed indices), global Cmd+K search. Email notifications built but dormant until Resend setup.
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), Tool Shed social learning feed, individual assignment, course duplication, manager compliance views, Algolia search (course + Tool Shed indices), global Cmd+K search. Email notifications active.
 
 **New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00068.
 
@@ -266,7 +266,7 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 
 Internal communications — news feed, resources/knowledge base, and induction.
 
-**Routes:** 12 pages under `/intranet` + `/resources`
+**Routes:** 13 pages under `/intranet` + `/resources`
 
 | Feature | Route |
 |---|---|
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**73 migration files** in `supabase/migrations/`, numbered `00001` through `00072` plus a combined migration.
+**76 migration files** in `supabase/migrations/`, numbered `00001` through `00075` plus a combined migration.
 
 **Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
 
@@ -442,7 +442,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 54 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,274 tests across 54 files
+- **Coverage:** 1,280 tests across 55 files
 
 ### Test Categories
 
@@ -689,7 +689,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - **Flat HR component structure** — all 68 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
 - **Absence hard-deletes** — `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
-- **No scheduled notifications** — key dates, compliance expiry, stale leave requests require manual dashboard checks. Email notification system built (PR #175) but dormant until Resend setup.
 - **No bulk operations** — leave entitlements, compliance assignments, onboarding checklists are all one-at-a-time.
 - **Google Drive webhook expiry** — watch channels expire after 7 days; no auto-renewal cron configured.
 
