@@ -271,10 +271,15 @@ export function GoogleDocArticleView({
 
   // Content freshness — flag articles not updated in 12+ months
   const updatedAt = new Date(article.updated_at);
-  const monthsOld = Math.floor(
-    (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
-  );
-  const isStale = monthsOld >= 12;
+  /* eslint-disable react-hooks/purity */
+  const isStale = useMemo(() => {
+    const ts = new Date(article.updated_at).getTime();
+    const monthsOld = Math.floor(
+      (Date.now() - ts) / (1000 * 60 * 60 * 24 * 30)
+    );
+    return monthsOld >= 12;
+  }, [article.updated_at]);
+  /* eslint-enable react-hooks/purity */
 
   return (
     <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5" style={{ minHeight: "calc(100vh - 14rem)" }}>

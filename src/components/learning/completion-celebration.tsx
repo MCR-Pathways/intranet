@@ -45,7 +45,7 @@ export function CompletionCelebration({
             Well done!
           </h2>
           <p className="text-green-700 mb-6">
-            You've completed {courseTitle}.
+            You&apos;ve completed {courseTitle}.
           </p>
           <div className="flex items-center gap-3">
             {hasCertificate && (

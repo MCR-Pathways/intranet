@@ -120,7 +120,7 @@ export default async function SectionQuizPage({
 
   // Fetch options (WITHOUT is_correct)
   const questionIds = (questions ?? []).map((q) => q.id);
-  let optionsByQuestion: Record<string, { id: string; option_text: string }[]> = {};
+  const optionsByQuestion: Record<string, { id: string; option_text: string }[]> = {};
 
   if (questionIds.length > 0) {
     const { data: options } = await supabase

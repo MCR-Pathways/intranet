@@ -1,5 +1,5 @@
 import { test as base, type Page } from "@playwright/test";
-import { authFile, type TestUserRole } from "./global-setup";
+import { authFile } from "./global-setup";
 
 /**
  * Custom Playwright fixtures with pre-authenticated pages.
@@ -10,6 +10,7 @@ import { authFile, type TestUserRole } from "./global-setup";
  *   test("staff can view feed", async ({ staffPage }) => { ... });
  */
 
+/* eslint-disable react-hooks/rules-of-hooks */
 export const test = base.extend<{
   hrAdminPage: Page;
   lineManagerPage: Page;
@@ -45,5 +46,6 @@ export const test = base.extend<{
     await ctx.close();
   },
 });
+/* eslint-enable react-hooks/rules-of-hooks */
 
 export { expect } from "@playwright/test";

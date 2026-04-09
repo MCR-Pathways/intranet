@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const {
   mockSupabase,
   mockFrom,
-  mockRpc,
+  mockRpc: _mockRpc,
   requireContentEditor,
   getCurrentUser,
   revalidatePath,

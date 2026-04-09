@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { FlexibleWorkingDashboard } from "@/components/hr/flexible-working-dashboard";
 import { fetchFlexibleWorkingRequests, checkFWREligibility } from "./actions";
-import type { FWRRequestType, FWRStatus } from "@/lib/hr";
 import type { FlexibleWorkingRequestWithEmployee } from "@/types/hr";
 
 export default async function FlexibleWorkingPage({

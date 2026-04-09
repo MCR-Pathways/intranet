@@ -52,6 +52,7 @@ export function LeaveRequestDialog({
   // Pre-fill dates when dialog opens with a defaultStartDate
   useEffect(() => {
     if (open && defaultStartDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStartDate(defaultStartDate);
       setEndDate(defaultStartDate);
     }

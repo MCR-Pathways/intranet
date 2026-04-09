@@ -50,8 +50,6 @@ import {
   withdrawFlexibleWorkingRequest,
   markRequestUnderReview,
   recordConsultation,
-  approveFlexibleWorkingRequest,
-  rejectFlexibleWorkingRequest,
   recordTrialOutcome,
   submitFWRAppeal,
   decideFWRAppeal,
@@ -77,7 +75,7 @@ interface FlexibleWorkingDetailProps {
 export function FlexibleWorkingDetail({
   request,
   appeal,
-  currentUserId,
+  currentUserId: _currentUserId,
   isHRAdmin,
   isOwner,
   isAssignedManager,
@@ -86,7 +84,7 @@ export function FlexibleWorkingDetail({
   const [isPending, startTransition] = useTransition();
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [appealReason, setAppealReason] = useState("");
+  const [_appealReason, _setAppealReason] = useState("");
   const [appealDialogOpen, setAppealDialogOpen] = useState(false);
   const [consultationOpen, setConsultationOpen] = useState(false);
   const [trialOutcomeOpen, setTrialOutcomeOpen] = useState(false);

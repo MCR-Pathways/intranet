@@ -56,7 +56,7 @@ async function sendMentionEmails(
 
   for (const mp of mentionedProfiles ?? []) {
     const safeAuthor = escapeHtml(authorName);
-    const safeName = escapeHtml(mp.full_name);
+    const _safeName = escapeHtml(mp.full_name);
     const safePreview = escapeHtml(preview);
     const subject = `${authorName} mentioned you in a ${entityType}`;
     const html = baseTemplate(

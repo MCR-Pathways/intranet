@@ -313,7 +313,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
 function SortableLessonRow({
   lesson,
   index,
-  isPending,
+  isPending: _isPending,
   lessonImagesMap,
   onEdit,
   onDelete,

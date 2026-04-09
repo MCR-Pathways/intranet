@@ -176,6 +176,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                 <td className="sticky left-0 z-5 bg-background px-3 py-2.5 border-r">
                   <div className="flex items-center gap-2">
                     {member.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={member.avatar_url}
                         alt={member.preferred_name || member.full_name}

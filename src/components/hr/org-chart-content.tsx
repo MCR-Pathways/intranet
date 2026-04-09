@@ -31,7 +31,7 @@ import {
   ChevronRight,
   Home,
 } from "lucide-react";
-import type { RawNodeDatum, TreeNodeDatum, CustomNodeElementProps } from "react-d3-tree";
+import type { RawNodeDatum, CustomNodeElementProps } from "react-d3-tree";
 
 // Dynamically import Tree to avoid SSR issues with D3
 const Tree = dynamic(() => import("react-d3-tree").then((mod) => mod.default), {
@@ -400,6 +400,7 @@ export function OrgChartContent({
     // Focus on the matched person's manager (so we see them + siblings)
     // If they have no manager (CEO), focus on them directly
     const focusTarget = searchMatch.line_manager_id ?? searchMatch.id;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFocusedPersonId(focusTarget);
   }, [searchMatch]);
 
