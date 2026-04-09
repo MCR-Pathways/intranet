@@ -137,7 +137,7 @@ describe("Intranet Post Actions", () => {
         author_id: "user-1",
         content: "Hello world!",
       });
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("returns error when not authenticated", async () => {
@@ -274,7 +274,7 @@ describe("Intranet Post Actions", () => {
       expect(result.success).toBe(true);
       expect(result.postId).toBe("post-1");
       expect(result.warning).toBe("Post created, but some attachments could not be saved");
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("limits attachments to 10", async () => {
@@ -323,7 +323,7 @@ describe("Intranet Post Actions", () => {
       expect(mockEq).toHaveBeenCalledWith("id", "post-1");
       expect(mockEq2).toHaveBeenCalledWith("author_id", "user-1");
       expect(editSelect).toHaveBeenCalledWith("id");
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("returns error when not authenticated", async () => {
@@ -436,7 +436,7 @@ describe("Intranet Post Actions", () => {
       const result = await deletePost("post-1");
 
       expect(result).toEqual({ success: true, error: null });
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("returns error when not authenticated", async () => {
@@ -635,7 +635,7 @@ describe("Intranet Post Actions", () => {
         user_id: "user-1",
         reaction_type: "like",
       });
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("removes reaction when toggling same type (toggle off)", async () => {
@@ -756,7 +756,7 @@ describe("Intranet Post Actions", () => {
         author_id: "user-1",
         content: "Nice post!",
       });
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("creates a reply to a top-level comment", async () => {
@@ -928,7 +928,7 @@ describe("Intranet Post Actions", () => {
       expect(mockFrom).toHaveBeenCalledWith("comment_mentions");
       expect(mentionDelete).toHaveBeenCalled();
       expect(mentionDeleteEq).toHaveBeenCalledWith("comment_id", "comment-1");
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("trims whitespace from content", async () => {
@@ -1027,7 +1027,7 @@ describe("Intranet Post Actions", () => {
 
       expect(result).toEqual({ success: true, error: null });
       expect(updateChain).toHaveBeenCalledWith({ is_pinned: true });
-      expect(revalidatePath).toHaveBeenCalledWith("/intranet");
+      expect(revalidatePath).toHaveBeenCalledWith("/intranet", "layout");
     });
 
     it("unpins a pinned post", async () => {

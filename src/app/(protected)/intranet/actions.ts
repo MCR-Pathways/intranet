@@ -34,6 +34,7 @@ async function sendMentionEmails(
   entityId: string,
   entityType: "post" | "comment",
   contentPreview: string,
+  postId: string,
 ) {
   const { data: authorProfile } = await supabase
     .from("profiles")
@@ -62,7 +63,7 @@ async function sendMentionEmails(
       `${authorName} mentioned you`,
       `<p style="font-size: 14px; color: #213350;"><strong>${safeAuthor}</strong> mentioned you in a ${entityType}${safePreview ? ":" : "."}</p>
        ${safePreview ? `<div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; color: #374151; border-left: 3px solid #213350;">${safePreview}${preview.length >= 100 ? "..." : ""}</div>` : ""}
-       <a href="${appUrl}/intranet" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`,
+       <a href="${appUrl}/intranet/post/${postId}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; border: 2px solid #213350; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Post →</a>`,
       { preheader: `${authorName} mentioned you: ${preview || ""}`.trim() }
     );
 
@@ -545,6 +546,34 @@ export async function fetchPostsWithClient(
 }
 
 /**
+ * Fetch a single post by ID with all relations (attachments, reactions, threaded comments).
+ * Used by the standalone post page (/intranet/post/[id]).
+ */
+export async function fetchPostByIdWithClient(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string
+): Promise<PostWithRelations | null> {
+  // Validate UUID format
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) {
+    return null;
+  }
+
+  const { data: post, error } = await supabase
+    .from("posts")
+    .select(
+      `${POST_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
+    )
+    .eq("id", postId)
+    .single();
+
+  if (error || !post) return null;
+
+  const enriched = await enrichPosts(supabase, userId, [post]);
+  return enriched[0] ?? null;
+}
+
+/**
  * Fetch the active weekly roundup with an existing supabase client.
  */
 export async function fetchActiveRoundupWithClient(
@@ -735,7 +764,7 @@ export async function createPost(data: {
 
       // Queue mention emails (non-blocking)
       try {
-        await sendMentionEmails(supabase, user.id, mentionIds, post.id, "post", data.content ?? "");
+        await sendMentionEmails(supabase, user.id, mentionIds, post.id, "post", data.content ?? "", post.id);
       } catch (emailErr) {
         logger.error("Failed to queue mention emails", { error: emailErr });
       }
@@ -762,7 +791,7 @@ export async function createPost(data: {
       .insert(attachments);
 
     if (attError) {
-      revalidatePath("/intranet");
+      revalidatePath("/intranet", "layout");
       return {
         success: true,
         error: null,
@@ -796,7 +825,7 @@ export async function createPost(data: {
     }
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null, postId: post.id };
 }
 
@@ -959,7 +988,7 @@ export async function editPost(
         .insert(newAttachments);
 
       if (attError) {
-        revalidatePath("/intranet");
+        revalidatePath("/intranet", "layout");
         return {
           success: true,
           error: null,
@@ -993,7 +1022,7 @@ export async function editPost(
     }
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1045,7 +1074,7 @@ export async function deletePost(
     );
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1122,7 +1151,7 @@ export async function toggleReaction(
     }
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1180,7 +1209,7 @@ export async function toggleCommentReaction(
     }
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1271,7 +1300,7 @@ export async function addComment(
 
       // Queue mention emails for comments (non-blocking)
       try {
-        await sendMentionEmails(supabase, user.id, mentionIds, comment.id, "comment", trimmed);
+        await sendMentionEmails(supabase, user.id, mentionIds, comment.id, "comment", trimmed, postId);
       } catch (emailErr) {
         logger.error("Failed to queue comment mention emails", { error: emailErr });
       }
@@ -1294,7 +1323,7 @@ export async function addComment(
     }
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null, commentId: comment?.id };
 }
 
@@ -1332,7 +1361,7 @@ export async function deleteComment(
     return { success: false, error: "Failed to delete comment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1546,7 +1575,7 @@ export async function editComment(
     .delete()
     .eq("comment_id", commentId);
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1586,7 +1615,7 @@ export async function togglePinPost(
     return { success: false, error: "Failed to update post pin status. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1669,7 +1698,7 @@ export async function votePoll(
     return { success: false, error: "Failed to submit vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1690,7 +1719,7 @@ export async function removeVote(
     return { success: false, error: "Failed to remove vote. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 
@@ -1732,7 +1761,7 @@ export async function closePoll(
     return { success: false, error: "Failed to close poll" };
   }
 
-  revalidatePath("/intranet");
+  revalidatePath("/intranet", "layout");
   return { success: true, error: null };
 }
 

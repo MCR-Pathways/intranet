@@ -7,7 +7,17 @@ import { WeeklyRoundupBanner } from "@/components/news-feed/weekly-roundup-banne
 import { fetchPostsWithClient, fetchActiveRoundupWithClient, getActiveProfilesForMentions } from "./actions";
 import type { PostAuthor } from "@/types/database.types";
 
-export default async function IntranetPage() {
+export default async function IntranetPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ post?: string }>;
+}) {
+  // Redirect ?post=X to the standalone post page (handles old notification links)
+  const params = await searchParams;
+  if (params.post) {
+    redirect(`/intranet/post/${params.post}`);
+  }
+
   const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile) {

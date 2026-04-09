@@ -39,6 +39,10 @@ interface PostCardProps {
   isHRAdmin: boolean;
   isSystemsAdmin?: boolean;
   mentionUsers?: MentionUser[];
+  /** Start with comments expanded (used on standalone post page) */
+  initialCommentsExpanded?: boolean;
+  /** Called after post is deleted (used for redirect on standalone page) */
+  onDeleted?: () => void;
 }
 
 export function PostCard({
@@ -48,11 +52,13 @@ export function PostCard({
   isHRAdmin,
   isSystemsAdmin = false,
   mentionUsers = [],
+  initialCommentsExpanded = false,
+  onDeleted,
 }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showClosePollDialog, setShowClosePollDialog] = useState(false);
-  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [commentsExpanded, setCommentsExpanded] = useState(initialCommentsExpanded);
   const [isPinPending, startPinTransition] = useTransition();
 
   // ─── Optimistic state ──────────────────────────────────────────────
@@ -195,7 +201,7 @@ export function PostCard({
 
   return (
     <>
-      <Card className={post.is_weekly_roundup ? "border-primary/30 bg-primary/5" : undefined}>
+      <Card id={`post-${post.id}`} className={post.is_weekly_roundup ? "border-primary/30 bg-primary/5" : undefined}>
         <CardContent className="pt-6">
           <div className="space-y-3">
             {/* Header */}
@@ -362,6 +368,7 @@ export function PostCard({
         postId={post.id}
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
+        onDeleted={onDeleted}
       />
       <ClosePollDialog
         postId={post.id}
