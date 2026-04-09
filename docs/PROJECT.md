@@ -2,8 +2,7 @@
 
 > **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-03-30
-> **Document updated during:** Periodic syncs
+> **Last reviewed:** 2026-04-09
 
 ---
 
@@ -685,7 +684,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ### Medium Priority
 
-- **`database.types.ts` is stale** — only 25 of 40+ tables present. Missing HR, L&D overhaul, email, and mention tables. Regenerate from Supabase.
 - **Large action files** — `flexible-working/actions.ts` (1,167 lines), `onboarding/actions.ts` (1,140 lines), `absence/actions.ts` (966 lines) could benefit from splitting.
 - **Flat HR component structure** — all 68 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
@@ -696,11 +694,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 ### Low Priority / UX
 
 - Weekend calendar cells nearly invisible (`bg-muted/30` on `bg-background`)
-- ~~"HR" sidebar naming unintuitive for employees~~ (addressed by sidebar declutter, PR #111)
-- ~~Maternity leave showing for regular employees~~ (fixed in PR #137)
-- ~~Notification dropdown scroll~~ (fixed in PR #137)
-- ~~System Permissions visible on non-admin Profile view~~ (fixed in PR #137)
-
 ### Won't Fix
 
 - Radix UI ID hydration mismatches (known React 19/Radix issue, harmless)
@@ -723,7 +716,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - Error monitoring integration (Sentry or Datadog)
 - CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - Scheduled notification jobs (daily digest for HR)
-- Regenerate `database.types.ts` from production Supabase (25 of 40+ tables present)
 - Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
 - Resend email activation (domain verification + env vars: `RESEND_API_KEY`, `CRON_SECRET`)
 
@@ -733,6 +725,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-04-09 | Abdulmuiz Adaranijo | Database types regeneration. Regenerated database.types.ts from Supabase (70+ tables, was 40). Added Database generic to all 3 Supabase clients for compile-time query checking. Fixed 72 type errors across 52 files: removed 29 `as any` casts, typed insert payloads, updated nullable interfaces. Post-process script at scripts/post-process-types.mjs. 1,330 tests passing. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Phase F COMPLETE (PRs #187-194, 8 PRs). Learner UX overhaul: merged Landing + My Courses into single dashboard (#187), catalogue card polish with left-border accents (#188), lesson sidebar section grouping (#189), catalogue search (#190), Coursera-inspired certificate redesign with Playfair Display + MCR logo + charity registration (#191), admin guardrails with certificate toggle + publish warnings + migration 00072 (#192), syllabus preview for unenrolled users + certificate download (#193), completion celebration with confetti (#194). Removed 8 redundancies, deleted /my-courses page, added canvas-confetti dependency. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Phase F PR 1: Merge Learning dashboard (PR #187). Deleted /learning/my-courses page. Merged Landing + My Courses into single /learning with tabs (In Progress, Completed, External). Extracted EnrolledCourseCard with category left-border accents. Replaced 4 stat cards with compact inline bar. Removed 8 redundancies. Moved external course actions to learning/actions.ts. Updated sidebar: "My Courses" → "Catalogue". Added borderColor to CategoryConfig. Fixed hydration mismatch (server timestamp for due date calc). 18 files, +385/-707. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Tool Shed dialog & draft UX overhaul (PR #186): draft validation fix (partial content allowed), character counters with colour-coded warnings (amber 90%, red 100%), unsaved changes AlertDialog (Keep Editing / Discard), "or save as draft" footer link, partial draft card rendering (fallback preview, skip empty sections). 7 files, +348/-175. |

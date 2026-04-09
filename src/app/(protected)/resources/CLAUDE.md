@@ -55,3 +55,21 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 **Remove monolithic card wrappers — let each page manage its own surfaces.** Each page decides its own card surfaces on the grey `bg-background`.
 
 **Add `shadow-sm` to cards on grey backgrounds.** Default `border-border` on `bg-background` is near-invisible. Use `hover:shadow-md` for interactive uplift.
+
+## Native Editor (Plate)
+
+Two content paths coexist. Google Docs for living documents (policies, procedures). Native Plate editor for static reference content (hub pages, training materials). Articles pick a path at creation and can't switch.
+
+**Native articles use `content_type = 'native'` with `content_json` JSONB.** The `content_json` column already existed from migration 00038. Migration 00076 added `'native'` to the CHECK constraint, plus `last_published_at`, `editing_by`, `editing_at`.
+
+**Use PlateStatic for read-only rendering.** Import from `platejs/static`, use `Base*` plugins (not the `/react` variants). Zero client JS for readers. Custom static components must be registered or blocks render as plain `<div>`.
+
+**Auto-save: 5-second debounce to DB, Algolia reindexed separately.** Two server actions: `saveNativeArticle` (every 5s, DB only) and `reindexNativeArticle` (30s idle or on explicit publish/unpublish). Prevents burning through Algolia quota.
+
+**Google Docs must be "anyone in MCR Pathways" before linking.** The service account impersonates `intranet-service-account@mcrpathways.org`. That user needs read access to the doc. A sharing hint is shown in the Link Google Doc dialog.
+
+**Native actions live in `native-actions.ts`, not `actions.ts`.** The main actions file is 1,243 lines. Split per CLAUDE.md convention at ~800 lines.
+
+**`PlateElement` with `as="a"` causes type conflicts.** Wrap children in a plain `<a>` inside `PlateElement` instead of passing `as="a"` + `href` props directly.
+
+**Plate packages were rebranded in v49.** `@platejs/common`, `@platejs/heading`, `@platejs/horizontal-rule` don't exist. Use `platejs` (meta package) + `@platejs/basic-nodes` (bundles headings, HR, blockquote, and all marks).
