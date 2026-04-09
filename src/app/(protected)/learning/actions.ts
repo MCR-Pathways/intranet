@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { validateUrl } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import type { CourseCategory } from "@/types/database.types";
+import type { CourseCategory, Database } from "@/types/database.types";
 
 // ===========================================
 // EXTERNAL COURSE CRUD
@@ -73,7 +73,7 @@ export async function addExternalCourse(data: {
   const sanitized = sanitizeExternalCourseData(data as Record<string, unknown>);
   sanitized.user_id = user.id;
 
-  const { error } = await supabase.from("external_courses").insert(sanitized);
+  const { error } = await supabase.from("external_courses").insert(sanitized as Database["public"]["Tables"]["external_courses"]["Insert"]);
 
   if (error) {
     logger.error("Failed to add external course", { error });

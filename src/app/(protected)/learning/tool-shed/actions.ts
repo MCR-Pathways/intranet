@@ -15,6 +15,7 @@ import type {
   ThreeTwoOneContent,
   TakeoverContent,
 } from "@/lib/learning";
+import type { Json } from "@/types/database.types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -252,7 +253,7 @@ function generateTitle(format: ToolShedFormat, eventName: string | null): string
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function isAdmin(profile: { is_hr_admin?: boolean; is_ld_admin?: boolean; status?: string } | null): boolean {
+function isAdmin(profile: { is_hr_admin?: boolean | null; is_ld_admin?: boolean | null; status?: string } | null): boolean {
   if (!profile || profile.status !== "active") return false;
   return profile.is_ld_admin === true || profile.is_hr_admin === true;
 }
@@ -510,10 +511,10 @@ export async function createEntry(data: {
       user_id: user.id,
       format,
       title,
-      content: contentResult.data,
+      content: contentResult.data as unknown as Json,
       event_name: eventName,
       event_date: eventDate,
-      tags: tagsResult.data,
+      tags: tagsResult.data as string[],
       is_published: data.is_published !== false,
       search_text: searchText,
     })

@@ -353,7 +353,7 @@ export async function GET(request: Request) {
         const manager = managerMap.get(requester.line_manager_id as string);
         if (!manager) continue;
 
-        const daysPending = Math.ceil((now.getTime() - new Date(req.created_at).getTime()) / 86400000);
+        const daysPending = Math.ceil((now.getTime() - new Date(req.created_at!).getTime()) / 86400000);
         const leaveLabel = (LEAVE_TYPE_CONFIG[req.leave_type as LeaveType]?.label ?? req.leave_type).toLowerCase();
         const dateRange = req.start_date && req.end_date
           ? `${formatDate(new Date(req.start_date))} – ${formatDate(new Date(req.end_date))}`

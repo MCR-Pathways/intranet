@@ -155,7 +155,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       ),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-xs">
-          {formatDate(new Date(row.original.updated_at))}
+          {row.original.updated_at ? formatDate(new Date(row.original.updated_at)) : "N/A"}
         </span>
       ),
     },

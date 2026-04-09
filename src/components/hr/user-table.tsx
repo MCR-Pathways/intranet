@@ -76,11 +76,11 @@ export interface UserTableProfile {
   email: string;
   user_type: string;
   status: string;
-  is_hr_admin: boolean;
-  is_ld_admin: boolean;
-  is_systems_admin: boolean;
-  is_content_editor: boolean;
-  is_line_manager: boolean;
+  is_hr_admin: boolean | null;
+  is_ld_admin: boolean | null;
+  is_systems_admin: boolean | null;
+  is_content_editor: boolean | null;
+  is_line_manager: boolean | null;
   job_title: string | null;
   avatar_url: string | null;
   induction_completed_at: string | null;
@@ -95,7 +95,7 @@ export interface UserTableProfile {
   is_external: boolean | null;
   line_manager_id: string | null;
   team_id: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 const statusVariants: Record<string, "success" | "muted" | "warning"> = {
@@ -280,10 +280,10 @@ export function UserTable({
     fte: p.fte ?? 1,
     department: (p.department ?? null) as EmployeeProfile["department"],
     region: (p.region ?? null) as EmployeeProfile["region"],
-    is_line_manager: p.is_line_manager,
-    is_hr_admin: p.is_hr_admin,
-    is_ld_admin: p.is_ld_admin,
-    is_systems_admin: p.is_systems_admin,
+    is_line_manager: p.is_line_manager ?? false,
+    is_hr_admin: p.is_hr_admin ?? false,
+    is_ld_admin: p.is_ld_admin ?? false,
+    is_systems_admin: p.is_systems_admin ?? false,
     is_content_editor: p.is_content_editor ?? false,
     is_external: p.is_external ?? false,
     phone: null,
@@ -295,7 +295,7 @@ export function UserTable({
     line_manager_id: p.line_manager_id,
     team_id: p.team_id,
     induction_completed_at: p.induction_completed_at,
-    created_at: p.created_at,
+    created_at: p.created_at ?? "",
   });
 
   // Column definitions
@@ -489,11 +489,11 @@ export function UserTable({
           currentUserId={currentUserId}
           isCurrentUserHRAdmin={isCurrentUserHRAdmin}
           isCurrentUserSystemsAdmin={isCurrentUserSystemsAdmin}
-          isHRAdmin={permissionsProfile.is_hr_admin}
-          isLDAdmin={permissionsProfile.is_ld_admin}
-          isSystemsAdmin={permissionsProfile.is_systems_admin}
-          isContentEditor={permissionsProfile.is_content_editor}
-          isLineManager={permissionsProfile.is_line_manager}
+          isHRAdmin={permissionsProfile.is_hr_admin ?? false}
+          isLDAdmin={permissionsProfile.is_ld_admin ?? false}
+          isSystemsAdmin={permissionsProfile.is_systems_admin ?? false}
+          isContentEditor={permissionsProfile.is_content_editor ?? false}
+          isLineManager={permissionsProfile.is_line_manager ?? false}
           open={!!permissionsProfile}
           onOpenChange={(open) => {
             if (!open) setPermissionsProfile(null);

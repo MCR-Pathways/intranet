@@ -23,7 +23,7 @@ interface CourseCardProps {
     description?: string | null;
     category: string;
     duration_minutes?: number | null;
-    is_required?: boolean;
+    is_required?: boolean | null;
     sectionCount?: number;
     lessonCount?: number;
   };

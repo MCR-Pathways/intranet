@@ -192,8 +192,8 @@ export interface LeaveRequest {
   leave_type: LeaveType;
   start_date: string;
   end_date: string;
-  start_half_day: boolean;
-  end_half_day: boolean;
+  start_half_day: boolean | null;
+  end_half_day: boolean | null;
   total_days: number;
   reason: string | null;
   status: "pending" | "approved" | "rejected" | "cancelled" | "withdrawn";
@@ -201,7 +201,7 @@ export interface LeaveRequest {
   decided_at: string | null;
   decision_notes: string | null;
   rejection_reason: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 /** Leave request joined with the requester's profile for manager views. */

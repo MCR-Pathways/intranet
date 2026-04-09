@@ -317,7 +317,7 @@ export function PostCard({
             </div>
 
             {/* Content */}
-            <TiptapRenderer json={post.content_json} fallback={post.content} />
+            <TiptapRenderer json={post.content_json as Record<string, unknown> | null} fallback={post.content} />
 
             {/* Attachments */}
             <AttachmentDisplay attachments={post.attachments} />
@@ -358,7 +358,7 @@ export function PostCard({
       <PostEditDialog
         postId={post.id}
         initialContent={post.content}
-        initialContentJson={post.content_json}
+        initialContentJson={post.content_json as Record<string, unknown> | null}
         initialAttachments={post.attachments}
         mentionUsers={mentionUsers}
         open={showEditDialog}

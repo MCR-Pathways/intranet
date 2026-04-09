@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { requireContentEditor } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import type { Json } from "@/types/database.types";
 import { indexArticleSections, removeArticleFromIndex } from "@/lib/algolia";
 import { parseHtmlIntoSections } from "@/lib/html-sections";
 import { logger } from "@/lib/logger";
@@ -140,7 +141,7 @@ export async function saveNativeArticle(
     const { error } = await supabase
       .from("resource_articles")
       .update({
-        content_json: contentJson,
+        content_json: contentJson as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq("id", articleId)

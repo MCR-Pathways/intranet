@@ -109,7 +109,7 @@ describe("HR Leave Actions", () => {
       expect(result).toEqual([]);
     });
 
-    it("returns holiday dates for scotland region", async () => {
+    it("returns holiday dates for west region (Scotland calendar)", async () => {
       const c = chainable();
       c.order.mockResolvedValue({
         data: [
@@ -121,7 +121,7 @@ describe("HR Leave Actions", () => {
       });
       mockFrom.mockReturnValue(c);
 
-      const result = await fetchPublicHolidays("scotland", 2026);
+      const result = await fetchPublicHolidays("west", 2026);
       expect(result).toEqual(["2026-01-01", "2026-01-02", "2026-12-25"]);
     });
 

@@ -49,7 +49,7 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
   // Form state
   const [title, setTitle] = useState(course?.title ?? "");
   const [provider, setProvider] = useState(course?.provider ?? "");
-  const [category, setCategory] = useState<CourseCategory | "">(course?.category ?? "");
+  const [category, setCategory] = useState<CourseCategory | "">(course?.category as CourseCategory ?? "");
   const [completedAt, setCompletedAt] = useState(course?.completed_at ?? "");
   const [durationMinutes, setDurationMinutes] = useState<string>(
     course?.duration_minutes?.toString() ?? ""
@@ -69,7 +69,7 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
     } else if (course) {
       setTitle(course.title);
       setProvider(course.provider ?? "");
-      setCategory(course.category ?? "");
+      setCategory(course.category as CourseCategory ?? "");
       setCompletedAt(course.completed_at);
       setDurationMinutes(course.duration_minutes?.toString() ?? "");
       setCertificateUrl(course.certificate_url ?? "");

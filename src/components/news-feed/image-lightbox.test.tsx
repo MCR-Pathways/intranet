@@ -25,6 +25,7 @@ function makeImage(id: string, name: string): PostAttachment {
     link_description: null,
     link_image_url: null,
     created_at: "2026-01-01T00:00:00Z",
+    sort_order: 0,
   };
 }
 

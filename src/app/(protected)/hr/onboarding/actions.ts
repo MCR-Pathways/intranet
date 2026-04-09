@@ -21,6 +21,7 @@ import { createNotification } from "@/lib/notifications";
 import { validateTextLength, MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import type { Database } from "@/types/database.types";
 
 // =============================================
 // VALID VALUES
@@ -575,8 +576,8 @@ export async function createOnboardingChecklist(data: {
       checklist_id: checklist.id as string,
       title: item.title as string,
       description: item.description as string | null,
-      section: item.section as string,
-      assignee_role: item.assignee_role as string,
+      section: item.section as Database["public"]["Tables"]["onboarding_checklist_items"]["Insert"]["section"],
+      assignee_role: item.assignee_role as Database["public"]["Tables"]["onboarding_checklist_items"]["Insert"]["assignee_role"],
       assignee_id: assigneeId,
       due_date: dueDate.toISOString().split("T")[0],
       sort_order: item.sort_order as number,

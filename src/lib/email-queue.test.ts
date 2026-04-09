@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Hoisted mocks ────────────────────────────────────────────────────────────
 
 const mockSendEmail = vi.hoisted(() =>
-  vi.fn<[], Promise<{ success: boolean; error?: string }>>()
+  vi.fn<() => Promise<{ success: boolean; error?: string }>>()
 );
 
 const mockInsert = vi.hoisted(() => vi.fn());

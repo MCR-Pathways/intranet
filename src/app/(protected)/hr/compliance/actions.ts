@@ -6,6 +6,7 @@ import type { ComplianceStatus } from "@/lib/hr";
 import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import type { Database } from "@/types/database.types";
 
 const HR_DOCUMENTS_BUCKET = "hr-documents";
 
@@ -95,6 +96,7 @@ export async function uploadComplianceDocument(formData: FormData) {
   }
 
   // Insert database record
+  // ComplianceStatus has values beyond the DB enum; cast to satisfy the typed client
   const { error: insertError } = await supabase
     .from("compliance_documents")
     .insert({
@@ -103,7 +105,7 @@ export async function uploadComplianceDocument(formData: FormData) {
       reference_number: referenceNumber || null,
       issue_date: issueDate || null,
       expiry_date: expiryDate || null,
-      status,
+      status: status as Database["public"]["Tables"]["compliance_documents"]["Insert"]["status"],
       file_path: filePath,
       file_name: fileName,
       file_size: fileSize,

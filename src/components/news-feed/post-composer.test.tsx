@@ -14,6 +14,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PostComposer } from "./post-composer";
 import type { PostAuthor } from "@/types/database.types";
+import type { MentionUser } from "./mention-list";
 
 // Mock server actions
 vi.mock("@/app/(protected)/intranet/actions", () => ({
@@ -69,8 +70,8 @@ const userProfile: PostAuthor = {
   job_title: "Developer",
 };
 
-const mentionUsers = [
-  { id: "user-2", full_name: "Bob Jones", avatar_url: null },
+const mentionUsers: MentionUser[] = [
+  { id: "user-2", label: "Bob Jones", avatar_url: null, job_title: null },
 ];
 
 describe("PostComposer", () => {

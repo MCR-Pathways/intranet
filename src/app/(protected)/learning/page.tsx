@@ -121,7 +121,7 @@ export default async function LearningPage() {
         );
       if (a.due_date) return -1;
       if (b.due_date) return 1;
-      return b.progress_percent - a.progress_percent;
+      return (b.progress_percent ?? 0) - (a.progress_percent ?? 0);
     });
 
   const completedEnrolments = typedEnrolments.filter(

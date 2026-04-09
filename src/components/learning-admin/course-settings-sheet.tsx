@@ -25,7 +25,7 @@ interface CourseSettingsSheetProps {
   enrolments: {
     id: string;
     status: string;
-    progress_percent: number;
+    progress_percent: number | null;
     completed_at: string | null;
     due_date: string | null;
   }[];
@@ -78,7 +78,7 @@ export function CourseSettingsSheet({
           <CourseDangerZone
             courseId={course.id}
             courseTitle={course.title}
-            isActive={course.is_active}
+            isActive={course.is_active ?? false}
             status={course.status as "draft" | "published"}
             enrolmentCount={enrolmentCount}
           />
@@ -88,12 +88,12 @@ export function CourseSettingsSheet({
           <div className="space-y-1 text-sm text-muted-foreground pb-6">
             <p>
               Created by {creatorName ?? "System"} on{" "}
-              {formatDate(new Date(course.created_at))}
+              {course.created_at ? formatDate(new Date(course.created_at)) : "Unknown"}
             </p>
             {course.updated_by && (
               <p>
                 Last modified by {updaterName ?? "Unknown"} on{" "}
-                {formatDate(new Date(course.updated_at))}
+                {course.updated_at ? formatDate(new Date(course.updated_at)) : "Unknown"}
               </p>
             )}
           </div>

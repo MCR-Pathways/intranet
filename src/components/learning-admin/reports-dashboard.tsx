@@ -30,7 +30,7 @@ interface EnrolmentData {
   user_id: string;
   course_id: string;
   status: string;
-  progress_percent: number;
+  progress_percent: number | null;
   score: number | null;
   completed_at: string | null;
   due_date: string | null;
@@ -40,8 +40,8 @@ interface CourseData {
   id: string;
   title: string;
   category: string;
-  is_active: boolean;
-  is_required: boolean;
+  is_active: boolean | null;
+  is_required: boolean | null;
 }
 
 interface ProfileData {
@@ -51,7 +51,7 @@ interface ProfileData {
   user_type: string;
   team_id: string | null;
   status: string;
-  is_external: boolean;
+  is_external: boolean | null;
 }
 
 interface TeamData {

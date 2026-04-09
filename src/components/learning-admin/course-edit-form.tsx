@@ -36,7 +36,7 @@ export function CourseEditForm({ course, variant = "card" }: CourseEditFormProps
   const [durationMinutes, setDurationMinutes] = useState(
     course.duration_minutes?.toString() ?? ""
   );
-  const [isRequired, setIsRequired] = useState(course.is_required);
+  const [isRequired, setIsRequired] = useState(course.is_required ?? false);
   const [passingScore, setPassingScore] = useState(
     course.passing_score?.toString() ?? ""
   );
