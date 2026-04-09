@@ -10,6 +10,8 @@
 import { revalidatePath } from "next/cache";
 import { requireContentEditor } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { indexArticleSections, removeArticleFromIndex } from "@/lib/algolia";
+import { parseHtmlIntoSections } from "@/lib/html-sections";
 import { logger } from "@/lib/logger";
 
 // =============================================
@@ -205,6 +207,154 @@ export async function updateEditingStatus(
     return {};
   } catch {
     return {};
+  }
+}
+
+// =============================================
+// PUBLISH / UNPUBLISH
+// =============================================
+
+export async function publishNativeArticle(
+  articleId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireContentEditor();
+    const supabase = createServiceClient();
+
+    const { data: article, error } = await supabase
+      .from("resource_articles")
+      .update({
+        status: "published",
+        last_published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId)
+      .eq("content_type", "native")
+      .select("id, title, slug, synced_html, resource_categories!category_id(name)")
+      .single();
+
+    if (error || !article) {
+      logger.error("Failed to publish native article", { error: error?.message, articleId });
+      return { success: false, error: "Failed to publish" };
+    }
+
+    // Index in Algolia
+    if (article.synced_html) {
+      try {
+        const categoryName = (article.resource_categories as unknown as { name: string })?.name ?? "";
+        const sections = parseHtmlIntoSections(
+          article.synced_html,
+          article.title,
+          article.slug,
+          categoryName
+        );
+        await indexArticleSections(article.id, sections);
+      } catch (err) {
+        logger.error("Algolia indexing failed on publish", {
+          error: err instanceof Error ? err.message : String(err),
+          articleId,
+        });
+        // Don't fail the publish — Algolia is non-critical
+      }
+    }
+
+    revalidate();
+    return { success: true };
+  } catch (error) {
+    logger.error("publishNativeArticle error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to publish" };
+  }
+}
+
+export async function unpublishNativeArticle(
+  articleId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireContentEditor();
+    const supabase = createServiceClient();
+
+    const { error } = await supabase
+      .from("resource_articles")
+      .update({
+        status: "draft",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId)
+      .eq("content_type", "native");
+
+    if (error) {
+      logger.error("Failed to unpublish native article", { error: error.message, articleId });
+      return { success: false, error: "Failed to unpublish" };
+    }
+
+    // Remove from Algolia
+    try {
+      await removeArticleFromIndex(articleId);
+    } catch (err) {
+      logger.error("Algolia removal failed on unpublish", {
+        error: err instanceof Error ? err.message : String(err),
+        articleId,
+      });
+    }
+
+    revalidate();
+    return { success: true };
+  } catch (error) {
+    logger.error("unpublishNativeArticle error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to unpublish" };
+  }
+}
+
+// =============================================
+// REINDEX (CALLED ON 30s IDLE OR PUBLISH)
+// =============================================
+
+export async function reindexNativeArticle(
+  articleId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireContentEditor();
+    const supabase = createServiceClient();
+
+    const { data: article, error } = await supabase
+      .from("resource_articles")
+      .select("id, title, slug, synced_html, status, resource_categories!category_id(name)")
+      .eq("id", articleId)
+      .eq("content_type", "native")
+      .single();
+
+    if (error || !article) {
+      return { success: false, error: "Article not found" };
+    }
+
+    // Only index published articles
+    if (article.status !== "published") {
+      return { success: true };
+    }
+
+    if (!article.synced_html) {
+      return { success: true };
+    }
+
+    const categoryName = (article.resource_categories as unknown as { name: string })?.name ?? "";
+    const sections = parseHtmlIntoSections(
+      article.synced_html,
+      article.title,
+      article.slug,
+      categoryName
+    );
+    await indexArticleSections(article.id, sections);
+
+    return { success: true };
+  } catch (error) {
+    logger.error("reindexNativeArticle error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to reindex" };
   }
 }
 

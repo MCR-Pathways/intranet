@@ -8,7 +8,7 @@
  * with edit, feature, move, and delete actions.
  */
 
-import { useEffect, useState, useTransition } from "react";
+import { createElement, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   MoreHorizontal,
@@ -17,6 +17,8 @@ import {
   StarOff,
   FolderInput,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +37,10 @@ import {
   toggleArticleFeatured,
   deleteArticle,
 } from "@/app/(protected)/resources/actions";
+import {
+  publishNativeArticle,
+  unpublishNativeArticle,
+} from "@/app/(protected)/resources/native-actions";
 import { formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { recordArticleView } from "@/lib/recently-viewed";
@@ -98,6 +104,24 @@ export function NativeArticleView({
     });
   };
 
+  const handleTogglePublish = () => {
+    const isPublished = article.status === "published";
+    startTransition(async () => {
+      const result = isPublished
+        ? await unpublishNativeArticle(article.id)
+        : await publishNativeArticle(article.id);
+      if (result.success) {
+        setArticle((prev) => ({
+          ...prev,
+          status: isPublished ? "draft" : "published",
+        }));
+        toast.success(isPublished ? "Article unpublished" : "Article published");
+      } else {
+        toast.error(result.error ?? "Failed to update status");
+      }
+    });
+  };
+
   const handleDelete = () => {
     startTransition(async () => {
       const result = await deleteArticle(article.id);
@@ -113,8 +137,6 @@ export function NativeArticleView({
   const updatedAt = article.updated_at;
   const contentJson = (article as { content_json?: Value }).content_json;
 
-  // Breadcrumb icon
-  const CategoryIcon = resolveIcon(category.icon);
   const iconColour = resolveIconColour(category.colour);
 
   // Edit URL — native articles open the Plate editor
@@ -143,7 +165,10 @@ export function NativeArticleView({
           href={`/resources/${categoryPath}`}
           className="hover:underline underline-offset-4 inline-flex items-center gap-1.5"
         >
-          <CategoryIcon className="h-3.5 w-3.5" style={{ color: iconColour }} />
+          {createElement(resolveIcon(category.icon), {
+            className: "h-3.5 w-3.5",
+            style: { color: iconColour },
+          })}
           {category.name}
         </Link>
       </nav>
@@ -174,6 +199,19 @@ export function NativeArticleView({
                     <Pencil className="h-4 w-4" />
                     Edit
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleTogglePublish}>
+                  {article.status === "published" ? (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      Unpublish
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Publish
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleToggleFeatured}>
                   {article.is_featured ? (
