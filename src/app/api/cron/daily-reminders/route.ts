@@ -14,6 +14,8 @@ import { logger } from "@/lib/logger";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate } from "@/lib/email";
+import { LEAVE_TYPE_CONFIG, type LeaveType } from "@/lib/hr";
+import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -122,13 +124,23 @@ export async function GET(request: Request) {
         const profile = profileMap.get(userId);
         if (!profile) continue;
 
-        const allItems = [
-          ...digest.approaching.map((i) => `<li>${i.title} — due in ${i.daysUntil} day${i.daysUntil !== 1 ? "s" : ""}</li>`),
-          ...digest.overdue.map((i) => `<li style="color: #dc2626;">${i.title} — ${i.daysOverdue} day${i.daysOverdue !== 1 ? "s" : ""} overdue</li>`),
-        ];
+        if (digest.approaching.length === 0 && digest.overdue.length === 0) continue;
 
-        if (allItems.length === 0) continue;
+        const overdueHtml = digest.overdue.length > 0
+          ? `<p style="font-size: 13px; font-weight: 600; color: #dc2626; margin: 16px 0 4px;">Overdue</p>
+             <ul style="font-size: 14px; color: #dc2626; padding-left: 20px; margin: 0;">
+               ${digest.overdue.map((i) => `<li style="margin: 4px 0;">${i.title} — <strong>${i.daysOverdue} day${i.daysOverdue !== 1 ? "s" : ""}</strong> overdue</li>`).join("")}
+             </ul>`
+          : "";
 
+        const approachingHtml = digest.approaching.length > 0
+          ? `<p style="font-size: 13px; font-weight: 600; color: #92400e; margin: 16px 0 4px;">Due soon</p>
+             <ul style="font-size: 14px; color: #213350; padding-left: 20px; margin: 0;">
+               ${digest.approaching.map((i) => `<li style="margin: 4px 0;">${i.title} — due in <strong>${i.daysUntil} day${i.daysUntil !== 1 ? "s" : ""}</strong></li>`).join("")}
+             </ul>`
+          : "";
+
+        const totalItems = digest.approaching.length + digest.overdue.length;
         const subject =
           digest.overdue.length > 0
             ? `${digest.overdue.length} overdue course${digest.overdue.length !== 1 ? "s" : ""} need your attention`
@@ -137,12 +149,11 @@ export async function GET(request: Request) {
         const html = baseTemplate(
           "Course Reminders",
           `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Course Reminders</h2>
-           <p style="color: #6b7280; font-size: 14px;">Hi ${profile.full_name},</p>
-           <p style="font-size: 14px; color: #213350;">You have ${allItems.length} course${allItems.length !== 1 ? "s" : ""} requiring attention:</p>
-           <ul style="font-size: 14px; color: #213350; padding-left: 20px; margin: 12px 0;">
-             ${allItems.join("")}
-           </ul>
-           <a href="${appUrl}/learning/my-courses" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View My Courses →</a>`
+           <p style="font-size: 14px; color: #213350;">Hi ${profile.full_name}, you have ${totalItems} course${totalItems !== 1 ? "s" : ""} requiring attention.</p>
+           ${overdueHtml}
+           ${approachingHtml}
+           <a href="${appUrl}/learning/my-courses" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">View My Courses →</a>`,
+          { emailType: "course_overdue_digest" }
         );
 
         await sendAndLogEmail({
@@ -170,7 +181,11 @@ export async function GET(request: Request) {
         const itemsHtml = items
           .map(
             (i) =>
-              `<li>${i.learnerName} — <strong>${i.courseTitle}</strong> (${i.daysOverdue} days overdue)</li>`
+              `<div style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px;">
+                <strong style="color: #213350;">${i.learnerName}</strong>
+                <span style="color: #6b7280;"> — ${i.courseTitle}</span>
+                <span style="color: #dc2626; font-weight: 600;"> (${i.daysOverdue}d overdue)</span>
+              </div>`
           )
           .join("");
 
@@ -178,12 +193,12 @@ export async function GET(request: Request) {
         const html = baseTemplate(
           "Team Overdue Courses",
           `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Team Course Compliance</h2>
-           <p style="color: #6b7280; font-size: 14px;">Hi ${manager.full_name},</p>
-           <p style="font-size: 14px; color: #213350;">${items.length} team member${items.length !== 1 ? "s have" : " has"} overdue courses:</p>
-           <ul style="font-size: 14px; color: #213350; padding-left: 20px; margin: 12px 0;">
+           <p style="font-size: 14px; color: #213350;">Hi ${manager.full_name}, ${items.length} team member${items.length !== 1 ? "s have" : " has"} overdue courses:</p>
+           <div style="background: #F2F4F7; border-radius: 8px; overflow: hidden; margin: 16px 0;">
              ${itemsHtml}
-           </ul>
-           <a href="${appUrl}/hr/team" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Team →</a>`
+           </div>
+           <a href="${appUrl}/hr/team" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Team →</a>`,
+          { emailType: "course_overdue_manager" }
         );
 
         await sendAndLogEmail({
@@ -246,12 +261,14 @@ export async function GET(request: Request) {
 
         // Employee notification (30d and 7d)
         if (daysUntil > 0) {
+          const urgencyColour = daysUntil <= 7 ? "#dc2626" : "#92400e";
           const subject = `${docType.name} expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
           const html = baseTemplate(
             "Compliance Reminder",
-            `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Document Expiry Reminder</h2>
-             <p style="color: #6b7280; font-size: 14px;">Hi ${profile.full_name},</p>
-             <p style="font-size: 14px; color: #213350;">Your <strong>${docType.name}</strong> expires in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange renewal.</p>`
+            `<h2 style="color: ${urgencyColour}; font-size: 18px; margin: 0 0 8px;">Document Expiry Reminder</h2>
+             <p style="font-size: 14px; color: #213350;">Hi ${profile.full_name}, your <strong>${docType.name}</strong> expires in <strong style="color: ${urgencyColour};">${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>.</p>
+             <p style="font-size: 14px; color: #213350;">Please arrange renewal as soon as possible.</p>`,
+            { emailType: "compliance_expiry" }
           );
 
           await sendAndLogEmail({
@@ -269,13 +286,20 @@ export async function GET(request: Request) {
         // HR admin escalation (7d or expired)
         if (daysUntil <= 7) {
           for (const admin of hrAdmins ?? []) {
-            const statusText = daysUntil <= 0 ? "has expired" : `expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
+            const isExpired = daysUntil <= 0;
+            const statusColour = isExpired ? "#dc2626" : "#92400e";
+            const statusText = isExpired ? "has expired" : `expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
             const subject = `${profile.full_name}'s ${docType.name} ${statusText}`;
             const html = baseTemplate(
               "Compliance Alert",
-              `<h2 style="color: ${daysUntil <= 0 ? "#dc2626" : "#92400e"}; font-size: 18px; margin: 0 0 8px;">Compliance Document ${daysUntil <= 0 ? "Expired" : "Expiring"}</h2>
-               <p style="color: #6b7280; font-size: 14px;">Hi ${admin.full_name},</p>
-               <p style="font-size: 14px; color: #213350;"><strong>${profile.full_name}</strong>'s <strong>${docType.name}</strong> ${statusText}.</p>`
+              `<h2 style="color: ${statusColour}; font-size: 18px; margin: 0 0 8px;">Compliance Document ${isExpired ? "Expired" : "Expiring"}</h2>
+               <p style="font-size: 14px; color: #213350;">Hi ${admin.full_name},</p>
+               <div style="background: ${isExpired ? "#fef2f2" : "#fffbeb"}; padding: 12px 16px; border-radius: 8px; margin: 12px 0; border-left: 3px solid ${statusColour};">
+                 <p style="font-size: 14px; color: #213350; margin: 0;"><strong>${profile.full_name}</strong> — ${docType.name}</p>
+                 <p style="font-size: 13px; color: ${statusColour}; margin: 4px 0 0; font-weight: 600;">${isExpired ? "Expired" : `Expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}</p>
+               </div>
+               <a href="${appUrl}/hr/users/${profile.id}" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">View Employee →</a>`,
+              { emailType: "compliance_expiry" }
             );
 
             await sendAndLogEmail({
@@ -297,7 +321,7 @@ export async function GET(request: Request) {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
     const { data: staleLeave } = await supabase
       .from("leave_requests")
-      .select("id, profile_id, leave_type, created_at")
+      .select("id, profile_id, leave_type, start_date, end_date, created_at")
       .eq("status", "pending")
       .lt("created_at", sevenDaysAgo);
 
@@ -331,13 +355,21 @@ export async function GET(request: Request) {
         if (!manager) continue;
 
         const daysPending = Math.ceil((now.getTime() - new Date(req.created_at).getTime()) / 86400000);
+        const leaveLabel = (LEAVE_TYPE_CONFIG[req.leave_type as LeaveType]?.label ?? req.leave_type).toLowerCase();
+        const dateRange = req.start_date && req.end_date
+          ? `${formatDate(new Date(req.start_date))} – ${formatDate(new Date(req.end_date))}`
+          : "";
         const subject = `Leave request from ${requester.full_name} pending ${daysPending} days`;
         const html = baseTemplate(
           "Stale Leave Request",
           `<h2 style="color: #92400e; font-size: 18px; margin: 0 0 8px;">Pending Leave Request</h2>
-           <p style="color: #6b7280; font-size: 14px;">Hi ${manager.full_name},</p>
-           <p style="font-size: 14px; color: #213350;"><strong>${requester.full_name}</strong> has a leave request that's been pending for <strong>${daysPending} days</strong>. Please review it.</p>
-           <a href="${appUrl}/hr/leave?tab=approvals" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 16px;">Review Requests →</a>`
+           <p style="font-size: 14px; color: #213350;">Hi ${manager.full_name}, a leave request needs your attention.</p>
+           <div style="background: #fffbeb; padding: 12px 16px; border-radius: 8px; margin: 12px 0; border-left: 3px solid #92400e;">
+             <p style="font-size: 14px; color: #213350; margin: 0;"><strong>${requester.full_name}</strong> — ${leaveLabel}${dateRange ? ` (${dateRange})` : ""}</p>
+             <p style="font-size: 13px; color: #92400e; margin: 4px 0 0; font-weight: 600;">Pending for ${daysPending} days</p>
+           </div>
+           <a href="${appUrl}/hr/leave?tab=approvals" style="display: inline-block; background: #213350; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">Review Requests →</a>`,
+          { emailType: "stale_leave_reminder" }
         );
 
         await sendAndLogEmail({
@@ -381,13 +413,20 @@ export async function GET(request: Request) {
         const mgr = probManagerMap.get(p.line_manager_id as string);
         if (!mgr) continue;
 
-        const daysUntil = Math.ceil((new Date(p.probation_end_date + "T00:00:00").getTime() - now.getTime()) / 86400000);
+        const probEndDate = new Date(p.probation_end_date + "T00:00:00");
+        const daysUntil = Math.ceil((probEndDate.getTime() - now.getTime()) / 86400000);
+        const endDateStr = probEndDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
         const subject = `${p.full_name}'s probation ends in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`;
         const html = baseTemplate(
           "Probation Reminder",
           `<h2 style="color: #213350; font-size: 18px; margin: 0 0 8px;">Probation Period Ending</h2>
-           <p style="color: #6b7280; font-size: 14px;">Hi ${mgr.full_name},</p>
-           <p style="font-size: 14px; color: #213350;"><strong>${p.full_name}</strong>'s probation period ends in <strong>${daysUntil} day${daysUntil !== 1 ? "s" : ""}</strong>. Please arrange a review meeting.</p>`
+           <p style="font-size: 14px; color: #213350;">Hi ${mgr.full_name},</p>
+           <div style="background: #F2F4F7; padding: 12px 16px; border-radius: 8px; margin: 12px 0;">
+             <p style="font-size: 14px; color: #213350; margin: 0;"><strong>${p.full_name}</strong></p>
+             <p style="font-size: 13px; color: #6b7280; margin: 4px 0 0;">Probation ends: <strong>${endDateStr}</strong> (${daysUntil} day${daysUntil !== 1 ? "s" : ""})</p>
+           </div>
+           <p style="font-size: 14px; color: #213350;">Please arrange a review meeting before this date.</p>`,
+          { emailType: "key_date_reminder" }
         );
 
         await sendAndLogEmail({

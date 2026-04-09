@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { sanitizeRedirectPath } from "@/lib/url";
 import { rateLimiters, getClientIp } from "@/lib/ratelimit";
+import { sendAndLogEmail } from "@/lib/email-queue";
+import { buildWelcomeEmail } from "@/lib/email";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -52,11 +54,23 @@ export async function GET(request: NextRequest) {
       // Check induction status
       const { data: profile } = await supabase
         .from("profiles")
-        .select("induction_completed_at")
+        .select("full_name, email, induction_completed_at")
         .eq("id", data.user.id)
         .single();
 
       if (profile && !profile.induction_completed_at) {
+        // Send welcome email (non-blocking, dedup by user ID)
+        const { subject, html } = buildWelcomeEmail(profile.full_name || "there");
+        void sendAndLogEmail({
+          userId: data.user.id,
+          email: profile.email || email,
+          emailType: "welcome",
+          subject,
+          bodyHtml: html,
+          entityId: data.user.id,
+          entityType: "welcome",
+        }).catch((err) => logger.error("Failed to send welcome email", { error: err }));
+
         return NextResponse.redirect(`${origin}/intranet/induction`);
       }
 
