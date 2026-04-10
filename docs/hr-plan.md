@@ -67,7 +67,7 @@ All features fully built with RLS policies, audit logging, and input sanitisatio
 
 Quick wins inspired by nexus-hr analysis (Feb 2026).
 
-### HR Dashboard Landing Page ✅ DONE
+### HR Dashboard Landing Page (done)
 - **Route:** `/hr` index page — **admin-only** (non-admins redirect to `/hr/profile`, PR #111)
 - **What:** Time-based greeting + up to 9 attention-needed stat cards (server-side data, clickable):
   - Staff on leave today → links to `/hr/leave?tab=calendar`
@@ -84,13 +84,13 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 - Stat cards only appear when count > 0 (zero-state = no cards)
 - Colours: amber (warning), red (expired/overdue), blue (informational), teal/emerald/orange (feature-specific)
 
-### Leave Team Capacity Notification ✅ DONE
+### Leave Team Capacity Notification (done)
 - **Where:** Approval view (`LeaveRequestTable` in Approvals tab)
 - **What:** Blue info notice per row when teammates have approved leave overlapping the request dates
 - **Implementation:** Server fetches `teamMemberMap` (2 indexed queries), client-side `getTeamOverlap()` from already-loaded `allRequests`. Zero additional queries at render time.
 - **Format:** "[Name(s)] is/are also on leave during this period. Team: X/Y available."
 
-### UI/UX Polish ✅ DONE
+### UI/UX Polish (done)
 - **HR admin dashboard (PR #111):** Admin-only `/hr` page with stat cards, office attendance, Administration quick-actions, and L&D admin section. Non-admins redirect to `/hr/profile`. Personal items (My Profile, Leave, etc.) accessed via "Me" sidebar section.
 - **Sidebar regrouping (PR #111):** "HR" renamed to "Me" with personal items only (My Profile, Leave, Assets, Flexible Working, My Team, Org Chart). Admin items removed to single "Admin" dashboard link. "Home" (Intranet), "Learning", "Location" (Sign-In) complete the main nav.
 - **Breadcrumbs (PR #112):** Standardised across all HR pages with `/` separator (GitHub/Linear/Notion style). Root label changed from "HR" to "Admin". All 8 admin sub-pages (absence, compliance, key-dates, leaving, users, flexible-working, onboarding, departments) now have breadcrumbs. Flexible working breadcrumbs conditional — only shown for HR admins (employees see no breadcrumbs). Manual `<h1>` headers on absence, compliance, key-dates replaced with PageHeader.
@@ -108,7 +108,7 @@ Quick wins inspired by nexus-hr analysis (Feb 2026).
 
 Database tables created in migration `00024`, extended in `00030`.
 
-### Absence Records & Sickness Tracking ✅ DONE
+### Absence Records & Sickness Tracking (done)
 - **Route:** `/hr/absence` (HR admin dashboard with All Absences + Pending RTW tabs)
 - **Components:** `src/components/hr/record-absence-dialog.tsx`, `src/components/hr/profile-absence-tab.tsx`, `src/components/hr/absence-dashboard-content.tsx`
 - **Actions:** `src/app/(protected)/hr/absence/actions.ts`
@@ -121,7 +121,7 @@ Database tables created in migration `00024`, extended in `00030`.
   - Wellbeing prompt cards for HR admins (replaces raw Bradford Factor)
   - Absence tab on employee detail view with history table, RTW status badges, delete with confirmation
 
-### Return-to-Work Forms ✅ DONE
+### Return-to-Work Forms (done)
 - **Route:** `/hr/absence/rtw/[formId]` (employee confirmation page)
 - **Components:** `src/components/hr/return-to-work-form.tsx` (Sheet — side drawer with 7 sections)
 - **Lifecycle:** Draft → Submitted → Locked
@@ -134,7 +134,7 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Migration:** `supabase/migrations/00030_extend_rtw_and_absence.sql` — 12 new columns on `return_to_work_forms`, generated `is_long_term` column, notification INSERT policy
 - **Dashboard integration:** Pending RTW Forms stat card on `/hr`, sidebar nav link to `/hr/absence`
 
-### Staff Leaving Forms (Offboarding) ✅ DONE
+### Staff Leaving Forms (Offboarding) (done)
 - **Routes:** `/hr/leaving` (dashboard with Active/Completed/All tabs), `/hr/leaving/[formId]` (full form page)
 - **Components:** `src/components/hr/leaving-dashboard-content.tsx`, `src/components/hr/leaving-form-content.tsx`, `src/components/hr/create-leaving-form-dialog.tsx`, `src/components/hr/profile-leaving-tab.tsx`
 - **Actions:** `src/app/(protected)/hr/leaving/actions.ts`
@@ -157,27 +157,27 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Ties into:** Existing compliance documents (auto-check PVG/DBS), asset assignments (auto-check equipment)
 - **Mirrors:** `staff_leaving_forms` for offboarding
 
-### Flexible Working Requests ✅ DONE
+### Flexible Working Requests (done)
 - **Route:** `/hr/flexible-working` (employee + HR admin views)
 - **Table:** `flexible_working_requests` + `fwr_appeals` (migration 00037)
 - **Actions:** `src/app/(protected)/hr/flexible-working/actions.ts` (12 server actions)
 - **Capabilities:** Full digital workflow per Employment Relations (Flexible Working) Act 2023 — day-one right, 2 requests/12 months, 2-month deadline, mandatory consultation, 8 statutory grounds. Auto-updates `profiles.work_pattern` + employment history on approval. Trial periods with outcome recording. Appeals process.
 - **PR:** #62
 
-### Department-Based Access Model ✅ DONE
+### Department-Based Access Model (done)
 - **Migration:** `supabase/migrations/00038_department_based_access.sql` — `is_systems_admin` column, `is_hr_admin_effective()` / `is_ld_admin_effective()` / `is_systems_admin_effective()` SQL functions, self-promotion prevention trigger, JWT sync
 - **Auth helpers:** `src/lib/auth-helpers.ts` (client-safe), `src/lib/auth.ts` (server-side `requireSystemsAdmin`, `requireHROrSystemsAdmin`)
 - **Sidebar restructure:** Self-Service / People / Admin groups with role-filtered items
 - **Permission UX:** Department auto-grant badges ("Via HR Department"), manual override toggles, self-edit protection
 - **PR:** #63
 
-### Decouple Permissions from Departments ✅ DONE
+### Decouple Permissions from Departments (done)
 - **Migration:** `supabase/migrations/00040_decouple_permissions_and_departments.sql` — backfills explicit admin flags, simplifies `_effective` RPCs (removes department checks), creates `departments` table, seeds 11 departments
 - **Changes:** Admin roles are now explicitly granted (not auto-derived from department membership). Departments are purely organisational. Permission confirmation AlertDialogs for granting/revoking access. Dynamic department dropdowns from DB.
 - **New page:** `/hr/departments` — CRUD management for departments (colour, sort order, activate/deactivate)
 - **PR:** #68
 
-### User Management Interface Improvement ✅ DONE
+### User Management Interface Improvement (done)
 - **What:** Compact 4-column table (Person, Status, Organisation, Actions) with two-line rows replacing 9-column cluttered table. Split overloaded UserEditDialog into three focused dialogs (ProfileEditDialog, EmploymentEditDialog, PermissionsEditDialog). Searchable comboboxes for line manager/team assignment. Auto-derive `is_external = true` for pathways coordinators. System Permissions card on detail page overview. `is_external` moved from header badges to Employment card as "Classification".
 - **Components:** `person-combobox.tsx`, `team-combobox.tsx`, `permissions-edit-dialog.tsx`, `command.tsx`, `popover.tsx` (NEW); `user-table.tsx`, `user-edit-dialog.tsx`, `employment-edit-dialog.tsx`, `profile-overview-tab.tsx`, `employee-detail-content.tsx` (REFACTOR)
 - **Dependencies:** `cmdk`, `@radix-ui/react-popover` (Popover + Command UI primitives)
@@ -185,13 +185,13 @@ Database tables created in migration `00024`, extended in `00030`.
 - **Types:** Added `is_systems_admin` to `ProfileSummary` in `types/hr.ts`
 - **Permission audit:** Comprehensive audit for UI elements that promise actions the server silently blocks. Fixed: Department field in EmploymentEditDialog disabled for non-HR admins (server strips it), induction Complete/Reset menu items hidden for non-HR admins (server rejects), admin permission toggles disabled for non-HR admins in both UserEditDialog and PermissionsEditDialog. `isCurrentUserHRAdmin` prop threaded through all dialog chains.
 
-### Leave Calendar Tab ✅ DONE
+### Leave Calendar Tab (done)
 - Calendar removed from sidebar, now a "Team Calendar" tab within `/hr/leave` (managers/HR admins only)
 - `/hr/calendar` redirects to `/hr/leave?tab=calendar` for backward compatibility
 - Role-aware tab validation — non-managers/non-admins can't access calendar/approvals tabs
 - **PR:** #64
 
-### My Team ✅ DONE
+### My Team (done)
 - **Route:** `/hr/team`
 - **Components:** `src/components/hr/team-dashboard-content.tsx` (manager view), `src/components/hr/team-peer-content.tsx` (non-manager view), `src/components/hr/team-member-card.tsx` (shared card)
 - **Capabilities:**
@@ -201,7 +201,7 @@ Database tables created in migration `00024`, extended in `00030`.
   - Action menu: View in User Management, View Leave, View on Calendar
 - **PRs:** #65, #67
 
-### Org Chart ✅ DONE
+### Org Chart (done)
 - **Route:** `/hr/org-chart`
 - **Components:** `src/components/hr/org-chart-content.tsx` (main client component), `src/components/hr/org-chart-person-card.tsx` (foreignObject card)
 - **Library:** `react-d3-tree` (dynamic import, SSR-safe)
@@ -221,7 +221,7 @@ Database tables created in migration `00024`, extended in `00030`.
   - Accessibility: `role="img"`, `aria-label`, `aria-roledescription` on container; `aria-label` on each card
 - **PRs:** #66, #67, #70 (UI/UX improvement)
 
-### Onboarding Progress Tracker ✅ DONE
+### Onboarding Progress Tracker (done)
 - **Routes:** `/hr/onboarding` (dashboard), `/hr/onboarding/[checklistId]` (detail), `/hr/onboarding/templates` (template management)
 - **Components:** `src/components/hr/onboarding-dashboard-content.tsx`, `src/components/hr/onboarding-checklist-content.tsx`, `src/components/hr/onboarding-template-management.tsx`, `src/components/hr/onboarding-progress-bar.tsx`, `src/components/hr/create-onboarding-dialog.tsx`, `src/components/hr/profile-onboarding-tab.tsx`
 - **Actions:** `src/app/(protected)/hr/onboarding/actions.ts` (18 server actions)
