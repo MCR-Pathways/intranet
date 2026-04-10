@@ -26,6 +26,7 @@ import {
   deleteTable,
 } from "@platejs/table";
 import { ResizeHandle } from "@platejs/resizable";
+import { setColumns, toggleColumnGroup } from "@platejs/layout";
 import { cn } from "@/lib/utils";
 import {
   Info,
@@ -37,6 +38,10 @@ import {
   Trash2,
   Rows3,
   Columns3,
+  Columns2,
+  PanelLeft,
+  PanelRight,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -420,6 +425,96 @@ function TableFloatingToolbar() {
         <TooltipContent side="top">Delete table</TooltipContent>
       </Tooltip>
     </div>
+  );
+}
+
+// =============================================
+// COLUMNS
+// =============================================
+
+const COLUMN_PRESETS = [
+  { label: "2 equal", icon: Columns2, columns: 2, widths: undefined },
+  { label: "3 equal", icon: Columns3, columns: 3, widths: undefined },
+  { label: "2/3 + 1/3", icon: PanelLeft, columns: undefined, widths: ["66%", "34%"] },
+  { label: "1/3 + 2/3", icon: PanelRight, columns: undefined, widths: ["34%", "66%"] },
+] as const;
+
+export function ColumnGroupElement({ children, element, ...props }: PlateElementProps) {
+  const editor = useEditorRef();
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div className="flex gap-4 my-4 w-full relative group/columns">
+        {/* Layout switcher — visible on hover/focus */}
+        <div
+          contentEditable={false}
+          className="absolute -top-8 left-0 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-1 py-0.5 shadow-sm opacity-0 group-hover/columns:opacity-100 group-focus-within/columns:opacity-100 transition-opacity"
+        >
+          {COLUMN_PRESETS.map((preset) => (
+            <Tooltip key={preset.label}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (preset.widths) {
+                      setColumns(editor, { at: props.path, widths: [...preset.widths] });
+                    } else {
+                      setColumns(editor, { at: props.path, columns: preset.columns });
+                    }
+                    editor.tf.focus();
+                  }}
+                  aria-label={preset.label}
+                >
+                  <preset.icon className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">{preset.label}</TooltipContent>
+            </Tooltip>
+          ))}
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  toggleColumnGroup(editor);
+                  editor.tf.focus();
+                }}
+                aria-label="Remove columns"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Remove columns</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {children}
+      </div>
+    </PlateElement>
+  );
+}
+
+export function ColumnItemElement({ children, element, ...props }: PlateElementProps) {
+  const width = (element as Record<string, unknown>).width as string | undefined;
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div
+        className="flex-1 min-w-0 rounded-md p-3 border border-dashed border-border/50"
+        style={width ? { width } : undefined}
+      >
+        {children}
+      </div>
+    </PlateElement>
   );
 }
 

@@ -181,6 +181,33 @@ describe("serializeHtml", () => {
     expect(html).toContain("Engineer");
   });
 
+  it("serialises a column layout with flex", async () => {
+    const value: Value = [
+      {
+        type: "column_group",
+        layout: [50, 50],
+        children: [
+          {
+            type: "column",
+            width: "50%",
+            children: [{ type: "p", children: [{ text: "Left side" }] }],
+          },
+          {
+            type: "column",
+            width: "50%",
+            children: [{ type: "p", children: [{ text: "Right side" }] }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("display:flex");
+    expect(html).toContain("Left side");
+    expect(html).toContain("Right side");
+    expect(html).toContain("not-prose");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },

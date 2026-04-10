@@ -27,6 +27,7 @@ import {
 import { BaseLinkPlugin } from "@platejs/link";
 import { BaseListPlugin } from "@platejs/list";
 import { BaseCalloutPlugin } from "@platejs/callout";
+import { BaseColumnPlugin, BaseColumnItemPlugin } from "@platejs/layout";
 import {
   BaseTablePlugin,
   BaseTableRowPlugin,
@@ -156,6 +157,31 @@ function TableCellHeaderStatic({ children, element, ...props }: SlateElementProp
 }
 
 // =============================================
+// COLUMNS
+// =============================================
+
+function ColumnGroupStatic({ children, ...props }: SlateElementProps) {
+  return (
+    <SlateElement {...props}>
+      <div className="not-prose" style={{ display: "flex", gap: "1rem", margin: "1rem 0" }}>
+        {children}
+      </div>
+    </SlateElement>
+  );
+}
+
+function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
+  const width = (element as Record<string, unknown>).width as string | undefined;
+  return (
+    <SlateElement element={element} {...props}>
+      <div className="prose prose-sm" style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
+        {children}
+      </div>
+    </SlateElement>
+  );
+}
+
+// =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
 
@@ -194,6 +220,8 @@ const staticPlugins = [
   BaseTableRowPlugin,
   BaseTableCellPlugin,
   BaseTableCellHeaderPlugin,
+  BaseColumnPlugin,
+  BaseColumnItemPlugin,
 ];
 
 const staticComponents = {
@@ -210,6 +238,8 @@ const staticComponents = {
   tr: TableRowStatic,
   td: TableCellStatic,
   th: TableCellHeaderStatic,
+  column_group: ColumnGroupStatic,
+  column: ColumnItemStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,
