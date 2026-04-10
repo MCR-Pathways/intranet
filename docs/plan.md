@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-09
+> Last updated: 2026-04-10
 
 ---
 
@@ -60,9 +60,9 @@
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
 - WS2 ✅: Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
-- WS3: Block plugins (accordion, columns, callout, tabs, button/CTA, tables)
+- WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
 - WS4: Media and files (Google Drive upload/proxy, image/file blocks, video embed, external embeds)
-- WS5: Visual parity and cross-linking (shared prose styling, HTML serialisation, Google Doc cross-link rewriting)
+- WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
 
@@ -76,7 +76,7 @@
 - Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,330 tests across 57 files (Vitest + RTL + jsdom)
+- 1,350 tests across 58 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 

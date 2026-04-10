@@ -73,3 +73,27 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 **`PlateElement` with `as="a"` causes type conflicts.** Wrap children in a plain `<a>` inside `PlateElement` instead of passing `as="a"` + `href` props directly.
 
 **Plate packages were rebranded in v49.** `@platejs/common`, `@platejs/heading`, `@platejs/horizontal-rule` don't exist. Use `platejs` (meta package) + `@platejs/basic-nodes` (bundles headings, HR, blockquote, and all marks).
+
+**Static components live in `plate-static-plugins.tsx`, editor elements in `plate-elements.tsx`.** Both are shared modules extracted in WS3 to avoid duplication. `plate-static-view.tsx` and `plate-editor.tsx` are thin wrappers.
+
+**Use standalone Plate transform functions for table operations.** `insertTableRow(editor)`, `deleteColumn(editor)` etc. from `@platejs/table` — not `editor.tf.insert.tableRow()` which requires plugin-specific type extensions that `useEditorRef()` doesn't provide.
+
+**Show block toolbars on focus-within only, not hover.** Hover-visible toolbars can target the wrong block when the cursor is elsewhere. Use `group-focus-within/name:opacity-100` without `group-hover`.
+
+**Use confirmation dialogs for destructive block actions.** Delete table, remove columns — both use `AlertDialog` before executing. Users can undo with Ctrl+Z but the dialog prevents accidental loss.
+
+**Callout static rendering uses Tailwind classes, not inline hex styles.** Inline styles don't respond to dark mode. Use the same `bg-blue-50 dark:bg-blue-950/30` pattern as the editor for visual parity.
+
+**Static table must include `<colgroup>` from `element.colSizes`.** Without it, column widths adjusted in the editor are lost in the read view. `globals.css` has `table-layout: fixed` which respects `<col>` widths.
+
+**TogglePlugin uses indent-based model, not container model.** Toggle children are sibling blocks with higher `indent`, not nested children. `IndentPlugin` must be registered BEFORE `TogglePlugin`. Configure `inject.targetPlugins` to exclude list types to avoid conflict with `ListPlugin`.
+
+**`nestToggleChildren` preprocessor converts flat indent model to nested for static rendering.** Creates a `toggle_summary` virtual node to separate heading from body content inside `<details>/<summary>`. Uses `BaseToggleSummaryPlugin` (with `node.isElement: true`) so `PlateStatic` applies the component mapping. Decrements indent (not strips) to preserve multi-level hierarchy.
+
+**Column `flex-1` conflicts with explicit width percentages.** `flex-basis: 0%` from Tailwind's `flex-1` overrides `width: 66%` in flex layout. Apply `flex-1` only when no width is set: `cn("min-w-0 ...", !width && "flex-1")`.
+
+**Column presets use node ID lookup, not `props.path`.** Paths can become stale between renders. `editor.api.node({ match: { id } })` finds the current path reliably.
+
+**`serializeHtml` is async (returns `Promise<string>`).** Must `await` it. The function is in `platejs/static` (re-exported from `@platejs/core/static`).
+
+**Empty content returns `""` from `serialiseContentToHtml`, not `null`.** `null` means serialisation error (skip update). Empty string means content was cleared (clear `synced_html` + remove from Algolia to prevent stale data).
