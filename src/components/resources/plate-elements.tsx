@@ -1,0 +1,444 @@
+"use client";
+
+/**
+ * Element and leaf components for the native Plate editor.
+ *
+ * Extracted from plate-editor.tsx to keep the main file focused
+ * on plugin registration and toolbar. Each component wraps
+ * PlateElement/PlateLeaf with semantic HTML + Tailwind styling.
+ */
+
+import { useRef } from "react";
+import { PlateElement, PlateLeaf, useEditorRef } from "platejs/react";
+import {
+  TablePlugin,
+  useTableElement,
+  useTableCellElement,
+  useTableCellElementResizable,
+  useSelectedCells,
+  useTableColSizes,
+} from "@platejs/table/react";
+import {
+  insertTableRow,
+  insertTableColumn,
+  deleteRow,
+  deleteColumn,
+  deleteTable,
+} from "@platejs/table";
+import { ResizeHandle } from "@platejs/resizable";
+import { cn } from "@/lib/utils";
+import {
+  Info,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Plus,
+  Minus,
+  Trash2,
+  Rows3,
+  Columns3,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { PlateElementProps, PlateLeafProps } from "platejs/react";
+
+// =============================================
+// BASIC ELEMENTS
+// =============================================
+
+export function ParagraphElement(props: PlateElementProps) {
+  return <PlateElement {...props} as="p" />;
+}
+
+export function BlockquoteElement(props: PlateElementProps) {
+  return (
+    <PlateElement
+      {...props}
+      as="blockquote"
+      className="border-l-2 border-border pl-6 italic"
+    />
+  );
+}
+
+export function H1Element(props: PlateElementProps) {
+  return <PlateElement {...props} as="h1" className="text-3xl font-bold tracking-tight" />;
+}
+
+export function H2Element(props: PlateElementProps) {
+  return <PlateElement {...props} as="h2" className="text-2xl font-semibold tracking-tight" />;
+}
+
+export function H3Element(props: PlateElementProps) {
+  return <PlateElement {...props} as="h3" className="text-xl font-semibold tracking-tight" />;
+}
+
+export function H4Element(props: PlateElementProps) {
+  return <PlateElement {...props} as="h4" className="text-lg font-semibold tracking-tight" />;
+}
+
+export function HrElement(props: PlateElementProps) {
+  return (
+    <PlateElement {...props}>
+      <hr className="my-4 border-border" />
+      {props.children}
+    </PlateElement>
+  );
+}
+
+export function LinkElement({ children, element, ...props }: PlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
+  return (
+    <PlateElement element={element} {...props}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-link underline underline-offset-4 hover:text-link/80"
+      >
+        {children}
+      </a>
+    </PlateElement>
+  );
+}
+
+// =============================================
+// CALLOUT
+// =============================================
+
+const CALLOUT_VARIANTS = {
+  info: {
+    container: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200",
+    dot: "bg-blue-500",
+    Icon: Info,
+  },
+  success: {
+    container: "bg-green-50 border-green-200 text-green-800 dark:bg-green-950/30 dark:border-green-800 dark:text-green-200",
+    dot: "bg-green-500",
+    Icon: CheckCircle,
+  },
+  warning: {
+    container: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200",
+    dot: "bg-amber-500",
+    Icon: AlertTriangle,
+  },
+  error: {
+    container: "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200",
+    dot: "bg-red-500",
+    Icon: XCircle,
+  },
+} as const;
+
+type CalloutVariant = keyof typeof CALLOUT_VARIANTS;
+
+export function CalloutElement({ children, element, editor, ...props }: PlateElementProps) {
+  const variant = ((element as Record<string, unknown>).variant as CalloutVariant) || "info";
+  const config = CALLOUT_VARIANTS[variant] ?? CALLOUT_VARIANTS.info;
+
+  return (
+    <PlateElement element={element} editor={editor} {...props}>
+      <div className={cn("rounded-lg border p-4 flex gap-3 relative group my-2", config.container)}>
+        <div contentEditable={false} className="flex-shrink-0 pt-0.5 select-none">
+          <config.Icon className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">{children}</div>
+        {/* Variant switcher — visible on hover */}
+        <div
+          contentEditable={false}
+          className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+        >
+          {(Object.keys(CALLOUT_VARIANTS) as CalloutVariant[]).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-label={`Switch to ${v} callout`}
+              className={cn(
+                "h-4 w-4 rounded-full border-2 border-white dark:border-gray-800 transition-transform hover:scale-110",
+                CALLOUT_VARIANTS[v].dot,
+                v === variant && "ring-2 ring-offset-1 ring-current"
+              )}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editor.tf.setNodes(
+                  { variant: v } as Record<string, unknown>,
+                  { at: props.path }
+                );
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </PlateElement>
+  );
+}
+
+// =============================================
+// TABLE
+// =============================================
+
+export function TableElement({ children, ...props }: PlateElementProps) {
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { props: tableProps } = useTableElement();
+  const colSizes = useTableColSizes();
+
+  useSelectedCells();
+
+  return (
+    <PlateElement {...props}>
+      <div className="relative my-4 group/table overflow-x-auto">
+        <TableFloatingToolbar />
+        <table
+          ref={tableRef}
+          className="w-full border-collapse border border-border"
+          {...tableProps}
+        >
+          <colgroup>
+            {colSizes.map((size, i) => (
+              <col
+                key={i}
+                style={size ? { width: size } : undefined}
+              />
+            ))}
+          </colgroup>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </PlateElement>
+  );
+}
+
+export function TableRowElement(props: PlateElementProps) {
+  return <PlateElement {...props} as="tr" />;
+}
+
+export function TableCellElement({ children, ...props }: PlateElementProps) {
+  const { colIndex, colSpan, rowIndex, selected, width } =
+    useTableCellElement();
+
+  const resizable = useTableCellElementResizable({ colIndex, colSpan, rowIndex });
+
+  return (
+    <PlateElement
+      {...props}
+      as="td"
+      className={cn(
+        "border border-border p-2 align-top relative",
+        selected && "bg-primary/10"
+      )}
+      style={width ? { width } : undefined}
+    >
+      {children}
+      <ResizeHandle
+        {...resizable.rightProps}
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize opacity-0 hover:opacity-100 bg-primary/40 transition-opacity"
+      />
+    </PlateElement>
+  );
+}
+
+export function TableCellHeaderElement({ children, ...props }: PlateElementProps) {
+  const { colIndex, colSpan, rowIndex, selected, width } =
+    useTableCellElement();
+
+  const resizable = useTableCellElementResizable({ colIndex, colSpan, rowIndex });
+
+  return (
+    <PlateElement
+      {...props}
+      as="th"
+      className={cn(
+        "border border-border p-2 align-top relative bg-muted font-semibold",
+        selected && "bg-primary/10"
+      )}
+      style={width ? { width } : undefined}
+    >
+      {children}
+      <ResizeHandle
+        {...resizable.rightProps}
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize opacity-0 hover:opacity-100 bg-primary/40 transition-opacity"
+      />
+    </PlateElement>
+  );
+}
+
+function TableFloatingToolbar() {
+  const editor = useEditorRef();
+
+  const isInTable = editor.api.some({
+    match: { type: TablePlugin.node.type },
+  });
+
+  if (!isInTable) return null;
+
+  return (
+    <div
+      contentEditable={false}
+      className="absolute -top-9 left-0 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-1 py-0.5 shadow-sm opacity-0 group-focus-within/table:opacity-100 group-hover/table:opacity-100 transition-opacity"
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              insertTableRow(editor, { before: true });
+              editor.tf.focus();
+            }}
+            aria-label="Insert row above"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <Rows3 className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Insert row above</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              insertTableRow(editor);
+              editor.tf.focus();
+            }}
+            aria-label="Insert row below"
+          >
+            <Rows3 className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Insert row below</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              insertTableColumn(editor, { before: true });
+              editor.tf.focus();
+            }}
+            aria-label="Insert column left"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <Columns3 className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Insert column left</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              insertTableColumn(editor);
+              editor.tf.focus();
+            }}
+            aria-label="Insert column right"
+          >
+            <Columns3 className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Insert column right</TooltipContent>
+      </Tooltip>
+
+      <div className="w-px h-5 bg-border mx-0.5" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              deleteRow(editor);
+              editor.tf.focus();
+            }}
+            aria-label="Delete row"
+          >
+            <Minus className="h-3.5 w-3.5" />
+            <Rows3 className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Delete row</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              deleteColumn(editor);
+              editor.tf.focus();
+            }}
+            aria-label="Delete column"
+          >
+            <Minus className="h-3.5 w-3.5" />
+            <Columns3 className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Delete column</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              deleteTable(editor);
+              editor.tf.focus();
+            }}
+            aria-label="Delete table"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">Delete table</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+// =============================================
+// LEAF COMPONENTS
+// =============================================
+
+export function BoldLeaf(props: PlateLeafProps) {
+  return <PlateLeaf {...props} as="strong" />;
+}
+
+export function ItalicLeaf(props: PlateLeafProps) {
+  return <PlateLeaf {...props} as="em" />;
+}
+
+export function UnderlineLeaf(props: PlateLeafProps) {
+  return <PlateLeaf {...props} as="u" />;
+}
+
+export function StrikethroughLeaf(props: PlateLeafProps) {
+  return <PlateLeaf {...props} as="s" />;
+}

@@ -27,6 +27,12 @@ import {
 import { BaseLinkPlugin } from "@platejs/link";
 import { BaseListPlugin } from "@platejs/list";
 import { BaseCalloutPlugin } from "@platejs/callout";
+import {
+  BaseTablePlugin,
+  BaseTableRowPlugin,
+  BaseTableCellPlugin,
+  BaseTableCellHeaderPlugin,
+} from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
 
 // =============================================
@@ -114,6 +120,42 @@ function cssStringToObject(css: string): React.CSSProperties {
 }
 
 // =============================================
+// TABLE
+// =============================================
+
+function TableStatic({ children, ...props }: SlateElementProps) {
+  return (
+    <SlateElement {...props}>
+      <table className="w-full border-collapse border border-border my-4">
+        <tbody>{children}</tbody>
+      </table>
+    </SlateElement>
+  );
+}
+
+function TableRowStatic(props: SlateElementProps) {
+  return <SlateElement {...props} as="tr" />;
+}
+
+function TableCellStatic({ children, element, ...props }: SlateElementProps) {
+  return (
+    <SlateElement element={element} {...props}>
+      <td className="border border-border p-2 align-top">{children}</td>
+    </SlateElement>
+  );
+}
+
+function TableCellHeaderStatic({ children, element, ...props }: SlateElementProps) {
+  return (
+    <SlateElement element={element} {...props}>
+      <th className="border border-border p-2 align-top bg-muted font-semibold text-left">
+        {children}
+      </th>
+    </SlateElement>
+  );
+}
+
+// =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
 
@@ -148,6 +190,10 @@ const staticPlugins = [
   BaseLinkPlugin,
   BaseListPlugin,
   BaseCalloutPlugin,
+  BaseTablePlugin,
+  BaseTableRowPlugin,
+  BaseTableCellPlugin,
+  BaseTableCellHeaderPlugin,
 ];
 
 const staticComponents = {
@@ -160,6 +206,10 @@ const staticComponents = {
   hr: HrStatic,
   a: LinkStatic,
   callout: CalloutStatic,
+  table: TableStatic,
+  tr: TableRowStatic,
+  td: TableCellStatic,
+  th: TableCellHeaderStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,

@@ -3,10 +3,8 @@
 /**
  * Native Plate editor for resource articles.
  *
- * Basic rich text: headings, bold, italic, underline, strikethrough,
- * ordered/unordered lists, links, blockquote, horizontal rule.
- * Block plugins (accordion, tabs, etc.) added in WS3.
- * Media plugins (images, files, embeds) added in WS4.
+ * Plugin registration, toolbar, and editor wrapper. Element/leaf
+ * components live in plate-elements.tsx.
  */
 
 import { useCallback, useEffect, useRef } from "react";
@@ -14,8 +12,6 @@ import type { Value } from "platejs";
 import {
   Plate,
   PlateContent,
-  PlateElement,
-  PlateLeaf,
   usePlateEditor,
 } from "platejs/react";
 import {
@@ -30,9 +26,34 @@ import {
 import { LinkPlugin } from "@platejs/link/react";
 import { ListPlugin } from "@platejs/list/react";
 import { CalloutPlugin } from "@platejs/callout/react";
+import {
+  TablePlugin,
+  TableRowPlugin,
+  TableCellPlugin,
+  TableCellHeaderPlugin,
+} from "@platejs/table/react";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
 import { ArticleLinkPopover } from "./article-link-popover";
+import {
+  ParagraphElement,
+  BlockquoteElement,
+  H1Element,
+  H2Element,
+  H3Element,
+  H4Element,
+  HrElement,
+  LinkElement,
+  CalloutElement,
+  TableElement,
+  TableRowElement,
+  TableCellElement,
+  TableCellHeaderElement,
+  BoldLeaf,
+  ItalicLeaf,
+  UnderlineLeaf,
+  StrikethroughLeaf,
+} from "./plate-elements";
 import {
   Bold,
   Italic,
@@ -48,9 +69,7 @@ import {
   Minus,
   Plus,
   Info,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
+  Table,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -60,157 +79,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import type { PlateElementProps, PlateLeafProps } from "platejs/react";
-
-// =============================================
-// ELEMENT COMPONENTS
-// =============================================
-
-function ParagraphElement(props: PlateElementProps) {
-  return <PlateElement {...props} as="p" />;
-}
-
-function BlockquoteElement(props: PlateElementProps) {
-  return (
-    <PlateElement
-      {...props}
-      as="blockquote"
-      className="border-l-2 border-border pl-6 italic"
-    />
-  );
-}
-
-function H1Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h1" className="text-3xl font-bold tracking-tight" />;
-}
-
-function H2Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h2" className="text-2xl font-semibold tracking-tight" />;
-}
-
-function H3Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h3" className="text-xl font-semibold tracking-tight" />;
-}
-
-function H4Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h4" className="text-lg font-semibold tracking-tight" />;
-}
-
-function HrElement(props: PlateElementProps) {
-  return (
-    <PlateElement {...props}>
-      <hr className="my-4 border-border" />
-      {props.children}
-    </PlateElement>
-  );
-}
-
-function LinkElement({ children, element, ...props }: PlateElementProps) {
-  const url = (element as Record<string, unknown>).url as string;
-  return (
-    <PlateElement element={element} {...props}>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-link underline underline-offset-4 hover:text-link/80"
-      >
-        {children}
-      </a>
-    </PlateElement>
-  );
-}
-
-// =============================================
-// CALLOUT
-// =============================================
-
-const CALLOUT_VARIANTS = {
-  info: {
-    container: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200",
-    dot: "bg-blue-500",
-    Icon: Info,
-  },
-  success: {
-    container: "bg-green-50 border-green-200 text-green-800 dark:bg-green-950/30 dark:border-green-800 dark:text-green-200",
-    dot: "bg-green-500",
-    Icon: CheckCircle,
-  },
-  warning: {
-    container: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200",
-    dot: "bg-amber-500",
-    Icon: AlertTriangle,
-  },
-  error: {
-    container: "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200",
-    dot: "bg-red-500",
-    Icon: XCircle,
-  },
-} as const;
-
-type CalloutVariant = keyof typeof CALLOUT_VARIANTS;
-
-function CalloutElement({ children, element, editor, ...props }: PlateElementProps) {
-  const variant = ((element as Record<string, unknown>).variant as CalloutVariant) || "info";
-  const config = CALLOUT_VARIANTS[variant] ?? CALLOUT_VARIANTS.info;
-
-  return (
-    <PlateElement element={element} editor={editor} {...props}>
-      <div className={cn("rounded-lg border p-4 flex gap-3 relative group my-2", config.container)}>
-        <div contentEditable={false} className="flex-shrink-0 pt-0.5 select-none">
-          <config.Icon className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">{children}</div>
-        {/* Variant switcher — visible on hover */}
-        <div
-          contentEditable={false}
-          className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
-        >
-          {(Object.keys(CALLOUT_VARIANTS) as CalloutVariant[]).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-label={`Switch to ${v} callout`}
-              className={cn(
-                "h-4 w-4 rounded-full border-2 border-white dark:border-gray-800 transition-transform hover:scale-110",
-                CALLOUT_VARIANTS[v].dot,
-                v === variant && "ring-2 ring-offset-1 ring-current"
-              )}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                editor.tf.setNodes(
-                  { variant: v } as Record<string, unknown>,
-                  { at: props.path }
-                );
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </PlateElement>
-  );
-}
-
-// =============================================
-// LEAF COMPONENTS
-// =============================================
-
-function BoldLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="strong" />;
-}
-
-function ItalicLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="em" />;
-}
-
-function UnderlineLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="u" />;
-}
-
-function StrikethroughLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="s" />;
-}
 
 // =============================================
 // INSERT BLOCK DROPDOWN
@@ -239,6 +107,15 @@ function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof
         >
           <Info className="h-4 w-4" />
           Callout
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insert.table({ colCount: 3, rowCount: 3, header: true });
+            editor.tf.focus();
+          }}
+        >
+          <Table className="h-4 w-4" />
+          Table
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -373,6 +250,10 @@ export function PlateRichEditor({
         LinkPlugin,
         ListPlugin,
         CalloutPlugin,
+        TablePlugin.configure({ options: { disableMerge: true } }),
+        TableRowPlugin,
+        TableCellPlugin,
+        TableCellHeaderPlugin,
       ],
       override: {
         components: {
@@ -385,6 +266,10 @@ export function PlateRichEditor({
           hr: HrElement,
           a: LinkElement,
           callout: CalloutElement,
+          table: TableElement,
+          tr: TableRowElement,
+          td: TableCellElement,
+          th: TableCellHeaderElement,
           bold: BoldLeaf,
           italic: ItalicLeaf,
           underline: UnderlineLeaf,

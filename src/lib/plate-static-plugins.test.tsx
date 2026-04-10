@@ -148,6 +148,39 @@ describe("serializeHtml", () => {
     expect(html).toContain("#eff6ff");
   });
 
+  it("serialises a table with header and body rows", async () => {
+    const value: Value = [
+      {
+        type: "table",
+        colSizes: [200, 200],
+        children: [
+          {
+            type: "tr",
+            children: [
+              { type: "th", children: [{ type: "p", children: [{ text: "Name" }] }] },
+              { type: "th", children: [{ type: "p", children: [{ text: "Role" }] }] },
+            ],
+          },
+          {
+            type: "tr",
+            children: [
+              { type: "td", children: [{ type: "p", children: [{ text: "Alice" }] }] },
+              { type: "td", children: [{ type: "p", children: [{ text: "Engineer" }] }] },
+            ],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<table");
+    expect(html).toContain("<th");
+    expect(html).toContain("<td");
+    expect(html).toContain("Name");
+    expect(html).toContain("Alice");
+    expect(html).toContain("Engineer");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },
