@@ -223,6 +223,58 @@ describe("serializeHtml", () => {
     expect(html).toContain("FAQ question");
   });
 
+  it("serialises an image with alt text and dimensions", async () => {
+    const value: Value = [
+      {
+        type: "img",
+        url: "/api/drive-file/abc123",
+        alt: "Team photo",
+        width: 800,
+        height: 600,
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<img");
+    expect(html).toContain("/api/drive-file/abc123");
+    expect(html).toContain('alt="Team photo"');
+    expect(html).toContain('loading="lazy"');
+  });
+
+  it("serialises a video embed with sandbox", async () => {
+    const value: Value = [
+      {
+        type: "media_embed",
+        url: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<iframe");
+    expect(html).toContain("youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(html).toContain("sandbox");
+  });
+
+  it("serialises a file attachment with download link", async () => {
+    const value: Value = [
+      {
+        type: "file",
+        url: "/api/drive-file/xyz789",
+        name: "Policy Document.pdf",
+        size: 2500000,
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("/api/drive-file/xyz789");
+    expect(html).toContain("Policy Document.pdf");
+    expect(html).toContain("2.4 MB");
+    expect(html).toContain("Download");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },
