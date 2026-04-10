@@ -263,11 +263,19 @@ export async function publishNativeArticle(
       const html = await serialiseContentToHtml(article.content_json);
 
       if (html) {
-        // Persist synced_html so future reindex calls can skip serialisation
-        await supabase
+        // Persist synced_html for listing page excerpts and search
+        const { error: syncError } = await supabase
           .from("resource_articles")
           .update({ synced_html: html })
-          .eq("id", articleId);
+          .eq("id", articleId)
+          .eq("content_type", "native");
+
+        if (syncError) {
+          logger.error("Failed to persist synced_html on publish", {
+            error: syncError.message,
+            articleId,
+          });
+        }
 
         const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
         const sections = parseHtmlIntoSections(html);
@@ -375,11 +383,19 @@ export async function reindexNativeArticle(
       return { success: true };
     }
 
-    // Persist synced_html for future use
-    await supabase
+    // Persist synced_html for listing page excerpts and search
+    const { error: syncError } = await supabase
       .from("resource_articles")
       .update({ synced_html: html })
-      .eq("id", articleId);
+      .eq("id", articleId)
+      .eq("content_type", "native");
+
+    if (syncError) {
+      logger.error("Failed to persist synced_html on reindex", {
+        error: syncError.message,
+        articleId,
+      });
+    }
 
     const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
     const sections = parseHtmlIntoSections(html);
