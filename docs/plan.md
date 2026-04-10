@@ -8,18 +8,18 @@
 
 ## Completed Modules
 
-### Learning & Development ✅ (Overhaul complete — replaced LearnDash)
+### Learning & Development (Overhaul complete — replaced LearnDash)
 - **Original V1** (complete): Course catalogue, enrolment, progress tracking, compliance alerts, admin CRUD/reports
 - **Overhaul** (complete): Full LMS rebuild. See `docs/learning-overhaul.md` for comprehensive handover.
-  - Phase 1 ✅: Migrations (00060-00070), shared utilities, section CRUD actions
-  - Phase 2 ✅: Admin UI (Tiptap editor, DnD, auto-save, preview), learner UI (Complete and Continue, progress bars), certificates (PDF), section quizzes
-  - Phase 3 ✅: Reporting & assignments (individual assignment, course duplication, manager compliance)
-  - Tool Shed ✅: Social learning feed (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). 6 components, JSONB content, format configs. PR #176.
+  - Phase 1 (complete): Migrations (00060-00070), shared utilities, section CRUD actions
+  - Phase 2 (complete): Admin UI (Tiptap editor, DnD, auto-save, preview), learner UI (Complete and Continue, progress bars), certificates (PDF), section quizzes
+  - Phase 3 (complete): Reporting & assignments (individual assignment, course duplication, manager compliance)
+  - Tool Shed (complete): Social learning feed (Digital Postcards, 3-2-1 Model, 10-Minute Takeover). 6 components, JSONB content, format configs. PR #176.
   - Email notifications: ACTIVE (PRs #175, #198, #200, #201). Immediate send, XSS-safe, branded logo + preheaders.
-  - Phase F ✅: Learner polish (PRs #187-194). Dashboard merge, catalogue card polish, lesson sidebar sections, catalogue search, certificate redesign (Coursera-inspired), admin guardrails (certificate toggle, publish warnings), syllabus preview, completion celebration (confetti). Migration 00072.
+  - Phase F (complete): Learner polish (PRs #187-194). Dashboard merge, catalogue card polish, lesson sidebar sections, catalogue search, certificate redesign (Coursera-inspired), admin guardrails (certificate toggle, publish warnings), syllabus preview, completion celebration (confetti). Migration 00072.
   - Key changes: Course→Sections→Lessons, section quizzes, certificates (PDF), Tool Shed, global Cmd+K search, private course feedback
 
-### Sign-In / Working Location ✅ (v2 complete)
+### Sign-In / Working Location (v2 complete)
 - Schedule-based weekly working location planner (replaced daily sign-in)
 - Interactive month calendar with day detail panel (Google Calendar–inspired)
 - Recurring weekly patterns with one-click apply
@@ -28,27 +28,24 @@
 - Kiosk check-in for office arrival confirmation
 - Daily reconciliation banners, reports with CSV export
 
-### Induction System ✅
-- 9-step induction checklist with DB persistence (`/intranet/induction`)
+### Induction System- 9-step induction checklist with DB persistence (`/intranet/induction`)
 - Auto-redirect when complete, server-side verification
 
-### News Feed & Content ✅
-- Post composer with Tiptap rich text, @mentions, attachments, link previews
+### News Feed & Content- Post composer with Tiptap rich text, @mentions, attachments, link previews
 - Reactions, editing, deletion, pin/unpin, comment notifications
 - Inline polls (custom duration, multi-select, close early, CSV/XLSX/PDF export)
 - Weekly roundup banner, image lightbox
 
-### Notifications ✅
-- Real-time notification bell with unread badge
+### Notifications- Real-time notification bell with unread badge
 - Mark as read / mark all as read
 - Course publish notifications via RPC
 
-### HR Module ✅ (Phase 1+2 complete)
+### HR Module (Phase 1+2 complete)
 - Phase 1: User management, profile, leave, assets, compliance, key dates, dashboard
 - Phase 2: Absence, RTW, leaving, flexible working, permissions, org chart, my team, onboarding
 - See [docs/hr-plan.md](./hr-plan.md) for Phase 3 roadmap
 
-### Resources — Google Docs ✅ (complete)
+### Resources — Google Docs (complete)
 - Google Docs integration (link, sync, webhook auto-update)
 - Category hierarchy (9 top-level, 43+ subcategories, cascading selects)
 - Component pages (org chart under Org Structure)
@@ -59,29 +56,26 @@
 ### Resources — Native Editor (in progress)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
-- WS2 ✅: Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
+- WS2 (complete): Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
 - WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
 - WS4: Media and files (Google Drive upload/proxy, image/file blocks, video embed, external embeds)
 - WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
 
-### Algolia Search ✅
-- 3 indices: resources_articles, learning_courses, tool_shed_entries
+### Algolia Search- 3 indices: resources_articles, learning_courses, tool_shed_entries
 - Global Cmd+K search overlay with recent search management
 - Faceted course catalogue
 - Deep linking for resources (#sectionSlug) and Tool Shed (#entryId)
 
-### Infrastructure ✅
-- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
+### Infrastructure- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
 - 1,350 tests across 58 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
-### UI/UX Polish ✅
-- Collapsible sidebar (YouTube-style), shared PageHeader, breadcrumbs
+### UI/UX Polish- Collapsible sidebar (YouTube-style), shared PageHeader, breadcrumbs
 - Colour/UX overhaul (neutral greys, cool grey background, brand colour palette)
 - Table standardisation (TanStack Table + Shadcn, 15 of 17 tables migrated)
 - Tab bar redesign (underline variant), badge tonal redesign

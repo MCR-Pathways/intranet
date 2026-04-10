@@ -92,7 +92,7 @@ This is **NOT a resource library**. It's a peer-to-peer knowledge sharing system
 - Profile integration (future): "Shared X insights" count on HR profile
 - Notifications: new entry optionally notifies team/manager (`email_notifications` type: `tool_shed_shared`)
 
-**Current state:** ✅ COMPLETE (PR #176). Full database-backed social learning feed with all 3 formats, search, filter tabs, tag filtering, draft support, edit/delete, event name autocomplete. 6 components (1,526 lines), 634 lines of server actions, migration 00062.
+**Current state:** COMPLETE (PR #176). Full database-backed social learning feed with all 3 formats, search, filter tabs, tag filtering, draft support, edit/delete, event name autocomplete. 6 components (1,526 lines), 634 lines of server actions, migration 00062.
 
 **Implementation order (all done):** Feed page → Share dialog (2-step: format picker → content form) → Search + filter tabs → Tag filtering (click-on-card) → Draft support → Edit/delete via kebab menu → Event name autocomplete
 
@@ -203,9 +203,9 @@ Interactive HTML mockups were created during planning:
 
 ### COMPLETED (Phase 1 — Foundation)
 ```
-✅ 1. Migrations (00060-00064) — 5 files, all schema + RLS + RPCs + triggers
+1. Migrations (00060-00064) — 5 files, all schema + RLS + RPCs + triggers
       Applied to production Supabase via SQL Editor (19 Mar 2026).
-✅ 2. Shared utilities:
+2. Shared utilities:
       - learning.ts — expanded: section types, Tool Shed format config, section-aware
         progress logic (getLockedSectionIds, calculateSectionProgress), lesson type
         config, duration formatting, notification type config, postcard field config
@@ -215,7 +215,7 @@ Interactive HTML mockups were created during planning:
         using @react-pdf/renderer
       - email.ts — NEW: Resend client, MCR-branded email templates
         (course assigned, overdue, certificate earned), sendEmail()
-✅ 3. Section server actions:
+3. Section server actions:
       - section-actions.ts — NEW: full CRUD for sections, section quizzes, quiz
         questions, quiz options (with reorder support)
       - actions.ts — MODIFIED: createLesson now requires section_id, publishCourse
@@ -224,7 +224,7 @@ Interactive HTML mockups were created during planning:
 
 ### COMPLETED (Phase 2 — Admin UI)
 ```
-✅ 4. Admin UI components:
+4. Admin UI components:
       - section-manager.tsx — NEW (~350 lines): expandable section panels with
         create/edit/delete dialogs, chevron up/down reorder, collapsible body
         containing LessonManager + SectionQuizEditor per section
@@ -261,7 +261,7 @@ Interactive HTML mockups were created during planning:
 
 ### COMPLETED (Phase 3 — Learner UI, Certificates, Security)
 ```
-✅ 5. Learner UI components (PR #167):
+5. Learner UI components (PR #167):
       - section-accordion.tsx — expandable sections in course detail with progress
       - section-quiz-player.tsx — section quiz UI calling submit_section_quiz_attempt RPC
       - lesson-renderer.tsx — renders text, video, slides, and rich_text lessons
@@ -269,17 +269,17 @@ Interactive HTML mockups were created during planning:
         checkmarks (green check done, blue dot current, grey circle pending, lock for locked)
       - New route: /learning/courses/[id]/sections/[sectionId]/quiz
 
-✅ 6. Certificate system (PR #167):
+6. Certificate system (PR #167):
       - Certificate auto-issue via DB trigger (generate_certificate_on_completion)
       - /api/certificate/[id]/route — PDF generation endpoint
       - Certificate wall and detail pages still pending (UI only)
 
-✅ 7. Security hardening (PR #167):
+7. Security hardening (PR #167):
       - auth.uid() enforcement on all RPCs (submit_section_quiz_attempt,
         complete_lesson_and_update_progress)
       - 4 lesson types: text, video, slides, rich_text
 
-✅ 8. Wiring components into pages (PR #168, pending):
+8. Wiring components into pages (PR #168, pending):
       - Section accordion wired into course detail page
       - Quiz player wired into section quiz route
       - Lesson renderer wired into lesson player page
@@ -292,7 +292,7 @@ Interactive HTML mockups were created during planning:
 ⬜ Resume course — "Continue where you left off" on dashboard
 ⬜ Course search — Algolia InstantSearch on catalogue page
 ⬜ Course feedback dialog — 5 structured fields, shows once after completion
-✅ Tool Shed rewrite — social learning feed (Digital Postcards, 3-2-1, Takeover) — PR #176
+Tool Shed rewrite — social learning feed (Digital Postcards, 3-2-1, Takeover) — PR #176
 ⬜ Global Cmd+K search — multi-index overlay in header (courses + resources)
 ⬜ HR profile Learning tab — certificates + course progress on profile page
 ⬜ Dashboard redesign — list-first layout (LinkedIn Learning pattern)
@@ -301,9 +301,9 @@ Interactive HTML mockups were created during planning:
 ```
 
 ### PR Strategy (Small PRs)
-- **PR 1:** ✅ Migrations + utilities + section actions (DONE)
-- **PR 2:** ✅ Admin UI (section manager, quiz editor, course detail page) — DONE
-- **PR 3 (PR #167):** ✅ Learner UI + certificates + security — MERGED to main
+- **PR 1:** Migrations + utilities + section actions (DONE)
+- **PR 2:** Admin UI (section manager, quiz editor, course detail page) — DONE
+- **PR 3 (PR #167):** Learner UI + certificates + security — MERGED to main
 - **PR 4 (PR #168):** Wire components into pages + slides/rich_text admin support — PENDING
 - **PRs #165, #166:** Colin's PRs — CLOSED, superseded by #167
 - **Future PRs:** Feedback dialog, Tool Shed rewrite, Algolia search, global Cmd+K, integrations, dashboard redesign
@@ -422,7 +422,7 @@ Interactive HTML mockups were created during planning:
 - `src/components/layout/sidebar.tsx` (lines 103-122) — update Learning children (add Certificates, rename Tool Shed)
 - `src/app/(protected)/learning/page.tsx` — dashboard redesign (list-first, compliance alerts, continue learning)
 - `src/app/(protected)/learning/courses/page.tsx` — add Algolia search bar above category tabs
-- ~~`src/app/(protected)/learning/tool-shed/page.tsx`~~ — ✅ DONE (PR #176)
+- ~~`src/app/(protected)/learning/tool-shed/page.tsx`~~ — DONE (PR #176)
 - ~~`src/app/(protected)/learning/my-courses/page.tsx`~~ — merged into `/learning` dashboard (Phase F)
 - `src/app/(protected)/learning/admin/reports/page.tsx` — add feedback/certs/tool shed tabs
 - `src/app/(protected)/hr/profile/page.tsx` — add Learning tab (certificates + course progress)
@@ -471,7 +471,7 @@ Interactive HTML mockups were created during planning:
 - `course-feedback-dialog.tsx` — 5 structured fields, shows once after completion
 - `feedback-dashboard.tsx` — admin aggregates + anonymous comments + CSV export
 
-**Tool Shed** ✅ COMPLETE (PR #176)
+**Tool Shed** COMPLETE (PR #176)
 - Full rewrite of `/learning/tool-shed` — social learning feed
 - 2-step share dialog (format picker → content form) with all 3 formats
 - 6 components, 634 lines of server actions, migration 00062
