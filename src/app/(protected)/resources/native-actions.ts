@@ -11,6 +11,9 @@ import { revalidatePath } from "next/cache";
 import { requireContentEditor } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/types/database.types";
+import type { Value } from "platejs";
+import { serializeHtml } from "platejs/static";
+import { createNativeStaticEditor } from "@/lib/plate-static-plugins";
 import { indexArticleSections, removeArticleFromIndex } from "@/lib/algolia";
 import { parseHtmlIntoSections } from "@/lib/html-sections";
 import { logger } from "@/lib/logger";
@@ -63,6 +66,22 @@ async function ensureUniqueSlug(
 
 function revalidate() {
   revalidatePath("/resources", "layout");
+}
+
+/** Serialise Plate JSON to HTML for Algolia indexing and synced_html storage. */
+async function serialiseContentToHtml(contentJson: unknown): Promise<string | null> {
+  if (!contentJson || !Array.isArray(contentJson) || contentJson.length === 0) {
+    return null;
+  }
+  try {
+    const editor = createNativeStaticEditor(contentJson as Value);
+    return await serializeHtml(editor, { stripDataAttributes: true });
+  } catch (err) {
+    logger.error("Failed to serialise native content to HTML", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
 }
 
 // =============================================
@@ -231,7 +250,7 @@ export async function publishNativeArticle(
       })
       .eq("id", articleId)
       .eq("content_type", "native")
-      .select("id, title, slug, synced_html, resource_categories!category_id(name, slug)")
+      .select("id, title, slug, content_json, resource_categories!category_id(name, slug)")
       .single();
 
     if (error || !article) {
@@ -239,11 +258,19 @@ export async function publishNativeArticle(
       return { success: false, error: "Failed to publish" };
     }
 
-    // Index in Algolia
-    if (article.synced_html) {
-      try {
+    // Generate synced_html from content_json and index in Algolia
+    try {
+      const html = await serialiseContentToHtml(article.content_json);
+
+      if (html) {
+        // Persist synced_html so future reindex calls can skip serialisation
+        await supabase
+          .from("resource_articles")
+          .update({ synced_html: html })
+          .eq("id", articleId);
+
         const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
-        const sections = parseHtmlIntoSections(article.synced_html);
+        const sections = parseHtmlIntoSections(html);
         await indexArticleSections(
           article.id,
           article.slug,
@@ -254,13 +281,13 @@ export async function publishNativeArticle(
           sections,
           new Date().toISOString()
         );
-      } catch (err) {
-        logger.error("Algolia indexing failed on publish", {
-          error: err instanceof Error ? err.message : String(err),
-          articleId,
-        });
-        // Don't fail the publish — Algolia is non-critical
       }
+    } catch (err) {
+      logger.error("Algolia indexing failed on publish", {
+        error: err instanceof Error ? err.message : String(err),
+        articleId,
+      });
+      // Don't fail the publish — Algolia is non-critical
     }
 
     revalidate();
@@ -327,7 +354,7 @@ export async function reindexNativeArticle(
 
     const { data: article, error } = await supabase
       .from("resource_articles")
-      .select("id, title, slug, synced_html, status, resource_categories!category_id(name, slug)")
+      .select("id, title, slug, content_json, status, resource_categories!category_id(name, slug)")
       .eq("id", articleId)
       .eq("content_type", "native")
       .single();
@@ -341,12 +368,21 @@ export async function reindexNativeArticle(
       return { success: true };
     }
 
-    if (!article.synced_html) {
+    // Generate HTML from content_json
+    const html = await serialiseContentToHtml(article.content_json);
+
+    if (!html) {
       return { success: true };
     }
 
+    // Persist synced_html for future use
+    await supabase
+      .from("resource_articles")
+      .update({ synced_html: html })
+      .eq("id", articleId);
+
     const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
-    const sections = parseHtmlIntoSections(article.synced_html);
+    const sections = parseHtmlIntoSections(html);
     await indexArticleSections(
       article.id,
       article.slug,
