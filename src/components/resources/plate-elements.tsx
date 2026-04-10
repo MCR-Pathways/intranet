@@ -8,7 +8,7 @@
  * PlateElement/PlateLeaf with semantic HTML + Tailwind styling.
  */
 
-import { useRef } from "react";
+import { useState } from "react";
 import { PlateElement, PlateLeaf, useEditorRef } from "platejs/react";
 import {
   TablePlugin,
@@ -38,8 +38,8 @@ import {
   Minus,
   Trash2,
   Rows3,
-  Columns3,
   Columns2,
+  Columns3,
   PanelLeft,
   PanelRight,
   X,
@@ -51,6 +51,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { PlateElementProps, PlateLeafProps } from "platejs/react";
 
 // =============================================
@@ -188,7 +198,6 @@ export function CalloutElement({ children, element, editor, ...props }: PlateEle
 // =============================================
 
 export function TableElement({ children, ...props }: PlateElementProps) {
-  const tableRef = useRef<HTMLTableElement>(null);
   const { props: tableProps } = useTableElement();
   const colSizes = useTableColSizes();
 
@@ -199,7 +208,6 @@ export function TableElement({ children, ...props }: PlateElementProps) {
       <div className="relative my-4 group/table overflow-x-auto">
         <TableFloatingToolbar />
         <table
-          ref={tableRef}
           className="w-full border-collapse border border-border"
           {...tableProps}
         >
@@ -258,7 +266,7 @@ export function TableCellHeaderElement({ children, ...props }: PlateElementProps
       {...props}
       as="th"
       className={cn(
-        "border border-border p-2 align-top relative bg-muted font-semibold",
+        "border border-border p-2 align-top relative bg-muted font-semibold text-left",
         selected && "bg-primary/10"
       )}
       style={width ? { width } : undefined}
@@ -274,6 +282,7 @@ export function TableCellHeaderElement({ children, ...props }: PlateElementProps
 
 function TableFloatingToolbar() {
   const editor = useEditorRef();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isInTable = editor.api.some({
     match: { type: TablePlugin.node.type },
@@ -282,6 +291,7 @@ function TableFloatingToolbar() {
   if (!isInTable) return null;
 
   return (
+    <>
     <div
       contentEditable={false}
       className="absolute -top-9 left-0 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-1 py-0.5 shadow-sm opacity-0 group-focus-within/table:opacity-100 group-hover/table:opacity-100 transition-opacity"
@@ -416,8 +426,7 @@ function TableFloatingToolbar() {
             className="h-7 w-7 text-destructive hover:text-destructive"
             onMouseDown={(e) => {
               e.preventDefault();
-              deleteTable(editor);
-              editor.tf.focus();
+              setShowDeleteConfirm(true);
             }}
             aria-label="Delete table"
           >
@@ -427,6 +436,30 @@ function TableFloatingToolbar() {
         <TooltipContent side="top">Delete table</TooltipContent>
       </Tooltip>
     </div>
+
+    <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete table?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove the entire table and its contents. You can undo with Ctrl+Z.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              deleteTable(editor);
+              editor.tf.focus();
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
@@ -443,6 +476,14 @@ const COLUMN_PRESETS = [
 
 export function ColumnGroupElement({ children, element, ...props }: PlateElementProps) {
   const editor = useEditorRef();
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const elementId = (element as Record<string, unknown>).id as string | undefined;
+
+  const findPath = () => {
+    if (!elementId) return props.path;
+    const entry = editor.api.node({ match: { id: elementId } });
+    return entry ? entry[1] : props.path;
+  };
 
   return (
     <PlateElement element={element} {...props}>
@@ -461,10 +502,11 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
                   className="h-7 w-7"
                   onMouseDown={(e) => {
                     e.preventDefault();
+                    const at = findPath();
                     if (preset.widths) {
-                      setColumns(editor, { at: props.path, widths: [...preset.widths] });
+                      setColumns(editor, { at, widths: [...preset.widths] });
                     } else {
-                      setColumns(editor, { at: props.path, columns: preset.columns });
+                      setColumns(editor, { at, columns: preset.columns });
                     }
                     editor.tf.focus();
                   }}
@@ -487,8 +529,7 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
                 className="h-7 w-7 text-destructive hover:text-destructive"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  toggleColumnGroup(editor);
-                  editor.tf.focus();
+                  setShowRemoveConfirm(true);
                 }}
                 aria-label="Remove columns"
               >
@@ -501,6 +542,29 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
 
         {children}
       </div>
+
+      <AlertDialog open={showRemoveConfirm} onOpenChange={setShowRemoveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove columns?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will unwrap the column layout. Content from each column will become normal blocks. You can undo with Ctrl+Z.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                toggleColumnGroup(editor);
+                editor.tf.focus();
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PlateElement>
   );
 }

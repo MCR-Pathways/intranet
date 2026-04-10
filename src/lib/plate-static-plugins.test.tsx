@@ -129,8 +129,8 @@ describe("serializeHtml", () => {
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain('role="note"');
     expect(html).toContain("Be careful here");
-    // Warning variant uses amber background
-    expect(html).toContain("#fffbeb");
+    // Warning variant uses amber Tailwind classes
+    expect(html).toContain("bg-amber-50");
   });
 
   it("serialises a callout with default info variant", async () => {
@@ -144,8 +144,8 @@ describe("serializeHtml", () => {
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain('role="note"');
     expect(html).toContain("Info note");
-    // Info variant uses blue background
-    expect(html).toContain("#eff6ff");
+    // Info variant uses blue Tailwind classes
+    expect(html).toContain("bg-blue-50");
   });
 
   it("serialises a table with header and body rows", async () => {
@@ -258,8 +258,12 @@ describe("nestToggleChildren", () => {
     ];
     const result = nestToggleChildren(value);
     expect(result).toHaveLength(2);
-    expect((result[1] as Record<string, unknown>).type).toBe("toggle");
-    expect((result[1] as Record<string, unknown>).children).toEqual([{ text: "Empty toggle" }]);
+    const toggle = result[1] as Record<string, unknown>;
+    expect(toggle.type).toBe("toggle");
+    // Children should be just the toggle_summary wrapper (no nested content)
+    const children = toggle.children as Record<string, unknown>[];
+    expect(children).toHaveLength(1);
+    expect(children[0].type).toBe("toggle_summary");
   });
 
   it("nests indented siblings after a toggle", () => {
@@ -274,11 +278,12 @@ describe("nestToggleChildren", () => {
 
     const toggle = result[0] as Record<string, unknown>;
     expect(toggle.type).toBe("toggle");
-    const children = toggle.children as unknown[];
-    // Original text child + 2 nested paragraphs
+    const children = toggle.children as Record<string, unknown>[];
+    // toggle_summary + 2 nested paragraphs
     expect(children).toHaveLength(3);
-    expect((children[1] as Record<string, unknown>).type).toBe("p");
-    expect((children[2] as Record<string, unknown>).type).toBe("p");
+    expect(children[0].type).toBe("toggle_summary");
+    expect(children[1].type).toBe("p");
+    expect(children[2].type).toBe("p");
 
     expect((result[1] as Record<string, unknown>).type).toBe("p");
   });
@@ -290,8 +295,13 @@ describe("nestToggleChildren", () => {
     ];
     const result = nestToggleChildren(value);
     expect(result).toHaveLength(2);
-    expect((result[0] as Record<string, unknown>).children).toEqual([{ text: "Q1" }]);
-    expect((result[1] as Record<string, unknown>).children).toEqual([{ text: "Q2" }]);
+    // Each toggle has just a toggle_summary child
+    const t1Children = (result[0] as Record<string, unknown>).children as Record<string, unknown>[];
+    expect(t1Children).toHaveLength(1);
+    expect(t1Children[0].type).toBe("toggle_summary");
+    const t2Children = (result[1] as Record<string, unknown>).children as Record<string, unknown>[];
+    expect(t2Children).toHaveLength(1);
+    expect(t2Children[0].type).toBe("toggle_summary");
   });
 
   it("handles nested toggles", () => {
@@ -307,15 +317,17 @@ describe("nestToggleChildren", () => {
     expect(result).toHaveLength(2); // outer toggle + "Outside" paragraph
 
     const outer = result[0] as Record<string, unknown>;
-    const outerChildren = outer.children as unknown[];
-    // Original text + "Outer content" + nested toggle + "Back to outer"
+    const outerChildren = outer.children as Record<string, unknown>[];
+    // toggle_summary + "Outer content" + nested toggle + "Back to outer"
     expect(outerChildren).toHaveLength(4);
+    expect(outerChildren[0].type).toBe("toggle_summary");
 
     const innerToggle = outerChildren[2] as Record<string, unknown>;
     expect(innerToggle.type).toBe("toggle");
-    const innerChildren = innerToggle.children as unknown[];
-    // Original text + "Inner content"
+    const innerChildren = innerToggle.children as Record<string, unknown>[];
+    // toggle_summary + "Inner content"
     expect(innerChildren).toHaveLength(2);
+    expect(innerChildren[0].type).toBe("toggle_summary");
   });
 
   it("does not nest indented content that does not follow a toggle", () => {

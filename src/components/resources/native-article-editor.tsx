@@ -102,19 +102,24 @@ export function NativeArticleEditor({
     [article.id]
   );
 
+  const clearPendingTimers = useCallback(() => {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
+  }, []);
+
   const handleChange = useCallback(
     (value: Value) => {
       currentValueRef.current = value;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      clearPendingTimers();
       debounceRef.current = setTimeout(() => doSave(value), 5000);
     },
-    [doSave]
+    [doSave, clearPendingTimers]
   );
 
   const handleManualSave = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    clearPendingTimers();
     doSave(currentValueRef.current);
-  }, [doSave]);
+  }, [doSave, clearPendingTimers]);
 
   return (
     <div className="space-y-4">
