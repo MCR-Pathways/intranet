@@ -34,6 +34,8 @@ import {
 } from "@platejs/table/react";
 import { ColumnPlugin, ColumnItemPlugin } from "@platejs/layout/react";
 import { insertColumnGroup } from "@platejs/layout";
+import { TogglePlugin } from "@platejs/toggle/react";
+import { IndentPlugin } from "@platejs/indent/react";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
 import { ArticleLinkPopover } from "./article-link-popover";
@@ -53,6 +55,7 @@ import {
   TableCellHeaderElement,
   ColumnGroupElement,
   ColumnItemElement,
+  ToggleElement,
   BoldLeaf,
   ItalicLeaf,
   UnderlineLeaf,
@@ -75,6 +78,7 @@ import {
   Info,
   Table,
   Columns2,
+  ChevronRight,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -130,6 +134,18 @@ function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof
         >
           <Columns2 className="h-4 w-4" />
           Columns
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insert.nodes(
+              { type: "toggle", id: crypto.randomUUID(), children: [{ text: "" }] },
+              { select: true }
+            );
+            editor.tf.focus();
+          }}
+        >
+          <ChevronRight className="h-4 w-4" />
+          Toggle
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -270,6 +286,12 @@ export function PlateRichEditor({
         TableCellHeaderPlugin,
         ColumnPlugin,
         ColumnItemPlugin,
+        IndentPlugin.configure({
+          inject: {
+            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote", "toggle"],
+          },
+        }),
+        TogglePlugin,
       ],
       override: {
         components: {
@@ -288,6 +310,7 @@ export function PlateRichEditor({
           th: TableCellHeaderElement,
           column_group: ColumnGroupElement,
           column: ColumnItemElement,
+          toggle: ToggleElement,
           bold: BoldLeaf,
           italic: ItalicLeaf,
           underline: UnderlineLeaf,

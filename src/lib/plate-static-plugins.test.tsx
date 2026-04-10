@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Value } from "platejs";
 import { serializeHtml } from "platejs/static";
-import { createNativeStaticEditor } from "./plate-static-plugins";
+import { createNativeStaticEditor, nestToggleChildren } from "./plate-static-plugins";
 
 describe("createNativeStaticEditor", () => {
   it("creates an editor with the given value", () => {
@@ -208,6 +208,21 @@ describe("serializeHtml", () => {
     expect(html).toContain("not-prose");
   });
 
+  it("serialises a toggle as details/summary", async () => {
+    const value: Value = [
+      {
+        type: "toggle",
+        id: "t1",
+        children: [{ text: "FAQ question" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<details");
+    expect(html).toContain("<summary");
+    expect(html).toContain("FAQ question");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },
@@ -223,5 +238,94 @@ describe("serializeHtml", () => {
     expect(html).toContain("Introduction text");
     expect(html).toContain("A quote");
     expect(html).toContain("Closing paragraph");
+  });
+});
+
+describe("nestToggleChildren", () => {
+  it("returns value unchanged when no toggles present", () => {
+    const value: Value = [
+      { type: "p", children: [{ text: "Hello" }] },
+      { type: "h1", children: [{ text: "Title" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toEqual(value);
+  });
+
+  it("handles a toggle at end of document with no children", () => {
+    const value: Value = [
+      { type: "p", children: [{ text: "Before" }] },
+      { type: "toggle", id: "t1", children: [{ text: "Empty toggle" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toHaveLength(2);
+    expect((result[1] as Record<string, unknown>).type).toBe("toggle");
+    expect((result[1] as Record<string, unknown>).children).toEqual([{ text: "Empty toggle" }]);
+  });
+
+  it("nests indented siblings after a toggle", () => {
+    const value: Value = [
+      { type: "toggle", id: "t1", children: [{ text: "Question" }] },
+      { type: "p", indent: 1, children: [{ text: "Answer line 1" }] },
+      { type: "p", indent: 1, children: [{ text: "Answer line 2" }] },
+      { type: "p", children: [{ text: "After toggle" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toHaveLength(2);
+
+    const toggle = result[0] as Record<string, unknown>;
+    expect(toggle.type).toBe("toggle");
+    const children = toggle.children as unknown[];
+    // Original text child + 2 nested paragraphs
+    expect(children).toHaveLength(3);
+    expect((children[1] as Record<string, unknown>).type).toBe("p");
+    expect((children[2] as Record<string, unknown>).type).toBe("p");
+
+    expect((result[1] as Record<string, unknown>).type).toBe("p");
+  });
+
+  it("handles consecutive toggles with no content between", () => {
+    const value: Value = [
+      { type: "toggle", id: "t1", children: [{ text: "Q1" }] },
+      { type: "toggle", id: "t2", children: [{ text: "Q2" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toHaveLength(2);
+    expect((result[0] as Record<string, unknown>).children).toEqual([{ text: "Q1" }]);
+    expect((result[1] as Record<string, unknown>).children).toEqual([{ text: "Q2" }]);
+  });
+
+  it("handles nested toggles", () => {
+    const value: Value = [
+      { type: "toggle", id: "t1", children: [{ text: "Outer" }] },
+      { type: "p", indent: 1, children: [{ text: "Outer content" }] },
+      { type: "toggle", id: "t2", indent: 1, children: [{ text: "Inner" }] },
+      { type: "p", indent: 2, children: [{ text: "Inner content" }] },
+      { type: "p", indent: 1, children: [{ text: "Back to outer" }] },
+      { type: "p", children: [{ text: "Outside" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toHaveLength(2); // outer toggle + "Outside" paragraph
+
+    const outer = result[0] as Record<string, unknown>;
+    const outerChildren = outer.children as unknown[];
+    // Original text + "Outer content" + nested toggle + "Back to outer"
+    expect(outerChildren).toHaveLength(4);
+
+    const innerToggle = outerChildren[2] as Record<string, unknown>;
+    expect(innerToggle.type).toBe("toggle");
+    const innerChildren = innerToggle.children as unknown[];
+    // Original text + "Inner content"
+    expect(innerChildren).toHaveLength(2);
+  });
+
+  it("does not nest indented content that does not follow a toggle", () => {
+    const value: Value = [
+      { type: "p", indent: 1, children: [{ text: "Indented but no toggle" }] },
+      { type: "p", children: [{ text: "Normal" }] },
+    ];
+    const result = nestToggleChildren(value);
+    expect(result).toHaveLength(2);
+    // Left as-is since no toggle precedes the indented content
+    expect(result).toEqual(value);
   });
 });
