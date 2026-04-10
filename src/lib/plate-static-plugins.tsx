@@ -30,6 +30,7 @@ import { BaseCalloutPlugin } from "@platejs/callout";
 import { BaseColumnPlugin, BaseColumnItemPlugin } from "@platejs/layout";
 import { BaseTogglePlugin } from "@platejs/toggle";
 import { BaseIndentPlugin } from "@platejs/indent";
+import { createSlatePlugin } from "platejs";
 import {
   BaseTablePlugin,
   BaseTableRowPlugin,
@@ -90,46 +91,41 @@ function LinkStatic({ children, element, ...props }: SlateElementProps) {
 // CALLOUT
 // =============================================
 
-const CALLOUT_STATIC_STYLES: Record<string, string> = {
-  info: "background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
-  success: "background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
-  warning: "background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
-  error: "background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
+const CALLOUT_STATIC_CLASSES: Record<string, string> = {
+  info: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200",
+  success: "bg-green-50 border-green-200 text-green-800 dark:bg-green-950/30 dark:border-green-800 dark:text-green-200",
+  warning: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200",
+  error: "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200",
 };
 
 function CalloutStatic({ children, element, ...props }: SlateElementProps) {
   const variant = ((element as Record<string, unknown>).variant as string) || "info";
-  const style = CALLOUT_STATIC_STYLES[variant] ?? CALLOUT_STATIC_STYLES.info;
+  const classes = CALLOUT_STATIC_CLASSES[variant] ?? CALLOUT_STATIC_CLASSES.info;
   return (
     <SlateElement element={element} {...props}>
-      <div role="note" style={cssStringToObject(style)}>
+      <div role="note" className={`rounded-lg border p-4 my-2 ${classes}`}>
         {children}
       </div>
     </SlateElement>
   );
 }
 
-/** Convert a CSS string like "color:red;margin:0" to a React style object. */
-function cssStringToObject(css: string): React.CSSProperties {
-  const style: Record<string, string> = {};
-  for (const declaration of css.split(";")) {
-    const [prop, val] = declaration.split(":");
-    if (prop && val) {
-      const camelCase = prop.trim().replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-      style[camelCase] = val.trim();
-    }
-  }
-  return style;
-}
-
 // =============================================
 // TABLE
 // =============================================
 
-function TableStatic({ children, ...props }: SlateElementProps) {
+function TableStatic({ children, element, ...props }: SlateElementProps) {
+  const colSizes = (element as Record<string, unknown>).colSizes as number[] | undefined;
   return (
-    <SlateElement {...props}>
+    <SlateElement element={element} {...props}>
       <table className="w-full border-collapse border border-border my-4">
+        {colSizes && (
+          <colgroup>
+            {colSizes.map((size, i) => (
+              <col key={i} style={size ? { width: size } : undefined} />
+            ))}
+          </colgroup>
+        )}
         <tbody>{children}</tbody>
       </table>
     </SlateElement>
@@ -191,10 +187,18 @@ function ToggleStatic({ children, ...props }: SlateElementProps) {
   return (
     <SlateElement {...props}>
       <details open>
-        <summary className="cursor-pointer font-medium list-none flex items-center gap-1">
-          {children}
-        </summary>
+        {children}
       </details>
+    </SlateElement>
+  );
+}
+
+function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
+  return (
+    <SlateElement {...props}>
+      <summary className="cursor-pointer font-medium list-none flex items-center gap-1">
+        {children}
+      </summary>
     </SlateElement>
   );
 }
@@ -248,8 +252,11 @@ export function nestToggleChildren(value: Value): Value {
       }
     }
 
-    // Combine original text children with nested block children
-    toggle.children = [...originalChildren, ...nestedChildren];
+    // Wrap heading in toggle_summary, then append nested block children
+    toggle.children = [
+      { type: "toggle_summary", children: originalChildren },
+      ...nestedChildren,
+    ];
     result.push(toggle as Value[number]);
   }
 
@@ -285,7 +292,10 @@ function collectToggleSlice(
     }
   }
 
-  toggle.children = [...originalChildren, ...nestedChildren];
+  toggle.children = [
+    { type: "toggle_summary", children: originalChildren },
+    ...nestedChildren,
+  ];
   // Strip indent from the toggle itself
   const { indent: _indent, ...cleanToggle } = toggle;
   return { nodes: [cleanToggle as Value[number]], nextIndex: i };
@@ -315,6 +325,12 @@ function StrikethroughStatic(props: SlateLeafProps) {
 // PLUGIN REGISTRY
 // =============================================
 
+/** Static-only plugin for the toggle_summary virtual node created by nestToggleChildren. */
+const BaseToggleSummaryPlugin = createSlatePlugin({
+  key: "toggle_summary",
+  node: { isElement: true },
+});
+
 const staticPlugins = [
   BaseHeadingPlugin,
   BaseBlockquotePlugin,
@@ -334,6 +350,7 @@ const staticPlugins = [
   BaseColumnItemPlugin,
   BaseIndentPlugin,
   BaseTogglePlugin,
+  BaseToggleSummaryPlugin,
 ];
 
 const staticComponents = {
@@ -353,6 +370,7 @@ const staticComponents = {
   column_group: ColumnGroupStatic,
   column: ColumnItemStatic,
   toggle: ToggleStatic,
+  toggle_summary: ToggleSummaryStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,
@@ -369,11 +387,8 @@ const staticComponents = {
  * serialisation in server actions.
  */
 export function createNativeStaticEditor(value: Value) {
-  // Preprocess: convert flat indent-based toggles to nested model
-  const hasToggles = value.some(
-    (node) => (node as Record<string, unknown>).type === "toggle"
-  );
-  const processedValue = hasToggles ? nestToggleChildren(value) : value;
+  // Preprocess: convert flat indent-based toggles to nested model for static rendering
+  const processedValue = nestToggleChildren(value);
 
   return createStaticEditor({
     plugins: staticPlugins,
