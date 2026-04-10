@@ -2,7 +2,7 @@
 
 > **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-04-09
+> **Last reviewed:** 2026-04-10
 
 ---
 
@@ -725,6 +725,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-04-10 | Abdulmuiz Adaranijo | Native editor WS3 block plugins. 4 block types added to the Plate editor: callout (4 variants with dark mode), table (basic grid with resize and floating toolbar), columns (2-3 column presets with layout switcher), toggle/accordion (indent-based with collapsible details/summary static rendering). Shared infrastructure: Insert dropdown on toolbar, manual Save button, HTML serialisation pipeline (synced_html populated for Algolia), static plugin extraction (plate-static-plugins.tsx + plate-elements.tsx). 20 new tests (serialisation + nestToggleChildren edge cases). 3 rounds of review fixes: confirmation dialogs for destructive actions, retry race condition fix, dark mode callout, colgroup for table widths, focus-only toolbars, flex-basis width conflict. 1,350 tests, 58 files. |
 | 2026-04-09 | Abdulmuiz Adaranijo | Database types regeneration. Regenerated database.types.ts from Supabase (70+ tables, was 40). Added Database generic to all 3 Supabase clients for compile-time query checking. Fixed 72 type errors across 52 files: removed 29 `as any` casts, typed insert payloads, updated nullable interfaces. Post-process script at scripts/post-process-types.mjs. 1,330 tests passing. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Phase F COMPLETE (PRs #187-194, 8 PRs). Learner UX overhaul: merged Landing + My Courses into single dashboard (#187), catalogue card polish with left-border accents (#188), lesson sidebar section grouping (#189), catalogue search (#190), Coursera-inspired certificate redesign with Playfair Display + MCR logo + charity registration (#191), admin guardrails with certificate toggle + publish warnings + migration 00072 (#192), syllabus preview for unenrolled users + certificate download (#193), completion celebration with confetti (#194). Removed 8 redundancies, deleted /my-courses page, added canvas-confetti dependency. |
 | 2026-03-30 | Abdulmuiz Adaranijo | Phase F PR 1: Merge Learning dashboard (PR #187). Deleted /learning/my-courses page. Merged Landing + My Courses into single /learning with tabs (In Progress, Completed, External). Extracted EnrolledCourseCard with category left-border accents. Replaced 4 stat cards with compact inline bar. Removed 8 redundancies. Moved external course actions to learning/actions.ts. Updated sidebar: "My Courses" → "Catalogue". Added borderColor to CategoryConfig. Fixed hydration mismatch (server timestamp for due date calc). 18 files, +385/-707. |
