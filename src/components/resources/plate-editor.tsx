@@ -32,6 +32,8 @@ import {
   TableCellPlugin,
   TableCellHeaderPlugin,
 } from "@platejs/table/react";
+import { ColumnPlugin, ColumnItemPlugin } from "@platejs/layout/react";
+import { insertColumnGroup } from "@platejs/layout";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
 import { ArticleLinkPopover } from "./article-link-popover";
@@ -49,6 +51,8 @@ import {
   TableRowElement,
   TableCellElement,
   TableCellHeaderElement,
+  ColumnGroupElement,
+  ColumnItemElement,
   BoldLeaf,
   ItalicLeaf,
   UnderlineLeaf,
@@ -70,6 +74,7 @@ import {
   Plus,
   Info,
   Table,
+  Columns2,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -116,6 +121,15 @@ function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof
         >
           <Table className="h-4 w-4" />
           Table
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            insertColumnGroup(editor, { columns: 2 });
+            editor.tf.focus();
+          }}
+        >
+          <Columns2 className="h-4 w-4" />
+          Columns
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -254,6 +268,8 @@ export function PlateRichEditor({
         TableRowPlugin,
         TableCellPlugin,
         TableCellHeaderPlugin,
+        ColumnPlugin,
+        ColumnItemPlugin,
       ],
       override: {
         components: {
@@ -270,6 +286,8 @@ export function PlateRichEditor({
           tr: TableRowElement,
           td: TableCellElement,
           th: TableCellHeaderElement,
+          column_group: ColumnGroupElement,
+          column: ColumnItemElement,
           bold: BoldLeaf,
           italic: ItalicLeaf,
           underline: UnderlineLeaf,
