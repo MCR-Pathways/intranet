@@ -97,3 +97,21 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 **`serializeHtml` is async (returns `Promise<string>`).** Must `await` it. The function is in `platejs/static` (re-exported from `@platejs/core/static`).
 
 **Empty content returns `""` from `serialiseContentToHtml`, not `null`.** `null` means serialisation error (skip update). Empty string means content was cleared (clear `synced_html` + remove from Algolia to prevent stale data).
+
+## Media (WS4)
+
+**Media files go to Google Drive, served via `/api/drive-file/[fileId]` proxy.** The proxy streams from Drive API (Node.js Readable -> Web ReadableStream). Auth check + resource_media whitelist check before fetching. `Cache-Control: private, max-age=86400` on 200 only; errors get `no-store` (prevents caching broken images during Drive outages).
+
+**`resource_media` table whitelists uploaded file IDs.** Without it, the proxy is an open relay for any file the service account can see (domain-wide delegation). RLS INSERT policy matches `requireContentEditor()` checks. Proxy uses service client for the whitelist query (needs all rows), session client for auth.
+
+**Validate magic bytes, not just `file.type`.** Browser-reported MIME types come from the file extension, not content. A renamed HTML file passes client-side validation. Server checks first bytes: PNG `\x89PNG`, JPEG `\xFF\xD8\xFF`, GIF `GIF8`, WebP `RIFF...WEBP`, PDF `%PDF-`.
+
+**`maxDuration` cannot be exported from "use server" files.** Sync exports in server action files cause Vercel build failures. `maxDuration` belongs in API route files only. Server actions inherit the page's function timeout.
+
+**Sanitise filenames in Content-Disposition headers.** Strip `"`, `\`, `\n`, `\r`, null bytes. Prevents header injection.
+
+**Video embeds store `url` (embed URL) + `sourceUrl` (original URL).** `url` is what Plate reads for rendering (the embed format). `sourceUrl` is for the edit dialog so users see the recognisable YouTube/Vimeo URL they pasted, not the embed format.
+
+**All video embed iframes use `sandbox="allow-scripts allow-same-origin allow-presentation"`.** Matches the learning module's VideoPlayer. Prevents navigation and form submission from embedded content.
+
+**Vercel Hobby streams files over 4.5 MB without issues.** Spike-tested with 1/5/10 MB files. The 4.5 MB serverless payload limit applies to non-streaming responses only. Streaming via Web ReadableStream bypasses it.
