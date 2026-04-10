@@ -28,6 +28,8 @@ import { BaseLinkPlugin } from "@platejs/link";
 import { BaseListPlugin } from "@platejs/list";
 import { BaseCalloutPlugin } from "@platejs/callout";
 import { BaseColumnPlugin, BaseColumnItemPlugin } from "@platejs/layout";
+import { BaseTogglePlugin } from "@platejs/toggle";
+import { BaseIndentPlugin } from "@platejs/indent";
 import {
   BaseTablePlugin,
   BaseTableRowPlugin,
@@ -182,6 +184,114 @@ function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
 }
 
 // =============================================
+// TOGGLE
+// =============================================
+
+function ToggleStatic({ children, ...props }: SlateElementProps) {
+  return (
+    <SlateElement {...props}>
+      <details open>
+        <summary className="cursor-pointer font-medium list-none flex items-center gap-1">
+          {children}
+        </summary>
+      </details>
+    </SlateElement>
+  );
+}
+
+/**
+ * Convert the flat indent-based toggle model to a nested model for
+ * static rendering. The editor stores toggle children as sibling blocks
+ * with indent > 0. The static renderer needs them nested inside the
+ * toggle's children array so they appear inside <details>.
+ *
+ * Only processes top-level nodes. Indented content NOT following a
+ * toggle is left as-is.
+ */
+export function nestToggleChildren(value: Value): Value {
+  const result: Value[number][] = [];
+  let i = 0;
+
+  while (i < value.length) {
+    const node = value[i] as Record<string, unknown>;
+
+    if (node.type !== "toggle") {
+      result.push(value[i]);
+      i++;
+      continue;
+    }
+
+    // Copy the toggle node
+    const toggle = { ...node };
+    const originalChildren = (toggle.children ?? []) as Value[number][];
+    const nestedChildren: Value[number][] = [];
+
+    // Scan forward for indented siblings
+    i++;
+    while (i < value.length) {
+      const sibling = value[i] as Record<string, unknown>;
+      const indent = sibling.indent as number | undefined;
+
+      if (!indent || indent <= 0) break;
+
+      // Recursively handle nested toggles
+      if (sibling.type === "toggle") {
+        // Collect this nested toggle and its children
+        const nestedSlice = collectToggleSlice(value, i);
+        nestedChildren.push(...nestedSlice.nodes);
+        i = nestedSlice.nextIndex;
+      } else {
+        // Strip the indent (decrement by 1) for the nested content
+        const { indent: _indent, ...rest } = sibling;
+        nestedChildren.push(rest as Value[number]);
+        i++;
+      }
+    }
+
+    // Combine original text children with nested block children
+    toggle.children = [...originalChildren, ...nestedChildren];
+    result.push(toggle as Value[number]);
+  }
+
+  return result;
+}
+
+/** Collect a toggle and all its indented children from the flat array. */
+function collectToggleSlice(
+  value: Value,
+  startIndex: number
+): { nodes: Value[number][]; nextIndex: number } {
+  const node = value[startIndex] as Record<string, unknown>;
+  const toggle = { ...node };
+  const originalChildren = (toggle.children ?? []) as Value[number][];
+  const nestedChildren: Value[number][] = [];
+  const baseIndent = (node.indent as number) ?? 0;
+
+  let i = startIndex + 1;
+  while (i < value.length) {
+    const sibling = value[i] as Record<string, unknown>;
+    const indent = (sibling.indent as number) ?? 0;
+
+    if (indent <= baseIndent) break;
+
+    if (sibling.type === "toggle") {
+      const nested = collectToggleSlice(value, i);
+      nestedChildren.push(...nested.nodes);
+      i = nested.nextIndex;
+    } else {
+      const { indent: _indent, ...rest } = sibling;
+      nestedChildren.push(rest as Value[number]);
+      i++;
+    }
+  }
+
+  toggle.children = [...originalChildren, ...nestedChildren];
+  // Strip indent from the toggle itself
+  const { indent: _indent, ...cleanToggle } = toggle;
+  return { nodes: [cleanToggle as Value[number]], nextIndex: i };
+}
+
+// =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
 
@@ -222,6 +332,8 @@ const staticPlugins = [
   BaseTableCellHeaderPlugin,
   BaseColumnPlugin,
   BaseColumnItemPlugin,
+  BaseIndentPlugin,
+  BaseTogglePlugin,
 ];
 
 const staticComponents = {
@@ -240,6 +352,7 @@ const staticComponents = {
   th: TableCellHeaderStatic,
   column_group: ColumnGroupStatic,
   column: ColumnItemStatic,
+  toggle: ToggleStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,
@@ -256,9 +369,15 @@ const staticComponents = {
  * serialisation in server actions.
  */
 export function createNativeStaticEditor(value: Value) {
+  // Preprocess: convert flat indent-based toggles to nested model
+  const hasToggles = value.some(
+    (node) => (node as Record<string, unknown>).type === "toggle"
+  );
+  const processedValue = hasToggles ? nestToggleChildren(value) : value;
+
   return createStaticEditor({
     plugins: staticPlugins,
-    value,
+    value: processedValue,
     override: {
       components: staticComponents,
     },

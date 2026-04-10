@@ -27,6 +27,7 @@ import {
 } from "@platejs/table";
 import { ResizeHandle } from "@platejs/resizable";
 import { setColumns, toggleColumnGroup } from "@platejs/layout";
+import { useToggleButtonState, useToggleButton } from "@platejs/toggle/react";
 import { cn } from "@/lib/utils";
 import {
   Info,
@@ -42,6 +43,7 @@ import {
   PanelLeft,
   PanelRight,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -513,6 +515,38 @@ export function ColumnItemElement({ children, element, ...props }: PlateElementP
         style={width ? { width } : undefined}
       >
         {children}
+      </div>
+    </PlateElement>
+  );
+}
+
+// =============================================
+// TOGGLE
+// =============================================
+
+export function ToggleElement({ children, element, ...props }: PlateElementProps) {
+  const id = (element as Record<string, unknown>).id as string;
+  const state = useToggleButtonState(id);
+  const { buttonProps, open } = useToggleButton(state);
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div className="flex items-start gap-1 my-1">
+        <button
+          type="button"
+          contentEditable={false}
+          className="mt-1 flex-shrink-0 select-none rounded p-0.5 hover:bg-muted transition-colors"
+          aria-expanded={open}
+          {...buttonProps}
+        >
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              open && "rotate-90"
+            )}
+          />
+        </button>
+        <div className="flex-1 min-w-0 font-medium">{children}</div>
       </div>
     </PlateElement>
   );
