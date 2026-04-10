@@ -3,10 +3,8 @@
 /**
  * Native Plate editor for resource articles.
  *
- * Basic rich text: headings, bold, italic, underline, strikethrough,
- * ordered/unordered lists, links, blockquote, horizontal rule.
- * Block plugins (accordion, tabs, etc.) added in WS3.
- * Media plugins (images, files, embeds) added in WS4.
+ * Plugin registration, toolbar, and editor wrapper. Element/leaf
+ * components live in plate-elements.tsx.
  */
 
 import { useCallback, useEffect, useRef } from "react";
@@ -14,8 +12,6 @@ import type { Value } from "platejs";
 import {
   Plate,
   PlateContent,
-  PlateElement,
-  PlateLeaf,
   usePlateEditor,
 } from "platejs/react";
 import {
@@ -29,9 +25,42 @@ import {
 } from "@platejs/basic-nodes/react";
 import { LinkPlugin } from "@platejs/link/react";
 import { ListPlugin } from "@platejs/list/react";
+import { CalloutPlugin } from "@platejs/callout/react";
+import {
+  TablePlugin,
+  TableRowPlugin,
+  TableCellPlugin,
+  TableCellHeaderPlugin,
+} from "@platejs/table/react";
+import { ColumnPlugin, ColumnItemPlugin } from "@platejs/layout/react";
+import { insertColumnGroup } from "@platejs/layout";
+import { TogglePlugin } from "@platejs/toggle/react";
+import { IndentPlugin } from "@platejs/indent/react";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
 import { ArticleLinkPopover } from "./article-link-popover";
+import {
+  ParagraphElement,
+  BlockquoteElement,
+  H1Element,
+  H2Element,
+  H3Element,
+  H4Element,
+  HrElement,
+  LinkElement,
+  CalloutElement,
+  TableElement,
+  TableRowElement,
+  TableCellElement,
+  TableCellHeaderElement,
+  ColumnGroupElement,
+  ColumnItemElement,
+  ToggleElement,
+  BoldLeaf,
+  ItalicLeaf,
+  UnderlineLeaf,
+  StrikethroughLeaf,
+} from "./plate-elements";
 import {
   Bold,
   Italic,
@@ -45,88 +74,82 @@ import {
   List,
   ListOrdered,
   Minus,
+  Plus,
+  Info,
+  Table,
+  Columns2,
+  ChevronRight,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
-import type { PlateElementProps, PlateLeafProps } from "platejs/react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 // =============================================
-// ELEMENT COMPONENTS
+// INSERT BLOCK DROPDOWN
 // =============================================
 
-function ParagraphElement(props: PlateElementProps) {
-  return <PlateElement {...props} as="p" />;
-}
-
-function BlockquoteElement(props: PlateElementProps) {
+function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof usePlateEditor>> }) {
   return (
-    <PlateElement
-      {...props}
-      as="blockquote"
-      className="border-l-2 border-border pl-6 italic"
-    />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-2 hover:bg-muted transition-colors"
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label="Insert block"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="text-xs">Insert</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insert.callout({ variant: "info" });
+            editor.tf.focus();
+          }}
+        >
+          <Info className="h-4 w-4" />
+          Callout
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insert.table({ colCount: 3, rowCount: 3, header: true });
+            editor.tf.focus();
+          }}
+        >
+          <Table className="h-4 w-4" />
+          Table
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            insertColumnGroup(editor, { columns: 2 });
+            editor.tf.focus();
+          }}
+        >
+          <Columns2 className="h-4 w-4" />
+          Columns
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insert.nodes(
+              { type: "toggle", id: crypto.randomUUID(), children: [{ text: "" }] },
+              { select: true }
+            );
+            editor.tf.focus();
+          }}
+        >
+          <ChevronRight className="h-4 w-4" />
+          Toggle
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
-}
-
-function H1Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h1" className="text-3xl font-bold tracking-tight" />;
-}
-
-function H2Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h2" className="text-2xl font-semibold tracking-tight" />;
-}
-
-function H3Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h3" className="text-xl font-semibold tracking-tight" />;
-}
-
-function H4Element(props: PlateElementProps) {
-  return <PlateElement {...props} as="h4" className="text-lg font-semibold tracking-tight" />;
-}
-
-function HrElement(props: PlateElementProps) {
-  return (
-    <PlateElement {...props}>
-      <hr className="my-4 border-border" />
-      {props.children}
-    </PlateElement>
-  );
-}
-
-function LinkElement({ children, element, ...props }: PlateElementProps) {
-  const url = (element as Record<string, unknown>).url as string;
-  return (
-    <PlateElement element={element} {...props}>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-link underline underline-offset-4 hover:text-link/80"
-      >
-        {children}
-      </a>
-    </PlateElement>
-  );
-}
-
-// =============================================
-// LEAF COMPONENTS
-// =============================================
-
-function BoldLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="strong" />;
-}
-
-function ItalicLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="em" />;
-}
-
-function UnderlineLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="u" />;
-}
-
-function StrikethroughLeaf(props: PlateLeafProps) {
-  return <PlateLeaf {...props} as="s" />;
 }
 
 // =============================================
@@ -204,6 +227,11 @@ function EditorToolbar({ editor }: { editor: NonNullable<ReturnType<typeof usePl
           editor.tf.focus();
         }}
       />
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      {/* Insert block */}
+      <InsertBlockDropdown editor={editor} />
     </div>
   );
 }
@@ -251,6 +279,19 @@ export function PlateRichEditor({
         StrikethroughPlugin,
         LinkPlugin,
         ListPlugin,
+        CalloutPlugin,
+        TablePlugin.configure({ options: { disableMerge: true } }),
+        TableRowPlugin,
+        TableCellPlugin,
+        TableCellHeaderPlugin,
+        ColumnPlugin,
+        ColumnItemPlugin,
+        IndentPlugin.configure({
+          inject: {
+            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote", "toggle"],
+          },
+        }),
+        TogglePlugin,
       ],
       override: {
         components: {
@@ -262,6 +303,14 @@ export function PlateRichEditor({
           h4: H4Element,
           hr: HrElement,
           a: LinkElement,
+          callout: CalloutElement,
+          table: TableElement,
+          tr: TableRowElement,
+          td: TableCellElement,
+          th: TableCellHeaderElement,
+          column_group: ColumnGroupElement,
+          column: ColumnItemElement,
+          toggle: ToggleElement,
           bold: BoldLeaf,
           italic: ItalicLeaf,
           underline: UnderlineLeaf,
