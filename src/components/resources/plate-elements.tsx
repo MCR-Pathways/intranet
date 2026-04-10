@@ -556,7 +556,7 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                toggleColumnGroup(editor);
+                toggleColumnGroup(editor, { at: findPath() });
                 editor.tf.focus();
               }}
             >
@@ -589,7 +589,7 @@ export function ColumnItemElement({ children, element, ...props }: PlateElementP
 // =============================================
 
 export function ToggleElement({ children, element, ...props }: PlateElementProps) {
-  const id = (element as Record<string, unknown>).id as string;
+  const id = (element as Record<string, unknown>).id as string || "";
   const state = useToggleButtonState(id);
   const { buttonProps, open } = useToggleButton(state);
 

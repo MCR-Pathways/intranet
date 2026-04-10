@@ -172,7 +172,7 @@ function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
   const width = (element as Record<string, unknown>).width as string | undefined;
   return (
     <SlateElement element={element} {...props}>
-      <div className="prose prose-sm" style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
+      <div className="prose prose-sm p-3" style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
         {children}
       </div>
     </SlateElement>
@@ -229,25 +229,25 @@ export function nestToggleChildren(value: Value): Value {
     const toggle = { ...node };
     const originalChildren = (toggle.children ?? []) as Value[number][];
     const nestedChildren: Value[number][] = [];
+    const baseIndent = (node.indent as number) ?? 0;
 
-    // Scan forward for indented siblings
+    // Scan forward for indented siblings (indent > this toggle's level)
     i++;
     while (i < value.length) {
       const sibling = value[i] as Record<string, unknown>;
-      const indent = sibling.indent as number | undefined;
+      const indent = (sibling.indent as number) ?? 0;
 
-      if (!indent || indent <= 0) break;
+      if (indent <= baseIndent) break;
 
-      // Recursively handle nested toggles
       if (sibling.type === "toggle") {
-        // Collect this nested toggle and its children
         const nestedSlice = collectToggleSlice(value, i);
         nestedChildren.push(...nestedSlice.nodes);
         i = nestedSlice.nextIndex;
       } else {
-        // Strip the indent (decrement by 1) for the nested content
+        // Decrement indent relative to toggle level, preserving multi-level hierarchy
+        const newIndent = indent - (baseIndent + 1);
         const { indent: _indent, ...rest } = sibling;
-        nestedChildren.push(rest as Value[number]);
+        nestedChildren.push({ ...rest, ...(newIndent > 0 ? { indent: newIndent } : {}) } as Value[number]);
         i++;
       }
     }
@@ -286,8 +286,10 @@ function collectToggleSlice(
       nestedChildren.push(...nested.nodes);
       i = nested.nextIndex;
     } else {
+      // Decrement indent relative to toggle level, preserving multi-level hierarchy
+      const newIndent = indent - (baseIndent + 1);
       const { indent: _indent, ...rest } = sibling;
-      nestedChildren.push(rest as Value[number]);
+      nestedChildren.push({ ...rest, ...(newIndent > 0 ? { indent: newIndent } : {}) } as Value[number]);
       i++;
     }
   }
