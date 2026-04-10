@@ -68,10 +68,14 @@ function revalidate() {
   revalidatePath("/resources", "layout");
 }
 
-/** Serialise Plate JSON to HTML for Algolia indexing and synced_html storage. */
+/**
+ * Serialise Plate JSON to HTML for Algolia indexing and synced_html storage.
+ * Returns "" for empty/missing content (callers should clear synced_html + Algolia).
+ * Returns null only on serialisation error (callers should skip update to avoid data loss).
+ */
 async function serialiseContentToHtml(contentJson: unknown): Promise<string | null> {
   if (!contentJson || !Array.isArray(contentJson) || contentJson.length === 0) {
-    return null;
+    return "";
   }
   try {
     const editor = createNativeStaticEditor(contentJson as Value);
@@ -262,11 +266,13 @@ export async function publishNativeArticle(
     try {
       const html = await serialiseContentToHtml(article.content_json);
 
-      if (html) {
-        // Persist synced_html for listing page excerpts and search
+      if (html === null) {
+        // Serialisation error — skip update to avoid data loss
+      } else {
+        // Persist synced_html (empty string clears stale data)
         const { error: syncError } = await supabase
           .from("resource_articles")
-          .update({ synced_html: html })
+          .update({ synced_html: html || null })
           .eq("id", articleId)
           .eq("content_type", "native");
 
@@ -277,18 +283,23 @@ export async function publishNativeArticle(
           });
         }
 
-        const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
-        const sections = parseHtmlIntoSections(html);
-        await indexArticleSections(
-          article.id,
-          article.slug,
-          article.title,
-          "native",
-          cat?.name ?? "",
-          cat?.slug ?? "",
-          sections,
-          new Date().toISOString()
-        );
+        if (html) {
+          const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
+          const sections = parseHtmlIntoSections(html);
+          await indexArticleSections(
+            article.id,
+            article.slug,
+            article.title,
+            "native",
+            cat?.name ?? "",
+            cat?.slug ?? "",
+            sections,
+            new Date().toISOString()
+          );
+        } else {
+          // Content cleared — remove stale search index
+          await removeArticleFromIndex(articleId);
+        }
       }
     } catch (err) {
       logger.error("Algolia indexing failed on publish", {
@@ -379,14 +390,15 @@ export async function reindexNativeArticle(
     // Generate HTML from content_json
     const html = await serialiseContentToHtml(article.content_json);
 
-    if (!html) {
+    if (html === null) {
+      // Serialisation error — skip update to avoid data loss
       return { success: true };
     }
 
-    // Persist synced_html for listing page excerpts and search
+    // Persist synced_html (empty string clears stale data)
     const { error: syncError } = await supabase
       .from("resource_articles")
-      .update({ synced_html: html })
+      .update({ synced_html: html || null })
       .eq("id", articleId)
       .eq("content_type", "native");
 
@@ -395,6 +407,12 @@ export async function reindexNativeArticle(
         error: syncError.message,
         articleId,
       });
+    }
+
+    if (!html) {
+      // Content cleared — remove stale search index
+      try { await removeArticleFromIndex(articleId); } catch { /* non-critical */ }
+      return { success: true };
     }
 
     const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
