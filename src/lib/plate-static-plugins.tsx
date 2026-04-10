@@ -26,6 +26,7 @@ import {
 } from "@platejs/basic-nodes";
 import { BaseLinkPlugin } from "@platejs/link";
 import { BaseListPlugin } from "@platejs/list";
+import { BaseCalloutPlugin } from "@platejs/callout";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
 
 // =============================================
@@ -77,6 +78,42 @@ function LinkStatic({ children, element, ...props }: SlateElementProps) {
 }
 
 // =============================================
+// CALLOUT
+// =============================================
+
+const CALLOUT_STATIC_STYLES: Record<string, string> = {
+  info: "background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
+  success: "background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
+  warning: "background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
+  error: "background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:1rem;border-radius:0.5rem;margin:0.5rem 0",
+};
+
+function CalloutStatic({ children, element, ...props }: SlateElementProps) {
+  const variant = ((element as Record<string, unknown>).variant as string) || "info";
+  const style = CALLOUT_STATIC_STYLES[variant] ?? CALLOUT_STATIC_STYLES.info;
+  return (
+    <SlateElement element={element} {...props}>
+      <div role="note" style={cssStringToObject(style)}>
+        {children}
+      </div>
+    </SlateElement>
+  );
+}
+
+/** Convert a CSS string like "color:red;margin:0" to a React style object. */
+function cssStringToObject(css: string): React.CSSProperties {
+  const style: Record<string, string> = {};
+  for (const declaration of css.split(";")) {
+    const [prop, val] = declaration.split(":");
+    if (prop && val) {
+      const camelCase = prop.trim().replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+      style[camelCase] = val.trim();
+    }
+  }
+  return style;
+}
+
+// =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
 
@@ -110,6 +147,7 @@ const staticPlugins = [
   BaseStrikethroughPlugin,
   BaseLinkPlugin,
   BaseListPlugin,
+  BaseCalloutPlugin,
 ];
 
 const staticComponents = {
@@ -121,6 +159,7 @@ const staticComponents = {
   h4: H4Static,
   hr: HrStatic,
   a: LinkStatic,
+  callout: CalloutStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,

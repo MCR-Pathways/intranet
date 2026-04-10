@@ -117,6 +117,37 @@ describe("serializeHtml", () => {
     expect(html).toContain("struck");
   });
 
+  it("serialises a callout with variant and role", async () => {
+    const value: Value = [
+      {
+        type: "callout",
+        variant: "warning",
+        children: [{ text: "Be careful here" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain('role="note"');
+    expect(html).toContain("Be careful here");
+    // Warning variant uses amber background
+    expect(html).toContain("#fffbeb");
+  });
+
+  it("serialises a callout with default info variant", async () => {
+    const value: Value = [
+      {
+        type: "callout",
+        children: [{ text: "Info note" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain('role="note"');
+    expect(html).toContain("Info note");
+    // Info variant uses blue background
+    expect(html).toContain("#eff6ff");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },

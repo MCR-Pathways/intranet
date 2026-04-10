@@ -10,7 +10,7 @@
 
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Check, Loader2, AlertTriangle, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlateRichEditor, EMPTY_PLATE_VALUE } from "./plate-editor";
 import {
@@ -39,6 +39,9 @@ export function NativeArticleEditor({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string | null>(null);
+  const currentValueRef = useRef<Value>(
+    ((article as unknown as { content_json?: unknown }).content_json as Value) ?? EMPTY_PLATE_VALUE
+  );
 
   const initialValue = ((article as unknown as { content_json?: unknown }).content_json as Value) ?? EMPTY_PLATE_VALUE;
   const isPublished = article.status === "published";
@@ -101,11 +104,17 @@ export function NativeArticleEditor({
 
   const handleChange = useCallback(
     (value: Value) => {
+      currentValueRef.current = value;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => doSave(value), 5000);
     },
     [doSave]
   );
+
+  const handleManualSave = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    doSave(currentValueRef.current);
+  }, [doSave]);
 
   return (
     <div className="space-y-4">
@@ -168,6 +177,15 @@ export function NativeArticleEditor({
             </span>
           )}
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualSave}
+            disabled={saveStatus === "saving"}
+          >
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Save
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/resources/article/${article.slug}`}>
               View article
