@@ -294,7 +294,7 @@ function TableFloatingToolbar() {
     <>
     <div
       contentEditable={false}
-      className="absolute -top-9 left-0 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-1 py-0.5 shadow-sm opacity-0 group-focus-within/table:opacity-100 group-hover/table:opacity-100 transition-opacity"
+      className="absolute -top-9 left-0 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-1 py-0.5 shadow-sm opacity-0 group-focus-within/table:opacity-100 transition-opacity"
     >
       <Tooltip>
         <TooltipTrigger asChild>
@@ -575,7 +575,10 @@ export function ColumnItemElement({ children, element, ...props }: PlateElementP
   return (
     <PlateElement element={element} {...props}>
       <div
-        className="flex-1 min-w-0 rounded-md p-3 border border-dashed border-border/50"
+        className={cn(
+          "min-w-0 rounded-md p-3 border border-dashed border-border/50",
+          !width && "flex-1"
+        )}
         style={width ? { width } : undefined}
       >
         {children}
