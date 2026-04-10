@@ -208,6 +208,7 @@ export function NativeArticleEditor({
       <PlateRichEditor
         initialValue={initialValue}
         onChange={handleChange}
+        articleId={article.id}
       />
     </div>
   );
