@@ -120,7 +120,7 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 
 **Use `editor.api.findPath(element)` for node mutations, not `props.path`.** Paths can go stale between render and user action (React batching, concurrent features). `findPath` returns `Path | undefined` — always guard against undefined before calling `setNodes` or `removeNodes`.
 
-**Use `onMouseDown` + `preventDefault()` on toolbar buttons inside void elements.** `onClick` steals focus from the editor and can cause selection/path issues. The table and column toolbars already use this pattern.
+**Use `onMouseDown` + `preventDefault()` on all in-editor toolbar buttons.** `onClick` steals focus from the editor and can cause selection/path issues. Applies to void element toolbars (image, file, embed), floating toolbars (table, columns), and inline toolbars (callout variant switcher).
 
 **Paste-uploaded images get dimensions via URL-keyed Map + `onValueChange`.** The `uploadImage` callback can only return a URL string (Plate v52 API). Dimensions are read with `createImageBitmap` before upload, stored in a `Map<url, dims>` after upload completes, then applied in `onValueChange` by matching on `type === "img"` + URL key. The Map prevents concurrent pastes from overwriting each other.
 
