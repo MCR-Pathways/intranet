@@ -47,6 +47,11 @@ vi.mock("@/lib/tiptap", () => ({
   }),
 }));
 
+const mockRemoveArticleFromIndex = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/algolia", () => ({
+  removeArticleFromIndex: mockRemoveArticleFromIndex,
+}));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function chainable() {
@@ -507,27 +512,89 @@ describe("Intranet Resource Actions", () => {
   // =============================================
 
   describe("deleteArticle", () => {
-    it("soft-deletes an article", async () => {
-      const c = chainable();
-      c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
-      mockFrom.mockReturnValue(c);
+    it("soft-deletes a published article and removes from Algolia", async () => {
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          // Pre-fetch: return article with status
+          c.single.mockResolvedValue({ data: { id: "art-1", status: "published" }, error: null });
+        } else {
+          // Update: soft-delete succeeds
+          c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
+        }
+        return c;
+      });
 
       const result = await deleteArticle("art-1");
       expect(result.success).toBe(true);
-      expect(c.update).toHaveBeenCalledWith(
-        expect.objectContaining({ is_featured: false })
-      );
       expect(revalidatePath).toHaveBeenCalledWith("/resources", "layout");
+      expect(mockRemoveArticleFromIndex).toHaveBeenCalledWith("art-1");
     });
 
-    it("returns error on DB failure", async () => {
+    it("soft-deletes a draft article without Algolia removal", async () => {
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          c.single.mockResolvedValue({ data: { id: "art-1", status: "draft" }, error: null });
+        } else {
+          c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
+        }
+        return c;
+      });
+
+      const result = await deleteArticle("art-1");
+      expect(result.success).toBe(true);
+      expect(mockRemoveArticleFromIndex).not.toHaveBeenCalled();
+    });
+
+    it("returns error when article not found", async () => {
       const c = chainable();
-      c.single.mockResolvedValue({ data: null, error: { message: "Delete failed" } });
+      c.single.mockResolvedValue({ data: null, error: null });
       mockFrom.mockReturnValue(c);
 
       const result = await deleteArticle("art-1");
       expect(result.success).toBe(false);
+      expect(result.error).toContain("not found");
+    });
+
+    it("returns error on DB update failure", async () => {
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          c.single.mockResolvedValue({ data: { id: "art-1", status: "published" }, error: null });
+        } else {
+          c.single.mockResolvedValue({ data: null, error: { message: "Update failed" } });
+        }
+        return c;
+      });
+
+      const result = await deleteArticle("art-1");
+      expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to delete");
+    });
+
+    it("succeeds even if Algolia removal fails", async () => {
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          c.single.mockResolvedValue({ data: { id: "art-1", status: "published" }, error: null });
+        } else {
+          c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
+        }
+        return c;
+      });
+      mockRemoveArticleFromIndex.mockRejectedValue(new Error("Algolia down"));
+
+      const result = await deleteArticle("art-1");
+      expect(result.success).toBe(true);
     });
 
     it("throws when user is not a content editor or HR admin", async () => {

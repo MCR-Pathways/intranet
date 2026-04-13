@@ -67,6 +67,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { PlateElementProps, PlateLeafProps } from "platejs/react";
+import { VideoEmbedDialog } from "./media-dialogs";
 
 // =============================================
 // BASIC ELEMENTS
@@ -754,7 +755,12 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
 // =============================================
 
 export function MediaEmbedElement({ children, element, ...props }: PlateElementProps) {
+  const editor = useEditorRef();
+  const selected = useSelected();
   const url = (element as Record<string, unknown>).url as string;
+  const sourceUrl = (element as Record<string, unknown>).sourceUrl as string | undefined;
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <PlateElement element={element} {...props}>
@@ -770,7 +776,79 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
             loading="lazy"
           />
         </div>
+
+        {/* Floating toolbar — visible when node is selected */}
+        <div className={cn(
+          "absolute top-2 right-2 flex gap-1 transition-opacity",
+          selected ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 text-xs"
+            aria-label="Edit video URL"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowEditDialog(true);
+            }}
+          >
+            <Pencil className="h-3 w-3 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 text-xs text-destructive hover:text-destructive"
+            aria-label="Remove video embed"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
+
+      <VideoEmbedDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        defaultUrl={sourceUrl ?? ""}
+        onEmbed={(newEmbedUrl, newSourceUrl) => {
+          const path = editor.api.findPath(element);
+          if (!path) return;
+          editor.tf.setNodes(
+            { url: newEmbedUrl, sourceUrl: newSourceUrl } as Record<string, unknown>,
+            { at: path }
+          );
+        }}
+      />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove video embed?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the video from this article. You can undo with Ctrl+Z.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.removeNodes({ at: path });
+                editor.tf.focus();
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {children}
     </PlateElement>
   );
