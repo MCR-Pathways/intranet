@@ -29,7 +29,7 @@ import { logger } from "@/lib/logger";
  * 2. Without delegation (no admin email):
  *    Can only access files explicitly shared with the service account.
  */
-function getDriveClient(impersonateEmail?: string): drive_v3.Drive {
+export function getDriveClient(impersonateEmail?: string): drive_v3.Drive {
   const keyJson = getServiceAccountKey();
   const subject = impersonateEmail ?? process.env.GOOGLE_DRIVE_ADMIN_EMAIL;
 

@@ -2900,6 +2900,54 @@ export type Database = {
           },
         ]
       }
+      resource_media: {
+        Row: {
+          id: string
+          file_id: string
+          article_id: string | null
+          original_name: string
+          mime_type: string
+          file_size: number
+          uploaded_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          article_id?: string | null
+          original_name: string
+          mime_type: string
+          file_size: number
+          uploaded_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          article_id?: string | null
+          original_name?: string
+          mime_type?: string
+          file_size?: number
+          uploaded_by?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_media_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "resource_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_categories: {
         Row: {
           created_at: string
