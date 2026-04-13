@@ -58,7 +58,7 @@
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
 - WS2 (complete): Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
 - WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
-- WS4 (complete): Media and files. Drive upload + proxy + resource_media whitelist. Image (dialog + paste with dimensions), video embed (YouTube/Vimeo with nocookie), file attachment (PDF/Word/Excel/PowerPoint/text). Static renderers, accessibility (aria-labels, iframe titles), CLS prevention, 23 new tests.
+- WS4 (complete): Media and files. Drive upload + proxy + resource_media whitelist + UPDATE RLS policy (migration 00078). Image (dialog + paste with dimensions + useUploadHandler hook), video embed (YouTube/Vimeo with nocookie + edit/delete toolbar), file attachment (PDF/Word/Excel/PowerPoint/text). Static renderers with icon parity, accessibility (aria-labels, iframe titles), CLS prevention, Algolia removal on soft-delete, findPath consistency across all elements, 23 new tests.
 - WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
@@ -71,7 +71,7 @@
 ### Infrastructure- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,350 tests across 58 files (Vitest + RTL + jsdom)
+- 1,374 tests across 59 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
