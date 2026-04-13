@@ -10,12 +10,11 @@
 import { requireContentEditor } from "@/lib/auth";
 import {
   uploadFileToDrive,
+  deleteFileFromDrive,
   validateMagicBytes,
 } from "@/lib/google-drive-upload";
 import { logger } from "@/lib/logger";
 import type { Database } from "@/types/database.types";
-
-export const maxDuration = 60;
 
 // =============================================
 // ALLOWED TYPES
@@ -126,12 +125,19 @@ export async function uploadEditorMedia(formData: FormData): Promise<UploadResul
       } as Database["public"]["Tables"]["resource_media"]["Insert"]);
 
     if (dbError) {
-      // File is in Drive but not whitelisted — orphaned. Log for cleanup.
-      logger.error("Failed to insert resource_media row (file orphaned in Drive)", {
+      logger.error("Failed to insert resource_media row", {
         error: dbError.message,
         fileId: result.fileId,
         articleId,
       });
+      try {
+        await deleteFileFromDrive(result.fileId);
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up orphaned Drive file", {
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+          fileId: result.fileId,
+        });
+      }
       return { success: false, error: "Failed to register uploaded file" };
     }
 

@@ -1,3 +1,4 @@
+import { Readable } from "stream";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -32,7 +33,7 @@ export async function GET(
     );
   }
 
-  // 2. Rate limit
+  // 2. Rate limit (shares ogImage limiter — 50/min, sufficient for media)
   if (rateLimiters) {
     const ip = getClientIp(request);
     const { success, reset } = await rateLimiters.ogImage.limit(`drive:${ip}:${user.id}`);
@@ -75,26 +76,15 @@ export async function GET(
     }
 
     // Convert Node.js Readable to Web ReadableStream
-    const webStream = new ReadableStream({
-      start(controller) {
-        file.stream.on("data", (chunk: Buffer) => {
-          controller.enqueue(new Uint8Array(chunk));
-        });
-        file.stream.on("end", () => {
-          controller.close();
-        });
-        file.stream.on("error", (err) => {
-          controller.error(err);
-        });
-      },
-    });
+    const webStream = Readable.toWeb(file.stream) as ReadableStream;
 
     // Content-Disposition: inline for images, attachment for files
+    // Uses filename* with UTF-8 encoding for non-ASCII characters (RFC 6266)
     const isImage = file.mimeType.startsWith("image/");
-    const safeName = (media.original_name || file.name).replace(/["\\\n\r\0]/g, "_");
+    const rawName = media.original_name || file.name;
     const disposition = isImage
       ? "inline"
-      : `attachment; filename="${safeName}"`;
+      : `attachment; filename="${rawName.replace(/["\\\n\r\0]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(rawName)}`;
 
     return new Response(webStream, {
       headers: {
