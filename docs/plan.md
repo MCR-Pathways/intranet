@@ -58,7 +58,7 @@
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
 - WS2 (complete): Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
 - WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
-- WS4: Media and files (Google Drive upload/proxy, image/file blocks, video embed, external embeds)
+- WS4 (in progress): Media and files. Infrastructure PR pending (Drive upload, proxy, whitelist). Plugins PR pending (image, video embed, file). Polish PR not started.
 - WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
