@@ -803,15 +803,20 @@ export async function deleteArticle(
   const { supabase, user } = await requireContentEditor();
 
   // Fetch status before soft-delete (needed for Algolia cleanup)
-  const { data: article } = await supabase
+  const { data: article, error: fetchError } = await supabase
     .from("resource_articles")
     .select("id, status")
     .eq("id", id)
     .is("deleted_at", null)
     .single();
 
-  if (!article) {
-    return { success: false, error: "Article not found" };
+  if (fetchError || !article) {
+    return {
+      success: false,
+      error: fetchError && fetchError.code !== "PGRST116"
+        ? "Failed to delete article"
+        : "Article not found",
+    };
   }
 
   // Soft-delete: set deleted_at + deleted_by, unfeatured if featured

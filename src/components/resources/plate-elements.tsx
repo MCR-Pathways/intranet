@@ -810,19 +810,21 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
         </div>
       </div>
 
-      <VideoEmbedDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        defaultUrl={sourceUrl ?? ""}
-        onEmbed={(newEmbedUrl, newSourceUrl) => {
-          const path = editor.api.findPath(element);
-          if (!path) return;
-          editor.tf.setNodes(
-            { url: newEmbedUrl, sourceUrl: newSourceUrl } as Record<string, unknown>,
-            { at: path }
-          );
-        }}
-      />
+      {showEditDialog && (
+        <VideoEmbedDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          defaultUrl={sourceUrl ?? ""}
+          onEmbed={(newEmbedUrl, newSourceUrl) => {
+            const path = editor.api.findPath(element);
+            if (!path) return;
+            editor.tf.setNodes(
+              { url: newEmbedUrl, sourceUrl: newSourceUrl } as Record<string, unknown>,
+              { at: path }
+            );
+          }}
+        />
+      )}
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

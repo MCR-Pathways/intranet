@@ -553,12 +553,22 @@ describe("Intranet Resource Actions", () => {
 
     it("returns error when article not found", async () => {
       const c = chainable();
-      c.single.mockResolvedValue({ data: null, error: null });
+      c.single.mockResolvedValue({ data: null, error: { code: "PGRST116", message: "No rows" } });
       mockFrom.mockReturnValue(c);
 
       const result = await deleteArticle("art-1");
       expect(result.success).toBe(false);
       expect(result.error).toContain("not found");
+    });
+
+    it("returns generic error on fetch failure", async () => {
+      const c = chainable();
+      c.single.mockResolvedValue({ data: null, error: { code: "42501", message: "Connection refused" } });
+      mockFrom.mockReturnValue(c);
+
+      const result = await deleteArticle("art-1");
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Failed to delete");
     });
 
     it("returns error on DB update failure", async () => {
