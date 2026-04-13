@@ -223,6 +223,123 @@ describe("serializeHtml", () => {
     expect(html).toContain("FAQ question");
   });
 
+  it("serialises an image with alt text and dimensions", async () => {
+    const value: Value = [
+      {
+        type: "img",
+        url: "/api/drive-file/abc123",
+        alt: "Team photo",
+        width: 800,
+        height: 600,
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<img");
+    expect(html).toContain("/api/drive-file/abc123");
+    expect(html).toContain('alt="Team photo"');
+    expect(html).toContain('loading="lazy"');
+  });
+
+  it("serialises a video embed with sandbox", async () => {
+    const value: Value = [
+      {
+        type: "media_embed",
+        url: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<iframe");
+    expect(html).toContain("youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    expect(html).toContain("sandbox");
+  });
+
+  it("serialises a file attachment with download link", async () => {
+    const value: Value = [
+      {
+        type: "file",
+        url: "/api/drive-file/xyz789",
+        name: "Policy Document.pdf",
+        size: 2500000,
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("/api/drive-file/xyz789");
+    expect(html).toContain("Policy Document.pdf");
+    expect(html).toContain("2.4 MB");
+    expect(html).toContain("Download");
+  });
+
+  it("serialises an image without dimensions (paste scenario)", async () => {
+    const value: Value = [
+      {
+        type: "img",
+        url: "/api/drive-file/no-dims",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<img");
+    expect(html).toContain("/api/drive-file/no-dims");
+    expect(html).not.toContain("width=");
+    expect(html).not.toContain("height=");
+  });
+
+  it("serialises an image with width only (height auto via style)", async () => {
+    const value: Value = [
+      {
+        type: "img",
+        url: "/api/drive-file/wide",
+        width: 600,
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain('width="600"');
+    expect(html).toContain("height");
+    // height: auto is applied via style to preserve aspect ratio
+    expect(html).toContain("auto");
+  });
+
+  it("serialises a file without size", async () => {
+    const value: Value = [
+      {
+        type: "file",
+        url: "/api/drive-file/nosize",
+        name: "Report.pdf",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("Report.pdf");
+    expect(html).toContain("Download");
+    // No size text rendered
+    expect(html).not.toContain("MB");
+    expect(html).not.toContain("KB");
+  });
+
+  it("serialises a video embed with title attribute", async () => {
+    const value: Value = [
+      {
+        type: "media_embed",
+        url: "https://player.vimeo.com/video/123456",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain('title="Embedded video"');
+    expect(html).toContain("sandbox");
+  });
+
   it("produces non-empty output for a mixed document", async () => {
     const value: Value = [
       { type: "h1", children: [{ text: "Welcome" }] },

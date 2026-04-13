@@ -27,6 +27,7 @@ import {
 import { BaseLinkPlugin } from "@platejs/link";
 import { BaseListPlugin } from "@platejs/list";
 import { BaseCalloutPlugin } from "@platejs/callout";
+import { BaseImagePlugin, BaseMediaEmbedPlugin, BaseFilePlugin } from "@platejs/media";
 import { BaseColumnPlugin, BaseColumnItemPlugin } from "@platejs/layout";
 import { BaseTogglePlugin } from "@platejs/toggle";
 import { BaseIndentPlugin } from "@platejs/indent";
@@ -38,6 +39,7 @@ import {
   BaseTableCellHeaderPlugin,
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
+import { formatFileSize } from "@/lib/utils";
 
 // =============================================
 // STATIC ELEMENT COMPONENTS
@@ -175,6 +177,89 @@ function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
       <div className="prose prose-sm p-3" style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
         {children}
       </div>
+    </SlateElement>
+  );
+}
+
+// =============================================
+// IMAGE
+// =============================================
+
+function ImageStatic({ children, element, ...props }: SlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
+  const alt = (element as Record<string, unknown>).alt as string | undefined;
+  const width = (element as Record<string, unknown>).width as number | undefined;
+  const height = (element as Record<string, unknown>).height as number | undefined;
+  return (
+    <SlateElement element={element} {...props}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Plate static renderer, can't use next/image */}
+      <img
+        src={url}
+        alt={alt ?? ""}
+        className="rounded-lg max-w-full mx-auto block"
+        loading="lazy"
+        width={width}
+        height={height}
+        style={width ? { height: "auto" } : undefined}
+      />
+      {children}
+    </SlateElement>
+  );
+}
+
+// =============================================
+// VIDEO EMBED
+// =============================================
+
+function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
+  return (
+    <SlateElement element={element} {...props}>
+      <div className="relative w-full my-4 rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+        <iframe
+          src={url}
+          title="Embedded video"
+          className="absolute inset-0 w-full h-full"
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+      {children}
+    </SlateElement>
+  );
+}
+
+// =============================================
+// FILE ATTACHMENT
+// =============================================
+
+function FileStatic({ children, element, ...props }: SlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
+  const name = (element as Record<string, unknown>).name as string | undefined;
+  const size = (element as Record<string, unknown>).size as number | undefined;
+
+  const sizeText = size ? formatFileSize(size) : "";
+
+  return (
+    <SlateElement element={element} {...props}>
+      <a
+        href={url}
+        download
+        className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 my-2 hover:bg-muted/50 transition-colors no-underline text-foreground"
+      >
+        {/* Inline SVG for file icon (RSC-safe) */}
+        <svg className="h-5 w-5 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+        </svg>
+        <span className="flex-1 min-w-0">
+          <span className="text-sm font-medium truncate block">{name ?? "File"}</span>
+          {sizeText && <span className="text-xs text-muted-foreground">{sizeText}</span>}
+        </span>
+        <span className="text-xs text-muted-foreground">Download</span>
+      </a>
+      {children}
     </SlateElement>
   );
 }
@@ -344,6 +429,9 @@ const staticPlugins = [
   BaseLinkPlugin,
   BaseListPlugin,
   BaseCalloutPlugin,
+  BaseImagePlugin,
+  BaseMediaEmbedPlugin,
+  BaseFilePlugin,
   BaseTablePlugin,
   BaseTableRowPlugin,
   BaseTableCellPlugin,
@@ -372,6 +460,9 @@ const staticComponents = {
   column_group: ColumnGroupStatic,
   column: ColumnItemStatic,
   toggle: ToggleStatic,
+  img: ImageStatic,
+  media_embed: MediaEmbedStatic,
+  file: FileStatic,
   toggle_summary: ToggleSummaryStatic,
   bold: BoldStatic,
   italic: ItalicStatic,

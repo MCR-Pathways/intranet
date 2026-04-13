@@ -4,10 +4,10 @@
  * Native Plate editor for resource articles.
  *
  * Plugin registration, toolbar, and editor wrapper. Element/leaf
- * components live in plate-elements.tsx.
+ * components live in plate-elements.tsx. Media dialogs in media-dialogs.tsx.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Value } from "platejs";
 import {
   Plate,
@@ -36,9 +36,17 @@ import { ColumnPlugin, ColumnItemPlugin } from "@platejs/layout/react";
 import { insertColumnGroup } from "@platejs/layout";
 import { TogglePlugin } from "@platejs/toggle/react";
 import { IndentPlugin } from "@platejs/indent/react";
+import { ImagePlugin, MediaEmbedPlugin, FilePlugin } from "@platejs/media/react";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { ArticleLinkPopover } from "./article-link-popover";
+import { uploadEditorMedia } from "@/app/(protected)/resources/media-actions";
+import {
+  ImageUploadDialog,
+  VideoEmbedDialog,
+  FileUploadDialog,
+} from "./media-dialogs";
 import {
   ParagraphElement,
   BlockquoteElement,
@@ -56,6 +64,9 @@ import {
   ColumnGroupElement,
   ColumnItemElement,
   ToggleElement,
+  ImageElement,
+  MediaEmbedElement,
+  FileElement,
   BoldLeaf,
   ItalicLeaf,
   UnderlineLeaf,
@@ -79,6 +90,9 @@ import {
   Table,
   Columns2,
   ChevronRight,
+  ImageIcon,
+  Video,
+  Paperclip,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -87,13 +101,26 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 // =============================================
 // INSERT BLOCK DROPDOWN
 // =============================================
 
-function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof usePlateEditor>> }) {
+interface InsertBlockDropdownProps {
+  editor: NonNullable<ReturnType<typeof usePlateEditor>>;
+  onOpenImageDialog: () => void;
+  onOpenEmbedDialog: () => void;
+  onOpenFileDialog: () => void;
+}
+
+function InsertBlockDropdown({
+  editor,
+  onOpenImageDialog,
+  onOpenEmbedDialog,
+  onOpenFileDialog,
+}: InsertBlockDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -147,6 +174,21 @@ function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof
           <ChevronRight className="h-4 w-4" />
           Toggle
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onSelect={onOpenImageDialog}>
+          <ImageIcon className="h-4 w-4" />
+          Image
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onOpenEmbedDialog}>
+          <Video className="h-4 w-4" />
+          Video embed
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onOpenFileDialog}>
+          <Paperclip className="h-4 w-4" />
+          File attachment
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -156,7 +198,19 @@ function InsertBlockDropdown({ editor }: { editor: NonNullable<ReturnType<typeof
 // TOOLBAR
 // =============================================
 
-function EditorToolbar({ editor }: { editor: NonNullable<ReturnType<typeof usePlateEditor>> }) {
+interface EditorToolbarProps {
+  editor: NonNullable<ReturnType<typeof usePlateEditor>>;
+  onOpenImageDialog: () => void;
+  onOpenEmbedDialog: () => void;
+  onOpenFileDialog: () => void;
+}
+
+function EditorToolbar({
+  editor,
+  onOpenImageDialog,
+  onOpenEmbedDialog,
+  onOpenFileDialog,
+}: EditorToolbarProps) {
   const prevent = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
     fn();
@@ -231,7 +285,12 @@ function EditorToolbar({ editor }: { editor: NonNullable<ReturnType<typeof usePl
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       {/* Insert block */}
-      <InsertBlockDropdown editor={editor} />
+      <InsertBlockDropdown
+        editor={editor}
+        onOpenImageDialog={onOpenImageDialog}
+        onOpenEmbedDialog={onOpenEmbedDialog}
+        onOpenFileDialog={onOpenFileDialog}
+      />
     </div>
   );
 }
@@ -250,6 +309,8 @@ interface PlateEditorProps {
   initialValue?: Value;
   /** Called with new value on each change (debounce externally) */
   onChange?: (value: Value) => void;
+  /** Article ID for media upload tracking */
+  articleId?: string;
   /** Additional className for the editor container */
   className?: string;
 }
@@ -257,14 +318,24 @@ interface PlateEditorProps {
 export function PlateRichEditor({
   initialValue,
   onChange,
+  articleId,
   className,
 }: PlateEditorProps) {
   const onChangeRef = useRef(onChange);
+  const articleIdRef = useRef(articleId);
+  const pendingDimensionsMap = useRef(new Map<string, { width: number; height: number }>());
 
-  // Update ref in an effect (React Compiler disallows ref writes during render)
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [showEmbedDialog, setShowEmbedDialog] = useState(false);
+  const [showFileDialog, setShowFileDialog] = useState(false);
+
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    articleIdRef.current = articleId;
+  }, [articleId]);
 
   const editor = usePlateEditor(
     {
@@ -292,6 +363,49 @@ export function PlateRichEditor({
           },
         }),
         TogglePlugin,
+        ImagePlugin.configure({
+          options: {
+            uploadImage: async (input) => {
+              const toastId = toast.loading("Uploading image...");
+              try {
+                const blob = input instanceof ArrayBuffer
+                  ? new Blob([input])
+                  : await fetch(input as string).then((r) => r.blob());
+
+                const ext = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[blob.type] ?? "png";
+                const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+
+                // Read dimensions before upload for CLS prevention
+                let dims: { width: number; height: number } | null = null;
+                try {
+                  const bitmap = await createImageBitmap(blob);
+                  dims = { width: bitmap.width, height: bitmap.height };
+                  bitmap.close();
+                } catch {
+                  // Proceed without dimensions
+                }
+
+                const fd = new FormData();
+                fd.append("file", file);
+                if (articleIdRef.current) fd.append("articleId", articleIdRef.current);
+
+                const result = await uploadEditorMedia(fd);
+                if (!result.success) throw new Error(result.error ?? "Upload failed");
+                // Store dimensions keyed by URL so concurrent pastes don't collide
+                if (dims && result.url) {
+                  pendingDimensionsMap.current.set(result.url, dims);
+                }
+                toast.success("Image inserted", { id: toastId });
+                return result.url!;
+              } catch (err) {
+                toast.error("Failed to upload image", { id: toastId });
+                throw err;
+              }
+            },
+          },
+        }),
+        MediaEmbedPlugin,
+        FilePlugin,
       ],
       override: {
         components: {
@@ -311,6 +425,9 @@ export function PlateRichEditor({
           column_group: ColumnGroupElement,
           column: ColumnItemElement,
           toggle: ToggleElement,
+          img: ImageElement,
+          media_embed: MediaEmbedElement,
+          file: FileElement,
           bold: BoldLeaf,
           italic: ItalicLeaf,
           underline: UnderlineLeaf,
@@ -323,20 +440,113 @@ export function PlateRichEditor({
 
   const handleValueChange = useCallback(
     ({ value }: { editor: unknown; value: Value }) => {
+      // Apply pending dimensions from paste-uploaded images (keyed by URL)
+      if (pendingDimensionsMap.current.size > 0) {
+        const entries = Array.from(
+          editor.api.nodes({
+            match: (n: Record<string, unknown>) =>
+              n.type === "img" && !n.width && pendingDimensionsMap.current.has(n.url as string),
+          })
+        );
+        for (const [node, path] of entries) {
+          const url = (node as Record<string, unknown>).url as string;
+          const dims = pendingDimensionsMap.current.get(url);
+          if (dims) {
+            pendingDimensionsMap.current.delete(url);
+            editor.tf.setNodes(
+              { width: dims.width, height: dims.height } as Record<string, unknown>,
+              { at: path }
+            );
+          }
+        }
+      }
       onChangeRef.current?.(value);
     },
-    [],
+    [editor],
+  );
+
+  const handleImageInsert = useCallback(
+    (url: string, width: number, height: number) => {
+      editor.tf.insertNodes(
+        {
+          type: "img",
+          url,
+          ...(width && height ? { width, height } : {}),
+          children: [{ text: "" }],
+        } as unknown as Value[number],
+        { select: true }
+      );
+      editor.tf.focus();
+    },
+    [editor],
+  );
+
+  const handleEmbed = useCallback(
+    (embedUrl: string, sourceUrl: string) => {
+      editor.tf.insertNodes(
+        {
+          type: "media_embed",
+          url: embedUrl,
+          sourceUrl,
+          children: [{ text: "" }],
+        } as unknown as Value[number],
+        { select: true }
+      );
+      editor.tf.focus();
+    },
+    [editor],
+  );
+
+  const handleFileInsert = useCallback(
+    (url: string, name: string, size: number) => {
+      editor.tf.insertNodes(
+        {
+          type: "file",
+          url,
+          name,
+          size,
+          children: [{ text: "" }],
+        } as unknown as Value[number],
+        { select: true }
+      );
+      editor.tf.focus();
+    },
+    [editor],
   );
 
   return (
     <div className={cn("rounded-lg border border-input bg-card overflow-hidden", className)}>
       <Plate editor={editor} onValueChange={handleValueChange}>
-        <EditorToolbar editor={editor} />
+        <EditorToolbar
+          editor={editor}
+          onOpenImageDialog={() => setShowImageDialog(true)}
+          onOpenEmbedDialog={() => setShowEmbedDialog(true)}
+          onOpenFileDialog={() => setShowFileDialog(true)}
+        />
         <PlateContent
           placeholder="Start writing..."
           className="min-h-[400px] px-6 py-4 outline-none text-foreground/85 leading-relaxed"
         />
       </Plate>
+
+      {/* Media dialogs */}
+      <ImageUploadDialog
+        open={showImageDialog}
+        onOpenChange={setShowImageDialog}
+        articleId={articleId ?? ""}
+        onInsert={handleImageInsert}
+      />
+      <VideoEmbedDialog
+        open={showEmbedDialog}
+        onOpenChange={setShowEmbedDialog}
+        onEmbed={handleEmbed}
+      />
+      <FileUploadDialog
+        open={showFileDialog}
+        onOpenChange={setShowFileDialog}
+        articleId={articleId ?? ""}
+        onInsert={handleFileInsert}
+      />
     </div>
   );
 }

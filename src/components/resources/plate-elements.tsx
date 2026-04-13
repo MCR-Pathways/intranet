@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { PlateElement, PlateLeaf, useEditorRef } from "platejs/react";
+import { PlateElement, PlateLeaf, useEditorRef, useSelected } from "platejs/react";
 import {
   TablePlugin,
   useTableElement,
@@ -44,8 +44,13 @@ import {
   PanelRight,
   X,
   ChevronRight,
+  Download,
+  FileText,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatFileSize } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -615,6 +620,238 @@ export function ToggleElement({ children, element, ...props }: PlateElementProps
         </button>
         <div className="flex-1 min-w-0 font-medium">{children}</div>
       </div>
+    </PlateElement>
+  );
+}
+
+// =============================================
+// IMAGE
+// =============================================
+
+export function ImageElement({ children, element, ...props }: PlateElementProps) {
+  const editor = useEditorRef();
+  const selected = useSelected();
+  const url = (element as Record<string, unknown>).url as string;
+  const alt = (element as Record<string, unknown>).alt as string | undefined;
+  const width = (element as Record<string, unknown>).width as number | undefined;
+  const height = (element as Record<string, unknown>).height as number | undefined;
+  const [showAltInput, setShowAltInput] = useState(false);
+  const [altText, setAltText] = useState(alt ?? "");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div className="relative my-4" contentEditable={false}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- Plate editor element, can't use next/image */}
+        <img
+          src={url}
+          alt={alt ?? ""}
+          className="rounded-lg max-w-full mx-auto block"
+          width={width}
+          height={height}
+          style={width ? { height: "auto" } : undefined}
+          loading="lazy"
+        />
+
+        {/* Floating toolbar — visible when node is selected */}
+        <div className={cn(
+          "absolute top-2 right-2 flex gap-1 transition-opacity",
+          selected ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 text-xs"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowAltInput(!showAltInput);
+            }}
+          >
+            <Pencil className="h-3 w-3 mr-1" />
+            Alt text
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 text-xs text-destructive hover:text-destructive"
+            aria-label="Delete image"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {/* Alt text input */}
+        {showAltInput && (
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={altText}
+              onChange={(e) => setAltText(e.target.value)}
+              placeholder="Describe this image..."
+              className="h-8 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const path = editor.api.findPath(element);
+                  if (!path) return;
+                  editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: path });
+                  setShowAltInput(false);
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: path });
+                setShowAltInput(false);
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete image?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the image from this article. The file will remain in Google Drive. You can undo with Ctrl+Z.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.removeNodes({ at: path });
+                editor.tf.focus();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {children}
+    </PlateElement>
+  );
+}
+
+// =============================================
+// VIDEO EMBED
+// =============================================
+
+export function MediaEmbedElement({ children, element, ...props }: PlateElementProps) {
+  const url = (element as Record<string, unknown>).url as string;
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div className="relative my-4" contentEditable={false}>
+        <div className="relative w-full rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+          <iframe
+            src={url}
+            title="Embedded video"
+            className="absolute inset-0 w-full h-full"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      </div>
+      {children}
+    </PlateElement>
+  );
+}
+
+// =============================================
+// FILE ATTACHMENT
+// =============================================
+
+export function FileElement({ children, element, ...props }: PlateElementProps) {
+  const editor = useEditorRef();
+  const selected = useSelected();
+  const url = (element as Record<string, unknown>).url as string;
+  const name = (element as Record<string, unknown>).name as string | undefined;
+  const size = (element as Record<string, unknown>).size as number | undefined;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  return (
+    <PlateElement element={element} {...props}>
+      <div
+        className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 my-2"
+        contentEditable={false}
+      >
+        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{name ?? "File"}</p>
+          {size != null && <p className="text-xs text-muted-foreground">{formatFileSize(size)}</p>}
+        </div>
+        <a
+          href={url}
+          download
+          aria-label={`Download ${name ?? "file"}`}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download
+        </a>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-7 w-7 text-destructive hover:text-destructive transition-opacity",
+            selected ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Remove file attachment"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setShowDeleteConfirm(true);
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove file attachment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the file from this article. The file will remain in Google Drive. You can undo with Ctrl+Z.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.removeNodes({ at: path });
+                editor.tf.focus();
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {children}
     </PlateElement>
   );
 }

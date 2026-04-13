@@ -2,7 +2,7 @@ import { Readable } from "stream";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getDriveFileStream, DRIVE_FILE_ID_REGEX } from "@/lib/google-drive-upload";
+import { getDriveContentStream, DRIVE_FILE_ID_REGEX } from "@/lib/google-drive-upload";
 import { logger } from "@/lib/logger";
 import { rateLimiters, createRateLimitResponse, getClientIp } from "@/lib/ratelimit";
 
@@ -13,6 +13,8 @@ export const maxDuration = 60;
  *
  * Authenticated streaming proxy for Google Drive files.
  * Only serves files registered in the resource_media whitelist table.
+ * Metadata (mime_type, file_size, original_name) comes from the DB,
+ * not from Drive — one API call instead of two.
  */
 export async function GET(
   request: NextRequest,
@@ -48,11 +50,11 @@ export async function GET(
     );
   }
 
-  // 4. Whitelist check (service client — needs all rows regardless of uploader)
+  // 4. Whitelist check + metadata (service client — needs all rows regardless of uploader)
   const service = createServiceClient();
   const { data: media } = await service
     .from("resource_media")
-    .select("file_id, original_name")
+    .select("file_id, original_name, mime_type, file_size")
     .eq("file_id", fileId)
     .limit(1)
     .single();
@@ -64,9 +66,9 @@ export async function GET(
     );
   }
 
-  // 5. Stream from Google Drive
+  // 5. Stream content from Google Drive (metadata already from DB)
   try {
-    const file = await getDriveFileStream(fileId);
+    const file = await getDriveContentStream(fileId);
 
     if (!file) {
       return NextResponse.json(
@@ -80,17 +82,18 @@ export async function GET(
 
     // Content-Disposition: inline for images, attachment for files
     // Uses filename* with UTF-8 encoding for non-ASCII characters (RFC 6266)
-    const isImage = file.mimeType.startsWith("image/");
-    const rawName = media.original_name || file.name;
+    const mimeType = media.mime_type || "application/octet-stream";
+    const isImage = mimeType.startsWith("image/");
+    const rawName = media.original_name || "file";
     const disposition = isImage
       ? "inline"
       : `attachment; filename="${rawName.replace(/["\\\n\r\0]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(rawName)}`;
 
     return new Response(webStream, {
       headers: {
-        "Content-Type": file.mimeType,
+        "Content-Type": mimeType,
         "Content-Disposition": disposition,
-        "Content-Length": String(file.size),
+        ...(media.file_size != null ? { "Content-Length": String(media.file_size) } : {}),
         "Cache-Control": "private, max-age=86400, stale-while-revalidate=604800",
         "X-Content-Type-Options": "nosniff",
       },
