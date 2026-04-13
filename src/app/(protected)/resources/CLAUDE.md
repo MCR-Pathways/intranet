@@ -115,3 +115,15 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 **All video embed iframes use `sandbox="allow-scripts allow-same-origin allow-presentation"`.** Matches the learning module's VideoPlayer. Prevents navigation and form submission from embedded content.
 
 **Vercel Hobby streams files over 4.5 MB without issues.** Spike-tested with 1/5/10 MB files. The 4.5 MB serverless payload limit applies to non-streaming responses only. Streaming via Web ReadableStream bypasses it.
+
+**Use `useSelected` for void element (image, file, embed) toolbar visibility, not `group-focus-within`.** Void elements have `contentEditable={false}` and no focusable children, so `focus-within` never triggers on click. `useSelected` (from `platejs/react`) returns true when the Slate selection includes the node. Use it alone without `useFocused` — clicking a toolbar button steals focus, making `useFocused` go false before the click registers.
+
+**Use `editor.api.findPath(element)` for node mutations, not `props.path`.** Paths can go stale between render and user action (React batching, concurrent features). `findPath` returns `Path | undefined` — always guard against undefined before calling `setNodes` or `removeNodes`.
+
+**Use `onMouseDown` + `preventDefault()` on all in-editor toolbar buttons.** `onClick` steals focus from the editor and can cause selection/path issues. Applies to void element toolbars (image, file, embed), floating toolbars (table, columns), and inline toolbars (callout variant switcher).
+
+**Paste-uploaded images get dimensions via URL-keyed Map + `onValueChange`.** The `uploadImage` callback can only return a URL string (Plate v52 API). Dimensions are read with `createImageBitmap` before upload, stored in a `Map<url, dims>` after upload completes, then applied in `onValueChange` by matching on `type === "img"` + URL key. The Map prevents concurrent pastes from overwriting each other.
+
+**`getDriveContentStream` throws on non-404 errors.** Returns `null` on 404 (file deleted from Drive), throws on 500/permission/network errors. Callers must handle thrown errors — the proxy route's try/catch returns 500.
+
+**Proxy metadata comes from the DB, not from Drive.** `resource_media` stores `mime_type`, `file_size`, `original_name` at upload time. The proxy selects these in the whitelist query and uses them for response headers. `getDriveContentStream` fetches content only (one Drive API call, not two).

@@ -53,12 +53,12 @@
 - Editor mode, settings page, featured articles
 - UX redesign: grouped index, scroll-spy TOC, freshness indicators, "More in [folder]" sibling nav
 
-### Resources — Native Editor (in progress)
+### Resources — Native Editor (WS4 complete)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
 - WS2 (complete): Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
 - WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
-- WS4 (in progress): Media and files. Infrastructure PR pending (Drive upload, proxy, whitelist). Plugins PR pending (image, video embed, file). Polish PR not started.
+- WS4 (complete): Media and files. Drive upload + proxy + resource_media whitelist. Image (dialog + paste with dimensions), video embed (YouTube/Vimeo with nocookie), file attachment (PDF/Word/Excel/PowerPoint/text). Static renderers, accessibility (aria-labels, iframe titles), CLS prevention, 23 new tests.
 - WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
