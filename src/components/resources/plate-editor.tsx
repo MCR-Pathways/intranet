@@ -366,29 +366,29 @@ export function PlateRichEditor({
         ImagePlugin.configure({
           options: {
             uploadImage: async (input) => {
-              const blob = input instanceof ArrayBuffer
-                ? new Blob([input])
-                : await fetch(input as string).then((r) => r.blob());
-
-              const ext = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[blob.type] ?? "png";
-              const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
-
-              // Read dimensions before upload for CLS prevention
-              let dims: { width: number; height: number } | null = null;
-              try {
-                const bitmap = await createImageBitmap(blob);
-                dims = { width: bitmap.width, height: bitmap.height };
-                bitmap.close();
-              } catch {
-                // Proceed without dimensions
-              }
-
-              const fd = new FormData();
-              fd.append("file", file);
-              if (articleIdRef.current) fd.append("articleId", articleIdRef.current);
-
               const toastId = toast.loading("Uploading image...");
               try {
+                const blob = input instanceof ArrayBuffer
+                  ? new Blob([input])
+                  : await fetch(input as string).then((r) => r.blob());
+
+                const ext = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[blob.type] ?? "png";
+                const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+
+                // Read dimensions before upload for CLS prevention
+                let dims: { width: number; height: number } | null = null;
+                try {
+                  const bitmap = await createImageBitmap(blob);
+                  dims = { width: bitmap.width, height: bitmap.height };
+                  bitmap.close();
+                } catch {
+                  // Proceed without dimensions
+                }
+
+                const fd = new FormData();
+                fd.append("file", file);
+                if (articleIdRef.current) fd.append("articleId", articleIdRef.current);
+
                 const result = await uploadEditorMedia(fd);
                 if (!result.success) throw new Error(result.error ?? "Upload failed");
                 // Store dimensions keyed by URL so concurrent pastes don't collide
