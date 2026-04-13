@@ -37,7 +37,6 @@ import { insertColumnGroup } from "@platejs/layout";
 import { TogglePlugin } from "@platejs/toggle/react";
 import { IndentPlugin } from "@platejs/indent/react";
 import { ImagePlugin, MediaEmbedPlugin, FilePlugin } from "@platejs/media/react";
-import { insertImage } from "@platejs/media";
 import { toggleList, ListStyleType } from "@platejs/list";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -324,6 +323,7 @@ export function PlateRichEditor({
 }: PlateEditorProps) {
   const onChangeRef = useRef(onChange);
   const articleIdRef = useRef(articleId);
+  const pendingDimensionsRef = useRef<{ width: number; height: number } | null>(null);
 
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showEmbedDialog, setShowEmbedDialog] = useState(false);
@@ -369,7 +369,19 @@ export function PlateRichEditor({
               const blob = input instanceof ArrayBuffer
                 ? new Blob([input])
                 : await fetch(input as string).then((r) => r.blob());
-              const file = new File([blob], `pasted-${Date.now()}.png`, { type: blob.type });
+
+              const ext = ({ "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp" } as Record<string, string>)[blob.type] ?? "png";
+              const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+
+              // Read dimensions before upload for CLS prevention
+              try {
+                const bitmap = await createImageBitmap(blob);
+                pendingDimensionsRef.current = { width: bitmap.width, height: bitmap.height };
+                bitmap.close();
+              } catch {
+                pendingDimensionsRef.current = null;
+              }
+
               const fd = new FormData();
               fd.append("file", file);
               if (articleIdRef.current) fd.append("articleId", articleIdRef.current);
@@ -423,23 +435,36 @@ export function PlateRichEditor({
 
   const handleValueChange = useCallback(
     ({ value }: { editor: unknown; value: Value }) => {
+      // Apply pending dimensions from paste-uploaded images
+      if (pendingDimensionsRef.current) {
+        const entries = Array.from(
+          editor.api.nodes({ match: (n: Record<string, unknown>) => n.type === "img" && !n.width, reverse: true })
+        );
+        if (entries.length > 0) {
+          const dims = pendingDimensionsRef.current;
+          pendingDimensionsRef.current = null;
+          editor.tf.setNodes(
+            { width: dims.width, height: dims.height } as Record<string, unknown>,
+            { at: entries[0][1] }
+          );
+        }
+      }
       onChangeRef.current?.(value);
     },
-    [],
+    [editor],
   );
 
   const handleImageInsert = useCallback(
     (url: string, width: number, height: number) => {
-      insertImage(editor, url);
-      // Set dimensions on the just-inserted image node
-      if (width && height) {
-        const nodes = Array.from(
-          editor.api.nodes({ match: { type: "img", url }, reverse: true })
-        );
-        if (nodes.length > 0) {
-          editor.tf.setNodes({ width, height } as Record<string, unknown>, { at: nodes[0][1] });
-        }
-      }
+      editor.tf.insertNodes(
+        {
+          type: "img",
+          url,
+          ...(width && height ? { width, height } : {}),
+          children: [{ text: "" }],
+        } as unknown as Value[number],
+        { select: true }
+      );
       editor.tf.focus();
     },
     [editor],

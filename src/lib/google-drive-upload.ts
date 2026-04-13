@@ -125,30 +125,26 @@ export async function deleteFileFromDrive(fileId: string): Promise<boolean> {
 // STREAM (for proxy route)
 // =============================================
 
-interface DriveFileStream {
+interface DriveContentStream {
   stream: Readable;
-  mimeType: string;
-  size: number;
-  name: string;
 }
 
 /**
- * Get a readable stream for a Drive file plus its metadata.
- * Returns null if the file doesn't exist or isn't accessible.
+ * Get a content stream for a Drive file.
+ *
+ * Returns null if the file doesn't exist (404).
+ * Throws on all other errors (500, permission, network) so the caller
+ * can return an appropriate HTTP status.
+ *
+ * Metadata (mimeType, size, name) should come from the resource_media
+ * DB table, not from Drive — this avoids a redundant API call.
  */
-export async function getDriveFileStream(fileId: string): Promise<DriveFileStream | null> {
+export async function getDriveContentStream(fileId: string): Promise<DriveContentStream | null> {
   if (!DRIVE_FILE_ID_REGEX.test(fileId)) return null;
 
   try {
     const drive = getDriveClient();
 
-    // Metadata fetch
-    const meta = await drive.files.get({
-      fileId,
-      fields: "name,mimeType,size",
-    });
-
-    // Content stream
     const content = await drive.files.get(
       { fileId, alt: "media" },
       { responseType: "stream" }
@@ -156,14 +152,15 @@ export async function getDriveFileStream(fileId: string): Promise<DriveFileStrea
 
     return {
       stream: content.data as unknown as Readable,
-      mimeType: meta.data.mimeType ?? "application/octet-stream",
-      size: meta.data.size ? parseInt(meta.data.size, 10) : 0,
-      name: meta.data.name ?? "file",
     };
   } catch (err) {
-    const error = err as { code?: number; message?: string };
-    if (error.code === 404) return null;
-    logger.error("Failed to stream Drive file", { error: error.message, fileId });
-    return null;
+    if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 404) {
+      return null;
+    }
+    logger.error("Failed to stream Drive file", {
+      error: err instanceof Error ? err.message : String(err),
+      fileId,
+    });
+    throw err;
   }
 }

@@ -239,6 +239,7 @@ export function VideoEmbedDialog({
             <div className="relative w-full rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
               <iframe
                 src={embedUrl}
+                title="Video preview"
                 className="absolute inset-0 w-full h-full"
                 sandbox="allow-scripts allow-same-origin allow-presentation"
                 allowFullScreen

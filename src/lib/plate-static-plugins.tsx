@@ -39,6 +39,7 @@ import {
   BaseTableCellHeaderPlugin,
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
+import { formatFileSize } from "@/lib/utils";
 
 // =============================================
 // STATIC ELEMENT COMPONENTS
@@ -195,10 +196,10 @@ function ImageStatic({ children, element, ...props }: SlateElementProps) {
       <img
         src={url}
         alt={alt ?? ""}
-        className="rounded-lg max-w-full"
+        className="rounded-lg max-w-full mx-auto block"
         loading="lazy"
-        {...(width ? { width } : {})}
-        {...(height ? { height } : {})}
+        {...(width ? { width, style: { height: "auto" } } : {})}
+        {...(height && !width ? { height } : {})}
       />
       {children}
     </SlateElement>
@@ -216,6 +217,7 @@ function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
       <div className="relative w-full my-4 rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
         <iframe
           src={url}
+          title="Embedded video"
           className="absolute inset-0 w-full h-full"
           sandbox="allow-scripts allow-same-origin allow-presentation"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -237,7 +239,7 @@ function FileStatic({ children, element, ...props }: SlateElementProps) {
   const name = (element as Record<string, unknown>).name as string | undefined;
   const size = (element as Record<string, unknown>).size as number | undefined;
 
-  const sizeText = size ? formatBytes(size) : "";
+  const sizeText = size ? formatFileSize(size) : "";
 
   return (
     <SlateElement element={element} {...props}>
@@ -259,15 +261,6 @@ function FileStatic({ children, element, ...props }: SlateElementProps) {
       {children}
     </SlateElement>
   );
-}
-
-/** Simple byte formatter for static rendering (no dependency on client utils). */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, i);
-  return `${i === 0 ? value : value.toFixed(1)} ${units[i]}`;
 }
 
 // =============================================
