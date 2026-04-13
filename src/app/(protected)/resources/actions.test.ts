@@ -589,24 +589,6 @@ describe("Intranet Resource Actions", () => {
       expect(result.error).toContain("Failed to delete");
     });
 
-    it("succeeds even if Algolia removal fails", async () => {
-      let callCount = 0;
-      mockFrom.mockImplementation(() => {
-        callCount++;
-        const c = chainable();
-        if (callCount === 1) {
-          c.single.mockResolvedValue({ data: { id: "art-1", status: "published" }, error: null });
-        } else {
-          c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
-        }
-        return c;
-      });
-      mockRemoveArticleFromIndex.mockRejectedValue(new Error("Algolia down"));
-
-      const result = await deleteArticle("art-1");
-      expect(result.success).toBe(true);
-    });
-
     it("throws when user is not a content editor or HR admin", async () => {
       vi.mocked(requireContentEditor).mockRejectedValue(new Error("Not authorised"));
       await expect(deleteArticle("art-1")).rejects.toThrow("Not authorised");

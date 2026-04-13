@@ -836,16 +836,10 @@ export async function deleteArticle(
     return { success: false, error: "Failed to delete article" };
   }
 
-  // Remove from Algolia if the article was published (non-blocking)
+  // Remove from Algolia if the article was published (non-blocking —
+  // removeArticleFromIndex handles errors internally)
   if (article.status === "published") {
-    try {
-      await removeArticleFromIndex(id);
-    } catch (err) {
-      logger.warn("Failed to remove deleted article from Algolia", {
-        articleId: id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    await removeArticleFromIndex(id);
   }
 
   revalidate();
