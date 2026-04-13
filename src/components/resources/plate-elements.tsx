@@ -186,9 +186,11 @@ export function CalloutElement({ children, element, editor, ...props }: PlateEle
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                const path = editor.api.findPath(element);
+                if (!path) return;
                 editor.tf.setNodes(
                   { variant: v } as Record<string, unknown>,
-                  { at: props.path }
+                  { at: path }
                 );
               }}
             />
@@ -483,13 +485,6 @@ const COLUMN_PRESETS = [
 export function ColumnGroupElement({ children, element, ...props }: PlateElementProps) {
   const editor = useEditorRef();
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const elementId = (element as Record<string, unknown>).id as string | undefined;
-
-  const findPath = () => {
-    if (!elementId) return props.path;
-    const entry = editor.api.node({ match: { id: elementId } });
-    return entry ? entry[1] : props.path;
-  };
 
   return (
     <PlateElement element={element} {...props}>
@@ -508,7 +503,8 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
                   className="h-7 w-7"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    const at = findPath();
+                    const at = editor.api.findPath(element);
+                    if (!at) return;
                     if (preset.widths) {
                       setColumns(editor, { at, widths: [...preset.widths] });
                     } else {
@@ -562,7 +558,9 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                toggleColumnGroup(editor, { at: findPath() });
+                const at = editor.api.findPath(element);
+                if (!at) return;
+                toggleColumnGroup(editor, { at });
                 editor.tf.focus();
               }}
             >
