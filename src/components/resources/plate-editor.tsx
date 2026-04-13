@@ -323,7 +323,7 @@ export function PlateRichEditor({
 }: PlateEditorProps) {
   const onChangeRef = useRef(onChange);
   const articleIdRef = useRef(articleId);
-  const pendingDimensionsRef = useRef<{ width: number; height: number } | null>(null);
+  const pendingDimensionsMap = useRef(new Map<string, { width: number; height: number }>());
 
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showEmbedDialog, setShowEmbedDialog] = useState(false);
@@ -374,12 +374,13 @@ export function PlateRichEditor({
               const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
 
               // Read dimensions before upload for CLS prevention
+              let dims: { width: number; height: number } | null = null;
               try {
                 const bitmap = await createImageBitmap(blob);
-                pendingDimensionsRef.current = { width: bitmap.width, height: bitmap.height };
+                dims = { width: bitmap.width, height: bitmap.height };
                 bitmap.close();
               } catch {
-                pendingDimensionsRef.current = null;
+                // Proceed without dimensions
               }
 
               const fd = new FormData();
@@ -390,6 +391,10 @@ export function PlateRichEditor({
               try {
                 const result = await uploadEditorMedia(fd);
                 if (!result.success) throw new Error(result.error ?? "Upload failed");
+                // Store dimensions keyed by URL so concurrent pastes don't collide
+                if (dims && result.url) {
+                  pendingDimensionsMap.current.set(result.url, dims);
+                }
                 toast.success("Image inserted", { id: toastId });
                 return result.url!;
               } catch (err) {
@@ -435,18 +440,24 @@ export function PlateRichEditor({
 
   const handleValueChange = useCallback(
     ({ value }: { editor: unknown; value: Value }) => {
-      // Apply pending dimensions from paste-uploaded images
-      if (pendingDimensionsRef.current) {
+      // Apply pending dimensions from paste-uploaded images (keyed by URL)
+      if (pendingDimensionsMap.current.size > 0) {
         const entries = Array.from(
-          editor.api.nodes({ match: (n: Record<string, unknown>) => n.type === "img" && !n.width, reverse: true })
+          editor.api.nodes({
+            match: (n: Record<string, unknown>) =>
+              n.type === "img" && !n.width && pendingDimensionsMap.current.has(n.url as string),
+          })
         );
-        if (entries.length > 0) {
-          const dims = pendingDimensionsRef.current;
-          pendingDimensionsRef.current = null;
-          editor.tf.setNodes(
-            { width: dims.width, height: dims.height } as Record<string, unknown>,
-            { at: entries[0][1] }
-          );
+        for (const [node, path] of entries) {
+          const url = (node as Record<string, unknown>).url as string;
+          const dims = pendingDimensionsMap.current.get(url);
+          if (dims) {
+            pendingDimensionsMap.current.delete(url);
+            editor.tf.setNodes(
+              { width: dims.width, height: dims.height } as Record<string, unknown>,
+              { at: path }
+            );
+          }
         }
       }
       onChangeRef.current?.(value);

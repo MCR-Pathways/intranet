@@ -93,7 +93,7 @@ export async function GET(
       headers: {
         "Content-Type": mimeType,
         "Content-Disposition": disposition,
-        ...(media.file_size ? { "Content-Length": String(media.file_size) } : {}),
+        ...(media.file_size != null ? { "Content-Length": String(media.file_size) } : {}),
         "Cache-Control": "private, max-age=86400, stale-while-revalidate=604800",
         "X-Content-Type-Options": "nosniff",
       },

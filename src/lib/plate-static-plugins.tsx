@@ -198,8 +198,9 @@ function ImageStatic({ children, element, ...props }: SlateElementProps) {
         alt={alt ?? ""}
         className="rounded-lg max-w-full mx-auto block"
         loading="lazy"
-        {...(width ? { width, style: { height: "auto" } } : {})}
-        {...(height && !width ? { height } : {})}
+        width={width}
+        height={height}
+        style={width ? { height: "auto" } : undefined}
       />
       {children}
     </SlateElement>
