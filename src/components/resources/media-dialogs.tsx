@@ -55,24 +55,27 @@ export function ImageUploadDialog({
   articleId,
   onInsert,
 }: ImageUploadDialogProps) {
-  const upload = useUploadHandler(MAX_IMAGE_SIZE, validateImageType);
+  const {
+    file, uploading, setUploading, progress, error, setError,
+    retried, setRetried, handleFileChange, startProgress, stopProgress, reset,
+  } = useUploadHandler(MAX_IMAGE_SIZE, validateImageType);
 
   useEffect(() => {
-    if (!open) upload.reset();
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!open) reset();
+  }, [open, reset]);
 
   const handleUpload = useCallback(async () => {
-    if (!upload.file) return;
+    if (!file) return;
 
-    upload.setUploading(true);
-    upload.setError(null);
-    upload.startProgress();
+    setUploading(true);
+    setError(null);
+    startProgress();
 
     try {
       let width = 0;
       let height = 0;
       try {
-        const bitmap = await createImageBitmap(upload.file);
+        const bitmap = await createImageBitmap(file);
         width = bitmap.width;
         height = bitmap.height;
         bitmap.close();
@@ -81,30 +84,30 @@ export function ImageUploadDialog({
       }
 
       const fd = new FormData();
-      fd.append("file", upload.file);
+      fd.append("file", file);
       fd.append("articleId", articleId);
 
       const result = await uploadEditorMedia(fd);
-      upload.stopProgress();
 
       if (!result.success) {
-        upload.setError(result.error ?? "Upload failed");
+        setError(result.error ?? "Upload failed");
         return;
       }
 
       onInsert(result.url!, width, height);
       onOpenChange(false);
     } catch {
-      upload.setError("Upload failed — check your connection");
+      setError("Upload failed — check your connection");
     } finally {
-      upload.setUploading(false);
+      setUploading(false);
+      stopProgress();
     }
-  }, [upload, articleId, onInsert, onOpenChange]);
+  }, [file, setUploading, setError, startProgress, stopProgress, articleId, onInsert, onOpenChange]);
 
   const handleRetry = useCallback(() => {
-    upload.setRetried(true);
+    setRetried(true);
     handleUpload();
-  }, [upload, handleUpload]);
+  }, [setRetried, handleUpload]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,14 +121,14 @@ export function ImageUploadDialog({
           <Input
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
-            onChange={upload.handleFileChange}
-            disabled={upload.uploading}
+            onChange={handleFileChange}
+            disabled={uploading}
           />
 
-          {upload.file && !upload.error && (
+          {file && !error && (
             <p className="text-sm text-muted-foreground">
-              {upload.file.name} ({formatFileSize(upload.file.size)})
-              {upload.file.size > 8 * 1024 * 1024 && (
+              {file.name} ({formatFileSize(file.size)})
+              {file.size > 8 * 1024 * 1024 && (
                 <span className="ml-2 text-amber-600">
                   <AlertTriangle className="inline h-3.5 w-3.5 mr-0.5" />
                   Large file — upload may take a moment
@@ -134,18 +137,18 @@ export function ImageUploadDialog({
             </p>
           )}
 
-          {upload.uploading && <Progress value={upload.progress} className="h-2" />}
-          {upload.error && <p className="text-sm text-destructive">{upload.error}</p>}
+          {uploading && <Progress value={progress} className="h-2" />}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>
-          {upload.error && !upload.retried && (
-            <Button variant="outline" onClick={handleRetry} disabled={upload.uploading}>
+          {error && !retried && (
+            <Button variant="outline" onClick={handleRetry} disabled={uploading}>
               Retry
             </Button>
           )}
-          <Button onClick={handleUpload} disabled={!upload.file || upload.uploading}>
-            {upload.uploading ? "Uploading..." : "Insert"}
+          <Button onClick={handleUpload} disabled={!file || uploading}>
+            {uploading ? "Uploading..." : "Insert"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -244,45 +247,48 @@ export function FileUploadDialog({
   articleId,
   onInsert,
 }: FileUploadDialogProps) {
-  const upload = useUploadHandler(MAX_FILE_SIZE);
+  const {
+    file, uploading, setUploading, progress, error, setError,
+    retried, setRetried, handleFileChange, startProgress, stopProgress, reset,
+  } = useUploadHandler(MAX_FILE_SIZE);
 
   useEffect(() => {
-    if (!open) upload.reset();
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!open) reset();
+  }, [open, reset]);
 
   const handleUpload = useCallback(async () => {
-    if (!upload.file) return;
+    if (!file) return;
 
-    upload.setUploading(true);
-    upload.setError(null);
-    upload.startProgress();
+    setUploading(true);
+    setError(null);
+    startProgress();
 
     try {
       const fd = new FormData();
-      fd.append("file", upload.file);
+      fd.append("file", file);
       fd.append("articleId", articleId);
 
       const result = await uploadEditorMedia(fd);
-      upload.stopProgress();
 
       if (!result.success) {
-        upload.setError(result.error ?? "Upload failed");
+        setError(result.error ?? "Upload failed");
         return;
       }
 
-      onInsert(result.url!, result.fileName ?? upload.file.name, result.fileSize ?? upload.file.size);
+      onInsert(result.url!, result.fileName ?? file.name, result.fileSize ?? file.size);
       onOpenChange(false);
     } catch {
-      upload.setError("Upload failed — check your connection");
+      setError("Upload failed — check your connection");
     } finally {
-      upload.setUploading(false);
+      setUploading(false);
+      stopProgress();
     }
-  }, [upload, articleId, onInsert, onOpenChange]);
+  }, [file, setUploading, setError, startProgress, stopProgress, articleId, onInsert, onOpenChange]);
 
   const handleRetry = useCallback(() => {
-    upload.setRetried(true);
+    setRetried(true);
     handleUpload();
-  }, [upload, handleUpload]);
+  }, [setRetried, handleUpload]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -296,14 +302,14 @@ export function FileUploadDialog({
           <Input
             type="file"
             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
-            onChange={upload.handleFileChange}
-            disabled={upload.uploading}
+            onChange={handleFileChange}
+            disabled={uploading}
           />
 
-          {upload.file && !upload.error && (
+          {file && !error && (
             <p className="text-sm text-muted-foreground">
-              {upload.file.name} ({formatFileSize(upload.file.size)})
-              {upload.file.size > 20 * 1024 * 1024 && (
+              {file.name} ({formatFileSize(file.size)})
+              {file.size > 20 * 1024 * 1024 && (
                 <span className="ml-2 text-amber-600">
                   <AlertTriangle className="inline h-3.5 w-3.5 mr-0.5" />
                   Large file — upload may take a moment
@@ -312,18 +318,18 @@ export function FileUploadDialog({
             </p>
           )}
 
-          {upload.uploading && <Progress value={upload.progress} className="h-2" />}
-          {upload.error && <p className="text-sm text-destructive">{upload.error}</p>}
+          {uploading && <Progress value={progress} className="h-2" />}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>
-          {upload.error && !upload.retried && (
-            <Button variant="outline" onClick={handleRetry} disabled={upload.uploading}>
+          {error && !retried && (
+            <Button variant="outline" onClick={handleRetry} disabled={uploading}>
               Retry
             </Button>
           )}
-          <Button onClick={handleUpload} disabled={!upload.file || upload.uploading}>
-            {upload.uploading ? "Uploading..." : "Attach"}
+          <Button onClick={handleUpload} disabled={!file || uploading}>
+            {uploading ? "Uploading..." : "Attach"}
           </Button>
         </DialogFooter>
       </DialogContent>

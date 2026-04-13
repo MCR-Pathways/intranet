@@ -37,6 +37,7 @@ export function useUploadHandler(
   }, []);
 
   const startProgress = useCallback(() => {
+    if (progressTimer.current) clearInterval(progressTimer.current);
     setProgress(30);
     let current = 30;
     progressTimer.current = setInterval(() => {
