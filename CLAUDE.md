@@ -333,3 +333,7 @@ These are universal rules that apply to every task regardless of which module yo
 **Use `raw_app_meta_data` for proxy JWT claims, not session storage.** Store frequently-checked profile fields in `auth.users.raw_app_meta_data` via a DB trigger. The proxy reads these from `user.app_metadata` (zero DB queries).
 
 **Proxy external URLs at both write-time AND render-time for CSP compliance.** Old records still have raw external URLs. Exclude protocol-relative URLs (`//attacker.com`) from the "already relative" fast path.
+
+**Don't wrap functions that handle their own errors in a second try/catch.** If `removeArticleFromIndex` already catches and logs internally, wrapping it in another try/catch produces dead code and duplicate logging. Check the function's error contract before adding defensive wrappers.
+
+**When extracting a hook, verify `finally` blocks transfer correctly.** Refactoring inline state management into a hook can drop cleanup code (e.g., `clearInterval` in `finally`). Diff the before and after to verify every code path is preserved.
