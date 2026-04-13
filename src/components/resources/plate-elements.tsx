@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { PlateElement, PlateLeaf, useEditorRef } from "platejs/react";
+import { PlateElement, PlateLeaf, useEditorRef, useSelected } from "platejs/react";
 import {
   TablePlugin,
   useTableElement,
@@ -630,32 +630,42 @@ export function ToggleElement({ children, element, ...props }: PlateElementProps
 
 export function ImageElement({ children, element, ...props }: PlateElementProps) {
   const editor = useEditorRef();
+  const selected = useSelected();
   const url = (element as Record<string, unknown>).url as string;
   const alt = (element as Record<string, unknown>).alt as string | undefined;
   const width = (element as Record<string, unknown>).width as number | undefined;
+  const height = (element as Record<string, unknown>).height as number | undefined;
   const [showAltInput, setShowAltInput] = useState(false);
   const [altText, setAltText] = useState(alt ?? "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <PlateElement element={element} {...props}>
-      <div className="relative my-4 group/image" contentEditable={false}>
+      <div className="relative my-4" contentEditable={false}>
         {/* eslint-disable-next-line @next/next/no-img-element -- Plate editor element, can't use next/image */}
         <img
           src={url}
           alt={alt ?? ""}
           className="rounded-lg max-w-full mx-auto block"
-          style={width ? { width, height: "auto" } : undefined}
+          width={width}
+          height={height}
+          style={width ? { height: "auto" } : undefined}
           loading="lazy"
         />
 
-        {/* Floating toolbar — focus-within only */}
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-focus-within/image:opacity-100 transition-opacity">
+        {/* Floating toolbar — visible when node is selected */}
+        <div className={cn(
+          "absolute top-2 right-2 flex gap-1 transition-opacity",
+          selected ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
           <Button
             variant="secondary"
             size="sm"
             className="h-7 text-xs"
-            onClick={() => setShowAltInput(!showAltInput)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowAltInput(!showAltInput);
+            }}
           >
             <Pencil className="h-3 w-3 mr-1" />
             Alt text
@@ -664,7 +674,11 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
             variant="secondary"
             size="sm"
             className="h-7 text-xs text-destructive hover:text-destructive"
-            onClick={() => setShowDeleteConfirm(true)}
+            aria-label="Delete image"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setShowDeleteConfirm(true);
+            }}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -680,7 +694,9 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
               className="h-8 text-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: props.path });
+                  const path = editor.api.findPath(element);
+                  if (!path) return;
+                  editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: path });
                   setShowAltInput(false);
                 }
               }}
@@ -689,8 +705,11 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
               variant="outline"
               size="sm"
               className="h-8"
-              onClick={() => {
-                editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: props.path });
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.setNodes({ alt: altText } as Record<string, unknown>, { at: path });
                 setShowAltInput(false);
               }}
             >
@@ -713,7 +732,9 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                editor.tf.removeNodes({ at: props.path });
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.removeNodes({ at: path });
                 editor.tf.focus();
               }}
             >
@@ -741,6 +762,7 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
         <div className="relative w-full rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
           <iframe
             src={url}
+            title="Embedded video"
             className="absolute inset-0 w-full h-full"
             sandbox="allow-scripts allow-same-origin allow-presentation"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -760,6 +782,7 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
 
 export function FileElement({ children, element, ...props }: PlateElementProps) {
   const editor = useEditorRef();
+  const selected = useSelected();
   const url = (element as Record<string, unknown>).url as string;
   const name = (element as Record<string, unknown>).name as string | undefined;
   const size = (element as Record<string, unknown>).size as number | undefined;
@@ -768,7 +791,7 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
   return (
     <PlateElement element={element} {...props}>
       <div
-        className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 my-2 group/file"
+        className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 my-2"
         contentEditable={false}
       >
         <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -779,6 +802,7 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
         <a
           href={url}
           download
+          aria-label={`Download ${name ?? "file"}`}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
@@ -788,8 +812,15 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-focus-within/file:opacity-100 transition-opacity"
-          onClick={() => setShowDeleteConfirm(true)}
+          className={cn(
+            "h-7 w-7 text-destructive hover:text-destructive transition-opacity",
+            selected ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+          aria-label="Remove file attachment"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setShowDeleteConfirm(true);
+          }}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -808,7 +839,9 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                editor.tf.removeNodes({ at: props.path });
+                const path = editor.api.findPath(element);
+                if (!path) return;
+                editor.tf.removeNodes({ at: path });
                 editor.tf.focus();
               }}
             >
