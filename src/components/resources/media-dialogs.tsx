@@ -6,9 +6,11 @@
  * ImageUploadDialog: file picker with progress, dimensions, retry.
  * VideoEmbedDialog: URL input with live preview.
  * FileUploadDialog: file picker with progress, retry.
+ *
+ * Image and file dialogs share upload state via useUploadHandler.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { useUploadHandler } from "@/hooks/use-upload-handler";
 import { uploadEditorMedia } from "@/app/(protected)/resources/media-actions";
 import { getEmbedUrl } from "@/lib/video";
 import { formatFileSize } from "@/lib/utils";
@@ -28,6 +31,16 @@ import { AlertTriangle } from "lucide-react";
 // =============================================
 // IMAGE UPLOAD DIALOG
 // =============================================
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
+function validateImageType(file: File): string | null {
+  if (!IMAGE_TYPES.includes(file.type)) {
+    return "Only PNG, JPEG, GIF, and WebP images are allowed";
+  }
+  return null;
+}
 
 interface ImageUploadDialogProps {
   open: boolean;
@@ -42,39 +55,14 @@ export function ImageUploadDialog({
   articleId,
   onInsert,
 }: ImageUploadDialogProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [retried, setRetried] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const {
+    file, uploading, setUploading, progress, error, setError,
+    retried, setRetried, handleFileChange, startProgress, stopProgress, reset,
+  } = useUploadHandler(MAX_IMAGE_SIZE, validateImageType);
 
-  // Reset state when dialog opens/closes
   useEffect(() => {
-    if (!open) {
-      setFile(null);
-      setUploading(false);
-      setProgress(0);
-      setError(null);
-      setRetried(false);
-      if (progressTimer.current) clearInterval(progressTimer.current);
-    }
-  }, [open]);
-
-  const startProgress = useCallback(() => {
-    setProgress(30);
-    let current = 30;
-    progressTimer.current = setInterval(() => {
-      current = Math.min(current + 5, 85);
-      setProgress(current);
-    }, 500);
-  }, []);
-
-  const stopProgress = useCallback(() => {
-    if (progressTimer.current) clearInterval(progressTimer.current);
-    setProgress(100);
-  }, []);
+    if (!open) reset();
+  }, [open, reset]);
 
   const handleUpload = useCallback(async () => {
     if (!file) return;
@@ -84,7 +72,6 @@ export function ImageUploadDialog({
     startProgress();
 
     try {
-      // Read dimensions before upload
       let width = 0;
       let height = 0;
       try {
@@ -93,7 +80,7 @@ export function ImageUploadDialog({
         height = bitmap.height;
         bitmap.close();
       } catch {
-        // Dimension read failed — proceed without
+        // Proceed without dimensions
       }
 
       const fd = new FormData();
@@ -101,8 +88,6 @@ export function ImageUploadDialog({
       fd.append("articleId", articleId);
 
       const result = await uploadEditorMedia(fd);
-
-      stopProgress();
 
       if (!result.success) {
         setError(result.error ?? "Upload failed");
@@ -115,35 +100,14 @@ export function ImageUploadDialog({
       setError("Upload failed — check your connection");
     } finally {
       setUploading(false);
-      if (progressTimer.current) clearInterval(progressTimer.current);
+      stopProgress();
     }
-  }, [file, articleId, onInsert, onOpenChange, startProgress, stopProgress]);
+  }, [file, setUploading, setError, startProgress, stopProgress, articleId, onInsert, onOpenChange]);
 
   const handleRetry = useCallback(() => {
     setRetried(true);
     handleUpload();
-  }, [handleUpload]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-
-    setError(null);
-    setRetried(false);
-
-    // Client-side validation
-    const allowed = ["image/png", "image/jpeg", "image/gif", "image/webp"];
-    if (!allowed.includes(selected.type)) {
-      setError("Only PNG, JPEG, GIF, and WebP images are allowed");
-      return;
-    }
-    if (selected.size > 10 * 1024 * 1024) {
-      setError("Image must be under 10 MB");
-      return;
-    }
-
-    setFile(selected);
-  }, []);
+  }, [setRetried, handleUpload]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +119,6 @@ export function ImageUploadDialog({
 
         <div className="space-y-4">
           <Input
-            ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
             onChange={handleFileChange}
@@ -175,10 +138,7 @@ export function ImageUploadDialog({
           )}
 
           {uploading && <Progress value={progress} className="h-2" />}
-
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>
@@ -218,7 +178,7 @@ export function VideoEmbedDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => {
-      if (!v) setUrl(defaultUrl ?? ""); // reset on close
+      if (!v) setUrl(defaultUrl ?? "");
       onOpenChange(v);
     }}>
       <DialogContent className="sm:max-w-md">
@@ -272,6 +232,8 @@ export function VideoEmbedDialog({
 // FILE UPLOAD DIALOG
 // =============================================
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
 interface FileUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -285,36 +247,21 @@ export function FileUploadDialog({
   articleId,
   onInsert,
 }: FileUploadDialogProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [retried, setRetried] = useState(false);
-  const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const {
+    file, uploading, setUploading, progress, error, setError,
+    retried, setRetried, handleFileChange, startProgress, stopProgress, reset,
+  } = useUploadHandler(MAX_FILE_SIZE);
 
   useEffect(() => {
-    if (!open) {
-      setFile(null);
-      setUploading(false);
-      setProgress(0);
-      setError(null);
-      setRetried(false);
-      if (progressTimer.current) clearInterval(progressTimer.current);
-    }
-  }, [open]);
+    if (!open) reset();
+  }, [open, reset]);
 
   const handleUpload = useCallback(async () => {
     if (!file) return;
 
     setUploading(true);
     setError(null);
-    setProgress(30);
-
-    let current = 30;
-    progressTimer.current = setInterval(() => {
-      current = Math.min(current + 3, 85);
-      setProgress(current);
-    }, 500);
+    startProgress();
 
     try {
       const fd = new FormData();
@@ -322,9 +269,6 @@ export function FileUploadDialog({
       fd.append("articleId", articleId);
 
       const result = await uploadEditorMedia(fd);
-
-      if (progressTimer.current) clearInterval(progressTimer.current);
-      setProgress(100);
 
       if (!result.success) {
         setError(result.error ?? "Upload failed");
@@ -337,29 +281,14 @@ export function FileUploadDialog({
       setError("Upload failed — check your connection");
     } finally {
       setUploading(false);
-      if (progressTimer.current) clearInterval(progressTimer.current);
+      stopProgress();
     }
-  }, [file, articleId, onInsert, onOpenChange]);
+  }, [file, setUploading, setError, startProgress, stopProgress, articleId, onInsert, onOpenChange]);
 
   const handleRetry = useCallback(() => {
     setRetried(true);
     handleUpload();
-  }, [handleUpload]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-
-    setError(null);
-    setRetried(false);
-
-    if (selected.size > 25 * 1024 * 1024) {
-      setError("File must be under 25 MB");
-      return;
-    }
-
-    setFile(selected);
-  }, []);
+  }, [setRetried, handleUpload]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -390,10 +319,7 @@ export function FileUploadDialog({
           )}
 
           {uploading && <Progress value={progress} className="h-2" />}
-
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>

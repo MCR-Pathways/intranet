@@ -309,8 +309,8 @@ interface PlateEditorProps {
   initialValue?: Value;
   /** Called with new value on each change (debounce externally) */
   onChange?: (value: Value) => void;
-  /** Article ID for media upload tracking */
-  articleId?: string;
+  /** Article ID for media upload tracking (required — uploads need an article association) */
+  articleId: string;
   /** Additional className for the editor container */
   className?: string;
 }
@@ -533,7 +533,7 @@ export function PlateRichEditor({
       <ImageUploadDialog
         open={showImageDialog}
         onOpenChange={setShowImageDialog}
-        articleId={articleId ?? ""}
+        articleId={articleId}
         onInsert={handleImageInsert}
       />
       <VideoEmbedDialog
@@ -544,7 +544,7 @@ export function PlateRichEditor({
       <FileUploadDialog
         open={showFileDialog}
         onOpenChange={setShowFileDialog}
-        articleId={articleId ?? ""}
+        articleId={articleId}
         onInsert={handleFileInsert}
       />
     </div>
