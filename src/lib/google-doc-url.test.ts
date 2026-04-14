@@ -71,6 +71,10 @@ describe("extractDocId", () => {
       extractDocId("https://drive.google.com/drive/folders/1AbCdEfGhI")
     ).toBeNull();
   });
+
+  it("returns null for non-Google URL with id query param", () => {
+    expect(extractDocId("https://example.com/?id=123")).toBeNull();
+  });
 });
 
 // =============================================
