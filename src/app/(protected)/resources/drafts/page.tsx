@@ -90,6 +90,11 @@ export default async function DraftsPage() {
               );
             })}
           </ul>
+          {drafts.length === 100 && (
+            <p className="px-4 py-2.5 text-xs text-muted-foreground border-t border-border bg-muted/30">
+              Showing 100 most recent drafts — older drafts not displayed.
+            </p>
+          )}
         </div>
       )}
     </div>
