@@ -2,8 +2,8 @@
  * Shared static plugin registry for native Plate articles.
  *
  * Used by:
- * - plate-static-view.tsx (RSC read-only rendering)
- * - native-actions.ts (HTML serialisation for Algolia indexing)
+ * - NativeArticleView (via prepareNativeArticle — rendering with heading IDs)
+ * - native-actions.ts (via createNativeStaticEditor — Algolia HTML serialisation, no heading IDs)
  *
  * All static element/leaf components and plugin registrations live here
  * to avoid duplication between the two consumers.
@@ -40,6 +40,11 @@ import {
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
 import { formatFileSize } from "@/lib/utils";
+import {
+  createSlugDeduplicator,
+  ARTICLE_CONTENT_MODIFIERS,
+  type ArticleHeading,
+} from "./article-constants";
 
 // =============================================
 // STATIC ELEMENT COMPONENTS
@@ -53,20 +58,59 @@ function BlockquoteStatic(props: SlateElementProps) {
   return <SlateElement {...props} as="blockquote" />;
 }
 
+/** Inline SVG link icon for heading anchors (RSC-safe — no lucide-react import). */
+function LinkIconSvg() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function HeadingStatic(props: SlateElementProps, Tag: "h1" | "h2" | "h3" | "h4") {
+  const id = (props.element as Record<string, unknown>).id as string | undefined;
+
+  // No-id path (Algolia serialisation): render with as={Tag} so the heading
+  // IS the top-level element. Without `as`, SlateElement wraps in a <div>,
+  // which breaks parseHtmlIntoSections (it checks body.children for heading tags).
+  if (!id) {
+    return <SlateElement {...props} as={Tag} />;
+  }
+
+  // Id path (browser rendering): wrap heading in SlateElement, add anchor link
+  const { element, children, ...rest } = props;
+  return (
+    <SlateElement element={element} {...rest}>
+      <Tag id={id} className="group relative scroll-mt-20">
+        <a
+          href={`#${id}`}
+          aria-hidden
+          tabIndex={-1}
+          className="absolute -left-5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity select-none [text-decoration:none] [color:var(--color-muted-foreground)]"
+        >
+          <LinkIconSvg />
+        </a>
+        {children}
+      </Tag>
+    </SlateElement>
+  );
+}
+
 function H1Static(props: SlateElementProps) {
-  return <SlateElement {...props} as="h1" />;
+  return HeadingStatic(props, "h1");
 }
 
 function H2Static(props: SlateElementProps) {
-  return <SlateElement {...props} as="h2" />;
+  return HeadingStatic(props, "h2");
 }
 
 function H3Static(props: SlateElementProps) {
-  return <SlateElement {...props} as="h3" />;
+  return HeadingStatic(props, "h3");
 }
 
 function H4Static(props: SlateElementProps) {
-  return <SlateElement {...props} as="h4" />;
+  return HeadingStatic(props, "h4");
 }
 
 function HrStatic(props: SlateElementProps) {
@@ -141,7 +185,7 @@ function TableRowStatic(props: SlateElementProps) {
 function TableCellStatic({ children, element, ...props }: SlateElementProps) {
   return (
     <SlateElement element={element} {...props}>
-      <td className="border border-border p-2 align-top">{children}</td>
+      <td className="align-top">{children}</td>
     </SlateElement>
   );
 }
@@ -149,9 +193,7 @@ function TableCellStatic({ children, element, ...props }: SlateElementProps) {
 function TableCellHeaderStatic({ children, element, ...props }: SlateElementProps) {
   return (
     <SlateElement element={element} {...props}>
-      <th className="border border-border p-2 align-top bg-muted font-semibold text-left">
-        {children}
-      </th>
+      <th className="align-top">{children}</th>
     </SlateElement>
   );
 }
@@ -174,7 +216,7 @@ function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
   const width = (element as Record<string, unknown>).width as string | undefined;
   return (
     <SlateElement element={element} {...props}>
-      <div className="prose prose-sm p-3" style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
+      <div className={`prose prose-sm ${ARTICLE_CONTENT_MODIFIERS} p-3`} style={width ? { width, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
         {children}
       </div>
     </SlateElement>
@@ -185,18 +227,25 @@ function ColumnItemStatic({ children, element, ...props }: SlateElementProps) {
 // IMAGE
 // =============================================
 
+const IMAGE_ALIGN_CLASSES: Record<string, string> = {
+  left: "rounded-lg max-w-full block",
+  center: "rounded-lg max-w-full mx-auto block",
+  right: "rounded-lg max-w-full ml-auto block",
+};
+
 function ImageStatic({ children, element, ...props }: SlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
   const alt = (element as Record<string, unknown>).alt as string | undefined;
   const width = (element as Record<string, unknown>).width as number | undefined;
   const height = (element as Record<string, unknown>).height as number | undefined;
+  const align = ((element as Record<string, unknown>).align as string) || "center";
   return (
     <SlateElement element={element} {...props}>
       {/* eslint-disable-next-line @next/next/no-img-element -- Plate static renderer, can't use next/image */}
       <img
         src={url}
         alt={alt ?? ""}
-        className="rounded-lg max-w-full mx-auto block"
+        className={IMAGE_ALIGN_CLASSES[align] ?? IMAGE_ALIGN_CLASSES.center}
         loading="lazy"
         width={width}
         height={height}
@@ -215,11 +264,11 @@ function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
   return (
     <SlateElement element={element} {...props}>
-      <div className="relative w-full my-4 rounded-lg overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+      <div className="not-prose my-4 aspect-video w-full overflow-hidden rounded-lg bg-muted">
         <iframe
           src={url}
           title="Embedded video"
-          className="absolute inset-0 w-full h-full"
+          className="h-full w-full"
           sandbox="allow-scripts allow-same-origin allow-presentation"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -475,13 +524,82 @@ const staticComponents = {
 };
 
 // =============================================
+// HEADING ID PREPROCESSOR
+// =============================================
+
+const HEADING_TYPES = new Set(["h1", "h2", "h3", "h4"]);
+const HEADING_LEVEL: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4 };
+
+/** Extract text from a Plate node's children recursively. */
+function getPlateNodeText(node: Record<string, unknown>): string {
+  if (typeof node.text === "string") return node.text;
+  const children = node.children as Record<string, unknown>[] | undefined;
+  if (!children) return "";
+  return children.map(getPlateNodeText).join("");
+}
+
+/**
+ * Walk Plate JSON, find h1-h4 nodes, generate slugs, and add `id`
+ * properties. Returns both the modified value and extracted headings.
+ *
+ * Creates new objects for modified nodes — does NOT mutate originals.
+ * nestToggleChildren only shallow-copies toggle nodes; heading nodes
+ * are original references that must not be mutated.
+ */
+export function addHeadingIds(value: Value): {
+  value: Value;
+  headings: ArticleHeading[];
+} {
+  const deduplicate = createSlugDeduplicator();
+  const headings: ArticleHeading[] = [];
+
+  function walkAndCopy(nodes: Value[number][]): Value[number][] {
+    let changed = false;
+    const result = nodes.map((node) => {
+      const record = node as Record<string, unknown>;
+      const type = record.type as string | undefined;
+      const children = record.children as Value[number][] | undefined;
+
+      // Recurse into children first (toggles, columns, etc.)
+      const newChildren = children ? walkAndCopy(children) : undefined;
+
+      if (type && HEADING_TYPES.has(type)) {
+        const text = getPlateNodeText(record).trim();
+        if (text) {
+          const slug = deduplicate(text);
+          headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          changed = true;
+          // Create new object with id — don't mutate original
+          return {
+            ...record,
+            id: slug,
+            ...(newChildren ? { children: newChildren } : {}),
+          } as unknown as Value[number];
+        }
+      }
+
+      // Only create new object if children changed
+      if (newChildren && newChildren !== children) {
+        changed = true;
+        return { ...record, children: newChildren } as Value[number];
+      }
+      return node;
+    });
+
+    return changed ? result : nodes;
+  }
+
+  return { value: walkAndCopy(value as Value[number][]) as Value, headings };
+}
+
+// =============================================
 // PUBLIC API
 // =============================================
 
 /**
- * Create a static editor instance with all native article plugins
- * and component mappings. Used for both RSC rendering and HTML
- * serialisation in server actions.
+ * Create a static editor instance for Algolia HTML serialisation.
+ * Does NOT add heading IDs — keeps serialised HTML clean for search indexing.
+ * Used by native-actions.ts.
  */
 export function createNativeStaticEditor(value: Value) {
   // Preprocess: convert flat indent-based toggles to nested model for static rendering
@@ -494,4 +612,30 @@ export function createNativeStaticEditor(value: Value) {
       components: staticComponents,
     },
   });
+}
+
+/**
+ * Prepare a native article for rendering with heading IDs and TOC data.
+ * Chains nestToggleChildren → addHeadingIds → createStaticEditor.
+ *
+ * Used by NativeArticleView — returns both the editor and extracted
+ * headings for the TOC sidebar. Heading slugs are guaranteed to match
+ * the DOM heading IDs since both come from the same walk.
+ */
+export function prepareNativeArticle(value: Value): {
+  editor: ReturnType<typeof createStaticEditor>;
+  headings: ArticleHeading[];
+} {
+  const nested = nestToggleChildren(value);
+  const { value: processed, headings } = addHeadingIds(nested);
+
+  const editor = createStaticEditor({
+    plugins: staticPlugins,
+    value: processed,
+    override: {
+      components: staticComponents,
+    },
+  });
+
+  return { editor, headings };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,36 +108,41 @@ export function LinkGoogleDocDialog({
   // Final category ID = most specific selection
   const categoryId = subSubcategoryId || subcategoryId || majorCategoryId;
 
-  // Load categories on open, reset form on close
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) {
-      setLoadingCategories(true);
-      fetchCategoriesForMove()
-        .then((cats) => {
-          const options = cats as CategoryOption[];
-          setAllCategories(options);
+  // Load categories when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setLoadingCategories(true);
+    fetchCategoriesForMove()
+      .then((cats) => {
+        const options = cats as CategoryOption[];
+        setAllCategories(options);
 
-          if (defaultCategoryId) {
-            const chain = resolveParentChain(defaultCategoryId, options);
-            setMajorCategoryId(chain.majorId);
-            setSubcategoryId(chain.subId);
-            setSubSubcategoryId(chain.subSubId);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch categories:", err);
-          toast.error("Failed to load categories");
-        })
-        .finally(() => {
-          setLoadingCategories(false);
-        });
-    } else {
+        if (defaultCategoryId) {
+          const chain = resolveParentChain(defaultCategoryId, options);
+          setMajorCategoryId(chain.majorId);
+          setSubcategoryId(chain.subId);
+          setSubSubcategoryId(chain.subSubId);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch categories:", err);
+        toast.error("Failed to load categories");
+      })
+      .finally(() => {
+        setLoadingCategories(false);
+      });
+  }, [open, defaultCategoryId]);
+
+  // Reset form on close
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
       setDocUrl("");
       setMajorCategoryId("");
       setSubcategoryId("");
       setSubSubcategoryId("");
       setCustomTitle("");
       setUrlError("");
+      setAllCategories([]);
     }
     onOpenChange(nextOpen);
   }

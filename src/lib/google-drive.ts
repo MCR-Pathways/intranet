@@ -323,6 +323,25 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
     });
   });
 
+  // ── Phase 3b: Preserve image alignment from paragraph text-align ──────
+  // Google Docs wraps images in styled <p> elements. Extract text-align
+  // before Phase 4 strips all styles, and apply alignment classes directly
+  // to the <img> element. Using text-center on the <p> doesn't work because
+  // Tailwind Typography sets img { display: block }, and text-align only
+  // affects inline content.
+  const allParagraphs = body.querySelectorAll("p");
+  allParagraphs.forEach((p: Element) => {
+    const img = p.querySelector("img");
+    if (!img) return;
+
+    const style = p.getAttribute("style") ?? "";
+    const alignMatch = style.match(/text-align:\s*(center|right)/i);
+    if (alignMatch) {
+      const align = alignMatch[1].toLowerCase();
+      img.setAttribute("class", align === "center" ? "mx-auto" : "ml-auto");
+    }
+  });
+
   // ── Phase 4: Strip all remaining styles, classes, and data attributes ─
   const allElements = body.querySelectorAll("*");
   const emptySpans: Element[] = [];
@@ -341,8 +360,13 @@ export function sanitiseGoogleDocsHtml(rawHtml: string): string {
       el.removeAttribute("style");
     }
 
-    // Strip class attributes (Google's proprietary classes)
-    el.removeAttribute("class");
+    // Strip class attributes — EXCEPT alignment classes on <img> elements (from Phase 3b)
+    const cls = el.getAttribute("class") ?? "";
+    if (el.tagName === "IMG" && (cls === "mx-auto" || cls === "ml-auto")) {
+      // Preserve — set by Phase 3b for image alignment
+    } else {
+      el.removeAttribute("class");
+    }
 
     // Strip id attributes (we'll generate our own)
     el.removeAttribute("id");

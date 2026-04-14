@@ -47,6 +47,9 @@ import {
   Download,
   FileText,
   Pencil,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -627,6 +630,18 @@ export function ToggleElement({ children, element, ...props }: PlateElementProps
 // IMAGE
 // =============================================
 
+const IMAGE_ALIGN_EDITOR: Record<string, string> = {
+  left: "rounded-lg max-w-full block",
+  center: "rounded-lg max-w-full mx-auto block",
+  right: "rounded-lg max-w-full ml-auto block",
+};
+
+const ALIGN_OPTIONS = [
+  { value: "left", icon: AlignLeft, label: "Align left" },
+  { value: "center", icon: AlignCenter, label: "Align centre" },
+  { value: "right", icon: AlignRight, label: "Align right" },
+] as const;
+
 export function ImageElement({ children, element, ...props }: PlateElementProps) {
   const editor = useEditorRef();
   const selected = useSelected();
@@ -634,9 +649,16 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
   const alt = (element as Record<string, unknown>).alt as string | undefined;
   const width = (element as Record<string, unknown>).width as number | undefined;
   const height = (element as Record<string, unknown>).height as number | undefined;
+  const align = ((element as Record<string, unknown>).align as string) || "center";
   const [showAltInput, setShowAltInput] = useState(false);
   const [altText, setAltText] = useState(alt ?? "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  function handleAlign(value: string) {
+    const path = editor.api.findPath(element);
+    if (!path) return;
+    editor.tf.setNodes({ align: value } as Record<string, unknown>, { at: path });
+  }
 
   return (
     <PlateElement element={element} {...props}>
@@ -645,7 +667,7 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
         <img
           src={url}
           alt={alt ?? ""}
-          className="rounded-lg max-w-full mx-auto block"
+          className={IMAGE_ALIGN_EDITOR[align] ?? IMAGE_ALIGN_EDITOR.center}
           width={width}
           height={height}
           style={width ? { height: "auto" } : undefined}
@@ -654,9 +676,32 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
 
         {/* Floating toolbar — visible when node is selected */}
         <div className={cn(
-          "absolute top-2 right-2 flex gap-1 transition-opacity",
+          "absolute top-2 right-2 flex items-center gap-1.5 transition-opacity",
           selected ? "opacity-100" : "opacity-0 pointer-events-none"
         )}>
+          {/* Alignment toggle group */}
+          <div className="flex rounded-md overflow-hidden border border-border">
+            {ALIGN_OPTIONS.map(({ value, icon: Icon, label }) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={label}
+                className={cn(
+                  "h-7 w-7 flex items-center justify-center transition-colors",
+                  align === value
+                    ? "bg-primary/10 text-primary"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleAlign(value);
+                }}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
+
           <Button
             variant="secondary"
             size="sm"

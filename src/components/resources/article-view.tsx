@@ -34,10 +34,12 @@ import {
   StarOff,
   FolderInput,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { VisibilityBadge } from "./visibility-badge";
-import type { ArticleWithAuthor } from "@/types/database.types";
+import { useScrollSpy } from "@/lib/use-scroll-spy";
+import { extractHeadings } from "@/lib/tiptap";
 import type { TiptapDocument } from "@/lib/tiptap";
+import type { ArticleWithAuthor } from "@/types/database.types";
 
 interface ArticleViewProps {
   article: ArticleWithAuthor;
@@ -55,6 +57,16 @@ export function ArticleView({
   const [isPending, startTransition] = useTransition();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+
+  // Extract headings for TOC sidebar
+  const headings = useMemo(
+    () =>
+      extractHeadings(article.content_json as unknown as TiptapDocument).map(
+        (h) => ({ text: h.text, slug: h.id, level: h.level })
+      ),
+    [article.content_json]
+  );
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
 
   const authorName =
     article.author?.preferred_name || article.author?.full_name || "Unknown";
@@ -234,11 +246,11 @@ export function ArticleView({
         </Card>
 
         {/* Right sidebar — table of contents */}
-        <div className="hidden lg:block w-56 shrink-0">
-          <ArticleOutline
-            contentJson={article.content_json as unknown as TiptapDocument}
-          />
-        </div>
+        <ArticleOutline
+          headings={headings}
+          activeHeadingId={activeHeadingId}
+          onHeadingClick={setActiveHeadingId}
+        />
       </div>
     </div>
   );

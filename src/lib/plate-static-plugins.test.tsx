@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { Value } from "platejs";
 import { serializeHtml } from "platejs/static";
-import { createNativeStaticEditor, nestToggleChildren } from "./plate-static-plugins";
+import {
+  createNativeStaticEditor,
+  nestToggleChildren,
+  addHeadingIds,
+  prepareNativeArticle,
+} from "./plate-static-plugins";
 
 describe("createNativeStaticEditor", () => {
   it("creates an editor with the given value", () => {
@@ -456,5 +461,253 @@ describe("nestToggleChildren", () => {
     expect(result).toHaveLength(2);
     // Left as-is since no toggle precedes the indented content
     expect(result).toEqual(value);
+  });
+});
+
+describe("addHeadingIds", () => {
+  it("adds id properties to heading nodes", () => {
+    const value: Value = [
+      { type: "h1", children: [{ text: "Welcome" }] },
+      { type: "p", children: [{ text: "Body text" }] },
+      { type: "h2", children: [{ text: "Getting Started" }] },
+    ];
+    const { value: result, headings } = addHeadingIds(value);
+    expect(headings).toHaveLength(2);
+    expect(headings[0]).toEqual({ text: "Welcome", slug: "welcome", level: 1 });
+    expect(headings[1]).toEqual({ text: "Getting Started", slug: "getting-started", level: 2 });
+    expect((result[0] as Record<string, unknown>).id).toBe("welcome");
+    expect((result[2] as Record<string, unknown>).id).toBe("getting-started");
+  });
+
+  it("does not mutate the original value", () => {
+    const original: Value = [
+      { type: "h2", children: [{ text: "Title" }] },
+    ];
+    const originalRef = original[0];
+    addHeadingIds(original);
+    // Original node should not have id property
+    expect((originalRef as Record<string, unknown>).id).toBeUndefined();
+  });
+
+  it("deduplicates slugs for headings with identical text", () => {
+    const value: Value = [
+      { type: "h2", children: [{ text: "Section" }] },
+      { type: "h2", children: [{ text: "Section" }] },
+      { type: "h2", children: [{ text: "Section" }] },
+    ];
+    const { headings } = addHeadingIds(value);
+    expect(headings[0].slug).toBe("section");
+    expect(headings[1].slug).toBe("section-1");
+    expect(headings[2].slug).toBe("section-2");
+  });
+
+  it("does not add id to paragraphs", () => {
+    const value: Value = [
+      { type: "p", children: [{ text: "Not a heading" }] },
+    ];
+    const { value: result, headings } = addHeadingIds(value);
+    expect(headings).toHaveLength(0);
+    expect((result[0] as Record<string, unknown>).id).toBeUndefined();
+  });
+
+  it("handles headings with inline marks", () => {
+    const value: Value = [
+      {
+        type: "h2",
+        children: [
+          { text: "Bold " },
+          { text: "heading", bold: true },
+        ],
+      },
+    ];
+    const { headings } = addHeadingIds(value);
+    expect(headings[0].text).toBe("Bold heading");
+    expect(headings[0].slug).toBe("bold-heading");
+  });
+});
+
+describe("prepareNativeArticle", () => {
+  it("returns an editor and headings", () => {
+    const value: Value = [
+      { type: "h1", children: [{ text: "Title" }] },
+      { type: "p", children: [{ text: "Body" }] },
+    ];
+    const { editor, headings } = prepareNativeArticle(value);
+    expect(editor).toBeDefined();
+    expect(headings).toHaveLength(1);
+    expect(headings[0].slug).toBe("title");
+  });
+
+  it("heading slugs match the editor heading IDs", async () => {
+    const value: Value = [
+      { type: "h2", children: [{ text: "FAQ" }] },
+      { type: "p", children: [{ text: "Content" }] },
+      { type: "h2", children: [{ text: "FAQ" }] },
+    ];
+    const { editor, headings } = prepareNativeArticle(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    // First FAQ heading should have id="faq"
+    expect(html).toContain('id="faq"');
+    // Second FAQ heading should have id="faq-1"
+    expect(html).toContain('id="faq-1"');
+    // Headings array should match
+    expect(headings[0].slug).toBe("faq");
+    expect(headings[1].slug).toBe("faq-1");
+  });
+
+  it("processes toggles before adding heading IDs", () => {
+    const value: Value = [
+      { type: "toggle", id: "t1", children: [{ text: "Toggle" }] },
+      { type: "h2", indent: 1, children: [{ text: "Inside Toggle" }] },
+    ];
+    const { headings } = prepareNativeArticle(value);
+    expect(headings).toHaveLength(1);
+    expect(headings[0].text).toBe("Inside Toggle");
+  });
+});
+
+describe("createNativeStaticEditor (Algolia path)", () => {
+  it("does NOT add heading IDs", async () => {
+    const value: Value = [
+      { type: "h2", children: [{ text: "Clean Heading" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    // Should not have id attribute (clean for Algolia)
+    expect(html).not.toContain('id="clean-heading"');
+    expect(html).toContain("Clean Heading");
+  });
+});
+
+describe("ImageStatic alignment", () => {
+  it("centres images by default", async () => {
+    const value: Value = [
+      { type: "img", url: "/test.png", children: [{ text: "" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("mx-auto");
+  });
+
+  it("applies left alignment", async () => {
+    const value: Value = [
+      { type: "img", url: "/test.png", align: "left", children: [{ text: "" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).not.toContain("mx-auto");
+    expect(html).not.toContain("ml-auto");
+  });
+
+  it("applies right alignment", async () => {
+    const value: Value = [
+      { type: "img", url: "/test.png", align: "right", children: [{ text: "" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("ml-auto");
+  });
+});
+
+describe("MediaEmbedStatic", () => {
+  it("uses aspect-video class", async () => {
+    const value: Value = [
+      {
+        type: "media_embed",
+        url: "https://www.youtube-nocookie.com/embed/test",
+        children: [{ text: "" }],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("aspect-video");
+    expect(html).toContain("not-prose");
+    expect(html).toContain("bg-muted");
+    // Should NOT use the old paddingBottom trick
+    expect(html).not.toContain("padding-bottom");
+  });
+});
+
+describe("TableCellStatic styling", () => {
+  it("does not have explicit padding or border classes", async () => {
+    const value: Value = [
+      {
+        type: "table",
+        children: [
+          {
+            type: "tr",
+            children: [
+              { type: "td", children: [{ type: "p", children: [{ text: "Cell" }] }] },
+            ],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    // td should only have align-top, not p-2 or border classes
+    expect(html).toContain("align-top");
+    expect(html).not.toMatch(/class="[^"]*p-2[^"]*"/);
+  });
+});
+
+describe("ColumnItemStatic prose modifiers", () => {
+  it("includes content modifier classes", async () => {
+    const value: Value = [
+      {
+        type: "column_group",
+        layout: [50, 50],
+        children: [
+          { type: "column", width: "50%", children: [{ type: "p", children: [{ text: "Col" }] }] },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    // Column items should have the full modifier chain
+    expect(html).toContain("prose-headings:font-semibold");
+    expect(html).toContain("prose-p:text-foreground/85");
+  });
+});
+
+describe("heading HTML structure for Algolia", () => {
+  /** Strip Plate's <div class="slate-editor"> wrapper (same as serialiseContentToHtml). */
+  function stripEditorWrapper(html: string): string {
+    const match = html.match(/^<div[^>]*>([\s\S]*)<\/div>$/);
+    return match ? match[1] : html;
+  }
+
+  it("headings render as top-level elements (no wrapper div)", async () => {
+    const value: Value = [
+      { type: "h2", children: [{ text: "Section One" }] },
+      { type: "p", children: [{ text: "Content" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = stripEditorWrapper(
+      await serializeHtml(editor, { stripDataAttributes: true })
+    );
+    // h2 should be rendered directly (via as="h2"), not wrapped in <div><h2>
+    expect(html).toMatch(/<h2[^>]*>.*Section One/);
+    expect(html).not.toMatch(/<div[^>]*><h2/);
+  });
+
+  it("section extraction finds headings after wrapper stripping", async () => {
+    const { parseHtmlIntoSections } = await import("./html-sections");
+    const value: Value = [
+      { type: "p", children: [{ text: "Intro text" }] },
+      { type: "h2", children: [{ text: "First Section" }] },
+      { type: "p", children: [{ text: "Body of first" }] },
+      { type: "h2", children: [{ text: "Second Section" }] },
+      { type: "p", children: [{ text: "Body of second" }] },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = stripEditorWrapper(
+      await serializeHtml(editor, { stripDataAttributes: true })
+    );
+    const sections = parseHtmlIntoSections(html);
+    expect(sections.length).toBe(3);
+    expect(sections[0].heading).toBeNull();
+    expect(sections[1].heading).toBe("First Section");
+    expect(sections[2].heading).toBe("Second Section");
   });
 });

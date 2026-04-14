@@ -8,8 +8,9 @@
  * with edit, feature, move, and delete actions.
  */
 
-import { createElement, useEffect, useState, useTransition } from "react";
+import { createElement, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { PlateStatic } from "platejs/static";
 import {
   MoreHorizontal,
   Pencil,
@@ -30,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreInSection } from "./more-in-section";
+import { ArticleOutline } from "./article-outline";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import { useEditorMode } from "./editor-mode-context";
@@ -44,7 +46,10 @@ import {
 import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { recordArticleView } from "@/lib/recently-viewed";
-import { PlateStaticView } from "./plate-static-view";
+import { useScrollSpy } from "@/lib/use-scroll-spy";
+import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
+import { prepareNativeArticle } from "@/lib/plate-static-plugins";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Value } from "platejs";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
@@ -62,6 +67,7 @@ interface NativeArticleViewProps {
   canEdit: boolean;
   siblings?: SiblingArticle[];
   categoryPath?: string;
+  serverNow: number;
 }
 
 export function NativeArticleView({
@@ -71,6 +77,7 @@ export function NativeArticleView({
   canEdit,
   siblings = [],
   categoryPath = "",
+  serverNow,
 }: NativeArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -85,6 +92,72 @@ export function NativeArticleView({
   useEffect(() => {
     recordArticleView({ id: article.id, title: article.title, slug: article.slug });
   }, [article.id, article.title, article.slug]);
+
+  // ─── Prepare content: editor + headings for TOC ───────────────────────────
+
+  const contentJson = (article as unknown as { content_json?: unknown }).content_json as Value | undefined;
+
+  const { editor, headings } = useMemo(() => {
+    if (!contentJson) return { editor: null, headings: [] };
+    return prepareNativeArticle(contentJson);
+  }, [contentJson]);
+
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
+
+  // ─── Freshness indicator ──────────────────────────────────────────────────
+
+  const isStale = useMemo(() => {
+    const ts = new Date(article.updated_at).getTime();
+    const monthsOld = Math.floor(
+      (serverNow - ts) / (1000 * 60 * 60 * 24 * 30)
+    );
+    return monthsOld >= 12;
+  }, [article.updated_at, serverNow]);
+
+  // ─── Supabase Realtime: live updates for status/title changes ─────────────
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`article-${article.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "resource_articles",
+          filter: `id=eq.${article.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as Record<string, unknown>;
+          // Only update status/title/timestamp — skip content_json
+          // (auto-save fires every 5s during editing, we don't want noise)
+          const newStatus = updated.status as "draft" | "published" | undefined;
+          const newTitle = updated.title as string | undefined;
+          setArticle((prev) => {
+            if (
+              newStatus === prev.status &&
+              newTitle === prev.title
+            ) {
+              return prev; // No meaningful change
+            }
+            return {
+              ...prev,
+              status: newStatus ?? prev.status,
+              title: newTitle ?? prev.title,
+              updated_at: (updated.updated_at as string) ?? prev.updated_at,
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [article.id]);
+
+  // ─── Actions ──────────────────────────────────────────────────────────────
 
   const handleToggleFeatured = () => {
     startTransition(async () => {
@@ -132,7 +205,6 @@ export function NativeArticleView({
   };
 
   const updatedAt = article.updated_at;
-  const contentJson = (article as unknown as { content_json?: unknown }).content_json as Value | undefined;
 
   const iconFg = resolveIconColour(category.icon_colour).fg;
 
@@ -140,33 +212,38 @@ export function NativeArticleView({
   const editUrl = `/resources/article/${article.slug}/edit`;
 
   return (
-    <div className="space-y-6">
+    <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link href="/resources" className="hover:underline underline-offset-4">
+      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+        <Link
+          href="/resources"
+          className="hover:text-foreground hover:underline underline-offset-4"
+        >
           Resources
         </Link>
-        <span className="text-muted-foreground/50">/</span>
+        <span className="text-muted-foreground/50 select-none">/</span>
         {parentCategory && (
           <>
             <Link
               href={`/resources/${parentCategory.slug}`}
-              className="hover:underline underline-offset-4"
+              className="hover:text-foreground hover:underline underline-offset-4"
             >
               {parentCategory.name}
             </Link>
-            <span className="text-muted-foreground/50">/</span>
+            <span className="text-muted-foreground/50 select-none">/</span>
           </>
         )}
         <Link
           href={`/resources/${categoryPath}`}
-          className="hover:underline underline-offset-4 inline-flex items-center gap-1.5"
+          className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline underline-offset-4"
         >
           {createElement(resolveIcon(category.icon), {
             className: cn("h-3.5 w-3.5", iconFg),
           })}
           {category.name}
         </Link>
+        <span className="text-muted-foreground/50 select-none">/</span>
+        <span className="text-foreground font-medium">{article.title}</span>
       </nav>
 
       {/* Article header */}
@@ -240,7 +317,10 @@ export function NativeArticleView({
         </div>
 
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
-          <span>Updated {formatDate(new Date(updatedAt))}</span>
+          <span className={isStale ? "text-amber-600" : undefined}>
+            Updated {formatDate(new Date(updatedAt))}
+            {isStale && " — may need review"}
+          </span>
           {editorMode && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
@@ -260,11 +340,20 @@ export function NativeArticleView({
         </div>
       </div>
 
-      {/* Article body */}
-      {contentJson ? (
-        <article className="prose prose-sm max-w-[720px] prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border">
-          <PlateStaticView value={contentJson} />
-        </article>
+      {/* Article body — two-column: content + outline sidebar */}
+      {editor ? (
+        <div className="flex gap-8">
+          <article className={cn(ARTICLE_PROSE_CLASSES, "flex-1 min-w-0")}>
+            <PlateStatic editor={editor} />
+          </article>
+
+          {/* Article outline sidebar (table of contents) */}
+          <ArticleOutline
+            headings={headings}
+            activeHeadingId={activeHeadingId}
+            onHeadingClick={setActiveHeadingId}
+          />
+        </div>
       ) : (
         <div className="text-sm text-muted-foreground italic py-8">
           This article has no content yet.

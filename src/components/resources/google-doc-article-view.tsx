@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createElement, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import parse, { type DOMNode, type Element, domToReact } from "html-react-parser";
 import { getEmbedUrl } from "@/lib/video";
@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreInSection } from "./more-in-section";
+import { ArticleOutline } from "./article-outline";
 import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { useEditorMode } from "./editor-mode-context";
@@ -34,6 +35,9 @@ import { createClient } from "@/lib/supabase/client";
 import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { recordArticleView } from "@/lib/recently-viewed";
+import { useScrollSpy } from "@/lib/use-scroll-spy";
+import { createSlugDeduplicator } from "@/lib/article-constants";
+import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
 import { toast } from "sonner";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
 
@@ -50,6 +54,7 @@ interface GoogleDocArticleViewProps {
   canEdit: boolean;
   siblings?: SiblingArticle[];
   categoryPath?: string;
+  serverNow: number;
 }
 
 export function GoogleDocArticleView({
@@ -59,6 +64,7 @@ export function GoogleDocArticleView({
   canEdit,
   siblings = [],
   categoryPath = "",
+  serverNow,
 }: GoogleDocArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -83,14 +89,7 @@ export function GoogleDocArticleView({
     if (!article.synced_html) return { parsedContent: null, headings: [] as { text: string; slug: string; level: number }[] };
 
     const extractedHeadings: { text: string; slug: string; level: number }[] = [];
-    const slugCounts = new Map<string, number>();
-
-    function slugify(text: string): string {
-      const base = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const count = slugCounts.get(base) ?? 0;
-      slugCounts.set(base, count + 1);
-      return count > 0 ? `${base}-${count}` : base;
-    }
+    const slugify = createSlugDeduplicator();
 
     const content = parse(article.synced_html, {
       replace: (domNode) => {
@@ -165,33 +164,7 @@ export function GoogleDocArticleView({
 
   // ─── Scroll-spy: highlight active heading in TOC ───────────────────────────
 
-  const [activeHeadingId, setActiveHeadingId] = useState("");
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    if (headings.length < 2) return;
-
-    observerRef.current?.disconnect();
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveHeadingId(entry.target.id);
-            break;
-          }
-        }
-      },
-      { rootMargin: "-80px 0px -80% 0px" }
-    );
-
-    for (const h of headings) {
-      const el = document.getElementById(h.slug);
-      if (el) observerRef.current.observe(el);
-    }
-
-    return () => observerRef.current?.disconnect();
-  }, [headings]);
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
 
   // ─── Supabase Realtime: live updates when synced_html changes ──────────────
 
@@ -271,18 +244,16 @@ export function GoogleDocArticleView({
 
   // Content freshness — flag articles not updated in 12+ months
   const updatedAt = new Date(article.updated_at);
-  /* eslint-disable react-hooks/purity */
   const isStale = useMemo(() => {
     const ts = new Date(article.updated_at).getTime();
     const monthsOld = Math.floor(
-      (Date.now() - ts) / (1000 * 60 * 60 * 24 * 30)
+      (serverNow - ts) / (1000 * 60 * 60 * 24 * 30)
     );
     return monthsOld >= 12;
-  }, [article.updated_at]);
-  /* eslint-enable react-hooks/purity */
+  }, [article.updated_at, serverNow]);
 
   return (
-    <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5" style={{ minHeight: "calc(100vh - 14rem)" }}>
+    <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
       {/* Breadcrumbs — no "Home", starts from Resources */}
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
         <Link
@@ -429,41 +400,16 @@ export function GoogleDocArticleView({
       {/* Article body — two-column: content + outline sidebar */}
       {article.synced_html ? (
         <div className="flex gap-8">
-          <article className="prose prose-sm max-w-[720px] flex-1 min-w-0 prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border">
+          <article className={cn(ARTICLE_PROSE_CLASSES, "flex-1 min-w-0")}>
             {parsedContent}
           </article>
 
           {/* Article outline sidebar (table of contents) */}
-          {headings.length > 1 && (
-            <nav className="hidden lg:block w-48 shrink-0 sticky top-6 self-start">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                On this page
-              </h4>
-              <ul className="space-y-1">
-                {headings.map((h) => (
-                  <li key={h.slug}>
-                    <a
-                      href={`#${h.slug}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth" });
-                        setActiveHeadingId(h.slug);
-                      }}
-                      className={cn(
-                        "text-xs block truncate py-1 transition-colors",
-                        activeHeadingId === h.slug
-                          ? "text-primary font-medium"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      style={h.level > 2 ? { paddingLeft: `${(h.level - 2) * 12}px` } : undefined}
-                    >
-                      {h.text}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
+          <ArticleOutline
+            headings={headings}
+            activeHeadingId={activeHeadingId}
+            onHeadingClick={setActiveHeadingId}
+          />
         </div>
       ) : (
         <div className="text-sm text-muted-foreground italic py-8">

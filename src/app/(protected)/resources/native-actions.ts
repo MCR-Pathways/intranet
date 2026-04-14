@@ -79,7 +79,12 @@ async function serialiseContentToHtml(contentJson: unknown): Promise<string | nu
   }
   try {
     const editor = createNativeStaticEditor(contentJson as Value);
-    return await serializeHtml(editor, { stripDataAttributes: true });
+    const fullHtml = await serializeHtml(editor, { stripDataAttributes: true });
+    // Strip Plate's <div class="slate-editor"> wrapper so headings are
+    // top-level for parseHtmlIntoSections (Algolia section extraction).
+    const trimmed = fullHtml.trim();
+    const match = trimmed.match(/^<div[^>]*>([\s\S]*)<\/div>$/);
+    return match ? match[1] : trimmed;
   } catch (err) {
     logger.error("Failed to serialise native content to HTML", {
       error: err instanceof Error ? err.message : String(err),

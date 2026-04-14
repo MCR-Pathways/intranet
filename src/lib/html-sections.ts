@@ -9,6 +9,10 @@
  */
 
 import { parseHTML } from "linkedom";
+import { slugifyHeading } from "./article-constants";
+
+// Re-export so existing consumers (drive-actions.ts, etc.) keep the same import path
+export { slugifyHeading };
 
 export interface HtmlSection {
   /** Heading text (null for intro content before first heading) */
@@ -17,14 +21,6 @@ export interface HtmlSection {
   headingSlug: string | null;
   /** Plaintext content of the section */
   content: string;
-}
-
-/** Convert heading text to a URL-safe slug. */
-export function slugifyHeading(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 /**
