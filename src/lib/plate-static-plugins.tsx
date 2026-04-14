@@ -554,7 +554,8 @@ export function addHeadingIds(value: Value): {
   const headings: ArticleHeading[] = [];
 
   function walkAndCopy(nodes: Value[number][]): Value[number][] {
-    return nodes.map((node) => {
+    let changed = false;
+    const result = nodes.map((node) => {
       const record = node as Record<string, unknown>;
       const type = record.type as string | undefined;
       const children = record.children as Value[number][] | undefined;
@@ -567,6 +568,7 @@ export function addHeadingIds(value: Value): {
         if (text) {
           const slug = deduplicate(text);
           headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          changed = true;
           // Create new object with id — don't mutate original
           return {
             ...record,
@@ -578,10 +580,13 @@ export function addHeadingIds(value: Value): {
 
       // Only create new object if children changed
       if (newChildren && newChildren !== children) {
+        changed = true;
         return { ...record, children: newChildren } as Value[number];
       }
       return node;
     });
+
+    return changed ? result : nodes;
   }
 
   return { value: walkAndCopy(value as Value[number][]) as Value, headings };

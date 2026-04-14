@@ -82,8 +82,9 @@ async function serialiseContentToHtml(contentJson: unknown): Promise<string | nu
     const fullHtml = await serializeHtml(editor, { stripDataAttributes: true });
     // Strip Plate's <div class="slate-editor"> wrapper so headings are
     // top-level for parseHtmlIntoSections (Algolia section extraction).
-    const match = fullHtml.match(/^<div[^>]*>([\s\S]*)<\/div>$/);
-    return match ? match[1] : fullHtml;
+    const trimmed = fullHtml.trim();
+    const match = trimmed.match(/^<div[^>]*>([\s\S]*)<\/div>$/);
+    return match ? match[1] : trimmed;
   } catch (err) {
     logger.error("Failed to serialise native content to HTML", {
       error: err instanceof Error ? err.message : String(err),
