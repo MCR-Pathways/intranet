@@ -54,6 +54,7 @@ interface GoogleDocArticleViewProps {
   canEdit: boolean;
   siblings?: SiblingArticle[];
   categoryPath?: string;
+  serverNow: number;
 }
 
 export function GoogleDocArticleView({
@@ -63,6 +64,7 @@ export function GoogleDocArticleView({
   canEdit,
   siblings = [],
   categoryPath = "",
+  serverNow,
 }: GoogleDocArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -242,15 +244,13 @@ export function GoogleDocArticleView({
 
   // Content freshness — flag articles not updated in 12+ months
   const updatedAt = new Date(article.updated_at);
-  /* eslint-disable react-hooks/purity */
   const isStale = useMemo(() => {
     const ts = new Date(article.updated_at).getTime();
     const monthsOld = Math.floor(
-      (Date.now() - ts) / (1000 * 60 * 60 * 24 * 30)
+      (serverNow - ts) / (1000 * 60 * 60 * 24 * 30)
     );
     return monthsOld >= 12;
-  }, [article.updated_at]);
-  /* eslint-enable react-hooks/purity */
+  }, [article.updated_at, serverNow]);
 
   return (
     <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>

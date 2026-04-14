@@ -30,6 +30,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   // Fetch sibling articles for "More in [folder]" section
   const siblings = await fetchSiblingArticles(supabase, category.id);
+  const serverNow = Date.now();
   const categoryPath = parentCategory
     ? `${parentCategory.slug}/${category.slug}`
     : category.slug;
@@ -44,6 +45,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         canEdit={canEdit}
         siblings={siblings}
         categoryPath={categoryPath}
+        serverNow={serverNow}
       />
     );
   }
@@ -80,6 +82,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         canEdit={canEdit}
         siblings={siblings}
         categoryPath={categoryPath}
+        serverNow={serverNow}
       />
     );
   }

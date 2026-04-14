@@ -67,6 +67,7 @@ interface NativeArticleViewProps {
   canEdit: boolean;
   siblings?: SiblingArticle[];
   categoryPath?: string;
+  serverNow: number;
 }
 
 export function NativeArticleView({
@@ -76,6 +77,7 @@ export function NativeArticleView({
   canEdit,
   siblings = [],
   categoryPath = "",
+  serverNow,
 }: NativeArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -104,15 +106,13 @@ export function NativeArticleView({
 
   // ─── Freshness indicator ──────────────────────────────────────────────────
 
-  /* eslint-disable react-hooks/purity */
   const isStale = useMemo(() => {
     const ts = new Date(article.updated_at).getTime();
     const monthsOld = Math.floor(
-      (Date.now() - ts) / (1000 * 60 * 60 * 24 * 30)
+      (serverNow - ts) / (1000 * 60 * 60 * 24 * 30)
     );
     return monthsOld >= 12;
-  }, [article.updated_at]);
-  /* eslint-enable react-hooks/purity */
+  }, [article.updated_at, serverNow]);
 
   // ─── Supabase Realtime: live updates for status/title changes ─────────────
 
