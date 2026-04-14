@@ -43,6 +43,7 @@ import { formatFileSize } from "@/lib/utils";
 import {
   createSlugDeduplicator,
   ARTICLE_CONTENT_MODIFIERS,
+  APP_ORIGIN,
   type ArticleHeading,
 } from "./article-constants";
 
@@ -123,10 +124,28 @@ function HrStatic(props: SlateElementProps) {
 }
 
 function LinkStatic({ children, element, ...props }: SlateElementProps) {
-  const url = (element as Record<string, unknown>).url as string;
+  const url = ((element as Record<string, unknown>).url as string) || "";
+
+  // Check if link is internal: relative path or absolute intranet URL
+  let href = url;
+  let isInternal = url.startsWith("/") && !url.startsWith("//");
+
+  if (!isInternal && APP_ORIGIN) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.origin === APP_ORIGIN) {
+        href = parsed.pathname + parsed.search + parsed.hash || "/";
+        isInternal = true;
+      }
+    } catch { /* not a valid URL, treat as external */ }
+  }
+
   return (
     <SlateElement element={element} {...props}>
-      <a href={url} target="_blank" rel="noopener noreferrer">
+      <a
+        href={href}
+        {...(!isInternal && { target: "_blank", rel: "noopener noreferrer" })}
+      >
         {children}
       </a>
     </SlateElement>

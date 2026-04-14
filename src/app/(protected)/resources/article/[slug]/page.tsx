@@ -5,6 +5,7 @@ import {
   isContentEditorEffective,
 } from "@/lib/auth";
 import { fetchArticleBySlugOnly, fetchSiblingArticles } from "../../actions";
+import { logger } from "@/lib/logger";
 import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
 import { ComponentArticleView } from "@/components/resources/component-article-view";
@@ -37,6 +38,25 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
+    // Build cross-link map: google_doc_id → slug for published Google Docs
+    let crossLinkMap: Record<string, string> = {};
+    const { data: crossLinks, error: crossLinkError } = await supabase
+      .from("resource_articles")
+      .select("google_doc_id, slug")
+      .not("google_doc_id", "is", null)
+      .is("deleted_at", null)
+      .eq("status", "published");
+
+    if (crossLinkError) {
+      logger.error("Failed to fetch cross-link map", { error: crossLinkError.message });
+    }
+
+    if (crossLinks) {
+      for (const row of crossLinks) {
+        if (row.google_doc_id) crossLinkMap[row.google_doc_id] = row.slug;
+      }
+    }
+
     return (
       <GoogleDocArticleView
         article={article}
@@ -46,6 +66,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         siblings={siblings}
         categoryPath={categoryPath}
         serverNow={serverNow}
+        crossLinkMap={crossLinkMap}
       />
     );
   }

@@ -711,3 +711,87 @@ describe("heading HTML structure for Algolia", () => {
     expect(sections[2].heading).toBe("Second Section");
   });
 });
+
+describe("LinkStatic internal vs external", () => {
+  it("internal link has no target attribute", async () => {
+    const value: Value = [
+      {
+        type: "p",
+        children: [
+          {
+            type: "a",
+            url: "/resources/article/some-article",
+            children: [{ text: "Internal" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("/resources/article/some-article");
+    expect(html).toContain("Internal");
+    expect(html).not.toContain("target=");
+  });
+
+  it("external link has target=_blank", async () => {
+    const value: Value = [
+      {
+        type: "p",
+        children: [
+          {
+            type: "a",
+            url: "https://example.com",
+            children: [{ text: "External" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("https://example.com");
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it("protocol-relative URL is treated as external", async () => {
+    const value: Value = [
+      {
+        type: "p",
+        children: [
+          {
+            type: "a",
+            url: "//evil.com/path",
+            children: [{ text: "Sneaky" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain('target="_blank"');
+  });
+
+  it("absolute intranet URL is stripped to relative path (same tab)", async () => {
+    // This test depends on NEXT_PUBLIC_APP_URL being set.
+    // If unset, absolute URLs are treated as external (safe fallback).
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) return; // skip if env var not set
+
+    const value: Value = [
+      {
+        type: "p",
+        children: [
+          {
+            type: "a",
+            url: `${appUrl}/resources/article/some-article`,
+            children: [{ text: "Absolute internal" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("/resources/article/some-article");
+    expect(html).not.toContain('target=');
+  });
+});

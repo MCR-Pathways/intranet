@@ -48,56 +48,8 @@ export function getDriveClient(impersonateEmail?: string): drive_v3.Drive {
 // URL PARSING
 // =============================================
 
-/**
- * Extract Google Doc file ID from a Google Docs or Drive URL.
- *
- * Supports:
- * - https://docs.google.com/document/d/{fileId}/edit
- * - https://docs.google.com/document/d/{fileId}/view
- * - https://docs.google.com/document/d/{fileId}
- * - https://drive.google.com/file/d/{fileId}/view
- * - https://drive.google.com/open?id={fileId}
- */
-export function extractDocId(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-
-    // docs.google.com/document/d/{id}/...
-    const docMatch = parsed.pathname.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
-    if (docMatch) return docMatch[1];
-
-    // drive.google.com/file/d/{id}/...
-    const fileMatch = parsed.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileMatch) return fileMatch[1];
-
-    // drive.google.com/open?id={id}
-    const idParam = parsed.searchParams.get("id");
-    if (idParam) return idParam;
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extract Google Drive folder ID from a Drive folder URL.
- *
- * Supports:
- * - https://drive.google.com/drive/folders/{folderId}
- * - https://drive.google.com/drive/u/0/folders/{folderId}
- * - https://drive.google.com/drive/u/0/folders/{folderId}?...
- */
-export function extractFolderId(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const folderMatch = parsed.pathname.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-    if (folderMatch) return folderMatch[1];
-    return null;
-  } catch {
-    return null;
-  }
-}
+// URL parsing utilities — re-exported from google-doc-url.ts (client-safe, no googleapis dep)
+export { extractDocId, extractFolderId } from "./google-doc-url";
 
 // =============================================
 // DOCUMENT OPERATIONS
