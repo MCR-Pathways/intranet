@@ -5,6 +5,7 @@ import {
   isContentEditorEffective,
 } from "@/lib/auth";
 import { fetchArticleBySlugOnly, fetchSiblingArticles } from "../../actions";
+import { logger } from "@/lib/logger";
 import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
 import { ComponentArticleView } from "@/components/resources/component-article-view";
@@ -47,7 +48,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       .eq("status", "published");
 
     if (crossLinkError) {
-      console.error("Failed to fetch cross-link map:", crossLinkError.message);
+      logger.error("Failed to fetch cross-link map", { error: crossLinkError.message });
     }
 
     if (crossLinks) {
