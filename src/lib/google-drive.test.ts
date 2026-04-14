@@ -289,3 +289,33 @@ describe("extractPlainTextFromHtml", () => {
     expect(extractPlainTextFromHtml("")).toBe("");
   });
 });
+
+describe("sanitiseGoogleDocsHtml — image alignment", () => {
+  it("applies mx-auto to centred images", () => {
+    const html = `<html><body><p style="text-align:center"><span><img src="https://lh7-us.googleusercontent.com/abc" style="width:400px"></span></p></body></html>`;
+    const result = sanitiseGoogleDocsHtml(html);
+    expect(result).toContain('class="mx-auto"');
+    // Style should be stripped but class preserved on the img
+    expect(result).not.toContain("text-align");
+  });
+
+  it("applies ml-auto to right-aligned images", () => {
+    const html = `<html><body><p style="text-align:right;line-height:1.5"><span><img src="https://lh7-us.googleusercontent.com/abc" style="width:200px"></span></p></body></html>`;
+    const result = sanitiseGoogleDocsHtml(html);
+    expect(result).toContain('class="ml-auto"');
+  });
+
+  it("does not add alignment class to paragraphs without images", () => {
+    const html = `<html><body><p style="text-align:center"><span style="font-weight:700">Centred text</span></p></body></html>`;
+    const result = sanitiseGoogleDocsHtml(html);
+    expect(result).not.toContain("mx-auto");
+    expect(result).not.toContain("ml-auto");
+  });
+
+  it("does not add class for left-aligned or unstyled image paragraphs", () => {
+    const html = `<html><body><p><span><img src="https://lh7-us.googleusercontent.com/abc"></span></p></body></html>`;
+    const result = sanitiseGoogleDocsHtml(html);
+    expect(result).not.toContain("mx-auto");
+    expect(result).not.toContain("ml-auto");
+  });
+});
