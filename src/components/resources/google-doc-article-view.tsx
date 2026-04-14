@@ -80,10 +80,13 @@ export function GoogleDocArticleView({
     setArticle(initialArticle);
   }, [initialArticle]);
 
-  // Track recently viewed articles for the global search overlay
+  // Track recently viewed articles for the global search overlay.
+  // Drafts never enter the list — would leak stale entries into readers'
+  // recents if the article was later unpublished.
   useEffect(() => {
+    if (article.status !== "published") return;
     recordArticleView({ id: article.id, title: article.title, slug: article.slug });
-  }, [article.id, article.title, article.slug]);
+  }, [article.id, article.title, article.slug, article.status]);
 
   // ─── Parse HTML into React elements with heading IDs ───────────────────────
 

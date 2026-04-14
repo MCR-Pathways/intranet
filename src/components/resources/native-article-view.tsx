@@ -89,9 +89,11 @@ export function NativeArticleView({
     setArticle(initialArticle);
   }, [initialArticle]);
 
+  // Drafts never enter the recently-viewed list — prevents stale entries.
   useEffect(() => {
+    if (article.status !== "published") return;
     recordArticleView({ id: article.id, title: article.title, slug: article.slug });
-  }, [article.id, article.title, article.slug]);
+  }, [article.id, article.title, article.slug, article.status]);
 
   // ─── Prepare content: editor + headings for TOC ───────────────────────────
 

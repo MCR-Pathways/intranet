@@ -22,6 +22,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   const canEdit =
     isHRAdminEffective(profile) || isContentEditorEffective(profile);
+  // Draft visibility is content-editor-only; HR admins without editor flag
+  // see the same view as readers. Fixes the inverted-governance audit bug.
+  const canViewDrafts = isContentEditorEffective(profile);
 
   // Resolve slug path to category
   const result = await fetchCategoryBySlugPath(supabase, slug);
@@ -38,8 +41,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // Fetch grouped subcategory articles and direct articles in parallel
   const [subcategoryGroups, { articles: directArticles }] = await Promise.all([
-    fetchGroupedSubcategoryArticles(supabase, category.id, canEdit),
-    fetchCategoryArticlesWithClient(supabase, category.slug, canEdit),
+    fetchGroupedSubcategoryArticles(supabase, category.id, canViewDrafts),
+    fetchCategoryArticlesWithClient(supabase, category.slug, canViewDrafts),
   ]);
 
   return (

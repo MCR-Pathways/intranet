@@ -135,6 +135,15 @@ export async function createNativeArticle(
       .single();
 
     if (error || !article) {
+      // Postgres unique-violation (23505) means a concurrent creation beat us
+      // to this slug despite the ensureUniqueSlug pre-check. Surface a clear
+      // message so the editor knows to retry with a different title.
+      if (error?.code === "23505") {
+        return {
+          success: false,
+          error: "A resource with this slug already exists — try a different title.",
+        };
+      }
       logger.error("Failed to create native article", { error: error?.message });
       return { success: false, error: "Failed to create article" };
     }
@@ -336,6 +345,9 @@ export async function unpublishNativeArticle(
       .update({
         status: "draft",
         updated_at: new Date().toISOString(),
+        // Unfeature on unpublish — prevents stale MAX_FEATURED_ARTICLES count.
+        is_featured: false,
+        featured_sort_order: 0,
       })
       .eq("id", articleId)
       .eq("content_type", "native");

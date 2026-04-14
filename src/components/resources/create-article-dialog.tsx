@@ -101,9 +101,12 @@ export function CreateArticleDialog({
 
   const categoryId = subSubcategoryId || subcategoryId || majorCategoryId;
 
-  // Load categories when dialog opens
+  // Load categories when dialog opens. Radix Dialog onOpenChange doesn't
+  // fire on programmatic open, so we can't move this to an event handler
+  // without refactoring the open prop (planned in WS2 editor-mode redesign).
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCategories(true);
     fetchCategoriesForMove()
       .then((cats) => {

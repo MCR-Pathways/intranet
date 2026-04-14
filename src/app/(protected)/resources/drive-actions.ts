@@ -389,6 +389,15 @@ export async function linkGoogleDoc(
       .single();
 
     if (insertError || !article) {
+      // Handle slug/google_doc_id unique-violation (23505) from a concurrent
+      // link — rare but possible despite the pre-check.
+      if (insertError?.code === "23505") {
+        return {
+          success: false,
+          error:
+            "This document or its slug is already linked. Try a different custom title.",
+        };
+      }
       logger.error("Failed to create article for linked Google Doc", {
         error: insertError?.message,
       });

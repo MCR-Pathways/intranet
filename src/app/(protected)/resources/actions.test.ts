@@ -85,6 +85,7 @@ import {
   deleteArticle,
   fetchCategoriesWithClient,
   fetchCategoryArticlesWithClient,
+  fetchArticleBySlugOnly,
 } from "./actions";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -481,6 +482,52 @@ describe("Intranet Resource Actions", () => {
       expect(result.success).toBe(true);
     });
 
+    it("unpublishing clears is_featured and compacts featured_sort_order", async () => {
+      // Track the actual update payload so we can assert is_featured=false.
+      let updatePayload: Record<string, unknown> | null = null;
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.update.mockImplementation((payload: Record<string, unknown>) => {
+          updatePayload = payload;
+          return c;
+        });
+        c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
+        return c;
+      });
+
+      const result = await updateArticle("art-1", { status: "draft" });
+      expect(result.success).toBe(true);
+      expect(updatePayload).toMatchObject({
+        status: "draft",
+        is_featured: false,
+        featured_sort_order: 0,
+      });
+    });
+
+    it("returns slug-exists message when DB update hits 23505 unique violation", async () => {
+      // Simulate concurrent slug collision caught at DB level.
+      let callCount = 0;
+      mockFrom.mockImplementation(() => {
+        callCount++;
+        const c = chainable();
+        if (callCount === 1) {
+          c.single.mockResolvedValue({ data: { category_id: "cat-1" }, error: null });
+        } else if (callCount === 2) {
+          c.limit.mockResolvedValue({ data: [], error: null });
+        } else {
+          c.single.mockResolvedValue({
+            data: null,
+            error: { code: "23505", message: "unique violation" },
+          });
+        }
+        return c;
+      });
+
+      const result = await updateArticle("art-1", { title: "Colliding title" });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/slug already exists/i);
+    });
+
     it("returns error for empty title", async () => {
       const result = await updateArticle("art-1", { title: "  " });
       expect(result.success).toBe(false);
@@ -680,7 +727,7 @@ describe("Intranet Resource Actions", () => {
       });
     }
 
-    it("returns category and articles for HR admin", async () => {
+    it("returns category and articles when canViewDrafts=true (content editor)", async () => {
       setupFetchArticlesChain();
 
       const result = await fetchCategoryArticlesWithClient(
@@ -692,7 +739,7 @@ describe("Intranet Resource Actions", () => {
       expect(result.articles).toHaveLength(1);
     });
 
-    it("filters published-only for non-admin", async () => {
+    it("filters published-only when canViewDrafts=false (reader or HR-admin-only)", async () => {
       const callLog: string[] = [];
       mockFrom.mockImplementation((table: string) => {
         callLog.push(table);
@@ -753,7 +800,60 @@ describe("Intranet Resource Actions", () => {
   });
 
   // =============================================
-  // fetchArticleWithClient
+  // fetchArticleBySlugOnly — draft-visibility governance
   // =============================================
+
+  describe("fetchArticleBySlugOnly", () => {
+    it("reader (canViewDrafts=false) sees a draft article as null — no leak", async () => {
+      // Simulate the query returning null because the status filter excluded
+      // the draft. This mirrors Supabase returning no rows after .eq("status", "published").
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.single.mockResolvedValue({ data: null, error: { message: "not found" } });
+        return c;
+      });
+
+      const result = await fetchArticleBySlugOnly(
+        mockSupabase as never,
+        "some-draft-slug",
+        false,
+      );
+
+      expect(result.article).toBeNull();
+      expect(result.category).toBeNull();
+      expect(result.parentCategory).toBeNull();
+    });
+
+    it("editor (canViewDrafts=true) receives a draft article", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.single.mockResolvedValue({
+          data: {
+            id: "art-1",
+            title: "Draft in progress",
+            slug: "draft-in-progress",
+            status: "draft",
+            category: {
+              id: "cat-1",
+              name: "Policies",
+              slug: "policies",
+              parent: null,
+            },
+          },
+          error: null,
+        });
+        return c;
+      });
+
+      const result = await fetchArticleBySlugOnly(
+        mockSupabase as never,
+        "draft-in-progress",
+        true,
+      );
+
+      expect(result.article).not.toBeNull();
+      expect(result.article?.title).toBe("Draft in progress");
+    });
+  });
 
 });
