@@ -120,5 +120,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "jotai": "2.19.1"
   }
 }
