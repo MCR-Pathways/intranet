@@ -124,7 +124,7 @@ function HrStatic(props: SlateElementProps) {
 }
 
 function LinkStatic({ children, element, ...props }: SlateElementProps) {
-  const url = (element as Record<string, unknown>).url as string;
+  const url = ((element as Record<string, unknown>).url as string) || "";
 
   // Check if link is internal: relative path or absolute intranet URL
   let href = url;

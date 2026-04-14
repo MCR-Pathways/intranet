@@ -39,12 +39,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (article.content_type === "google_doc") {
     // Build cross-link map: google_doc_id → slug for published Google Docs
     let crossLinkMap: Record<string, string> = {};
-    const { data: crossLinks } = await supabase
+    const { data: crossLinks, error: crossLinkError } = await supabase
       .from("resource_articles")
       .select("google_doc_id, slug")
       .not("google_doc_id", "is", null)
       .is("deleted_at", null)
       .eq("status", "published");
+
+    if (crossLinkError) {
+      console.error("Failed to fetch cross-link map:", crossLinkError.message);
+    }
 
     if (crossLinks) {
       for (const row of crossLinks) {

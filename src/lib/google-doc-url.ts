@@ -27,8 +27,8 @@ export function extractDocId(url: string): string | null {
     const fileMatch = parsed.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (fileMatch) return fileMatch[1];
 
-    // drive.google.com/open?id={id} — restrict to drive.google.com only
-    if (parsed.hostname === "drive.google.com") {
+    // drive.google.com/open?id={id} — restrict to the /open endpoint only
+    if (parsed.hostname === "drive.google.com" && parsed.pathname === "/open") {
       const idParam = parsed.searchParams.get("id");
       if (idParam) return idParam;
     }
