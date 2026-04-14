@@ -21,6 +21,19 @@ export const ARTICLE_PROSE_CLASSES =
 export const ARTICLE_CARD_CLASSES =
   "bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5";
 
+// ─── Internal link detection ────────────────────────────────────────────
+
+/**
+ * Parsed origin of the app URL. Used to detect absolute intranet links
+ * (e.g. pasted from the address bar) in both GoogleDocArticleView and
+ * LinkStatic. Parsed once at module level since NEXT_PUBLIC_* env vars
+ * are inlined at build time. Returns null if unset or malformed.
+ */
+export const APP_ORIGIN = (() => {
+  try { return new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").origin; }
+  catch { return null; }
+})();
+
 // ─── Heading slugs ──────────────────────────────────────────────────────
 
 /**

@@ -770,4 +770,28 @@ describe("LinkStatic internal vs external", () => {
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain('target="_blank"');
   });
+
+  it("absolute intranet URL is stripped to relative path (same tab)", async () => {
+    // This test depends on NEXT_PUBLIC_APP_URL being set.
+    // If unset, absolute URLs are treated as external (safe fallback).
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) return; // skip if env var not set
+
+    const value: Value = [
+      {
+        type: "p",
+        children: [
+          {
+            type: "a",
+            url: `${appUrl}/resources/article/some-article`,
+            children: [{ text: "Absolute internal" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("/resources/article/some-article");
+    expect(html).not.toContain('target=');
+  });
 });

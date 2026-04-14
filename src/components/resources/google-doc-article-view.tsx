@@ -36,17 +36,10 @@ import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
-import { createSlugDeduplicator } from "@/lib/article-constants";
-import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
+import { createSlugDeduplicator, ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES, APP_ORIGIN } from "@/lib/article-constants";
 import { extractDocId, unwrapGoogleRedirect } from "@/lib/google-doc-url";
 import { toast } from "sonner";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
-
-// Parse app origin once at module level (NEXT_PUBLIC_* is inlined at build time)
-const APP_ORIGIN = (() => {
-  try { return new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").origin; }
-  catch { return null; }
-})();
 
 interface SiblingArticle {
   id: string;
