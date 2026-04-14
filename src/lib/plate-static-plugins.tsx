@@ -124,13 +124,9 @@ function HrStatic(props: SlateElementProps) {
 
 function LinkStatic({ children, element, ...props }: SlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
-  const isInternal = url.startsWith("/") && !url.startsWith("//");
   return (
     <SlateElement element={element} {...props}>
-      <a
-        href={url}
-        {...(!isInternal && { target: "_blank", rel: "noopener noreferrer" })}
-      >
+      <a href={url} target="_blank" rel="noopener noreferrer">
         {children}
       </a>
     </SlateElement>

@@ -37,21 +37,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
-    // Build cross-link map: google_doc_id → slug for published Google Docs
-    let crossLinkMap: Record<string, string> = {};
-    const { data: crossLinks } = await supabase
-      .from("resource_articles")
-      .select("google_doc_id, slug")
-      .not("google_doc_id", "is", null)
-      .is("deleted_at", null)
-      .eq("status", "published");
-
-    if (crossLinks) {
-      for (const row of crossLinks) {
-        if (row.google_doc_id) crossLinkMap[row.google_doc_id] = row.slug;
-      }
-    }
-
     return (
       <GoogleDocArticleView
         article={article}
@@ -61,7 +46,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         siblings={siblings}
         categoryPath={categoryPath}
         serverNow={serverNow}
-        crossLinkMap={crossLinkMap}
       />
     );
   }

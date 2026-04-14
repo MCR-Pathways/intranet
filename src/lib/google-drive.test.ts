@@ -6,18 +6,121 @@ import {
   extractPlainTextFromHtml,
 } from "./google-drive";
 
-// Re-export smoke test — verify extractDocId/extractFolderId still work via google-drive.ts
-describe("re-exported URL parsers", () => {
-  it("extractDocId works via re-export", () => {
+// =============================================
+// extractDocId
+// =============================================
+
+describe("extractDocId", () => {
+  it("extracts ID from standard Google Docs URL", () => {
     expect(
-      extractDocId("https://docs.google.com/document/d/ABC123/edit")
-    ).toBe("ABC123");
+      extractDocId(
+        "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrStUvWxYz");
   });
 
-  it("extractFolderId works via re-export", () => {
+  it("extracts ID from Google Docs view URL", () => {
     expect(
-      extractFolderId("https://drive.google.com/drive/folders/XYZ789")
-    ).toBe("XYZ789");
+      extractDocId(
+        "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrStUvWxYz");
+  });
+
+  it("extracts ID from Google Docs URL without trailing path", () => {
+    expect(
+      extractDocId(
+        "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrStUvWxYz");
+  });
+
+  it("extracts ID from Google Drive file URL", () => {
+    expect(
+      extractDocId(
+        "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrStUvWxYz");
+  });
+
+  it("extracts ID from Google Drive open URL", () => {
+    expect(
+      extractDocId(
+        "https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWxYz"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrStUvWxYz");
+  });
+
+  it("handles IDs with hyphens and underscores", () => {
+    expect(
+      extractDocId(
+        "https://docs.google.com/document/d/1A-b_C-d_E/edit"
+      )
+    ).toBe("1A-b_C-d_E");
+  });
+
+  it("returns null for non-Google URLs", () => {
+    expect(extractDocId("https://example.com/document/123")).toBeNull();
+  });
+
+  it("returns null for invalid URLs", () => {
+    expect(extractDocId("not-a-url")).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(extractDocId("")).toBeNull();
+  });
+
+  it("returns null for Google Drive folder URLs (not a doc)", () => {
+    expect(
+      extractDocId("https://drive.google.com/drive/folders/1AbCdEfGhI")
+    ).toBeNull();
+  });
+});
+
+// =============================================
+// extractFolderId
+// =============================================
+
+describe("extractFolderId", () => {
+  it("extracts ID from standard Drive folder URL", () => {
+    expect(
+      extractFolderId(
+        "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrSt"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrSt");
+  });
+
+  it("extracts ID from Drive folder URL with user prefix", () => {
+    expect(
+      extractFolderId(
+        "https://drive.google.com/drive/u/0/folders/1AbCdEfGhIjKlMnOpQrSt"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrSt");
+  });
+
+  it("extracts ID from Drive folder URL with query params", () => {
+    expect(
+      extractFolderId(
+        "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrSt?resourcekey=abc"
+      )
+    ).toBe("1AbCdEfGhIjKlMnOpQrSt");
+  });
+
+  it("returns null for Google Docs URL", () => {
+    expect(
+      extractFolderId(
+        "https://docs.google.com/document/d/1AbCdEfGhI/edit"
+      )
+    ).toBeNull();
+  });
+
+  it("returns null for invalid URL", () => {
+    expect(extractFolderId("not-a-url")).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(extractFolderId("")).toBeNull();
   });
 });
 
