@@ -38,8 +38,15 @@ import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
 import { createSlugDeduplicator } from "@/lib/article-constants";
 import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
+import { extractDocId, unwrapGoogleRedirect } from "@/lib/google-doc-url";
 import { toast } from "sonner";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
+
+// Parse app origin once at module level (NEXT_PUBLIC_* is inlined at build time)
+const APP_ORIGIN = (() => {
+  try { return new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").origin; }
+  catch { return null; }
+})();
 
 interface SiblingArticle {
   id: string;
@@ -55,6 +62,7 @@ interface GoogleDocArticleViewProps {
   siblings?: SiblingArticle[];
   categoryPath?: string;
   serverNow: number;
+  crossLinkMap?: Record<string, string>;
 }
 
 export function GoogleDocArticleView({
@@ -65,6 +73,7 @@ export function GoogleDocArticleView({
   siblings = [],
   categoryPath = "",
   serverNow,
+  crossLinkMap = {},
 }: GoogleDocArticleViewProps) {
   const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
@@ -128,6 +137,46 @@ export function GoogleDocArticleView({
                 );
               }
             }
+          }
+        }
+
+        // Rewrite links: cross-link Google Docs, handle internal URLs
+        if (tagName === "a" && el.attribs?.href) {
+          const href = el.attribs.href;
+
+          // Case 1: Google Doc URL → rewrite to intranet article
+          const unwrapped = unwrapGoogleRedirect(href);
+          const docId = extractDocId(unwrapped);
+          if (docId && Object.hasOwn(crossLinkMap, docId)) {
+            return createElement(
+              "a",
+              { href: `/resources/article/${crossLinkMap[docId]}` },
+              domToReact(el.children as DOMNode[])
+            );
+          }
+
+          // Case 2: Relative internal path → same-tab
+          if (href.startsWith("/") && !href.startsWith("//")) {
+            return createElement(
+              "a",
+              { href },
+              domToReact(el.children as DOMNode[])
+            );
+          }
+
+          // Case 3: Absolute intranet URL → strip origin, same-tab
+          if (APP_ORIGIN) {
+            try {
+              const linkUrl = new URL(href);
+              if (linkUrl.origin === APP_ORIGIN) {
+                const internalPath = linkUrl.pathname + linkUrl.search + linkUrl.hash || "/";
+                return createElement(
+                  "a",
+                  { href: internalPath },
+                  domToReact(el.children as DOMNode[])
+                );
+              }
+            } catch { /* not a valid URL, leave as external */ }
           }
         }
 

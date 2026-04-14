@@ -23,11 +23,7 @@ import {
 import { linkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { fetchCategoriesForMove } from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
-
-// Client-side URL validation (same regex as extractDocId in google-drive.ts)
-function isValidGoogleDocUrl(url: string): boolean {
-  return /docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/.test(url);
-}
+import { extractDocId } from "@/lib/google-doc-url";
 
 interface LinkGoogleDocDialogProps {
   open: boolean;
@@ -160,7 +156,7 @@ export function LinkGoogleDocDialog({
 
   function handleUrlChange(value: string) {
     setDocUrl(value);
-    if (value && !isValidGoogleDocUrl(value)) {
+    if (value && !extractDocId(value)) {
       setUrlError("Please enter a valid Google Docs URL");
     } else {
       setUrlError("");
@@ -169,7 +165,7 @@ export function LinkGoogleDocDialog({
 
   function handleSubmit() {
     if (!docUrl || !categoryId) return;
-    if (!isValidGoogleDocUrl(docUrl)) {
+    if (!extractDocId(docUrl)) {
       setUrlError("Please enter a valid Google Docs URL");
       return;
     }
