@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PublishConfirmDialog } from "./publish-confirm-dialog";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { getExcerpt } from "@/lib/resource-utils";
 import { updateArticle } from "@/app/(protected)/resources/actions";
 import { toast } from "sonner";
@@ -35,6 +35,12 @@ interface ArticleListItemProps {
   onDelete?: () => void;
   onMove?: () => void;
   onUnlink?: () => void;
+  /**
+   * "compact" trims the excerpt and reduces vertical padding for nested use
+   * inside GroupedIndex subcategory sections. Default ("default") shows the
+   * full excerpt + generous spacing for direct-category article lists.
+   */
+  variant?: "default" | "compact";
 }
 
 export function ArticleListItem({
@@ -44,14 +50,16 @@ export function ArticleListItem({
   onDelete,
   onMove,
   onUnlink,
+  variant = "default",
 }: ArticleListItemProps) {
   const [publishOpen, setPublishOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isCompact = variant === "compact";
 
   const displayDate = article.published_at
     ? new Date(article.published_at)
     : new Date(article.updated_at);
-  const excerpt = getExcerpt(article.synced_html, 120);
+  const excerpt = isCompact ? null : getExcerpt(article.synced_html, 120);
 
   const isGoogleDoc = article.content_type === "google_doc";
   const isNative = article.content_type === "native";
@@ -83,7 +91,12 @@ export function ArticleListItem({
 
   return (
     <>
-      <div className="group relative flex items-start gap-3 rounded-lg px-3.5 py-3 transition-colors hover:bg-muted">
+      <div
+        className={cn(
+          "group relative flex items-start gap-3 rounded-lg transition-colors hover:bg-muted",
+          isCompact ? "px-3 py-2" : "px-3.5 py-3"
+        )}
+      >
         <Link
           href={`/resources/article/${article.slug}`}
           className="absolute inset-0 z-0"
@@ -92,7 +105,7 @@ export function ArticleListItem({
         </Link>
 
         <div className="text-muted-foreground shrink-0 mt-0.5">
-          <FileText className="h-[18px] w-[18px]" />
+          <FileText className={cn(isCompact ? "h-4 w-4" : "h-[18px] w-[18px]")} />
         </div>
 
         <div className="min-w-0 flex-1">

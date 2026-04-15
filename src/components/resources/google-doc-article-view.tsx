@@ -14,7 +14,7 @@ import {
   Unlink,
   Loader2,
   Link as LinkIcon,
-  FileClock,
+  FileEdit,
   Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -381,14 +381,15 @@ export function GoogleDocArticleView({
               {article.title}
             </h1>
             {canEdit && article.status === "draft" && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+              <Badge
+                variant="secondary"
+                className="gap-1 font-medium"
                 title="Only content editors can see this article"
                 aria-label="Draft — only visible to editors"
               >
-                <FileClock className="h-3 w-3" />
+                <FileEdit className="h-3 w-3" />
                 Draft
-              </span>
+              </Badge>
             )}
           </div>
 

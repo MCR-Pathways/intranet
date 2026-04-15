@@ -11,7 +11,7 @@ export default function ProtectedNotFound() {
         The page you&apos;re looking for doesn&apos;t exist or may have been
         moved. Check the URL and try again.
       </p>
-      <Button asChild variant="outline">
+      <Button asChild>
         <Link href="/intranet">Back to Home</Link>
       </Button>
     </div>

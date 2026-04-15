@@ -15,7 +15,7 @@ import type {
 
 interface SubcategoryGroup {
   subcategory: CategoryWithCount;
-  articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+  articles: ArticleWithAuthor[];
 }
 
 interface CategoryContentProps {
@@ -118,6 +118,7 @@ export function CategoryContent({
           groups={subcategoryGroups}
           parentSlugPath={categorySlugPath}
           parentIconColour={category.icon_colour}
+          canEdit={canEdit}
         />
       )}
 

@@ -251,7 +251,7 @@ export async function fetchGroupedSubcategoryArticles(
 ): Promise<
   Array<{
     subcategory: CategoryWithCount;
-    articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+    articles: ArticleWithAuthor[];
   }>
 > {
   // Fetch subcategories
@@ -259,11 +259,14 @@ export async function fetchGroupedSubcategoryArticles(
 
   if (subcats.length === 0) return [];
 
-  // Single query for all articles across all subcategories (avoids N+1)
+  // Single query for all articles across all subcategories (avoids N+1).
+  // Expanded SELECT so GroupedIndex can reuse ArticleListItem with full
+  // kebab (Edit / Move / Publish-or-Unpublish / Unlink / Delete) — needs
+  // status, content_type, google_doc_url, category_id, author join, etc.
   const subcatIds = subcats.map((s) => s.id);
   let articlesQuery = supabase
     .from("resource_articles")
-    .select("id, title, slug, updated_at, category_id")
+    .select(`${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`)
     .in("category_id", subcatIds)
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
@@ -275,15 +278,11 @@ export async function fetchGroupedSubcategoryArticles(
   const { data: allArticles } = await articlesQuery;
 
   // Group articles by subcategory
-  const articlesBySubcat = new Map<
-    string,
-    Array<{ id: string; title: string; slug: string; updated_at: string }>
-  >();
-  for (const article of allArticles ?? []) {
-    const { category_id, ...rest } = article;
-    const list = articlesBySubcat.get(category_id) ?? [];
-    list.push(rest);
-    articlesBySubcat.set(category_id, list);
+  const articlesBySubcat = new Map<string, ArticleWithAuthor[]>();
+  for (const article of (allArticles ?? []) as unknown as ArticleWithAuthor[]) {
+    const list = articlesBySubcat.get(article.category_id) ?? [];
+    list.push(article);
+    articlesBySubcat.set(article.category_id, list);
   }
 
   const groups = subcats.map((sub) => ({
