@@ -18,14 +18,16 @@ export default async function ResourcesPage() {
 
   const canEdit =
     isHRAdminEffective(profile) || isContentEditorEffective(profile);
+  // Draft visibility is content-editor-only; HR admins without editor flag
+  // see the same view as readers (no drafts pill, no draft-inclusive counts).
+  const canViewDrafts = isContentEditorEffective(profile);
 
   const [featuredArticles, recentArticles, categories, draftCount] =
     await Promise.all([
       fetchFeaturedArticles(supabase),
       fetchRecentlyUpdatedArticles(supabase),
-      fetchCategoryTreeWithClient(supabase),
-      // Readers always get 0 via RLS; skip the round-trip.
-      canEdit ? fetchDraftCount(supabase) : Promise.resolve(0),
+      fetchCategoryTreeWithClient(supabase, canViewDrafts),
+      canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
     ]);
 
   return (

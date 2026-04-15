@@ -300,15 +300,27 @@ export async function fetchGroupedSubcategoryArticles(
 /**
  * Build a 3-level category tree with slug paths for the sidebar tree.
  * Each node includes its full hierarchical slug path (e.g. "policies/employment").
+ *
+ * `canViewDrafts` gates whether the nested article count includes drafts.
+ * RLS would otherwise leak draft counts to HR admins (who have SELECT on
+ * drafts but per WS1 policy shouldn't see them). Content editors pass true
+ * and see inclusive counts.
  */
 export async function fetchCategoryTreeWithClient(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  canViewDrafts: boolean
 ): Promise<CategoryTreeNode[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("resource_categories")
     .select(`${CATEGORY_SELECT}, resource_articles(count)`)
     .is("deleted_at", null)
-    .filter("resource_articles.deleted_at", "is", null)
+    .filter("resource_articles.deleted_at", "is", null);
+
+  if (!canViewDrafts) {
+    query = query.filter("resource_articles.status", "eq", "published");
+  }
+
+  const { data, error } = await query
     .order("sort_order")
     .order("name");
 

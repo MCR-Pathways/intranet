@@ -45,8 +45,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     await Promise.all([
       fetchGroupedSubcategoryArticles(supabase, category.id, canViewDrafts),
       fetchCategoryArticlesWithClient(supabase, category.slug, canViewDrafts),
-      // Readers always get 0 via RLS; skip the round-trip.
-      canEdit ? fetchDraftCount(supabase) : Promise.resolve(0),
+      // Draft count follows the canViewDrafts policy (content-editor only,
+      // not HR admin).
+      canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
     ]);
 
   return (
