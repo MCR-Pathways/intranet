@@ -63,26 +63,26 @@ export function ResourcesLanding({
         <EditorHeaderActions canEdit={canEdit} draftCount={draftCount} />
       </div>
 
-      {/* Search input — on focus, opens the global Cmd+K overlay. Radix Dialog's
-          focus trap then steals focus to the overlay input, so keystrokes flow
-          there naturally. */}
-      <div className="relative w-full">
-        <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          type="search"
-          placeholder="Search resources..."
-          onFocus={openGlobalSearch}
-          className="w-full rounded-xl border border-border bg-card pl-10 pr-16 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-foreground/20 hover:shadow-sm focus:outline-none focus:border-foreground/20 focus:shadow-sm"
-        />
+      {/* Search trigger — styled to look like an input, but remains a button for
+          a11y. Focusing a real <input> here would WCAG-3.2.1-violate and, combined
+          with Radix Dialog's default focus-restore on close, cause a focus loop
+          (focus returns to the input → onFocus fires → overlay reopens). */}
+      <button
+        type="button"
+        onClick={openGlobalSearch}
+        className="w-full flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-foreground/20 hover:shadow-sm"
+      >
+        <Search className="h-4 w-4" />
+        <span>Search resources...</span>
         <kbd
           suppressHydrationWarning
-          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded-md border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          className="ml-auto hidden sm:inline-flex items-center gap-0.5 rounded-md border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
         >
           {typeof window !== "undefined" && !/mac/i.test(navigator.platform)
             ? "Ctrl+K"
             : "⌘K"}
         </kbd>
-      </div>
+      </button>
 
       {/* In progress — editor-only section. Ambient awareness for "what was I writing?" */}
       {canEdit && recentDrafts.length > 0 && (
