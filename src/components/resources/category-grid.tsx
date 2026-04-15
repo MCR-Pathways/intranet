@@ -2,7 +2,6 @@
 
 import { createElement } from "react";
 import Link from "next/link";
-import { FileText, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { CategoryCardActions } from "./category-card-actions";
@@ -31,12 +30,10 @@ export function CategoryGrid({ categories, canEdit = false }: CategoryGridProps)
   if (topLevel.length === 0) return null;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {topLevel.map((cat) => {
         const Icon = resolveIcon(cat.icon);
         const colour = resolveIconColour(cat.icon_colour);
-        const articles = totalArticleCount(cat);
-        const subcategories = cat.children.length;
 
         return (
           <div
@@ -69,22 +66,6 @@ export function CategoryGrid({ categories, canEdit = false }: CategoryGridProps)
                   <p className="text-[13px] text-muted-foreground leading-relaxed line-clamp-2">
                     {cat.description}
                   </p>
-                )}
-
-                {/* Metadata — pushed to bottom for consistent card heights */}
-                {(subcategories > 0 || articles > 0) && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground opacity-75 mt-auto pt-2">
-                    {articles > 0 ? (
-                      <FileText className="h-3.5 w-3.5" />
-                    ) : (
-                      <FolderOpen className="h-3.5 w-3.5" />
-                    )}
-                    <span>
-                      {subcategories > 0 && `${subcategories} ${subcategories === 1 ? "subcategory" : "subcategories"}`}
-                      {subcategories > 0 && articles > 0 && " · "}
-                      {articles > 0 && `${articles} ${articles === 1 ? "article" : "articles"}`}
-                    </span>
-                  </div>
                 )}
               </div>
             </Link>
