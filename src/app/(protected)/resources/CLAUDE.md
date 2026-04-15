@@ -44,6 +44,8 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Supabase `.select()` with joined tables returns arrays, not objects.** When using `resource_categories!category_id(name, slug)` in a select, cast via `unknown` first.
 
+**For self-referential joins, use `alias:fk_column_name(...)` — not `alias:table!fk_column_name(...)`.** The `!fk_column_name` hint on a self-referential FK resolves as a REVERSE join (returning rows that reference this one — i.e. children), not the forward direction you want (this row's parent). Correct syntax for the parent lookup: `parent:parent_id(name, slug)`. The FK-constraint-name variant (`!resource_categories_parent_id_fkey`) fails with "no relationship in schema cache" — PostgREST doesn't expose it under that name. Verified live 2026-04-15 (PR #240). The column-as-alias form returns a single object or null, not an array — the `Array.isArray` defensive unwrap stays because PostgREST-JS sometimes types 1:1 joins as `T[]`.
+
 **Don't duplicate navigation between sidebar and page body.** For lookup-oriented knowledge bases (~80 staff), the page-body pattern with breadcrumbs + search is sufficient.
 
 **Use grouped index sections on category pages, not subcategory cards + flat article list.** Show subcategories as expandable sections with their articles inline (GitBook/Document360 pattern).
