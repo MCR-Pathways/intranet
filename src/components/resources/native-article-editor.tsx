@@ -52,7 +52,7 @@ export function NativeArticleEditor({
 
   const initialValue = ((article as unknown as { content_json?: unknown }).content_json as Value) ?? EMPTY_PLATE_VALUE;
   const isPublished = article.status === "published";
-  const lastPublishedAt = (article as { last_published_at?: string }).last_published_at;
+  const lastPublishedAt = article.last_published_at;
 
   const iconFg = resolveIconColour(category.icon_colour).fg;
 

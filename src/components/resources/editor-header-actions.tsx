@@ -108,7 +108,7 @@ export function EditorHeaderActions({
       <CategoryFormDialog
         open={categoryOpen}
         onOpenChange={setCategoryOpen}
-        defaultParentId={isCategoryScoped ? defaultCategoryId : undefined}
+        defaultParentId={defaultCategoryId}
       />
     </>
   );

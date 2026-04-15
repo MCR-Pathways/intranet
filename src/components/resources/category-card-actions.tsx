@@ -58,7 +58,7 @@ export function CategoryCardActions({ category, canEdit }: CategoryCardActionsPr
       <CategoryFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        category={category as ResourceCategory}
+        category={category}
       />
       <CategoryFormDialog
         open={newSubOpen}

@@ -52,6 +52,16 @@ vi.mock("@/lib/algolia", () => ({
   removeArticleFromIndex: mockRemoveArticleFromIndex,
 }));
 
+// Logger mock — silences stderr during error-path tests and lets us assert
+// the "no silent swallow" contract in fetchDraftCount.
+const mockLogger = vi.hoisted(() => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+}));
+vi.mock("@/lib/logger", () => ({ logger: mockLogger }));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function chainable() {
@@ -837,6 +847,9 @@ describe("Intranet Resource Actions", () => {
 
       const result = await fetchDraftCount(mockSupabase as never);
       expect(result).toBe(0);
+      expect(mockLogger.error).toHaveBeenCalledWith("fetchDraftCount failed", {
+        error: "boom",
+      });
     });
   });
 

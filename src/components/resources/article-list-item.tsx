@@ -53,10 +53,9 @@ export function ArticleListItem({
     : new Date(article.updated_at);
   const excerpt = getExcerpt(article.synced_html, 120);
 
-  const contentType = (article as { content_type?: string }).content_type;
-  const isGoogleDoc = contentType === "google_doc";
-  const isNative = contentType === "native";
-  const isComponent = contentType === "component";
+  const isGoogleDoc = article.content_type === "google_doc";
+  const isNative = article.content_type === "native";
+  const isComponent = article.content_type === "component";
   const isPublished = article.status === "published";
 
   // "Edit" direct jump — Google Doc opens in Drive in a new tab; native
@@ -64,7 +63,7 @@ export function ArticleListItem({
   const editHref = isNative
     ? `/resources/article/${article.slug}/edit`
     : isGoogleDoc
-      ? ((article as { google_doc_url?: string }).google_doc_url ?? "#")
+      ? (article.google_doc_url ?? "#")
       : null;
   const editTarget = isGoogleDoc ? "_blank" : undefined;
 
