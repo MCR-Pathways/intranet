@@ -52,14 +52,16 @@
 - Algolia search (section-level indexing, deep linking)
 - Editor mode, settings page, featured articles
 - UX redesign: grouped index, scroll-spy TOC, freshness indicators, "More in [folder]" sibling nav
+- Drafts governance (WS1, PR #237): draft visibility restricted to content editors (not HR admins), `/resources/drafts` view, unpublish-clears-featured, Postgres 23505 handling on slug collisions, drafts excluded from recently-viewed
 
-### Resources — Native Editor (WS4 complete)
+### Resources — Native Editor (WS5 complete)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
 - Two content paths coexist: Google Docs for living documents, native editor for static reference content
 - WS2 (complete): Editor foundation (Plate packages, PlateStatic renderer, create/edit flows, draft/publish, auto-save, search-and-link, concurrent editing warning)
 - WS3 (complete): Block plugins (callout, table, columns, toggle). Insert dropdown, manual Save button, HTML serialisation pipeline, static plugin extraction
 - WS4 (complete): Media and files. Drive upload + proxy + resource_media whitelist + UPDATE RLS policy (migration 00078). Image (dialog + paste with dimensions + useUploadHandler hook), video embed (YouTube/Vimeo with nocookie + edit/delete toolbar), file attachment (PDF/Word/Excel/PowerPoint/text). Static renderers with icon parity, accessibility (aria-labels, iframe titles), CLS prevention, Algolia removal on soft-delete, findPath consistency across all elements, 23 new tests.
-- WS5: Visual parity and cross-linking (shared prose styling, Google Doc cross-link rewriting)
+- WS5a (complete): Visual parity. Card wrapper, TOC sidebar, heading deep-links, freshness indicator, breadcrumbs, Supabase Realtime for native articles. Shared article-constants.ts, useScrollSpy hook, refactored ArticleOutline. Table/video/column/image styling aligned. Image alignment (left/centre/right) in editor + static renderer. Google Docs sanitiser preserves image alignment. Category dropdown bug fixed. Jotai deduplicated. 34 new tests.
+- WS5b (complete): Cross-linking. Google Doc URLs rewritten to intranet articles via render-time parser. Google redirect URL unwrapping. LinkStatic handles internal links (relative + absolute intranet URLs) in same tab. extractDocId/extractFolderId extracted to client-safe google-doc-url.ts. Object.hasOwn for prototype pollution guard. APP_ORIGIN shared via article-constants.ts. UNIQUE partial index on google_doc_id (migration 00079). 14 new tests.
 - WS6: Content migration (create articles from old WordPress intranet pages)
 - Files stored on Google Drive via service account impersonation, served through proxy API route
 
