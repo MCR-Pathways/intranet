@@ -35,7 +35,6 @@ import { MoreInSection } from "./more-in-section";
 import { ArticleOutline } from "./article-outline";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
-import { useEditorMode } from "./editor-mode-context";
 import {
   toggleArticleFeatured,
   deleteArticle,
@@ -80,7 +79,6 @@ export function NativeArticleView({
   categoryPath = "",
   serverNow,
 }: NativeArticleViewProps) {
-  const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
   const [isPending, startTransition] = useTransition();
   const [showMoveDialog, setShowMoveDialog] = useState(false);
@@ -279,7 +277,7 @@ export function NativeArticleView({
               </Button>
             )}
 
-          {editorMode && canEdit && (
+          {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -293,12 +291,7 @@ export function NativeArticleView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={editUrl}>
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
+                {/* Edit is the primary button next to the title — not duplicated here. */}
                 <DropdownMenuItem onSelect={handleTogglePublish}>
                   {article.status === "published" ? (
                     <>
@@ -348,7 +341,7 @@ export function NativeArticleView({
             Updated {formatDate(new Date(updatedAt))}
             {isStale && " — may need review"}
           </span>
-          {editorMode && article.is_featured && (
+          {canEdit && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
               <Badge variant="secondary" className="text-[10px] py-0">
@@ -356,7 +349,7 @@ export function NativeArticleView({
               </Badge>
             </>
           )}
-          {editorMode && article.status === "draft" && (
+          {canEdit && article.status === "draft" && (
             <>
               <span className="text-border">&middot;</span>
               <Badge variant="outline" className="text-[10px] py-0 text-amber-600 border-amber-300">

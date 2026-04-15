@@ -30,7 +30,6 @@ import { MoreInSection } from "./more-in-section";
 import { ArticleOutline } from "./article-outline";
 import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
-import { useEditorMode } from "./editor-mode-context";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { toggleArticleFeatured } from "@/app/(protected)/resources/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -70,7 +69,6 @@ export function GoogleDocArticleView({
   serverNow,
   crossLinkMap = {},
 }: GoogleDocArticleViewProps) {
-  const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
   const [isPending, startTransition] = useTransition();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -335,7 +333,7 @@ export function GoogleDocArticleView({
       </nav>
 
       {/* Google Docs bar — editor mode only */}
-      {editorMode && canEdit && (
+      {canEdit && (
         <div className="flex items-center justify-between rounded-lg bg-mcr-teal/[0.06] border border-mcr-teal/15 px-5 py-3">
           <div className="flex items-center gap-2 text-[13px] text-mcr-teal font-medium">
             <ExternalLink className="h-4 w-4" />
@@ -411,7 +409,7 @@ export function GoogleDocArticleView({
             )}
 
           {/* Kebab menu — editor mode only (transitional; removed in PR-2). */}
-          {editorMode && canEdit && (
+          {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -462,7 +460,7 @@ export function GoogleDocArticleView({
             Updated {formatDate(updatedAt)}
             {isStale && " — may need review"}
           </span>
-          {editorMode && article.is_featured && (
+          {canEdit && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
               <Badge variant="secondary" className="text-[10px] py-0">

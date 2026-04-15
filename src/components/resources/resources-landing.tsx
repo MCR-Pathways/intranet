@@ -5,7 +5,6 @@ import { FileText, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { FeaturedResources } from "./featured-resources";
 import { CategoryGrid } from "./category-grid";
-import { AdminBar } from "./admin-bar";
 import { EditorHeaderActions } from "./editor-header-actions";
 import { cn, formatDate } from "@/lib/utils";
 import type { FeaturedArticle } from "@/app/(protected)/resources/actions";
@@ -51,9 +50,6 @@ export function ResourcesLanding({
         />
         <EditorHeaderActions canEdit={canEdit} draftCount={draftCount} />
       </div>
-
-      {/* Admin bar — removed in WS2 PR-2; kept during transition for safety. */}
-      <AdminBar />
 
       {/* Search prompt — opens global Cmd+K overlay */}
       <button

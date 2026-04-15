@@ -6,7 +6,6 @@ import { Folder, FolderOpen } from "lucide-react";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { GroupedIndex } from "./grouped-index";
 import { ArticlesList } from "./articles-list";
-import { AdminBar } from "./admin-bar";
 import { EditorHeaderActions } from "./editor-header-actions";
 import type {
   ResourceCategory,
@@ -72,9 +71,6 @@ export function CategoryContent({
         <span className="text-muted-foreground/50 select-none">/</span>
         <span className="text-foreground font-medium">{category.name}</span>
       </nav>
-
-      {/* Admin bar — removed in WS2 PR-2; kept during transition for safety. */}
-      <AdminBar />
 
       {/* Category header with contextual editor actions (WS2). */}
       <div className="flex items-center justify-between gap-4">
