@@ -23,14 +23,20 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const canEdit =
     isHRAdminEffective(profile) || isContentEditorEffective(profile);
+  // Draft visibility is content-editor-only; HR admins without editor flag
+  // get 404 on a draft slug, same as readers.
+  const canViewDrafts = isContentEditorEffective(profile);
 
   const { article, category, parentCategory } =
-    await fetchArticleBySlugOnly(supabase, slug, canEdit);
+    await fetchArticleBySlugOnly(supabase, slug, canViewDrafts);
 
   if (!article || !category) notFound();
 
   // Fetch sibling articles for "More in [folder]" section
   const siblings = await fetchSiblingArticles(supabase, category.id);
+  // Server-rendered timestamp for freshness indicator. Date.now() in an async
+  // Server Component generates a per-request value and is the intended pattern.
+  // eslint-disable-next-line react-hooks/purity
   const serverNow = Date.now();
   const categoryPath = parentCategory
     ? `${parentCategory.slug}/${category.slug}`
@@ -39,7 +45,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
     // Build cross-link map: google_doc_id → slug for published Google Docs
-    let crossLinkMap: Record<string, string> = {};
+    const crossLinkMap: Record<string, string> = {};
     const { data: crossLinks, error: crossLinkError } = await supabase
       .from("resource_articles")
       .select("google_doc_id, slug")

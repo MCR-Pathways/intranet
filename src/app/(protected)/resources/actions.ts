@@ -156,7 +156,7 @@ export async function fetchParentCategory(
 export async function fetchCategoryArticlesWithClient(
   supabase: SupabaseClient,
   categorySlug: string,
-  isHRAdmin: boolean
+  canViewDrafts: boolean
 ): Promise<{
   category: ResourceCategory | null;
   articles: ArticleWithAuthor[];
@@ -181,7 +181,7 @@ export async function fetchCategoryArticlesWithClient(
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
-  if (!isHRAdmin) {
+  if (!canViewDrafts) {
     query = query.eq("status", "published");
   }
 
@@ -247,7 +247,7 @@ export async function fetchSiblingArticles(
 export async function fetchGroupedSubcategoryArticles(
   supabase: SupabaseClient,
   parentId: string,
-  canEdit: boolean
+  canViewDrafts: boolean
 ): Promise<
   Array<{
     subcategory: CategoryWithCount;
@@ -268,7 +268,7 @@ export async function fetchGroupedSubcategoryArticles(
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
-  if (!canEdit) {
+  if (!canViewDrafts) {
     articlesQuery = articlesQuery.eq("status", "published");
   }
 
@@ -292,7 +292,7 @@ export async function fetchGroupedSubcategoryArticles(
   }));
 
   // Hide subcategories with no articles (unless editor can see drafts)
-  return canEdit ? groups : groups.filter((g) => g.articles.length > 0);
+  return canViewDrafts ? groups : groups.filter((g) => g.articles.length > 0);
 }
 
 // ─── Tree + flat article helpers (for resources redesign) ────────────────────
@@ -360,7 +360,7 @@ export async function fetchCategoryTreeWithClient(
 export async function fetchArticleBySlugOnly(
   supabase: SupabaseClient,
   articleSlug: string,
-  canEdit: boolean
+  canViewDrafts: boolean
 ): Promise<{
   article: ArticleWithAuthor | null;
   category: ResourceCategory | null;
@@ -374,7 +374,7 @@ export async function fetchArticleBySlugOnly(
     .eq("slug", articleSlug)
     .is("deleted_at", null);
 
-  if (!canEdit) {
+  if (!canViewDrafts) {
     query = query.eq("status", "published");
   }
 
@@ -463,6 +463,71 @@ export async function fetchRecentlyUpdatedArticles(
       category_name: cat?.name ?? "",
       category_slug: cat?.slug ?? "",
       parent_category_name: parent?.name ?? null,
+    };
+  });
+}
+
+/**
+ * Fetch all draft articles across all categories. Gated by caller — only
+ * content editors should call this. Returns up to 100 drafts sorted by most
+ * recently edited.
+ */
+export async function fetchDraftArticles(
+  supabase: SupabaseClient
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    slug: string;
+    content_type: string;
+    updated_at: string;
+    category_name: string;
+    parent_category_name: string | null;
+    author_name: string | null;
+  }>
+> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select(
+      "id, title, slug, content_type, updated_at, author:profiles!author_id(full_name, preferred_name), category:resource_categories!category_id(name, parent:resource_categories!parent_id(name))"
+    )
+    .is("deleted_at", null)
+    .eq("status", "draft")
+    .order("updated_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    logger.error("fetchDraftArticles failed", { error: error.message });
+    return [];
+  }
+  if (!data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    const rawCat = row.category;
+    const cat = (Array.isArray(rawCat) ? rawCat[0] : rawCat) as {
+      name: string;
+      parent: { name: string } | { name: string }[] | null;
+    } | null;
+    const rawParent = cat?.parent;
+    const parent = rawParent
+      ? (Array.isArray(rawParent) ? rawParent[0] : rawParent)
+      : null;
+
+    const rawAuthor = row.author;
+    const author = (Array.isArray(rawAuthor) ? rawAuthor[0] : rawAuthor) as {
+      full_name: string | null;
+      preferred_name: string | null;
+    } | null;
+
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      slug: row.slug as string,
+      content_type: row.content_type as string,
+      updated_at: row.updated_at as string,
+      category_name: cat?.name ?? "",
+      parent_category_name: parent?.name ?? null,
+      author_name: author?.preferred_name || author?.full_name || null,
     };
   });
 }
@@ -771,6 +836,12 @@ export async function updateArticle(
       if (!current?.published_at) {
         update.published_at = new Date().toISOString();
       }
+    } else if (data.status === "draft") {
+      // Unpublish must also unfeature — otherwise the article stays in
+      // is_featured=true, gets hidden by the landing-page published filter,
+      // but still counts against MAX_FEATURED_ARTICLES.
+      update.is_featured = false;
+      update.featured_sort_order = 0;
     }
   }
 
@@ -790,6 +861,13 @@ export async function updateArticle(
     .single();
 
   if (error) {
+    if (error.code === "23505") {
+      return {
+        success: false,
+        error:
+          "A resource with this slug already exists — try a different title.",
+      };
+    }
     return { success: false, error: "Failed to update article" };
   }
 

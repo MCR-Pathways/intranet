@@ -104,9 +104,11 @@ export function LinkGoogleDocDialog({
   // Final category ID = most specific selection
   const categoryId = subSubcategoryId || subcategoryId || majorCategoryId;
 
-  // Load categories when dialog opens
+  // Load categories when dialog opens. See create-article-dialog for the
+  // onOpenChange constraint that prevents moving this out of the effect.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingCategories(true);
     fetchCategoriesForMove()
       .then((cats) => {
