@@ -127,3 +127,45 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 **`getDriveContentStream` throws on non-404 errors.** Returns `null` on 404 (file deleted from Drive), throws on 500/permission/network errors. Callers must handle thrown errors — the proxy route's try/catch returns 500.
 
 **Proxy metadata comes from the DB, not from Drive.** `resource_media` stores `mime_type`, `file_size`, `original_name` at upload time. The proxy selects these in the whitelist query and uses them for response headers. `getDriveContentStream` fetches content only (one Drive API call, not two).
+
+## Visual Parity (WS5a)
+
+**Use `prepareNativeArticle` for rendering, `createNativeStaticEditor` for Algolia.** `prepareNativeArticle` adds heading IDs and returns `{ editor, headings }` for TOC. `createNativeStaticEditor` stays clean for Algolia HTML — no IDs, no anchor SVGs.
+
+**`SlateElement` without `as` wraps content in a `<div>`.** For headings in the Algolia path, use `<SlateElement {...props} as={Tag} />` so the heading IS the top-level element. Without `as`, you get `<div class="slate-h2"><h2>...</h2></div>` which breaks `parseHtmlIntoSections` (it checks `body.children` for heading tags).
+
+**Strip the `<div class="slate-editor">` wrapper from `serializeHtml` output.** `serialiseContentToHtml` trims and strips the outer wrapper so headings are top-level for Algolia section extraction.
+
+**Google Docs image alignment: apply classes to `<img>`, not `text-center` on `<p>`.** Tailwind Typography sets `img { display: block }`. CSS `text-align: center` only affects inline content. Use `mx-auto`/`ml-auto` directly on the `<img>` element. Preserve through Phase 4 with a tag-name check.
+
+**Jotai must be deduplicated across Plate packages.** `@platejs/core` and `@platejs/toggle` can pull different jotai versions. Two instances = two atom stores = `AggregateError` on every editor onChange. Fix with `"overrides": { "jotai": "2.19.1" }` in package.json.
+
+**Radix Dialog `onOpenChange` is not called on programmatic open.** When `open={true}` is set from outside, `onOpenChange` doesn't fire. Use `useEffect` on the `open` prop to load data, not `onOpenChange`.
+
+**`addHeadingIds` must create new objects, not mutate.** `nestToggleChildren` only shallow-copies toggle nodes. Heading nodes are original references. Use spread (`{ ...record, id: slug }`). Track a `changed` flag in `walkAndCopy` to avoid cloning subtrees with no headings.
+
+## Cross-Linking (WS5b)
+
+**Cross-link map uses `Object.hasOwn`, not direct property access.** Doc IDs come from parsed HTML. A crafted href producing `"__proto__"` or `"constructor"` as a doc ID would return `Object.prototype` properties. Per CLAUDE.md rules, guard with `Object.hasOwn(crossLinkMap, docId)`.
+
+**`APP_ORIGIN` lives in `article-constants.ts`, shared by GoogleDocArticleView and LinkStatic.** Parsed once at module level. Used for origin comparison (not `startsWith`, which has a domain prefix attack: `example.com.evil.com` starts with `example.com`).
+
+**`extractDocId` `?id=` param restricted to `drive.google.com/open` only.** Without the pathname check, `example.com/?id=123` would return `"123"`.
+
+**Google redirect URLs must be unwrapped before `extractDocId`.** Google Docs exports wrap links in `google.com/url?q=ACTUAL_URL`. `unwrapGoogleRedirect` extracts the `q` param. `URL.searchParams.get()` auto-decodes.
+
+**Cross-link map filters `status = 'published'`.** Draft articles aren't cross-link targets. Without this, readers clicking a cross-link to a draft get 404.
+
+**Use structured `logger`, not `console.error`.** Every file in the resources module uses `logger` from `@/lib/logger`. Mixing in `console.error` breaks structured logging.
+
+## Governance (WS1)
+
+**`canViewDrafts` is separate from `canEdit`.** Compute `canViewDrafts = isContentEditorEffective(profile)` at caller level, not `isHRAdminEffective(profile) || isContentEditorEffective(profile)`. HR admins without the content-editor flag don't see drafts on category lists or via article URLs. `canEdit` stays as the union for edit-affordance decisions. Both pages under `[...slug]/page.tsx` and `article/[slug]/page.tsx` compute both values and pass the narrower one to fetchers. Don't collapse them back — that was the bug.
+
+**Unpublish must clear `is_featured` + `featured_sort_order`.** A stale `is_featured=true AND status=draft` row is invisible on the landing (filtered by `status='published'`) but still counts against `MAX_FEATURED_ARTICLES`, which silently caps how many new articles you can feature. Apply to `updateArticle` on `status === 'draft'` branch AND `unpublishNativeArticle`. `deleteArticle` already clears it.
+
+**Handle Postgres `23505` on slug mutations.** `ensureUniqueArticleSlug` pre-checks, but a concurrent insert can still win the slug between check and insert. Catch `error.code === "23505"` in `createNativeArticle`, `linkGoogleDoc`, and `updateArticle` — return "A resource with this slug already exists — try a different title." Generic error copy here is user-hostile and hides a retryable condition.
+
+**Log DB errors before returning `[]`.** The file-wide pattern `if (error || !data) return []` silently swallows Supabase errors, surfacing a broken page as "no results". Split into two checks: `if (error) { logger.error(...); return [] }` then `if (!data) return []`. `fetchDraftArticles` does this; 7 other sites in `actions.ts` + 1 in `native-actions.ts` still need cleanup — tracked tech debt.
+
+**Drafts never enter "recently viewed" localStorage.** Gate `recordArticleView(...)` on `article.status === "published"` inside both `google-doc-article-view.tsx` and `native-article-view.tsx`. Without the gate, an editor viewing a draft stores it in localStorage; if the article then unpublishes or the user loses editor rights, the recents entry becomes stale and clicking it 404s.
