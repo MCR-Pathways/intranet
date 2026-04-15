@@ -471,7 +471,7 @@ export async function searchArticlesForLink(
 
     const { data, error } = await supabase
       .from("resource_articles")
-      .select("id, title, slug, resource_categories!category_id(slug, parent_id, parent:parent_id(slug))")
+      .select("id, title, slug, resource_categories!category_id(slug, parent:parent_id(slug))")
       .ilike("title", `%${sanitised}%`)
       .is("deleted_at", null)
       .eq("status", "published")
@@ -482,7 +482,6 @@ export async function searchArticlesForLink(
     return data.map((article) => {
       const category = article.resource_categories as unknown as {
         slug: string;
-        parent_id: string | null;
         parent: { slug: string } | null;
       };
       return {
