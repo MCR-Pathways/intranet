@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, FileClock, FileText } from "lucide-react";
+import { ArrowLeft, FileEdit, FileText } from "lucide-react";
 import {
   getCurrentUser,
   isContentEditorEffective,
@@ -29,7 +29,7 @@ export default async function DraftsPage() {
           Back to Resources
         </Link>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <FileClock className="h-6 w-6 text-amber-500" />
+          <FileEdit className="h-6 w-6 text-muted-foreground" />
           Drafts
           <span className="text-base font-normal text-muted-foreground">
             ({drafts.length})
@@ -73,7 +73,7 @@ export default async function DraftsPage() {
                     className="grid grid-cols-12 gap-3 px-4 py-3 items-center text-sm hover:bg-muted transition-colors"
                   >
                     <div className="col-span-5 flex items-center gap-2 min-w-0">
-                      <FileClock className="h-4 w-4 text-amber-500 shrink-0" />
+                      <FileEdit className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="font-medium truncate">{d.title}</span>
                     </div>
                     <div className="col-span-3 text-muted-foreground truncate">

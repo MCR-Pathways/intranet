@@ -251,7 +251,7 @@ export async function fetchGroupedSubcategoryArticles(
 ): Promise<
   Array<{
     subcategory: CategoryWithCount;
-    articles: Array<{ id: string; title: string; slug: string; updated_at: string }>;
+    articles: ArticleWithAuthor[];
   }>
 > {
   // Fetch subcategories
@@ -259,11 +259,14 @@ export async function fetchGroupedSubcategoryArticles(
 
   if (subcats.length === 0) return [];
 
-  // Single query for all articles across all subcategories (avoids N+1)
+  // Single query for all articles across all subcategories (avoids N+1).
+  // Expanded SELECT so GroupedIndex can reuse ArticleListItem with full
+  // kebab (Edit / Move / Publish-or-Unpublish / Unlink / Delete) — needs
+  // status, content_type, google_doc_url, category_id, author join, etc.
   const subcatIds = subcats.map((s) => s.id);
   let articlesQuery = supabase
     .from("resource_articles")
-    .select("id, title, slug, updated_at, category_id")
+    .select(`${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`)
     .in("category_id", subcatIds)
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
@@ -275,15 +278,11 @@ export async function fetchGroupedSubcategoryArticles(
   const { data: allArticles } = await articlesQuery;
 
   // Group articles by subcategory
-  const articlesBySubcat = new Map<
-    string,
-    Array<{ id: string; title: string; slug: string; updated_at: string }>
-  >();
-  for (const article of allArticles ?? []) {
-    const { category_id, ...rest } = article;
-    const list = articlesBySubcat.get(category_id) ?? [];
-    list.push(rest);
-    articlesBySubcat.set(category_id, list);
+  const articlesBySubcat = new Map<string, ArticleWithAuthor[]>();
+  for (const article of (allArticles ?? []) as unknown as ArticleWithAuthor[]) {
+    const list = articlesBySubcat.get(article.category_id) ?? [];
+    list.push(article);
+    articlesBySubcat.set(article.category_id, list);
   }
 
   const groups = subcats.map((sub) => ({
@@ -300,15 +299,27 @@ export async function fetchGroupedSubcategoryArticles(
 /**
  * Build a 3-level category tree with slug paths for the sidebar tree.
  * Each node includes its full hierarchical slug path (e.g. "policies/employment").
+ *
+ * `canViewDrafts` gates whether the nested article count includes drafts.
+ * RLS would otherwise leak draft counts to HR admins (who have SELECT on
+ * drafts but per WS1 policy shouldn't see them). Content editors pass true
+ * and see inclusive counts.
  */
 export async function fetchCategoryTreeWithClient(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  canViewDrafts: boolean
 ): Promise<CategoryTreeNode[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("resource_categories")
     .select(`${CATEGORY_SELECT}, resource_articles(count)`)
     .is("deleted_at", null)
-    .filter("resource_articles.deleted_at", "is", null)
+    .filter("resource_articles.deleted_at", "is", null);
+
+  if (!canViewDrafts) {
+    query = query.filter("resource_articles.status", "eq", "published");
+  }
+
+  const { data, error } = await query
     .order("sort_order")
     .order("name");
 
@@ -465,6 +476,25 @@ export async function fetchRecentlyUpdatedArticles(
       parent_category_name: parent?.name ?? null,
     };
   });
+}
+
+/**
+ * Count draft articles across all categories. Gate the call on canEdit —
+ * readers always get 0 via RLS anyway, but skip the round-trip. Used by
+ * the header Drafts pill.
+ */
+export async function fetchDraftCount(supabase: SupabaseClient): Promise<number> {
+  const { count, error } = await supabase
+    .from("resource_articles")
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .eq("status", "draft");
+
+  if (error) {
+    logger.error("fetchDraftCount failed", { error: error.message });
+    return 0;
+  }
+  return count ?? 0;
 }
 
 /**

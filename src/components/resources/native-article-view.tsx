@@ -20,6 +20,7 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  FileEdit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,6 @@ import { MoreInSection } from "./more-in-section";
 import { ArticleOutline } from "./article-outline";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
-import { useEditorMode } from "./editor-mode-context";
 import {
   toggleArticleFeatured,
   deleteArticle,
@@ -79,7 +79,6 @@ export function NativeArticleView({
   categoryPath = "",
   serverNow,
 }: NativeArticleViewProps) {
-  const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
   const [isPending, startTransition] = useTransition();
   const [showMoveDialog, setShowMoveDialog] = useState(false);
@@ -251,11 +250,35 @@ export function NativeArticleView({
       {/* Article header */}
       <div>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-            {article.title}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
+              {article.title}
+            </h1>
+            {canEdit && article.status === "draft" && (
+              <Badge
+                variant="secondary"
+                className="gap-1 font-medium"
+                title="Only content editors can see this article"
+                aria-label="Draft — only visible to editors"
+              >
+                <FileEdit className="h-3 w-3" />
+                Draft
+              </Badge>
+            )}
+          </div>
 
-          {editorMode && canEdit && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary Edit button (WS2) — always visible to editors. */}
+            {canEdit && (
+              <Button size="sm" asChild>
+                <Link href={editUrl}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              </Button>
+            )}
+
+          {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -269,12 +292,7 @@ export function NativeArticleView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={editUrl}>
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
+                {/* Edit is the primary button next to the title — not duplicated here. */}
                 <DropdownMenuItem onSelect={handleTogglePublish}>
                   {article.status === "published" ? (
                     <>
@@ -316,6 +334,7 @@ export function NativeArticleView({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
@@ -323,7 +342,7 @@ export function NativeArticleView({
             Updated {formatDate(new Date(updatedAt))}
             {isStale && " — may need review"}
           </span>
-          {editorMode && article.is_featured && (
+          {canEdit && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
               <Badge variant="secondary" className="text-[10px] py-0">
@@ -331,14 +350,7 @@ export function NativeArticleView({
               </Badge>
             </>
           )}
-          {editorMode && article.status === "draft" && (
-            <>
-              <span className="text-border">&middot;</span>
-              <Badge variant="outline" className="text-[10px] py-0 text-amber-600 border-amber-300">
-                Draft
-              </Badge>
-            </>
-          )}
+          {/* Draft indicator is the prominent title-adjacent Badge above; meta-line duplicate removed. */}
         </div>
       </div>
 

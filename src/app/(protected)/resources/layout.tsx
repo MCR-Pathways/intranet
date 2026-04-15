@@ -1,10 +1,5 @@
-import {
-  getCurrentUser,
-  isHRAdminEffective,
-  isContentEditorEffective,
-} from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { ResourcesShell } from "@/components/resources/resources-shell";
 
 export default async function ResourcesLayout({
   children,
@@ -14,12 +9,7 @@ export default async function ResourcesLayout({
   const { user, profile } = await getCurrentUser();
   if (!user || !profile) redirect("/login");
 
-  const canEdit =
-    isHRAdminEffective(profile) || isContentEditorEffective(profile);
-
-  return (
-    <ResourcesShell canEdit={canEdit}>
-      {children}
-    </ResourcesShell>
-  );
+  // Permission checks happen inside each page component (canEdit / canViewDrafts
+  // are derived in page.tsx and [...slug]/page.tsx). Layout stays thin.
+  return <>{children}</>;
 }

@@ -14,6 +14,8 @@ import {
   Unlink,
   Loader2,
   Link as LinkIcon,
+  FileEdit,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +30,6 @@ import { MoreInSection } from "./more-in-section";
 import { ArticleOutline } from "./article-outline";
 import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
-import { useEditorMode } from "./editor-mode-context";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { toggleArticleFeatured } from "@/app/(protected)/resources/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -68,7 +69,6 @@ export function GoogleDocArticleView({
   serverNow,
   crossLinkMap = {},
 }: GoogleDocArticleViewProps) {
-  const { editorMode } = useEditorMode();
   const [article, setArticle] = useState(initialArticle);
   const [isPending, startTransition] = useTransition();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -333,7 +333,7 @@ export function GoogleDocArticleView({
       </nav>
 
       {/* Google Docs bar — editor mode only */}
-      {editorMode && canEdit && (
+      {canEdit && (
         <div className="flex items-center justify-between rounded-lg bg-mcr-teal/[0.06] border border-mcr-teal/15 px-5 py-3">
           <div className="flex items-center gap-2 text-[13px] text-mcr-teal font-medium">
             <ExternalLink className="h-4 w-4" />
@@ -376,12 +376,41 @@ export function GoogleDocArticleView({
       {/* Article header */}
       <div>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-            {article.title}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
+              {article.title}
+            </h1>
+            {canEdit && article.status === "draft" && (
+              <Badge
+                variant="secondary"
+                className="gap-1 font-medium"
+                title="Only content editors can see this article"
+                aria-label="Draft — only visible to editors"
+              >
+                <FileEdit className="h-3 w-3" />
+                Draft
+              </Badge>
+            )}
+          </div>
 
-          {/* Kebab menu — editor mode only */}
-          {editorMode && canEdit && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary Edit button (WS2) — always visible to editors. */}
+            {canEdit && article.google_doc_url && (
+              <Button size="sm" asChild>
+                <a
+                  href={article.google_doc_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
+              </Button>
+            )}
+
+          {/* Kebab menu — editor mode only (transitional; removed in PR-2). */}
+          {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -423,6 +452,7 @@ export function GoogleDocArticleView({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          </div>
         </div>
 
         {/* Article meta */}
@@ -431,7 +461,7 @@ export function GoogleDocArticleView({
             Updated {formatDate(updatedAt)}
             {isStale && " — may need review"}
           </span>
-          {editorMode && article.is_featured && (
+          {canEdit && article.is_featured && (
             <>
               <span className="text-border">&middot;</span>
               <Badge variant="secondary" className="text-[10px] py-0">

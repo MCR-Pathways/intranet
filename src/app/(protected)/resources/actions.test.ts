@@ -52,6 +52,16 @@ vi.mock("@/lib/algolia", () => ({
   removeArticleFromIndex: mockRemoveArticleFromIndex,
 }));
 
+// Logger mock — silences stderr during error-path tests and lets us assert
+// the "no silent swallow" contract in fetchDraftCount.
+const mockLogger = vi.hoisted(() => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+}));
+vi.mock("@/lib/logger", () => ({ logger: mockLogger }));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function chainable() {
@@ -86,6 +96,7 @@ import {
   fetchCategoriesWithClient,
   fetchCategoryArticlesWithClient,
   fetchArticleBySlugOnly,
+  fetchDraftCount,
 } from "./actions";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -796,6 +807,49 @@ describe("Intranet Resource Actions", () => {
       );
       expect(result.category).toBeDefined();
       expect(result.articles).toEqual([]);
+    });
+  });
+
+  // =============================================
+  // fetchDraftCount — used by the WS2 Drafts pill
+  // =============================================
+
+  describe("fetchDraftCount", () => {
+    it("returns the Supabase count when the query succeeds", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        // eq() is the terminal call; make it resolve directly to {count, error}.
+        c.eq.mockResolvedValue({ count: 7, error: null });
+        return c;
+      });
+
+      const result = await fetchDraftCount(mockSupabase as never);
+      expect(result).toBe(7);
+    });
+
+    it("returns 0 when the query returns no count", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.eq.mockResolvedValue({ count: null, error: null });
+        return c;
+      });
+
+      const result = await fetchDraftCount(mockSupabase as never);
+      expect(result).toBe(0);
+    });
+
+    it("logs and returns 0 on DB error — no silent swallow", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.eq.mockResolvedValue({ count: null, error: { message: "boom" } });
+        return c;
+      });
+
+      const result = await fetchDraftCount(mockSupabase as never);
+      expect(result).toBe(0);
+      expect(mockLogger.error).toHaveBeenCalledWith("fetchDraftCount failed", {
+        error: "boom",
+      });
     });
   });
 
