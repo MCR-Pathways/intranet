@@ -8,14 +8,18 @@
  * navigation back to the article view.
  */
 
-import { createElement, useCallback, useEffect, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Loader2, AlertTriangle, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Check, Loader2, AlertTriangle, Save, Send, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlateRichEditor, EMPTY_PLATE_VALUE } from "./plate-editor";
+import { PublishConfirmDialog } from "./publish-confirm-dialog";
 import {
   saveNativeArticle,
   updateEditingStatus,
+  publishNativeArticle,
+  unpublishNativeArticle,
 } from "@/app/(protected)/resources/native-actions";
 import { toast } from "sonner";
 import { cn, formatDate } from "@/lib/utils";
@@ -34,8 +38,11 @@ export function NativeArticleEditor({
   article,
   category,
 }: NativeArticleEditorProps) {
+  const router = useRouter();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [editingWarning, setEditingWarning] = useState<string | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [isPublishPending, startPublishTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string | null>(null);
@@ -121,6 +128,21 @@ export function NativeArticleEditor({
     doSave(currentValueRef.current);
   }, [doSave, clearPendingTimers]);
 
+  function handlePublishToggle() {
+    startPublishTransition(async () => {
+      const result = isPublished
+        ? await unpublishNativeArticle(article.id)
+        : await publishNativeArticle(article.id);
+      if (result.success) {
+        toast.success(isPublished ? "Article unpublished" : "Article published");
+        setPublishOpen(false);
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "Failed to update article");
+      }
+    });
+  }
+
   return (
     <div className="space-y-4">
       {/* Concurrent editing warning */}
@@ -196,8 +218,38 @@ export function NativeArticleEditor({
               View article
             </Link>
           </Button>
+          {/* Primary Publish / Unpublish (WS2). Confirmation before either. */}
+          {isPublished ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPublishOpen(true)}
+              disabled={isPublishPending}
+            >
+              <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+              Unpublish
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setPublishOpen(true)}
+              disabled={isPublishPending}
+            >
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              Publish
+            </Button>
+          )}
         </div>
       </div>
+
+      <PublishConfirmDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        title={article.title}
+        mode={isPublished ? "unpublish" : "publish"}
+        onConfirm={handlePublishToggle}
+        disabled={isPublishPending}
+      />
 
       {/* Article title */}
       <h1 className="text-[26px] font-bold tracking-tight leading-tight">

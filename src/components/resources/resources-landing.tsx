@@ -79,7 +79,7 @@ export function ResourcesLanding({
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Key Resources
           </h2>
-          <FeaturedResources articles={featuredArticles} />
+          <FeaturedResources articles={featuredArticles} canEdit={canEdit} />
         </section>
       )}
 
@@ -89,7 +89,7 @@ export function ResourcesLanding({
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
             Browse by Category
           </h2>
-          <CategoryGrid categories={categories} />
+          <CategoryGrid categories={categories} canEdit={canEdit} />
         </section>
       )}
 

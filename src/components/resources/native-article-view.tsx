@@ -20,6 +20,7 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  FileClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -251,9 +252,32 @@ export function NativeArticleView({
       {/* Article header */}
       <div>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-            {article.title}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
+              {article.title}
+            </h1>
+            {canEdit && article.status === "draft" && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+                title="Only content editors can see this article"
+                aria-label="Draft — only visible to editors"
+              >
+                <FileClock className="h-3 w-3" />
+                Draft
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary Edit button (WS2) — always visible to editors. */}
+            {canEdit && (
+              <Button size="sm" asChild>
+                <Link href={editUrl}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+              </Button>
+            )}
 
           {editorMode && canEdit && (
             <DropdownMenu>
@@ -316,6 +340,7 @@ export function NativeArticleView({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">

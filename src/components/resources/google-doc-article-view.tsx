@@ -14,6 +14,8 @@ import {
   Unlink,
   Loader2,
   Link as LinkIcon,
+  FileClock,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -376,11 +378,39 @@ export function GoogleDocArticleView({
       {/* Article header */}
       <div>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-            {article.title}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
+              {article.title}
+            </h1>
+            {canEdit && article.status === "draft" && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+                title="Only content editors can see this article"
+                aria-label="Draft — only visible to editors"
+              >
+                <FileClock className="h-3 w-3" />
+                Draft
+              </span>
+            )}
+          </div>
 
-          {/* Kebab menu — editor mode only */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary Edit button (WS2) — always visible to editors. */}
+            {canEdit && article.google_doc_url && (
+              <Button size="sm" asChild>
+                <a
+                  href={article.google_doc_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
+              </Button>
+            )}
+
+          {/* Kebab menu — editor mode only (transitional; removed in PR-2). */}
           {editorMode && canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -423,6 +453,7 @@ export function GoogleDocArticleView({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          </div>
         </div>
 
         {/* Article meta */}
