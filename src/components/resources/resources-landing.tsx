@@ -193,15 +193,17 @@ export function ResourcesLanding({
         </section>
       )}
 
-      {/* Browse by Category — empty categories hidden by CategoryGrid */}
-      {categories.length > 0 && (
-        <section>
+      {/* Browse by Category — CategoryGrid owns heading+grid visibility as a
+          single unit, so an all-empty filter result hides both together. */}
+      <CategoryGrid
+        categories={categories}
+        canEdit={canEdit}
+        heading={
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
             Browse by Category
           </h2>
-          <CategoryGrid categories={categories} canEdit={canEdit} />
-        </section>
-      )}
+        }
+      />
     </div>
   );
 }
