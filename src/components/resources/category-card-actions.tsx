@@ -7,10 +7,15 @@ import { CardActionsKebab } from "./card-actions-kebab";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import { deleteCategory } from "@/app/(protected)/resources/actions";
-import type { ResourceCategory, CategoryTreeNode, CategoryWithCount } from "@/types/database.types";
+import type { ResourceCategory } from "@/types/database.types";
 
 interface CategoryCardActionsProps {
-  category: ResourceCategory | CategoryTreeNode | CategoryWithCount;
+  /**
+   * Accepts any ResourceCategory shape. Callers passing CategoryTreeNode or
+   * CategoryWithCount work via structural typing — both extend ResourceCategory.
+   * Only id + name are accessed here, so the narrower type is sufficient.
+   */
+  category: ResourceCategory;
   canEdit: boolean;
 }
 
