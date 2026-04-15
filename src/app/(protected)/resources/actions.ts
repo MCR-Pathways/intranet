@@ -496,7 +496,11 @@ export async function fetchDraftArticles(
     .order("updated_at", { ascending: false })
     .limit(100);
 
-  if (error || !data) return [];
+  if (error) {
+    logger.error("fetchDraftArticles failed", { error: error.message });
+    return [];
+  }
+  if (!data) return [];
 
   return data.map((row: Record<string, unknown>) => {
     const rawCat = row.category;
