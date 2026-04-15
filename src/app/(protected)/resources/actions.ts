@@ -468,6 +468,25 @@ export async function fetchRecentlyUpdatedArticles(
 }
 
 /**
+ * Count draft articles across all categories. Gate the call on canEdit —
+ * readers always get 0 via RLS anyway, but skip the round-trip. Used by
+ * the header Drafts pill.
+ */
+export async function fetchDraftCount(supabase: SupabaseClient): Promise<number> {
+  const { count, error } = await supabase
+    .from("resource_articles")
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .eq("status", "draft");
+
+  if (error) {
+    logger.error("fetchDraftCount failed", { error: error.message });
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
  * Fetch all draft articles across all categories. Gated by caller — only
  * content editors should call this. Returns up to 100 drafts sorted by most
  * recently edited.

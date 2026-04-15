@@ -7,6 +7,7 @@ import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { GroupedIndex } from "./grouped-index";
 import { ArticlesList } from "./articles-list";
 import { AdminBar } from "./admin-bar";
+import { EditorHeaderActions } from "./editor-header-actions";
 import type {
   ResourceCategory,
   CategoryWithCount,
@@ -27,6 +28,7 @@ interface CategoryContentProps {
   /** Articles directly in this category (not in subcategories) */
   directArticles: ArticleWithAuthor[];
   canEdit: boolean;
+  draftCount: number;
 }
 
 export function CategoryContent({
@@ -36,6 +38,7 @@ export function CategoryContent({
   subcategoryGroups,
   directArticles,
   canEdit,
+  draftCount,
 }: CategoryContentProps) {
   const colour = resolveIconColour(category.icon_colour);
 
@@ -70,28 +73,35 @@ export function CategoryContent({
         <span className="text-foreground font-medium">{category.name}</span>
       </nav>
 
-      {/* Admin bar — visible when editor mode on */}
+      {/* Admin bar — removed in WS2 PR-2; kept during transition for safety. */}
       <AdminBar />
 
-      {/* Category header */}
-      <div className="flex items-center gap-4">
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colour.bg} ${colour.fg}`}
-        >
-          {createElement(categoryIcon, {
-            className: "h-[22px] w-[22px]",
-          })}
+      {/* Category header with contextual editor actions (WS2). */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colour.bg} ${colour.fg}`}
+          >
+            {createElement(categoryIcon, {
+              className: "h-[22px] w-[22px]",
+            })}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-[22px] font-bold tracking-tight">
+              {category.name}
+            </h2>
+            {category.description && (
+              <p className="text-[13px] text-muted-foreground mt-0.5">
+                {category.description}
+              </p>
+            )}
+          </div>
         </div>
-        <div>
-          <h2 className="text-[22px] font-bold tracking-tight">
-            {category.name}
-          </h2>
-          {category.description && (
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              {category.description}
-            </p>
-          )}
-        </div>
+        <EditorHeaderActions
+          canEdit={canEdit}
+          draftCount={draftCount}
+          defaultCategoryId={category.id}
+        />
       </div>
 
       {/* Direct articles in this category (not in subcategories) */}

@@ -8,6 +8,7 @@ import {
   fetchCategoryBySlugPath,
   fetchGroupedSubcategoryArticles,
   fetchCategoryArticlesWithClient,
+  fetchDraftCount,
 } from "../actions";
 import { CategoryContent } from "@/components/resources/category-content";
 
@@ -39,11 +40,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category, ancestors } = result;
   const slugPath = slug.join("/");
 
-  // Fetch grouped subcategory articles and direct articles in parallel
-  const [subcategoryGroups, { articles: directArticles }] = await Promise.all([
-    fetchGroupedSubcategoryArticles(supabase, category.id, canViewDrafts),
-    fetchCategoryArticlesWithClient(supabase, category.slug, canViewDrafts),
-  ]);
+  // Fetch grouped subcategory articles, direct articles, and draft count in parallel
+  const [subcategoryGroups, { articles: directArticles }, draftCount] =
+    await Promise.all([
+      fetchGroupedSubcategoryArticles(supabase, category.id, canViewDrafts),
+      fetchCategoryArticlesWithClient(supabase, category.slug, canViewDrafts),
+      // Readers always get 0 via RLS; skip the round-trip.
+      canEdit ? fetchDraftCount(supabase) : Promise.resolve(0),
+    ]);
 
   return (
     <CategoryContent
@@ -53,6 +57,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       subcategoryGroups={subcategoryGroups}
       directArticles={directArticles}
       canEdit={canEdit}
+      draftCount={draftCount}
     />
   );
 }

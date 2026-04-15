@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { FeaturedResources } from "./featured-resources";
 import { CategoryGrid } from "./category-grid";
 import { AdminBar } from "./admin-bar";
+import { EditorHeaderActions } from "./editor-header-actions";
 import { cn, formatDate } from "@/lib/utils";
 import type { FeaturedArticle } from "@/app/(protected)/resources/actions";
 import type { CategoryTreeNode } from "@/types/database.types";
@@ -24,6 +25,8 @@ interface ResourcesLandingProps {
   featuredArticles: FeaturedArticle[];
   recentArticles: RecentArticle[];
   categories: CategoryTreeNode[];
+  canEdit: boolean;
+  draftCount: number;
 }
 
 /** Open the global search overlay via custom event. */
@@ -35,16 +38,21 @@ export function ResourcesLanding({
   featuredArticles,
   recentArticles,
   categories,
+  canEdit,
+  draftCount,
 }: ResourcesLandingProps) {
   return (
     <div className="space-y-6">
-      {/* Page header — matches Home ("News Feed") and Learning ("Learning") */}
-      <PageHeader
-        title="Resources"
-        subtitle="Policies, procedures, and organisational documents"
-      />
+      {/* Page header with contextual editor actions (WS2). */}
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Resources"
+          subtitle="Policies, procedures, and organisational documents"
+        />
+        <EditorHeaderActions canEdit={canEdit} draftCount={draftCount} />
+      </div>
 
-      {/* Admin bar — visible when editor mode on */}
+      {/* Admin bar — removed in WS2 PR-2; kept during transition for safety. */}
       <AdminBar />
 
       {/* Search prompt — opens global Cmd+K overlay */}

@@ -33,6 +33,8 @@ interface CategoryFormDialogProps {
   trigger?: React.ReactNode;
   /** Pass existing category for edit mode; omit for create mode */
   category?: ResourceCategory;
+  /** Pre-select parent when creating a subcategory (create mode only). */
+  defaultParentId?: string;
   /** Controlled open state */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -41,6 +43,7 @@ interface CategoryFormDialogProps {
 export function CategoryFormDialog({
   trigger,
   category,
+  defaultParentId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: CategoryFormDialogProps) {
@@ -56,7 +59,7 @@ export function CategoryFormDialog({
     category?.icon_colour ?? "default"
   );
   const [parentId, setParentId] = useState<string>(
-    category?.parent_id ?? "none"
+    category?.parent_id ?? defaultParentId ?? "none"
   );
   const [visibility, setVisibility] = useState<"all" | "internal">(
     category?.visibility ?? "internal"
@@ -100,7 +103,7 @@ export function CategoryFormDialog({
           setDescription("");
           setIcon("Folder");
           setIconColour("default");
-          setParentId("none");
+          setParentId(defaultParentId ?? "none");
           setVisibility("internal");
         }
       } else {
