@@ -380,7 +380,7 @@ export async function fetchArticleBySlugOnly(
   let query = supabase
     .from("resource_articles")
     .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT}, parent:resource_categories!parent_id(name, slug))`
+      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(${CATEGORY_SELECT}, parent:parent_id(name, slug))`
     )
     .eq("slug", articleSlug)
     .is("deleted_at", null);
@@ -442,7 +442,7 @@ export async function fetchRecentlyUpdatedArticles(
   const { data, error } = await supabase
     .from("resource_articles")
     .select(
-      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:resource_categories!parent_id(name))"
+      "id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:parent_id(name))"
     )
     .is("deleted_at", null)
     .eq("status", "published")
@@ -519,7 +519,7 @@ export async function fetchDraftArticles(
   const { data, error } = await supabase
     .from("resource_articles")
     .select(
-      "id, title, slug, content_type, updated_at, author:profiles!author_id(full_name, preferred_name), category:resource_categories!category_id(name, parent:resource_categories!parent_id(name))"
+      "id, title, slug, content_type, updated_at, author:profiles!author_id(full_name, preferred_name), category:resource_categories!category_id(name, parent:parent_id(name))"
     )
     .is("deleted_at", null)
     .eq("status", "draft")

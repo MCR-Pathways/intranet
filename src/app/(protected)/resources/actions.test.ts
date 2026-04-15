@@ -97,6 +97,8 @@ import {
   fetchCategoryArticlesWithClient,
   fetchArticleBySlugOnly,
   fetchDraftCount,
+  fetchDraftArticles,
+  fetchRecentlyUpdatedArticles,
 } from "./actions";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
@@ -907,6 +909,177 @@ describe("Intranet Resource Actions", () => {
 
       expect(result.article).not.toBeNull();
       expect(result.article?.title).toBe("Draft in progress");
+    });
+
+    it("resolves parent from forward join (object shape) and strips it from category", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.single.mockResolvedValue({
+          data: {
+            id: "art-2",
+            title: "Sub article",
+            slug: "sub-article",
+            category: {
+              id: "cat-sub",
+              name: "Supplier Directory",
+              slug: "supplier-directory",
+              parent: { name: "Organisation", slug: "organisation" },
+            },
+          },
+          error: null,
+        });
+        return c;
+      });
+
+      const result = await fetchArticleBySlugOnly(
+        mockSupabase as never,
+        "sub-article",
+        true,
+      );
+
+      expect(result.parentCategory).toEqual({
+        name: "Organisation",
+        slug: "organisation",
+      });
+      expect(result.category?.slug).toBe("supplier-directory");
+      expect((result.category as unknown as { parent?: unknown }).parent).toBeUndefined();
+    });
+
+    it("returns null parentCategory when the category is top-level (parent = null)", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.single.mockResolvedValue({
+          data: {
+            id: "art-3",
+            title: "Top-level article",
+            slug: "top-level-article",
+            category: {
+              id: "cat-top",
+              name: "Organisation",
+              slug: "organisation",
+              parent: null,
+            },
+          },
+          error: null,
+        });
+        return c;
+      });
+
+      const result = await fetchArticleBySlugOnly(
+        mockSupabase as never,
+        "top-level-article",
+        true,
+      );
+
+      expect(result.parentCategory).toBeNull();
+      expect(result.category?.slug).toBe("organisation");
+    });
+  });
+
+  // =============================================
+  // fetchDraftArticles — parent-join direction
+  // =============================================
+
+  describe("fetchDraftArticles", () => {
+    it("resolves parent_category_name from forward-join object shape", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.limit.mockResolvedValue({
+          data: [
+            {
+              id: "d-1",
+              title: "Sub draft",
+              slug: "sub-draft",
+              content_type: "native",
+              updated_at: "2026-04-14T10:00:00Z",
+              author: { full_name: "Alice", preferred_name: null },
+              category: {
+                name: "Supplier Directory",
+                parent: { name: "Organisation" },
+              },
+            },
+            {
+              id: "d-2",
+              title: "Top draft",
+              slug: "top-draft",
+              content_type: "google_doc",
+              updated_at: "2026-04-14T09:00:00Z",
+              author: { full_name: "Bob", preferred_name: "Bobby" },
+              category: { name: "Organisation", parent: null },
+            },
+          ],
+          error: null,
+        });
+        return c;
+      });
+
+      const result = await fetchDraftArticles(mockSupabase as never);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        category_name: "Supplier Directory",
+        parent_category_name: "Organisation",
+        author_name: "Alice",
+      });
+      expect(result[1]).toMatchObject({
+        category_name: "Organisation",
+        parent_category_name: null,
+        author_name: "Bobby",
+      });
+    });
+  });
+
+  // =============================================
+  // fetchRecentlyUpdatedArticles — parent-join direction
+  // =============================================
+
+  describe("fetchRecentlyUpdatedArticles", () => {
+    it("resolves parent_category_name from forward-join object shape", async () => {
+      mockFrom.mockImplementation(() => {
+        const c = chainable();
+        c.limit.mockResolvedValue({
+          data: [
+            {
+              id: "r-1",
+              title: "Sub published",
+              slug: "sub-published",
+              updated_at: "2026-04-14T10:00:00Z",
+              category: {
+                name: "Supplier Directory",
+                slug: "supplier-directory",
+                parent: { name: "Organisation" },
+              },
+            },
+            {
+              id: "r-2",
+              title: "Top published",
+              slug: "top-published",
+              updated_at: "2026-04-14T09:00:00Z",
+              category: {
+                name: "Organisation",
+                slug: "organisation",
+                parent: null,
+              },
+            },
+          ],
+          error: null,
+        });
+        return c;
+      });
+
+      const result = await fetchRecentlyUpdatedArticles(mockSupabase as never);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        category_name: "Supplier Directory",
+        category_slug: "supplier-directory",
+        parent_category_name: "Organisation",
+      });
+      expect(result[1]).toMatchObject({
+        category_name: "Organisation",
+        category_slug: "organisation",
+        parent_category_name: null,
+      });
     });
   });
 
