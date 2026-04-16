@@ -682,7 +682,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ### Medium Priority
 
-- **Large action files** — `flexible-working/actions.ts` (1,167 lines), `onboarding/actions.ts` (1,140 lines), `absence/actions.ts` (966 lines) could benefit from splitting.
+- **Large action files** — `flexible-working/actions.ts` (1,241 lines), `onboarding/actions.ts` (1,192 lines), `absence/actions.ts` (1,012 lines) could benefit from splitting.
 - **Flat HR component structure** — all 68 HR components in `src/components/hr/`. Consider grouping by feature as Phase 3 grows.
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
 - **Absence hard-deletes** — `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
