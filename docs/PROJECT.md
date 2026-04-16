@@ -2,7 +2,7 @@
 
 > **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-04-10
+> **Last reviewed:** 2026-04-16
 
 ---
 
@@ -114,7 +114,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (73 files, `00001` through `00072` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (80 files, `00001` through `00079` plus a combined migration).
 
 ### Local Supabase
 
@@ -280,7 +280,7 @@ Internal communications — news feed, resources/knowledge base, and induction.
 
 **Key features:** Rich text posts (Tiptap), @mentions with notifications, reactions, comments, link previews with SSRF protection, image lightbox, file attachments, pin/unpin (HR admin), weekly roundup.
 
-**Resources/Knowledge Base (redesigned — PR #157):** Google Docs integration replaces Tiptap article editor. Content editors link Google Docs from Drive, HTML synced via webhooks, rendered with Tailwind `prose` classes. Sidebar tree navigation (3-level, collapsible to icon-only). Component page system for developer-created pages (e.g. org chart). Editor mode pencil toggle shows/hides admin controls. Settings page for folder registration, featured article curation, and category management. Algolia search with section-level indexing and deep links. Supabase Realtime for live content updates while viewing.
+**Resources/Knowledge Base (redesigned):** Google Docs integration replaces Tiptap article editor. Content editors link Google Docs from Drive, HTML synced via webhooks, rendered with Tailwind `prose` classes. Native Plate editor for static reference content (two content paths coexist). Component page system for developer-created pages (e.g. org chart). Contextual editor affordances (kebab menus on cards, drafts pill in header, per-article Edit/Publish). Category grid with grouped index on category pages. Scroll-spy TOC, "More in [folder]" sibling nav. Settings page for folder registration, featured article curation, and category management. Algolia search with section-level indexing and deep links. Supabase Realtime for live content updates while viewing.
 
 ### Sign-In / Working Location Module (v2 complete)
 
@@ -306,11 +306,9 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**76 migration files** in `supabase/migrations/`, numbered `00001` through `00075` plus a combined migration.
+**80 migration files** in `supabase/migrations/`, numbered `00001` through `00079` plus a combined migration.
 
-**Note:** `src/types/database.types.ts` is stale — it only contains 25 tables from the original schema. HR tables, L&D overhaul tables (course_sections, section_quizzes, certificates, tool_shed_entries), and email tables are missing. Regenerate from Supabase after confirming production schema.
-
-**40+ tables** — key ones:
+**70+ tables** — key ones:
 
 | Table | Purpose |
 |---|---|
@@ -441,8 +439,8 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
-- **Files:** 56 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,311 tests
+- **Files:** 61 test files, co-located with source files (`.test.ts` / `.test.tsx`)
+- **Coverage:** 1,433 tests
 
 ### Test Categories
 
@@ -717,7 +715,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - Scheduled notification jobs (daily digest for HR)
 - Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
-- Resend email activation (domain verification + env vars: `RESEND_API_KEY`, `CRON_SECRET`)
 
 ---
 
@@ -725,6 +722,9 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-04-16 | Abdulmuiz Adaranijo | Resources WS3 landing polish. Dropped category card metadata row (format was inconsistent across cards). Standardised "Updated" date prefix across all landing sections. Grid changed from 3-col to sm:2/md:3/lg:4 for symmetric layout. Recently Updated promoted above Browse by Category. Editor-only placeholder for empty featured section. Heading moved into CategoryGrid component to prevent empty-heading risk. Key Resources section deduplicated. Search input swap attempted and reverted for WCAG 3.2.1 compliance (Radix focus-loop). 5 commits, 2 files. |
+| 2026-04-15 | Abdulmuiz Adaranijo | Category parent-join fix. PostgREST self-referential join `parent:resource_categories!parent_id(...)` was resolving as a reverse join (returning children, not the parent). Fix: `parent:parent_id(...)` (column-as-alias forward join). Touched 4 fetcher functions. |
+| 2026-04-15 | Abdulmuiz Adaranijo | Resources WS2 contextual editor affordances. Killed the global `resources-editor-mode` localStorage toggle and admin bar. Replaced with contextual kebab menus on category cards and featured cards, drafts pill with count in page header, per-article Edit/Publish buttons, settings cog link. Fixed outline button contrast on 404 pages. Draft-inclusive article counts for editors (count-visibility batch fix across 4 fetchers). 22 files, +521/-234. |
 | 2026-04-15 | Abdulmuiz Adaranijo | Resources drafts governance (PR #237). Fixed inverted draft visibility — HR admins without the content-editor flag no longer see drafts in category lists or via article URLs; `canViewDrafts` (content-editor-only) split from `canEdit` (edit-affordance union) at caller level. New `/resources/drafts` view with loading + empty states and a 100-row cap banner. Unpublish now clears `is_featured` + `featured_sort_order` to stop stale rows counting against the featured cap. Postgres 23505 slug-collision handled cleanly in createNativeArticle, linkGoogleDoc, and updateArticle. Drafts gated out of "recently viewed" localStorage. `fetchDraftArticles` logs DB errors instead of silent-swallow. 12 files +356/-19. 4 new tests, 1,426 total passing across 61 files. |
 | 2026-04-14 | Abdulmuiz Adaranijo | Native editor WS5b cross-linking (PR #236). Google Doc URLs in article content rewritten to intranet article links at render-time via html-react-parser replace callback. Google redirect URLs (`google.com/url?q=...`) unwrapped before doc-ID extraction. `Object.hasOwn` guard on cross-link map prevents prototype pollution via crafted doc IDs. `APP_ORIGIN` parsed once at module scope in `article-constants.ts` for origin comparison (not `startsWith`). `extractDocId` `?id=` param restricted to `drive.google.com/open`. UNIQUE partial index on `google_doc_id` (migration 00079). 14 new tests. Squash-merged after #235 revert-and-reland. |
 | 2026-04-14 | Abdulmuiz Adaranijo | Native editor WS5a visual parity (PR #234). Native articles now match Google Doc article surface — card wrapper, sticky TOC sidebar, heading deep-links with anchor SVGs, freshness indicator, breadcrumbs, Supabase Realtime for status/title updates. Extracted shared `article-constants.ts` (prose classes, slugify, APP_ORIGIN, types), `useScrollSpy` hook (IntersectionObserver), refactored `ArticleOutline`. Table/video/column/image styling aligned. Image alignment (left/centre/right) preserved through Google Docs sanitiser via classes on `<img>` rather than `text-center` on `<p>`. Jotai deduplicated via npm `overrides` (fixed AggregateError on every editor onChange). Category dropdown bug (Radix Dialog onOpenChange not firing on programmatic open) fixed. `addHeadingIds` creates new objects rather than mutating; tracks a `changed` flag to avoid cloning subtrees with no headings. 34 new tests. |
