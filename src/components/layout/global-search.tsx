@@ -40,10 +40,15 @@ const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY;
 const RECENT_SEARCHES_KEY = "mcr-recent-searches";
 const MAX_RECENT = 5;
 
+type SnippetField = { value: string; matchLevel: string };
+type WithSnippet<T> = T & {
+  _snippetResult?: Record<string, SnippetField>;
+};
+
 interface SearchResults {
-  resources: AlgoliaResourceRecord[];
+  resources: WithSnippet<AlgoliaResourceRecord>[];
   courses: AlgoliaCourseRecord[];
-  toolShed: AlgoliaToolShedRecord[];
+  toolShed: WithSnippet<AlgoliaToolShedRecord>[];
 }
 
 const EMPTY_RESULTS: SearchResults = {
@@ -164,7 +169,7 @@ function GlobalSearchInner() {
           await Promise.allSettled([
             client.searchSingleIndex({
               indexName: RESOURCES_INDEX,
-              searchParams: { query, hitsPerPage: 5, attributesToSnippet: ["content:30"] },
+              searchParams: { query, hitsPerPage: 5 },
             }),
             client.searchSingleIndex({
               indexName: COURSES_INDEX,
@@ -178,7 +183,7 @@ function GlobalSearchInner() {
         setResults({
           resources:
             resourcesResult.status === "fulfilled"
-              ? (resourcesResult.value.hits as unknown as AlgoliaResourceRecord[])
+              ? (resourcesResult.value.hits as unknown as WithSnippet<AlgoliaResourceRecord>[])
               : [],
           courses:
             coursesResult.status === "fulfilled"
@@ -186,7 +191,7 @@ function GlobalSearchInner() {
               : [],
           toolShed:
             toolShedResult.status === "fulfilled"
-              ? (toolShedResult.value.hits as unknown as AlgoliaToolShedRecord[])
+              ? (toolShedResult.value.hits as unknown as WithSnippet<AlgoliaToolShedRecord>[])
               : [],
         });
       } catch {
@@ -436,6 +441,14 @@ function GlobalSearchInner() {
                         <p className="text-xs text-muted-foreground truncate">
                           {hit.categoryName}
                         </p>
+                        {hit._snippetResult?.content?.value && (
+                          <p
+                            className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                            dangerouslySetInnerHTML={{
+                              __html: hit._snippetResult.content.value,
+                            }}
+                          />
+                        )}
                       </div>
                     </CommandPrimitive.Item>
                   ))}
@@ -503,6 +516,14 @@ function GlobalSearchInner() {
                           {hit.authorName}
                           {hit.eventName && ` · ${hit.eventName}`}
                         </p>
+                        {hit._snippetResult?.content?.value && (
+                          <p
+                            className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                            dangerouslySetInnerHTML={{
+                              __html: hit._snippetResult.content.value,
+                            }}
+                          />
+                        )}
                       </div>
                       <Badge
                         variant="secondary"
