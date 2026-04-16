@@ -68,7 +68,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 ## Global Search
 
-**Global search uses Cmd+K overlay, not per-module search bars.** Uses Algolia multi-index query across `resources_articles` + `learning_courses`. Resources landing page opens the overlay via `CustomEvent` dispatch. See `global-search.tsx` and `src/lib/algolia.ts`.
+**Global search uses Cmd+K overlay, not per-module search bars.** Uses Algolia multi-index query across `resources_articles` + `learning_courses` + `tool_shed_entries`. Index settings tracked in `scripts/algolia-settings.mjs` (searchableAttributes, snippets, distinct dedup). Resources landing page opens the overlay via `CustomEvent` dispatch. See `global-search.tsx` and `src/lib/algolia.ts`.
 
 ## Process Reminders
 

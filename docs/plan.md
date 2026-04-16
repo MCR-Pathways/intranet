@@ -55,6 +55,8 @@
 - Drafts governance (WS1): draft visibility restricted to content editors (not HR admins), `/resources/drafts` view, unpublish-clears-featured, Postgres 23505 handling on slug collisions, drafts excluded from recently-viewed
 - Editor affordances (WS2): global editor-mode toggle killed, replaced with contextual kebab menus on cards/articles, drafts pill in page header, 404 outline button contrast fixed
 - Landing polish (WS3): category card metadata dropped for consistency, "Updated" date prefix standardised, grid changed to sm:2/md:3/lg:4, Recently Updated promoted above Browse by Category, editor-only featured placeholder, heading-in-grid to prevent empty sections, Key Resources section deduplicated
+- Article reading (WS4): sticky TOC offset fixed (top-6 to top-20), TOC card surface added, ArticleBreadcrumb extracted from 3 views (fixed ComponentArticleView "Home" bug + missing category icon), heading indent baseline made dynamic
+- Search (WS5): config-as-code script for Algolia (searchableAttributes, snippets, distinct dedup), content snippets rendered in global search, highlight contrast improved (amber-100 to amber-200/60)
 
 ### Resources — Native Editor (WS5 complete)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)

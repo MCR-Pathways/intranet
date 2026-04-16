@@ -91,7 +91,7 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 ### Server Actions Location
 
-Each route group has its own `actions.ts` (26 action files total):
+Each route group has its own `actions.ts` (27 action files total):
 - `src/app/(auth)/actions.ts` — sign out
 - `src/app/(protected)/hr/` — `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
 - `src/app/(protected)/intranet/actions.ts` — news feed posts, polls, comments, mentions
@@ -266,6 +266,8 @@ These are universal rules that apply to every task regardless of which module yo
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` targets the nearest ancestor with `class="group"`.
 
 ### CSS & Styling
+
+**`overflow: clip` does NOT break `position: sticky`.** Unlike `overflow: hidden/scroll/auto`, `overflow: clip` does not create a scroll container. Sticky elements work inside `overflow-clip` parents. The `ARTICLE_CARD_CLASSES` constant uses `overflow-clip` intentionally for rounded-corner clipping without affecting the sticky TOC.
 
 **Use `bg-card` not `bg-background` for dialogs, modals, and form inputs.** When `--background` is grey, inputs with `bg-background` become invisible. Use `bg-card` for all elevated surfaces.
 
