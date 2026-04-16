@@ -8,7 +8,7 @@
  * with edit, feature, move, and delete actions.
  */
 
-import { createElement, useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { PlateStatic } from "platejs/static";
 import {
@@ -44,7 +44,7 @@ import {
   unpublishNativeArticle,
 } from "@/app/(protected)/resources/native-actions";
 import { cn, formatDate } from "@/lib/utils";
-import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
+import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
 import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
@@ -207,45 +207,16 @@ export function NativeArticleView({
 
   const updatedAt = article.updated_at;
 
-  const iconFg = resolveIconColour(category.icon_colour).fg;
-
   // Edit URL — native articles open the Plate editor
   const editUrl = `/resources/article/${article.slug}/edit`;
 
   return (
     <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/resources"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Resources
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
-        {parentCategory && (
-          <>
-            <Link
-              href={`/resources/${parentCategory.slug}`}
-              className="hover:text-foreground hover:underline underline-offset-4"
-            >
-              {parentCategory.name}
-            </Link>
-            <span className="text-muted-foreground/50 select-none">/</span>
-          </>
-        )}
-        <Link
-          href={`/resources/${categoryPath}`}
-          className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline underline-offset-4"
-        >
-          {createElement(resolveIcon(category.icon), {
-            className: cn("h-3.5 w-3.5", iconFg),
-          })}
-          {category.name}
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <span className="text-foreground font-medium">{article.title}</span>
-      </nav>
+      <ArticleBreadcrumb
+        category={category}
+        parentCategory={parentCategory}
+        title={article.title}
+      />
 
       {/* Article header */}
       <div>
