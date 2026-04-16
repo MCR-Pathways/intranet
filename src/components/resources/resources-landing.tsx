@@ -63,7 +63,10 @@ export function ResourcesLanding({
         <EditorHeaderActions canEdit={canEdit} draftCount={draftCount} />
       </div>
 
-      {/* Search prompt — opens global Cmd+K overlay */}
+      {/* Search trigger — styled to look like an input, but remains a button for
+          a11y. Focusing a real <input> here would WCAG-3.2.1-violate and, combined
+          with Radix Dialog's default focus-restore on close, cause a focus loop
+          (focus returns to the input → onFocus fires → overlay reopens). */}
       <button
         type="button"
         onClick={openGlobalSearch}
@@ -119,7 +122,7 @@ export function ResourcesLanding({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {categoryPath}
                       <span className="mx-1.5 text-border">&middot;</span>
-                      Edited {formatDate(new Date(draft.updated_at))}
+                      Updated {formatDate(new Date(draft.updated_at))}
                     </p>
                   </div>
                 </Link>
@@ -129,27 +132,25 @@ export function ResourcesLanding({
         </section>
       )}
 
-      {/* Featured articles — above categories (Zendesk pattern) */}
-      {featuredArticles.length > 0 && (
+      {/* Featured articles — above categories (Zendesk pattern).
+          Editors see an empty-state placeholder when nothing is featured yet. */}
+      {(featuredArticles.length > 0 || canEdit) && (
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Key Resources
           </h2>
-          <FeaturedResources articles={featuredArticles} canEdit={canEdit} />
+          {featuredArticles.length > 0 ? (
+            <FeaturedResources articles={featuredArticles} canEdit={canEdit} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              No featured resources yet. Open an article&apos;s menu and select
+              &ldquo;Feature&rdquo; to surface up to 3 key resources here.
+            </div>
+          )}
         </section>
       )}
 
-      {/* Browse by Category — empty categories hidden by CategoryGrid */}
-      {categories.length > 0 && (
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-            Browse by Category
-          </h2>
-          <CategoryGrid categories={categories} canEdit={canEdit} />
-        </section>
-      )}
-
-      {/* Recently updated — inside its own card surface */}
+      {/* Recently Updated — promoted above Browse by Category (WS3 finding F7) */}
       {recentArticles.length > 0 && (
         <section className="rounded-xl bg-card shadow-sm border border-border p-5">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -179,7 +180,7 @@ export function ResourcesLanding({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {categoryPath}
                       <span className="mx-1.5 text-border">&middot;</span>
-                      {formatDate(new Date(article.updated_at))}
+                      Updated {formatDate(new Date(article.updated_at))}
                     </p>
                   </div>
                 </Link>
@@ -188,6 +189,18 @@ export function ResourcesLanding({
           </div>
         </section>
       )}
+
+      {/* Browse by Category — CategoryGrid owns heading+grid visibility as a
+          single unit, so an all-empty filter result hides both together. */}
+      <CategoryGrid
+        categories={categories}
+        canEdit={canEdit}
+        heading={
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            Browse by Category
+          </h2>
+        }
+      />
     </div>
   );
 }
