@@ -125,7 +125,7 @@ function SearchResults() {
                 {(hit._snippetResult?.content as { value?: string } | undefined)
                   ?.value && (
                   <p
-                    className="text-xs text-muted-foreground mt-1 line-clamp-2 [&_mark]:bg-amber-100 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                    className="text-xs text-muted-foreground mt-1 line-clamp-2 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
                     dangerouslySetInnerHTML={{
                       __html: (
                         hit._snippetResult!.content as { value: string }

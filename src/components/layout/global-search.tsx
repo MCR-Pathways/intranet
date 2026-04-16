@@ -31,6 +31,7 @@ import type {
   AlgoliaCourseRecord,
   AlgoliaToolShedRecord,
 } from "@/lib/algolia";
+import type { Hit } from "@algolia/client-search";
 import { cn, formatDuration } from "@/lib/utils";
 import { getRecentlyViewed } from "@/lib/recently-viewed";
 
@@ -41,9 +42,9 @@ const RECENT_SEARCHES_KEY = "mcr-recent-searches";
 const MAX_RECENT = 5;
 
 interface SearchResults {
-  resources: AlgoliaResourceRecord[];
-  courses: AlgoliaCourseRecord[];
-  toolShed: AlgoliaToolShedRecord[];
+  resources: Hit<AlgoliaResourceRecord>[];
+  courses: Hit<AlgoliaCourseRecord>[];
+  toolShed: Hit<AlgoliaToolShedRecord>[];
 }
 
 const EMPTY_RESULTS: SearchResults = {
@@ -162,15 +163,15 @@ function GlobalSearchInner() {
         // (e.g. no courses published), it shouldn't break the others.
         const [resourcesResult, coursesResult, toolShedResult] =
           await Promise.allSettled([
-            client.searchSingleIndex({
+            client.searchSingleIndex<AlgoliaResourceRecord>({
               indexName: RESOURCES_INDEX,
-              searchParams: { query, hitsPerPage: 5, attributesToSnippet: ["content:30"] },
+              searchParams: { query, hitsPerPage: 5 },
             }),
-            client.searchSingleIndex({
+            client.searchSingleIndex<AlgoliaCourseRecord>({
               indexName: COURSES_INDEX,
               searchParams: { query, hitsPerPage: 5 },
             }),
-            client.searchSingleIndex({
+            client.searchSingleIndex<AlgoliaToolShedRecord>({
               indexName: TOOL_SHED_INDEX,
               searchParams: { query, hitsPerPage: 5 },
             }),
@@ -178,15 +179,15 @@ function GlobalSearchInner() {
         setResults({
           resources:
             resourcesResult.status === "fulfilled"
-              ? (resourcesResult.value.hits as unknown as AlgoliaResourceRecord[])
+              ? resourcesResult.value.hits
               : [],
           courses:
             coursesResult.status === "fulfilled"
-              ? (coursesResult.value.hits as unknown as AlgoliaCourseRecord[])
+              ? coursesResult.value.hits
               : [],
           toolShed:
             toolShedResult.status === "fulfilled"
-              ? (toolShedResult.value.hits as unknown as AlgoliaToolShedRecord[])
+              ? toolShedResult.value.hits
               : [],
         });
       } catch {
@@ -436,6 +437,15 @@ function GlobalSearchInner() {
                         <p className="text-xs text-muted-foreground truncate">
                           {hit.categoryName}
                         </p>
+                        {(hit._snippetResult?.content as { value?: string } | undefined)
+                          ?.value && (
+                          <p
+                            className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                            dangerouslySetInnerHTML={{
+                              __html: (hit._snippetResult!.content as { value: string }).value,
+                            }}
+                          />
+                        )}
                       </div>
                     </CommandPrimitive.Item>
                   ))}
@@ -503,6 +513,15 @@ function GlobalSearchInner() {
                           {hit.authorName}
                           {hit.eventName && ` · ${hit.eventName}`}
                         </p>
+                        {(hit._snippetResult?.content as { value?: string } | undefined)
+                          ?.value && (
+                          <p
+                            className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                            dangerouslySetInnerHTML={{
+                              __html: (hit._snippetResult!.content as { value: string }).value,
+                            }}
+                          />
+                        )}
                       </div>
                       <Badge
                         variant="secondary"
