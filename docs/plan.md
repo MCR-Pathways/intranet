@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-10
+> Last updated: 2026-04-16
 
 ---
 
@@ -50,9 +50,11 @@
 - Category hierarchy (9 top-level, 43+ subcategories, cascading selects)
 - Component pages (org chart under Org Structure)
 - Algolia search (section-level indexing, deep linking)
-- Editor mode, settings page, featured articles
+- Contextual editor affordances (kebab menus, drafts pill, per-surface actions), settings page, featured articles
 - UX redesign: grouped index, scroll-spy TOC, freshness indicators, "More in [folder]" sibling nav
-- Drafts governance (WS1, PR #237): draft visibility restricted to content editors (not HR admins), `/resources/drafts` view, unpublish-clears-featured, Postgres 23505 handling on slug collisions, drafts excluded from recently-viewed
+- Drafts governance (WS1): draft visibility restricted to content editors (not HR admins), `/resources/drafts` view, unpublish-clears-featured, Postgres 23505 handling on slug collisions, drafts excluded from recently-viewed
+- Editor affordances (WS2): global editor-mode toggle killed, replaced with contextual kebab menus on cards/articles, drafts pill in page header, 404 outline button contrast fixed
+- Landing polish (WS3): category card metadata dropped for consistency, "Updated" date prefix standardised, grid changed to sm:2/md:3/lg:4, Recently Updated promoted above Browse by Category, editor-only featured placeholder, heading-in-grid to prevent empty sections, Key Resources section deduplicated
 
 ### Resources — Native Editor (WS5 complete)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
@@ -73,7 +75,7 @@
 ### Infrastructure- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,374 tests across 59 files (Vitest + RTL + jsdom)
+- 1,433 tests across 61 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
@@ -133,7 +135,7 @@
 - [ ] Google Drive webhook renewal cron (watch channels expire after 7 days)
 - [ ] CI/CD pipeline (GitHub Actions — currently relies on Vercel Git integration only)
 - [ ] Absence records soft-delete (currently hard-deletes, no audit trail)
-- [ ] Large action file splitting — flexible-working (1,167 lines), onboarding (1,140 lines), absence (966 lines)
+- [ ] Large action file splitting — flexible-working (1,241 lines), onboarding (1,192 lines), absence (1,012 lines)
 - [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
 - [x] Tool Shed card & feed UX overhaul (PR #185): format accent borders, event title redesign, 3-2-1 violet→emerald, search_text column, end-of-feed indicator, filter transitions
 - [ ] Tool Shed dialog & draft UX (PR 2, planned): partial draft saves, character counters, unsaved changes warning, draft toggle discovery

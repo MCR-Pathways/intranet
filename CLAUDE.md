@@ -203,6 +203,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Don't defensively cast properties that are already on the Row type.** Patterns like `(article as { content_type?: string }).content_type` or `(article as { last_published_at?: string }).last_published_at` are a reflex from pre-generated-types days. `ArticleWithAuthor extends ResourceArticle` which IS `Database["public"]["Tables"]["resource_articles"]["Row"]` — every column on the table is on the type. Trust it, write `article.content_type`. Same for `CategoryWithCount` / `CategoryTreeNode` — both extend `ResourceCategory`; structural typing accepts them where `ResourceCategory` is expected, no `as ResourceCategory` cast needed. Legit casts remain: Supabase join results that can be array-or-object (e.g. `row.category` from a `select("...category:resource_categories(...)")` — those genuinely need narrowing), and different-library types like Plate's `Value` on `content_json`.
 
+**Don't over-widen prop-type unions when subtypes share the base type.** A prop typed `ResourceCategory | CategoryTreeNode | CategoryWithCount` is equivalent to `ResourceCategory` because both descendants extend it. Structural typing lets you pass the subtype where the parent is expected. Wider unions don't improve safety — they read as "the author wasn't sure what shape to accept".
+
 ### Database & Migrations
 
 **Make all migrations idempotent.** Use `IF NOT EXISTS` / `DROP IF EXISTS` guards so migrations can be re-run safely.
