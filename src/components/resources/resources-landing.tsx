@@ -134,24 +134,21 @@ export function ResourcesLanding({
 
       {/* Featured articles — above categories (Zendesk pattern).
           Editors see an empty-state placeholder when nothing is featured yet. */}
-      {featuredArticles.length > 0 ? (
+      {(featuredArticles.length > 0 || canEdit) && (
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Key Resources
           </h2>
-          <FeaturedResources articles={featuredArticles} canEdit={canEdit} />
+          {featuredArticles.length > 0 ? (
+            <FeaturedResources articles={featuredArticles} canEdit={canEdit} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              No featured resources yet. Open an article&apos;s menu and select
+              &ldquo;Feature&rdquo; to surface up to 3 key resources here.
+            </div>
+          )}
         </section>
-      ) : canEdit ? (
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Key Resources
-          </h2>
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-            No featured resources yet. Open an article&apos;s menu and select
-            &ldquo;Feature&rdquo; to surface up to 3 key resources here.
-          </div>
-        </section>
-      ) : null}
+      )}
 
       {/* Recently Updated — promoted above Browse by Category (WS3 finding F7) */}
       {recentArticles.length > 0 && (
@@ -199,7 +196,7 @@ export function ResourcesLanding({
         categories={categories}
         canEdit={canEdit}
         heading={
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Browse by Category
           </h2>
         }
