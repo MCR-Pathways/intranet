@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
+import { ArticleBreadcrumb } from "./article-breadcrumb";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
 
 // ─── Dynamic imports for component pages ────────────────────────────────────
@@ -50,42 +50,11 @@ export function ComponentArticleView({
 
   return (
     <div className="space-y-5">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/intranet"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Home
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <Link
-          href="/resources"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Resources
-        </Link>
-        {parentCategory && (
-          <>
-            <span className="text-muted-foreground/50 select-none">/</span>
-            <Link
-              href={`/resources/${parentCategory.slug}`}
-              className="hover:text-foreground hover:underline underline-offset-4"
-            >
-              {parentCategory.name}
-            </Link>
-          </>
-        )}
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <Link
-          href={`/resources/${parentCategory ? `${parentCategory.slug}/${category.slug}` : category.slug}`}
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          {category.name}
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <span className="text-foreground font-medium">{article.title}</span>
-      </nav>
+      <ArticleBreadcrumb
+        category={category}
+        parentCategory={parentCategory}
+        title={article.title}
+      />
 
       {/* Component content */}
       {Component ? (

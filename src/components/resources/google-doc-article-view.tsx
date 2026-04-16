@@ -1,7 +1,6 @@
 "use client";
 
 import { createElement, useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import parse, { type DOMNode, type Element, domToReact } from "html-react-parser";
 import { getEmbedUrl } from "@/lib/video";
 import {
@@ -34,7 +33,7 @@ import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-
 import { toggleArticleFeatured } from "@/app/(protected)/resources/actions";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDate } from "@/lib/utils";
-import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
+import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
 import { createSlugDeduplicator, ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES, APP_ORIGIN } from "@/lib/article-constants";
@@ -299,38 +298,11 @@ export function GoogleDocArticleView({
 
   return (
     <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
-      {/* Breadcrumbs — no "Home", starts from Resources */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/resources"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Resources
-        </Link>
-        {parentCategory && (
-          <>
-            <span className="text-muted-foreground/50 select-none">/</span>
-            <Link
-              href={`/resources/${parentCategory.slug}`}
-              className="hover:text-foreground hover:underline underline-offset-4"
-            >
-              {parentCategory.name}
-            </Link>
-          </>
-        )}
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <Link
-          href={`/resources/${parentCategory ? `${parentCategory.slug}/${category.slug}` : category.slug}`}
-          className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline underline-offset-4"
-        >
-          {createElement(resolveIcon(category.icon), {
-            className: cn("h-3.5 w-3.5", resolveIconColour(category.icon_colour).fg),
-          })}
-          {category.name}
-        </Link>
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <span className="text-foreground font-medium">{article.title}</span>
-      </nav>
+      <ArticleBreadcrumb
+        category={category}
+        parentCategory={parentCategory}
+        title={article.title}
+      />
 
       {/* Google Docs bar — editor mode only */}
       {canEdit && (
