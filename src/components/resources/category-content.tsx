@@ -22,12 +22,11 @@ interface CategoryContentProps {
   category: ResourceCategory;
   categorySlugPath: string;
   ancestors: Array<{ name: string; slug: string; slugPath: string }>;
-  /** Subcategories with their articles for the grouped index */
   subcategoryGroups: SubcategoryGroup[];
-  /** Articles directly in this category (not in subcategories) */
   directArticles: ArticleWithAuthor[];
   canEdit: boolean;
   draftCount: number;
+  bookmarkedIds?: Set<string>;
 }
 
 export function CategoryContent({
@@ -38,6 +37,7 @@ export function CategoryContent({
   directArticles,
   canEdit,
   draftCount,
+  bookmarkedIds = new Set(),
 }: CategoryContentProps) {
   const colour = resolveIconColour(category.icon_colour);
 
@@ -108,6 +108,7 @@ export function CategoryContent({
             categoryId={category.id}
             categorySlug={category.slug}
             canEdit={canEdit}
+            bookmarkedIds={bookmarkedIds}
           />
         </section>
       )}
@@ -119,6 +120,7 @@ export function CategoryContent({
           parentSlugPath={categorySlugPath}
           parentIconColour={category.icon_colour}
           canEdit={canEdit}
+          bookmarkedIds={bookmarkedIds}
         />
       )}
 
