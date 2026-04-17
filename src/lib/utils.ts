@@ -69,6 +69,7 @@ export function formatDate(date: Date): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "Europe/London",
   });
 }
 
@@ -76,7 +77,7 @@ export function formatDate(date: Date): string {
  * Formats a Date into a short "day month" string (e.g. "5 Feb").
  */
 export function formatShortDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
 }
 
 /**
