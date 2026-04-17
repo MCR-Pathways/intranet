@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-16
+> Last updated: 2026-04-17
 
 ---
 
@@ -57,6 +57,7 @@
 - Landing polish (WS3): category card metadata dropped for consistency, "Updated" date prefix standardised, grid changed to sm:2/md:3/lg:4, Recently Updated promoted above Browse by Category, editor-only featured placeholder, heading-in-grid to prevent empty sections, Key Resources section deduplicated
 - Article reading (WS4): sticky TOC offset fixed (top-6 to top-20), TOC card surface added, ArticleBreadcrumb extracted from 3 views (fixed ComponentArticleView "Home" bug + missing category icon), heading indent baseline made dynamic
 - Search (WS5): config-as-code script for Algolia (searchableAttributes, snippets, distinct dedup), content snippets rendered in global search, highlight contrast improved (amber-100 to amber-200/60)
+- Long-tail polish (WS6): dead code deletion (-1,100 lines), exhaustive-deps fix, dynamic icon consistency, featured system removed entirely, landing redesigned (categories first, Finder-style zebra table for Recently Updated), per-user bookmarks (DB table, server actions, toggle on articles + category lists, dedicated /resources/bookmarks page), header actions redesigned (Bookmarks button for all users with teal icon, outline+bg-card, consistent height), button intent system (success variant for Publish/Approve, outline contrast fix, active:scale-95 tap animation), table-04 pattern adopted system-wide (rounded striped tables, odd:bg-muted/50)
 
 ### Resources — Native Editor (WS5 complete)
 - Plate editor for creating articles directly on the intranet (not linked from Google Docs)
