@@ -8,7 +8,7 @@
  * PlateElement/PlateLeaf with semantic HTML + Tailwind styling.
  */
 
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { PlateElement, PlateLeaf, useEditorRef, useSelected } from "platejs/react";
 import {
   TablePlugin,
@@ -697,7 +697,7 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
                   handleAlign(value);
                 }}
               >
-                <Icon className="h-3.5 w-3.5" />
+                {createElement(Icon, { className: "h-3.5 w-3.5" })}
               </button>
             ))}
           </div>
