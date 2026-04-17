@@ -8,7 +8,6 @@ import {
   fetchRecentlyUpdatedArticles,
   fetchCategoryTreeWithClient,
   fetchDraftCount,
-  fetchBookmarkedArticles,
 } from "./actions";
 import { ResourcesLanding } from "@/components/resources/resources-landing";
 
@@ -20,18 +19,15 @@ export default async function ResourcesPage() {
     isHRAdminEffective(profile) || isContentEditorEffective(profile);
   const canViewDrafts = isContentEditorEffective(profile);
 
-  const [recentArticles, categories, draftCount, bookmarkedArticles] =
-    await Promise.all([
-      fetchRecentlyUpdatedArticles(supabase),
-      fetchCategoryTreeWithClient(supabase, canViewDrafts),
-      canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
-      fetchBookmarkedArticles(supabase, user.id),
-    ]);
+  const [recentArticles, categories, draftCount] = await Promise.all([
+    fetchRecentlyUpdatedArticles(supabase),
+    fetchCategoryTreeWithClient(supabase, canViewDrafts),
+    canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
+  ]);
 
   return (
     <ResourcesLanding
       recentArticles={recentArticles}
-      bookmarkedArticles={bookmarkedArticles}
       categories={categories}
       canEdit={canEdit}
       draftCount={draftCount}
