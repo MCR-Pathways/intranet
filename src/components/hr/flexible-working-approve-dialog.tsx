@@ -160,6 +160,7 @@ export function FlexibleWorkingApproveDialog({
           </Button>
           <Button
             type="button"
+            variant="success"
             onClick={handleSubmit}
             disabled={isPending || (trialEnabled && trialDuration === "custom" && !customEndDate)}
           >

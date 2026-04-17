@@ -107,6 +107,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
         <Button
           variant="outline"
           size="icon"
+          className="bg-card"
           onClick={() => navigateWeek(-1)}
           disabled={weekOffset <= MIN_WEEK_OFFSET}
           type="button"
@@ -117,6 +118,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
         <Button
           variant="outline"
           size="icon"
+          className="bg-card"
           onClick={() => navigateWeek(1)}
           disabled={weekOffset >= MAX_WEEK_OFFSET}
           type="button"

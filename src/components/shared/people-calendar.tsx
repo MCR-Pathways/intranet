@@ -247,7 +247,7 @@ export function PeopleCalendar({
     <div className="space-y-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" onClick={prevMonth} type="button">
+        <Button variant="outline" size="sm" className="bg-card" onClick={prevMonth} type="button">
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
@@ -275,7 +275,7 @@ export function PeopleCalendar({
             </Button>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={nextMonth} type="button">
+        <Button variant="outline" size="sm" className="bg-card" onClick={nextMonth} type="button">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
