@@ -38,6 +38,29 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Evaluate each table column's value before migrating.** Fold sparse data into related cells to reduce visual noise.
 
+## Lightweight Table Pattern (Finder-style)
+
+**Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use raw `Table`/`TableRow`/`TableCell` with these overrides:
+
+- Header: `bg-transparent h-8 px-3 text-xs font-medium text-muted-foreground border-b border-border` (override default `bg-table-header h-12 px-4 font-semibold`)
+- Cells: `px-3 py-2` (tighter than default `px-4 py-3`)
+- Header row: add `hover:bg-transparent` to prevent hover highlight
+- Zebra striping is built in: `TableRow` has `even:bg-muted/50`
+- No card wrapper — sits directly on `bg-background`
+- Clickable rows: put a `<Link>` in the title cell, not `onClick` on the row
+
+## Button Intent
+
+**Use button variants by intent, not just hierarchy.**
+- `default` (primary, navy fill) — routine actions: Save, Close, generic Submit. One primary CTA per view.
+- `success` (green fill) — high-stakes positive confirmations: Publish, Approve, Submit Leave Request. Use when the action has a meaningful positive outcome beyond "OK".
+- `destructive` (red fill) — irreversible or high-impact negative actions: Delete, Remove, Unlink. Always behind a confirmation dialog.
+- `outline` + `bg-card` — secondary navigation on grey `bg-background` pages: Bookmarks, Drafts, filter controls. Without `bg-card`, outline buttons are invisible on grey (the variant uses `bg-background` as fill).
+- `ghost` — utility actions that should recede: Settings cog, kebab triggers, toolbar icons.
+- `action` (pink fill) — reserved for special brand actions.
+
+**Destructive items in dropdown menus** use `className="text-destructive focus:text-destructive"` — red text, not a variant. The icon inherits the red colour from the parent text class.
+
 ## Tiptap / Editor Patterns
 
 **`@tiptap/extension-table` uses named exports, not default exports.** `import { Table, TableRow, TableCell, TableHeader }`.
