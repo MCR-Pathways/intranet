@@ -40,9 +40,9 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 ## Lightweight Table Pattern (Finder-style)
 
-**Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use raw `Table`/`TableRow`/`TableCell` with these overrides:
+**Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use `Table`/`TableHeader`/`TableHead`/`TableBody`/`TableRow`/`TableCell` with these overrides. This is an intentional exception to the card-wrapped, sticky-header DataTable rules above — lightweight tables sit directly on the page with minimal chrome.
 
-- Header: `bg-transparent h-8 px-3 text-xs font-medium text-muted-foreground border-b border-border` (override default `bg-table-header h-12 px-4 font-semibold`)
+- Header: `bg-background h-8 px-3 text-xs font-medium text-muted-foreground border-b border-border` on `TableHead` (override default `bg-table-header h-12 px-4 font-semibold`). Use `bg-background` not `bg-transparent` so content doesn't bleed through if the table is in a scrollable container.
 - Cells: `px-3 py-2` (tighter than default `px-4 py-3`)
 - Header row: add `hover:bg-transparent` to prevent hover highlight
 - Zebra striping is built in: `TableRow` has `even:bg-muted/50`
