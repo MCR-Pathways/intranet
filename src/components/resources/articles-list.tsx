@@ -16,6 +16,7 @@ interface ArticlesListProps {
   categoryId: string;
   categorySlug: string;
   canEdit: boolean;
+  bookmarkedIds?: Set<string>;
 }
 
 export function ArticlesList({
@@ -23,6 +24,7 @@ export function ArticlesList({
   categoryId,
   categorySlug,
   canEdit,
+  bookmarkedIds = new Set(),
 }: ArticlesListProps) {
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ArticleWithAuthor | null>(
@@ -82,6 +84,7 @@ export function ArticlesList({
               article={article}
               categorySlug={categorySlug}
               canEdit={canEdit}
+              isBookmarked={bookmarkedIds.has(article.id)}
               onDelete={() => setDeleteTarget(article)}
               onMove={() => setMoveTarget(article)}
             />

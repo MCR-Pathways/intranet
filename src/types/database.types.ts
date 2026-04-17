@@ -2784,6 +2784,35 @@ export type Database = {
           },
         ]
       }
+      resource_bookmarks: {
+        Row: {
+          id: string
+          user_id: string
+          article_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          article_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          article_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_bookmarks_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "resource_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_articles: {
         Row: {
           author_id: string
@@ -2797,12 +2826,10 @@ export type Database = {
           deleted_by: string | null
           editing_at: string | null
           editing_by: string | null
-          featured_sort_order: number
           google_doc_id: string | null
           google_doc_url: string | null
           google_watch_resource_id: string | null
           id: string
-          is_featured: boolean
           last_published_at: string | null
           last_synced_at: string | null
           published_at: string | null
@@ -2825,12 +2852,10 @@ export type Database = {
           deleted_by?: string | null
           editing_at?: string | null
           editing_by?: string | null
-          featured_sort_order?: number
           google_doc_id?: string | null
           google_doc_url?: string | null
           google_watch_resource_id?: string | null
           id?: string
-          is_featured?: boolean
           last_published_at?: string | null
           last_synced_at?: string | null
           published_at?: string | null
@@ -2853,12 +2878,10 @@ export type Database = {
           deleted_by?: string | null
           editing_at?: string | null
           editing_by?: string | null
-          featured_sort_order?: number
           google_doc_id?: string | null
           google_doc_url?: string | null
           google_watch_resource_id?: string | null
           id?: string
-          is_featured?: boolean
           last_published_at?: string | null
           last_synced_at?: string | null
           published_at?: string | null

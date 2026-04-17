@@ -9,6 +9,7 @@ import {
   fetchGroupedSubcategoryArticles,
   fetchCategoryArticlesWithClient,
   fetchDraftCount,
+  fetchUserBookmarkIds,
 } from "../actions";
 import { CategoryContent } from "@/components/resources/category-content";
 
@@ -40,14 +41,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category, ancestors } = result;
   const slugPath = slug.join("/");
 
-  // Fetch grouped subcategory articles, direct articles, and draft count in parallel
-  const [subcategoryGroups, { articles: directArticles }, draftCount] =
+  // Fetch grouped subcategory articles, direct articles, draft count, and bookmarks in parallel
+  const [subcategoryGroups, { articles: directArticles }, draftCount, bookmarkedIds] =
     await Promise.all([
       fetchGroupedSubcategoryArticles(supabase, category.id, canViewDrafts),
       fetchCategoryArticlesWithClient(supabase, category.slug, canViewDrafts),
-      // Draft count follows the canViewDrafts policy (content-editor only,
-      // not HR admin).
       canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
+      fetchUserBookmarkIds(supabase, user.id),
     ]);
 
   return (
@@ -59,6 +59,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       directArticles={directArticles}
       canEdit={canEdit}
       draftCount={draftCount}
+      bookmarkedIds={bookmarkedIds}
     />
   );
 }

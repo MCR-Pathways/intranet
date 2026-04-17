@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
+import { BookmarkToggle } from "./bookmark-toggle";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
 
 // ─── Dynamic imports for component pages ────────────────────────────────────
@@ -35,6 +36,7 @@ interface ComponentArticleViewProps {
   article: ArticleWithAuthor;
   category: ResourceCategory;
   parentCategory: { name: string; slug: string } | null;
+  isBookmarked?: boolean;
   componentData: Record<string, unknown>;
 }
 
@@ -42,6 +44,7 @@ export function ComponentArticleView({
   article,
   category,
   parentCategory,
+  isBookmarked = false,
   componentData,
 }: ComponentArticleViewProps) {
   const Component = article.component_name
@@ -50,11 +53,14 @@ export function ComponentArticleView({
 
   return (
     <div className="space-y-5">
-      <ArticleBreadcrumb
-        category={category}
-        parentCategory={parentCategory}
-        title={article.title}
-      />
+      <div className="flex items-center justify-between gap-4">
+        <ArticleBreadcrumb
+          category={category}
+          parentCategory={parentCategory}
+          title={article.title}
+        />
+        <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+      </div>
 
       {/* Component content */}
       {Component ? (

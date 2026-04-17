@@ -945,6 +945,106 @@ export async function deleteArticle(
   return { success: true };
 }
 
+// ─── Bookmarks ──────────────────────────────────────────────────────────────
+
+export async function toggleBookmark(
+  articleId: string
+): Promise<{ success: boolean; bookmarked: boolean; error?: string }> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) return { success: false, bookmarked: false, error: "Not authenticated" };
+
+  const { data: article } = await supabase
+    .from("resource_articles")
+    .select("id, status")
+    .eq("id", articleId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!article) {
+    return { success: false, bookmarked: false, error: "Article not found" };
+  }
+
+  if (article.status !== "published") {
+    return { success: false, bookmarked: false, error: "Only published articles can be bookmarked" };
+  }
+
+  const { data: existing } = await supabase
+    .from("resource_bookmarks")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("article_id", articleId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("resource_bookmarks")
+      .delete()
+      .eq("id", existing.id);
+
+    if (error) {
+      return { success: false, bookmarked: true, error: "Failed to remove bookmark" };
+    }
+
+    revalidate();
+    return { success: true, bookmarked: false };
+  }
+
+  const { error } = await supabase
+    .from("resource_bookmarks")
+    .insert({ user_id: user.id, article_id: articleId });
+
+  if (error) {
+    return { success: false, bookmarked: false, error: "Failed to add bookmark" };
+  }
+
+  revalidate();
+  return { success: true, bookmarked: true };
+}
+
+export async function fetchBookmarkedArticles(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("resource_bookmarks")
+    .select(
+      "article_id, resource_articles!inner(id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:parent_id(name)))"
+    )
+    .eq("user_id", userId)
+    .eq("resource_articles.status", "published")
+    .is("resource_articles.deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    const article = row.resource_articles as Record<string, unknown>;
+    const cat = article.category as { name: string; slug: string; parent: { name: string } | null } | null;
+    return {
+      id: article.id as string,
+      title: article.title as string,
+      slug: article.slug as string,
+      updated_at: article.updated_at as string,
+      category_name: cat?.name ?? "",
+      category_slug: cat?.slug ?? "",
+      parent_category_name: cat?.parent?.name ?? null,
+    };
+  });
+}
+
+export async function fetchUserBookmarkIds(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("resource_bookmarks")
+    .select("article_id")
+    .eq("user_id", userId);
+
+  if (!data) return new Set();
+  return new Set(data.map((row) => row.article_id));
+}
+
 // ─── Move article between categories ─────────────────────────────────────────
 
 export async function moveArticle(
