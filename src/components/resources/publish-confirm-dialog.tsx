@@ -49,7 +49,11 @@ export function PublishConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={disabled}>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={disabled}
+            className={isPublish ? "bg-success text-success-foreground shadow-sm hover:bg-success/90" : undefined}
+          >
             {isPublish ? "Publish" : "Unpublish"}
           </AlertDialogAction>
         </AlertDialogFooter>

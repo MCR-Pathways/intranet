@@ -37,6 +37,8 @@
   --muted-foreground: #6b7280;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-foreground: #ffffff;
   --border: #e5e7eb;
   --input: #e5e7eb;
   --ring: var(--mcr-dark-blue);
@@ -79,6 +81,8 @@
   --muted-foreground: hsl(210, 20%, 60%);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-foreground: #ffffff;
   --border: hsl(210, 50%, 20%);
   --input: hsl(210, 50%, 20%);
   --ring: var(--mcr-light-blue);
@@ -114,6 +118,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

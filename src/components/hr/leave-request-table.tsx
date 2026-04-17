@@ -152,7 +152,7 @@ function LeaveRowActions({
       {canDecide && (
         <>
           <Button
-            variant="default"
+            variant="success"
             size="sm"
             disabled={isPending}
             onClick={() => onApprove(request.id)}
