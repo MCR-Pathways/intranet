@@ -1008,31 +1008,28 @@ export async function fetchBookmarkedArticles(
   const { data, error } = await supabase
     .from("resource_bookmarks")
     .select(
-      "article_id, resource_articles!article_id(id, title, slug, updated_at, status, deleted_at, category:resource_categories!category_id(name, slug, parent:parent_id(name)))"
+      "article_id, resource_articles!inner(id, title, slug, updated_at, category:resource_categories!category_id(name, slug, parent:parent_id(name)))"
     )
     .eq("user_id", userId)
+    .eq("resource_articles.status", "published")
+    .is("resource_articles.deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
 
-  return data
-    .filter((row: Record<string, unknown>) => {
-      const article = row.resource_articles as Record<string, unknown> | null;
-      return article && article.status === "published" && !article.deleted_at;
-    })
-    .map((row: Record<string, unknown>) => {
-      const article = row.resource_articles as Record<string, unknown>;
-      const cat = article.category as { name: string; slug: string; parent: { name: string } | null } | null;
-      return {
-        id: article.id as string,
-        title: article.title as string,
-        slug: article.slug as string,
-        updated_at: article.updated_at as string,
-        category_name: cat?.name ?? "",
-        category_slug: cat?.slug ?? "",
-        parent_category_name: cat?.parent?.name ?? null,
-      };
-    });
+  return data.map((row: Record<string, unknown>) => {
+    const article = row.resource_articles as Record<string, unknown>;
+    const cat = article.category as { name: string; slug: string; parent: { name: string } | null } | null;
+    return {
+      id: article.id as string,
+      title: article.title as string,
+      slug: article.slug as string,
+      updated_at: article.updated_at as string,
+      category_name: cat?.name ?? "",
+      category_slug: cat?.slug ?? "",
+      parent_category_name: cat?.parent?.name ?? null,
+    };
+  });
 }
 
 export async function fetchUserBookmarkIds(
@@ -1045,7 +1042,7 @@ export async function fetchUserBookmarkIds(
     .eq("user_id", userId);
 
   if (!data) return new Set();
-  return new Set(data.map((row: { article_id: string }) => row.article_id));
+  return new Set(data.map((row) => row.article_id));
 }
 
 // ─── Move article between categories ─────────────────────────────────────────

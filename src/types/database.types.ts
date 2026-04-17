@@ -2826,12 +2826,10 @@ export type Database = {
           deleted_by: string | null
           editing_at: string | null
           editing_by: string | null
-          featured_sort_order: number
           google_doc_id: string | null
           google_doc_url: string | null
           google_watch_resource_id: string | null
           id: string
-          is_featured: boolean
           last_published_at: string | null
           last_synced_at: string | null
           published_at: string | null
@@ -2854,12 +2852,10 @@ export type Database = {
           deleted_by?: string | null
           editing_at?: string | null
           editing_by?: string | null
-          featured_sort_order?: number
           google_doc_id?: string | null
           google_doc_url?: string | null
           google_watch_resource_id?: string | null
           id?: string
-          is_featured?: boolean
           last_published_at?: string | null
           last_synced_at?: string | null
           published_at?: string | null
@@ -2882,12 +2878,10 @@ export type Database = {
           deleted_by?: string | null
           editing_at?: string | null
           editing_by?: string | null
-          featured_sort_order?: number
           google_doc_id?: string | null
           google_doc_url?: string | null
           google_watch_resource_id?: string | null
           id?: string
-          is_featured?: boolean
           last_published_at?: string | null
           last_synced_at?: string | null
           published_at?: string | null
