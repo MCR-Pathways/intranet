@@ -6,7 +6,7 @@ import { Folder, FolderOpen } from "lucide-react";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 import { GroupedIndex } from "./grouped-index";
 import { ArticlesList } from "./articles-list";
-import { EditorHeaderActions } from "./editor-header-actions";
+import { ResourceHeaderActions } from "./resource-header-actions";
 import type {
   ResourceCategory,
   CategoryWithCount,
@@ -93,7 +93,7 @@ export function CategoryContent({
             )}
           </div>
         </div>
-        <EditorHeaderActions
+        <ResourceHeaderActions
           canEdit={canEdit}
           draftCount={draftCount}
           defaultCategoryId={category.id}

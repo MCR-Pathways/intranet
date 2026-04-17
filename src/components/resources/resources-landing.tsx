@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CategoryGrid } from "./category-grid";
-import { EditorHeaderActions } from "./editor-header-actions";
+import { ResourceHeaderActions } from "./resource-header-actions";
 import { formatDate } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { CategoryTreeNode } from "@/types/database.types";
 
 interface RecentArticle {
@@ -18,19 +26,8 @@ interface RecentArticle {
   parent_category_name: string | null;
 }
 
-interface BookmarkedArticle {
-  id: string;
-  title: string;
-  slug: string;
-  updated_at: string;
-  category_name: string;
-  category_slug: string;
-  parent_category_name: string | null;
-}
-
 interface ResourcesLandingProps {
   recentArticles: RecentArticle[];
-  bookmarkedArticles: BookmarkedArticle[];
   categories: CategoryTreeNode[];
   canEdit: boolean;
   draftCount: number;
@@ -42,19 +39,18 @@ function openGlobalSearch() {
 
 export function ResourcesLanding({
   recentArticles,
-  bookmarkedArticles,
   categories,
   canEdit,
   draftCount,
 }: ResourcesLandingProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <PageHeader
           title="Resources"
           subtitle="Policies, procedures, and organisational documents"
         />
-        <EditorHeaderActions canEdit={canEdit} draftCount={draftCount} />
+        <ResourceHeaderActions canEdit={canEdit} draftCount={draftCount} />
       </div>
 
       <button
@@ -74,45 +70,6 @@ export function ResourcesLanding({
         </kbd>
       </button>
 
-      {/* My Bookmarks — personal saved articles */}
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-          My Bookmarks
-        </h2>
-        {bookmarkedArticles.length > 0 ? (
-          <div className="space-y-0.5">
-            {bookmarkedArticles.map((article) => {
-              const categoryPath = article.parent_category_name
-                ? `${article.parent_category_name} / ${article.category_name}`
-                : article.category_name;
-
-              return (
-                <Link
-                  key={article.id}
-                  href={`/resources/article/${article.slug}`}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted/50 group"
-                >
-                  <span className="font-medium truncate group-hover:text-foreground">
-                    {article.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[200px] hidden sm:block">
-                    {categoryPath}
-                  </span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {formatDate(new Date(article.updated_at))}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground/60 px-2 py-3">
-            <Bookmark className="h-4 w-4" />
-            Save articles you come back to often. Tap the bookmark icon on any article to add it here.
-          </p>
-        )}
-      </section>
-
       {/* Categories — the primary browsing structure */}
       <CategoryGrid
         categories={categories}
@@ -124,37 +81,53 @@ export function ResourcesLanding({
         }
       />
 
-      {/* Recently Updated — compact Finder-style list */}
+      {/* Recently Updated — Finder-style zebra table */}
       {recentArticles.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Recently Updated
           </h2>
-          <div className="space-y-0.5">
-            {recentArticles.map((article) => {
-              const categoryPath = article.parent_category_name
-                ? `${article.parent_category_name} / ${article.category_name}`
-                : article.category_name;
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border">
+                  Title
+                </TableHead>
+                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border hidden sm:table-cell">
+                  Category
+                </TableHead>
+                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border text-right">
+                  Updated
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentArticles.map((article) => {
+                const categoryPath = article.parent_category_name
+                  ? `${article.parent_category_name} / ${article.category_name}`
+                  : article.category_name;
 
-              return (
-                <Link
-                  key={article.id}
-                  href={`/resources/article/${article.slug}`}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted/50 group"
-                >
-                  <span className="font-medium truncate group-hover:text-foreground">
-                    {article.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[200px] hidden sm:block">
-                    {categoryPath}
-                  </span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {formatDate(new Date(article.updated_at))}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+                return (
+                  <TableRow key={article.id}>
+                    <TableCell className="px-3 py-2 font-medium">
+                      <Link
+                        href={`/resources/article/${article.slug}`}
+                        className="hover:underline underline-offset-4"
+                      >
+                        {article.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground hidden sm:table-cell">
+                      {categoryPath}
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground text-right whitespace-nowrap">
+                      {formatDate(new Date(article.updated_at))}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </section>
       )}
     </div>
