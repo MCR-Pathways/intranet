@@ -283,6 +283,16 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Use specific sr-only text on row action buttons.** Include the entity name: `Actions for {dept.name}`, not generic "Actions".
 
+### UI Component Patterns
+
+**Use the table-04 pattern for lightweight tables.** Wrap in `<div className="w-full overflow-hidden rounded-md border">`, use default `TableHead`/`TableCell` styling (no overrides), add `hover:bg-background odd:bg-background` on header `TableRow` to reset inherited striping. Full DataTable (TanStack) for data management; table-04 for activity feeds, bookmarks, and recent items. See `src/lib/CLAUDE.md` for the full code example.
+
+**Use button variants by intent.** `default` (navy) for routine actions, `success` (green) for Publish/Approve, `destructive` (red) for Delete/Remove, `outline` + `bg-card` for secondary navigation on grey pages, `ghost` for utility (Settings, kebabs). All buttons have `active:scale-95` tap animation built into the base component.
+
+**Inline delete triggers in tables use `variant="ghost"`** — not destructive. The destructive styling goes on the confirmation button inside the AlertDialog. Keeps table rows clean.
+
+**Add `bg-card` to outline buttons on grey `bg-background` pages.** The outline variant uses `bg-background` as fill, making it invisible on grey. `className="bg-card"` pops as white.
+
 ### Server Actions & Middleware
 
 **Middleware cannot safely block server actions.** Returning non-200 from Next.js middleware during a server action throws E394 ("An unexpected response was received from the server"), which propagates to the Error Boundary and replaces the page. Rate limiting or blocking server actions must happen inside the action (e.g., in auth helpers), not in the proxy.

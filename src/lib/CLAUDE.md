@@ -46,7 +46,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 <div className="w-full overflow-hidden rounded-md border">
   <Table>
     <TableHeader>
-      <TableRow>
+      <TableRow className="hover:bg-background odd:bg-background">
         <TableHead>Title</TableHead>
         <TableHead>Category</TableHead>
       </TableRow>
@@ -66,7 +66,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 - Wrapper: `overflow-hidden rounded-md border` — clips table corners cleanly (border-radius on `<table>` is unreliable)
 - Use default `TableHead` styling (no overrides) — `bg-table-header`, `h-12`, `font-semibold`
 - Use default `TableCell` styling (no overrides) — `px-4 py-3`
-- Zebra striping is built in: `TableRow` has `odd:bg-muted/50`
+- Zebra striping is built in: `TableRow` has `odd:bg-muted/50`. Header rows need `hover:bg-background odd:bg-background` to reset the inherited stripe and hover
 - Clickable rows: put a `<Link>` in the title cell, not `onClick` on the row
 
 ## Button Intent

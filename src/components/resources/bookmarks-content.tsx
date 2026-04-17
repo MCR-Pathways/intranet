@@ -47,7 +47,7 @@ export function BookmarksContent({ articles }: BookmarksContentProps) {
         <div className="w-full overflow-hidden rounded-md border">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-background odd:bg-background">
                 <TableHead>Title</TableHead>
                 <TableHead className="hidden sm:table-cell">Category</TableHead>
                 <TableHead className="text-right">Updated</TableHead>
