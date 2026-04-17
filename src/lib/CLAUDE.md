@@ -81,6 +81,10 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Destructive items in dropdown menus** use `className="text-destructive focus:text-destructive"` — red text, not a variant. The icon inherits the red colour from the parent text class.
 
+**Inline delete triggers in tables** (e.g. Trash2 icon in a table row) use `variant="ghost"` — not destructive. The destructive styling goes on the confirmation button inside the AlertDialog, not the trigger. Keeps table rows visually clean.
+
+**All buttons have tap animation.** `active:scale-95` is in the base Button component. Every button shrinks slightly on press for tactile feedback. Works automatically — no per-button class needed. Disabled buttons don't scale (`disabled:pointer-events-none` prevents the active state).
+
 ## Tiptap / Editor Patterns
 
 **`@tiptap/extension-table` uses named exports, not default exports.** `import { Table, TableRow, TableCell, TableHeader }`.
