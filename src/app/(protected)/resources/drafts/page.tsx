@@ -7,6 +7,14 @@ import {
 } from "@/lib/auth";
 import { fetchDraftArticles } from "../actions";
 import { formatDate } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function DraftsPage() {
   const { supabase, user, profile } = await getCurrentUser();
@@ -41,7 +49,7 @@ export default async function DraftsPage() {
       </div>
 
       {drafts.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card shadow-sm px-6 py-12 text-center">
+        <div className="bg-card rounded-xl border border-border shadow-sm px-6 py-12 text-center">
           <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm text-foreground font-medium">No drafts</p>
           <p className="text-sm text-muted-foreground mt-1">
@@ -49,51 +57,52 @@ export default async function DraftsPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-          <div className="grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            <div className="col-span-5">Title</div>
-            <div className="col-span-3">Category</div>
-            <div className="col-span-2">Author</div>
-            <div className="col-span-2">Last edited</div>
-          </div>
-          <ul>
-            {drafts.map((d, i) => {
-              const categoryPath = d.parent_category_name
-                ? `${d.parent_category_name} / ${d.category_name}`
-                : d.category_name;
-              return (
-                <li
-                  key={d.id}
-                  className={
-                    i % 2 === 1 ? "bg-muted/20" : undefined
-                  }
-                >
-                  <Link
-                    href={`/resources/article/${d.slug}`}
-                    className="grid grid-cols-12 gap-3 px-4 py-3 items-center text-sm hover:bg-muted transition-colors"
-                  >
-                    <div className="col-span-5 flex items-center gap-2 min-w-0">
-                      <FileEdit className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="font-medium truncate">{d.title}</span>
-                    </div>
-                    <div className="col-span-3 text-muted-foreground truncate">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-background odd:bg-background">
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden sm:table-cell">Category</TableHead>
+                <TableHead className="hidden md:table-cell">Author</TableHead>
+                <TableHead className="text-right">Last edited</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drafts.map((d) => {
+                const categoryPath = d.parent_category_name
+                  ? `${d.parent_category_name} / ${d.category_name}`
+                  : d.category_name;
+                return (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/resources/article/${d.slug}`}
+                        className="inline-flex items-center gap-2 hover:underline underline-offset-4"
+                      >
+                        <FileEdit className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{d.title}</span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden sm:table-cell">
                       {categoryPath}
-                    </div>
-                    <div className="col-span-2 text-muted-foreground truncate">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">
                       {d.author_name ?? "—"}
-                    </div>
-                    <div className="col-span-2 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-right whitespace-nowrap">
                       {formatDate(new Date(d.updated_at))}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
           {drafts.length === 100 && (
-            <p className="px-4 py-2.5 text-xs text-muted-foreground border-t border-border bg-muted/30">
-              Showing 100 most recent drafts — older drafts not displayed.
-            </p>
+            <div className="border-t border-border">
+              <p className="px-4 py-3 text-xs text-muted-foreground">
+                Showing 100 most recent drafts — older drafts not displayed.
+              </p>
+            </div>
           )}
         </div>
       )}

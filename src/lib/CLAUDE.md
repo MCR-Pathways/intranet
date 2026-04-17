@@ -24,7 +24,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Use `border-separate border-spacing-0` with sticky table headers.** CSS `border-collapse: collapse` causes glitches with `position: sticky` on `<th>`.
 
-**Use card-style table wrappers.** `bg-card shadow-md rounded-xl overflow-clip` instead of `rounded-md border`. Apply to ALL content surfaces on grey backgrounds, not just tables.
+**Use card-style table wrappers.** `bg-card rounded-xl border border-border shadow-sm overflow-clip`. Apply to ALL content surfaces on grey backgrounds, not just tables.
 
 **Add `font-semibold` to `DataTableColumnHeader`.** Override ghost Button's `font-medium` default for consistent headers.
 
@@ -38,12 +38,12 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Evaluate each table column's value before migrating.** Fold sparse data into related cells to reduce visual noise.
 
-## Lightweight Table Pattern (table-04 / rounded striped)
+## Lightweight Table Pattern
 
-**Use the table-04 pattern for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use raw Shadcn Table primitives inside a rounded wrapper. Based on `shadcnui-blocks.com/r/table-04.json`.
+**Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use the same visual wrapper as DataTable.
 
 ```tsx
-<div className="w-full overflow-hidden rounded-md border">
+<div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
   <Table>
     <TableHeader>
       <TableRow className="hover:bg-background odd:bg-background">
@@ -63,7 +63,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 </div>
 ```
 
-- Wrapper: `overflow-hidden rounded-md border` — clips table corners cleanly (border-radius on `<table>` is unreliable)
+- Wrapper: `bg-card rounded-xl border border-border shadow-sm overflow-clip` — same as the DataTable component. Crisp border edge with subtle shadow
 - Use default `TableHead` styling (no overrides) — `bg-table-header`, `h-12`, `font-semibold`
 - Use default `TableCell` styling (no overrides) — `px-4 py-3`
 - Zebra striping is built in: `TableRow` has `odd:bg-muted/50`. Header rows need `hover:bg-background odd:bg-background` to reset the inherited stripe and hover

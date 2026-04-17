@@ -3,6 +3,15 @@
 import { useState, useMemo, useTransition, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
@@ -128,20 +137,20 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
       </div>
 
       {/* Grid table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm border-collapse">
-          <thead className="sticky top-0 z-10 bg-background">
-            <tr>
-              <th className="text-left px-3 py-2 border-b min-w-[180px] sticky left-0 z-20 bg-background">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-background odd:bg-background">
+              <TableHead className="min-w-[180px] sticky left-0 z-20 border-r border-border">
+                <span className="text-xs font-medium uppercase tracking-wide">
                   Team Member
                 </span>
-              </th>
+              </TableHead>
               {weekDates.map((date, i) => (
-                <th
+                <TableHead
                   key={date}
                   className={cn(
-                    "text-center px-2 py-2 border-b min-w-[100px]",
+                    "text-center min-w-[100px]",
                     isToday(date) && "bg-primary/5"
                   )}
                 >
@@ -164,18 +173,15 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                       TODAY
                     </span>
                   )}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {memberSchedules.map((member) => (
-              <tr
-                key={member.id}
-                className="border-b hover:bg-muted/30 transition-colors"
-              >
+              <TableRow key={member.id} className="group/row">
                 {/* Name cell (sticky left) */}
-                <td className="sticky left-0 z-5 bg-background px-3 py-2.5 border-r">
+                <TableCell className="sticky left-0 z-5 bg-card group-odd/row:bg-muted/50 group-hover/row:bg-muted transition-colors border-r border-border">
                   <div className="flex items-center gap-2">
                     {member.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -200,7 +206,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                       )}
                     </div>
                   </div>
-                </td>
+                </TableCell>
 
                 {/* Day cells */}
                 {member.daySchedules.map((schedule) => {
@@ -212,10 +218,10 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                   const isEmpty = !entry && !hasSplitDay;
 
                   return (
-                    <td
+                    <TableCell
                       key={schedule.date}
                       className={cn(
-                        "text-center px-2 py-2",
+                        "text-center",
                         isToday(schedule.date) && "bg-primary/5"
                       )}
                     >
@@ -261,24 +267,24 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                           )}
                         </div>
                       )}
-                    </td>
+                    </TableCell>
                   );
                 })}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
+          </TableBody>
 
           {/* Summary footer */}
-          <tfoot>
-            <tr className="border-t-2">
-              <td className="sticky left-0 z-5 bg-background px-3 py-2 text-xs font-medium text-muted-foreground border-r">
+          <TableFooter>
+            <TableRow>
+              <TableCell className="sticky left-0 z-5 bg-muted/50 border-r border-border text-xs font-medium text-muted-foreground">
                 Office count
-              </td>
+              </TableCell>
               {officeCounts.map((count, i) => (
-                <td
+                <TableCell
                   key={weekDates[i]}
                   className={cn(
-                    "text-center px-2 py-2 text-xs font-medium",
+                    "text-center text-xs font-medium",
                     isToday(weekDates[i]) && "bg-primary/5",
                     count < OFFICE_HEADCOUNT_TARGET
                       ? "text-amber-600 font-semibold"
@@ -286,11 +292,11 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                   )}
                 >
                   {count}/{members.length} in office
-                </td>
+                </TableCell>
               ))}
-            </tr>
-          </tfoot>
-        </table>
+            </TableRow>
+          </TableFooter>
+        </Table>
       </div>
     </div>
   );
