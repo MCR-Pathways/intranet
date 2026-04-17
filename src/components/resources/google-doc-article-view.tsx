@@ -204,7 +204,7 @@ export function GoogleDocArticleView({
     });
 
     return { parsedContent: content, headings: extractedHeadings };
-  }, [article.synced_html]);
+  }, [article.synced_html, crossLinkMap]);
 
   // ─── Scroll-spy: highlight active heading in TOC ───────────────────────────
 

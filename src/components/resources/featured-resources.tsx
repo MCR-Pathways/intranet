@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import Link from "next/link";
 import { cn, formatDate } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
@@ -38,7 +39,7 @@ export function FeaturedResources({ articles, canEdit = false }: FeaturedResourc
                   colour.fg
                 )}
               >
-                <Icon className="h-4 w-4" />
+                {createElement(Icon, { className: "h-4 w-4" })}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">{article.title}</p>

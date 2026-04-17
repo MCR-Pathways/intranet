@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { createElement, Fragment } from "react";
 import { isValidHttpUrl, linkifyText, proxyImageUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { isValidHexColour } from "@/lib/validation";
@@ -276,7 +276,7 @@ function RenderNode({
           className={cn("my-4 rounded-lg border-l-4 p-4", style.bg, style.border)}
         >
           <div className="flex gap-3">
-            <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+            {createElement(Icon, { className: "h-5 w-5 shrink-0 mt-0.5" })}
             <div className="min-w-0 flex-1">
               {node.content?.map((child, i) => (
                 <RenderNode key={i} node={child} />
