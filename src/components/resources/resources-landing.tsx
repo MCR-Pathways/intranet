@@ -87,47 +87,43 @@ export function ResourcesLanding({
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Recently Updated
           </h2>
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border">
-                  Title
-                </TableHead>
-                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border hidden sm:table-cell">
-                  Category
-                </TableHead>
-                <TableHead className="h-8 px-3 text-xs font-medium text-muted-foreground bg-transparent border-b border-border text-right">
-                  Updated
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentArticles.map((article) => {
-                const categoryPath = article.parent_category_name
-                  ? `${article.parent_category_name} / ${article.category_name}`
-                  : article.category_name;
+          <div className="w-full overflow-hidden rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-background odd:bg-background">
+                  <TableHead>Title</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
+                  <TableHead className="text-right">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentArticles.map((article) => {
+                  const categoryPath = article.parent_category_name
+                    ? `${article.parent_category_name} / ${article.category_name}`
+                    : article.category_name;
 
-                return (
-                  <TableRow key={article.id}>
-                    <TableCell className="px-3 py-2 font-medium">
-                      <Link
-                        href={`/resources/article/${article.slug}`}
-                        className="hover:underline underline-offset-4"
-                      >
-                        {article.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="px-3 py-2 text-muted-foreground hidden sm:table-cell">
-                      {categoryPath}
-                    </TableCell>
-                    <TableCell className="px-3 py-2 text-muted-foreground text-right whitespace-nowrap">
-                      {formatDate(new Date(article.updated_at))}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={article.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/resources/article/${article.slug}`}
+                          className="hover:underline underline-offset-4"
+                        >
+                          {article.title}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden sm:table-cell">
+                        {categoryPath}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right whitespace-nowrap">
+                        {formatDate(new Date(article.updated_at))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </section>
       )}
     </div>
