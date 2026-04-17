@@ -345,9 +345,6 @@ export async function unpublishNativeArticle(
       .update({
         status: "draft",
         updated_at: new Date().toISOString(),
-        // Unfeature on unpublish — prevents stale MAX_FEATURED_ARTICLES count.
-        is_featured: false,
-        featured_sort_order: 0,
       })
       .eq("id", articleId)
       .eq("content_type", "native");

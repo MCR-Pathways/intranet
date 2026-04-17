@@ -495,27 +495,6 @@ describe("Intranet Resource Actions", () => {
       expect(result.success).toBe(true);
     });
 
-    it("unpublishing clears is_featured and compacts featured_sort_order", async () => {
-      // Track the actual update payload so we can assert is_featured=false.
-      let updatePayload: Record<string, unknown> | null = null;
-      mockFrom.mockImplementation(() => {
-        const c = chainable();
-        c.update.mockImplementation((payload: Record<string, unknown>) => {
-          updatePayload = payload;
-          return c;
-        });
-        c.single.mockResolvedValue({ data: { id: "art-1" }, error: null });
-        return c;
-      });
-
-      const result = await updateArticle("art-1", { status: "draft" });
-      expect(result.success).toBe(true);
-      expect(updatePayload).toMatchObject({
-        status: "draft",
-        is_featured: false,
-        featured_sort_order: 0,
-      });
-    });
 
     it("returns slug-exists message when DB update hits 23505 unique violation", async () => {
       // Simulate concurrent slug collision caught at DB level.

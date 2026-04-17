@@ -7,8 +7,6 @@ import {
   ExternalLink,
   RefreshCw,
   MoreHorizontal,
-  Star,
-  StarOff,
   FolderInput,
   Unlink,
   Loader2,
@@ -30,7 +28,6 @@ import { ArticleOutline } from "./article-outline";
 import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
-import { toggleArticleFeatured } from "@/app/(protected)/resources/actions";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDate } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
@@ -257,19 +254,6 @@ export function GoogleDocArticleView({
     });
   }
 
-  function handleToggleFeatured() {
-    startTransition(async () => {
-      const result = await toggleArticleFeatured(article.id);
-      if (result.success) {
-        toast.success(
-          article.is_featured ? "Article unfeatured" : "Article featured"
-        );
-      } else {
-        toast.error(result.error ?? "Failed to update article");
-      }
-    });
-  }
-
   function handleUnlink() {
     startTransition(async () => {
       const result = await unlinkGoogleDoc(article.id);
@@ -396,19 +380,6 @@ export function GoogleDocArticleView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleToggleFeatured}>
-                  {article.is_featured ? (
-                    <>
-                      <StarOff className="h-4 w-4" />
-                      Unfeature
-                    </>
-                  ) : (
-                    <>
-                      <Star className="h-4 w-4" />
-                      Feature
-                    </>
-                  )}
-                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
                   <FolderInput className="h-4 w-4" />
                   Move to...
@@ -433,14 +404,6 @@ export function GoogleDocArticleView({
             Updated {formatDate(updatedAt)}
             {isStale && " — may need review"}
           </span>
-          {canEdit && article.is_featured && (
-            <>
-              <span className="text-border">&middot;</span>
-              <Badge variant="secondary" className="text-[10px] py-0">
-                Featured
-              </Badge>
-            </>
-          )}
         </div>
       </div>
 

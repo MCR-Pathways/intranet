@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, FileEdit, Plus, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,33 +50,25 @@ export function EditorHeaderActions({
       {/* Order: [Drafts] left (secondary status), [Settings] middle, [+ New] right (primary). */}
       <div className="flex items-center gap-2">
         {draftCount > 0 && (
-          <Link
-            href="/resources/drafts"
-            aria-label={`${draftCount} draft${draftCount === 1 ? "" : "s"} in progress`}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
-              "hover:bg-muted hover:text-foreground hover:border-foreground/20",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              "transition-colors"
-            )}
-          >
-            <FileEdit className="h-3.5 w-3.5" />
-            <span>Drafts</span>
-            {/* Separate count chip — Material 3 nav-with-count pattern, reads cleaner than parenthetical. */}
-            <span className="inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
-              {draftCount}
-            </span>
-          </Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              href="/resources/drafts"
+              aria-label={`${draftCount} draft${draftCount === 1 ? "" : "s"} in progress`}
+            >
+              <FileEdit className="h-3.5 w-3.5" />
+              Drafts
+              <span className="inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
+                {draftCount}
+              </span>
+            </Link>
+          </Button>
         )}
 
-        <Link
-          href="/resources/settings"
-          aria-label="Settings"
-          title="Settings"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <Settings className="h-4 w-4" />
-        </Link>
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/resources/settings" aria-label="Settings" title="Settings">
+            <Settings className="h-4 w-4" />
+          </Link>
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

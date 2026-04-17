@@ -21,9 +21,7 @@ const CATEGORY_SELECT =
   "id, name, slug, description, icon, icon_colour, sort_order, parent_id, visibility, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
-  "id, category_id, title, slug, content, content_json, content_type, google_doc_id, google_doc_url, synced_html, last_synced_at, component_name, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, is_featured, featured_sort_order, visibility";
-
-const MAX_FEATURED_ARTICLES = 3;
+  "id, category_id, title, slug, content, content_json, content_type, google_doc_id, google_doc_url, synced_html, last_synced_at, component_name, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, visibility";
 
 const AUTHOR_SELECT = "id, full_name, preferred_name, avatar_url";
 
@@ -866,12 +864,6 @@ export async function updateArticle(
       if (!current?.published_at) {
         update.published_at = new Date().toISOString();
       }
-    } else if (data.status === "draft") {
-      // Unpublish must also unfeature — otherwise the article stays in
-      // is_featured=true, gets hidden by the landing-page published filter,
-      // but still counts against MAX_FEATURED_ARTICLES.
-      update.is_featured = false;
-      update.featured_sort_order = 0;
     }
   }
 
@@ -933,7 +925,6 @@ export async function deleteArticle(
     .update({
       deleted_at: new Date().toISOString(),
       deleted_by: user.id,
-      is_featured: false,
     })
     .eq("id", id)
     .is("deleted_at", null)
@@ -948,230 +939,6 @@ export async function deleteArticle(
   // removeArticleFromIndex handles errors internally)
   if (article.status === "published") {
     await removeArticleFromIndex(id);
-  }
-
-  revalidate();
-  return { success: true };
-}
-
-// ─── Featured articles ──────────────────────────────────────────────────────
-
-export type FeaturedArticle = ArticleWithAuthor & {
-  category_slug: string;
-  category_name: string;
-  category_icon: string | null;
-  category_icon_colour: string | null;
-};
-
-export async function fetchFeaturedArticles(
-  supabase: SupabaseClient
-): Promise<FeaturedArticle[]> {
-  const { data } = await supabase
-    .from("resource_articles")
-    .select(
-      `${ARTICLE_SELECT}, author:profiles!author_id(${AUTHOR_SELECT}), category:resource_categories!category_id(slug, name, icon, icon_colour)`
-    )
-    .eq("is_featured", true)
-    .is("deleted_at", null)
-    .eq("status", "published")
-    .order("featured_sort_order")
-    .limit(MAX_FEATURED_ARTICLES);
-
-  if (!data) return [];
-
-  return data.map((a: Record<string, unknown>) => {
-    const cat = a.category as { slug: string; name: string; icon: string | null; icon_colour: string | null } | null;
-    const { category: _, ...rest } = a;
-    return {
-      ...rest,
-      category_slug: cat?.slug ?? "",
-      category_name: cat?.name ?? "",
-      category_icon: cat?.icon ?? null,
-      category_icon_colour: cat?.icon_colour ?? null,
-    };
-  }) as FeaturedArticle[];
-}
-
-/** Fetch ALL featured articles (no limit) for settings management. */
-export async function fetchFeaturedArticlesAll(): Promise<
-  Array<{
-    id: string;
-    title: string;
-    slug: string;
-    featured_sort_order: number;
-    category_name: string;
-  }>
-> {
-  const { supabase, user } = await getCurrentUser();
-  if (!user) return [];
-
-  const { data } = await supabase
-    .from("resource_articles")
-    .select(
-      "id, title, slug, featured_sort_order, category:resource_categories!category_id(name)"
-    )
-    .eq("is_featured", true)
-    .is("deleted_at", null)
-    .order("featured_sort_order");
-
-  if (!data) return [];
-
-  return data.map((a: Record<string, unknown>) => {
-    const cat = a.category as { name: string } | null;
-    return {
-      id: a.id as string,
-      title: a.title as string,
-      slug: a.slug as string,
-      featured_sort_order: a.featured_sort_order as number,
-      category_name: cat?.name ?? "",
-    };
-  });
-}
-
-/** Reorder a featured article up or down by swapping sort orders. */
-export async function reorderFeaturedArticle(
-  articleId: string,
-  direction: "up" | "down"
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  // Get all featured articles ordered
-  const { data: featured } = await supabase
-    .from("resource_articles")
-    .select("id, featured_sort_order")
-    .eq("is_featured", true)
-    .is("deleted_at", null)
-    .order("featured_sort_order");
-
-  if (!featured) return { success: false, error: "Failed to load featured articles" };
-
-  const index = featured.findIndex((f) => f.id === articleId);
-  if (index === -1) return { success: false, error: "Article not found" };
-
-  const swapIndex = direction === "up" ? index - 1 : index + 1;
-  if (swapIndex < 0 || swapIndex >= featured.length) {
-    return { success: false, error: "Cannot move further" };
-  }
-
-  // Swap sort orders — sequential to avoid partial failure
-  const current = featured[index];
-  const swap = featured[swapIndex];
-
-  const { error: err1 } = await supabase
-    .from("resource_articles")
-    .update({ featured_sort_order: swap.featured_sort_order })
-    .eq("id", current.id);
-
-  if (err1) return { success: false, error: "Failed to update sort order" };
-
-  const { error: err2 } = await supabase
-    .from("resource_articles")
-    .update({ featured_sort_order: current.featured_sort_order })
-    .eq("id", swap.id);
-
-  if (err2) {
-    // Attempt rollback of first update
-    await supabase
-      .from("resource_articles")
-      .update({ featured_sort_order: current.featured_sort_order })
-      .eq("id", current.id);
-    return { success: false, error: "Failed to update sort order" };
-  }
-
-  revalidate();
-  return { success: true };
-}
-
-export async function toggleArticleFeatured(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
-  const { supabase } = await requireContentEditor();
-
-  // Get current featured state
-  const { data: article } = await supabase
-    .from("resource_articles")
-    .select("is_featured, status")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .single();
-
-  if (!article) {
-    return { success: false, error: "Article not found" };
-  }
-
-  if (article.status !== "published") {
-    return { success: false, error: "Only published articles can be featured" };
-  }
-
-  const newFeatured = !article.is_featured;
-
-  // If featuring, check limit and get sort order in parallel
-  if (newFeatured) {
-    const [countResult, maxRowResult] = await Promise.all([
-      supabase
-        .from("resource_articles")
-        .select("id", { count: "exact", head: true })
-        .eq("is_featured", true)
-        .is("deleted_at", null),
-      supabase
-        .from("resource_articles")
-        .select("featured_sort_order")
-        .eq("is_featured", true)
-        .is("deleted_at", null)
-        .order("featured_sort_order", { ascending: false })
-        .limit(1)
-        .single(),
-    ]);
-
-    if ((countResult.count ?? 0) >= MAX_FEATURED_ARTICLES) {
-      return {
-        success: false,
-        error: `Maximum of ${MAX_FEATURED_ARTICLES} featured articles allowed. Unfeature one first.`,
-      };
-    }
-
-    const nextOrder = (maxRowResult.data?.featured_sort_order ?? -1) + 1;
-
-    const { error } = await supabase
-      .from("resource_articles")
-      .update({ is_featured: true, featured_sort_order: nextOrder })
-      .eq("id", id)
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: "Failed to feature article" };
-    }
-
-    // Race condition safety: verify we haven't exceeded the limit
-    const { count: postCount } = await supabase
-      .from("resource_articles")
-      .select("id", { count: "exact", head: true })
-      .eq("is_featured", true)
-      .is("deleted_at", null);
-
-    if ((postCount ?? 0) > MAX_FEATURED_ARTICLES) {
-      // Another admin featured an article simultaneously — roll back
-      await supabase
-        .from("resource_articles")
-        .update({ is_featured: false, featured_sort_order: 0 })
-        .eq("id", id);
-      return {
-        success: false,
-        error: `Maximum of ${MAX_FEATURED_ARTICLES} featured articles allowed. Unfeature one first.`,
-      };
-    }
-  } else {
-    const { error } = await supabase
-      .from("resource_articles")
-      .update({ is_featured: false, featured_sort_order: 0 })
-      .eq("id", id)
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: "Failed to unfeature article" };
-    }
   }
 
   revalidate();
