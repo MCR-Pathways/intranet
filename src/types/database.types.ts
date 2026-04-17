@@ -2784,6 +2784,35 @@ export type Database = {
           },
         ]
       }
+      resource_bookmarks: {
+        Row: {
+          id: string
+          user_id: string
+          article_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          article_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          article_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_bookmarks_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "resource_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_articles: {
         Row: {
           author_id: string

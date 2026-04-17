@@ -25,6 +25,7 @@ import { PublishConfirmDialog } from "./publish-confirm-dialog";
 import { cn, formatDate } from "@/lib/utils";
 import { getExcerpt } from "@/lib/resource-utils";
 import { updateArticle } from "@/app/(protected)/resources/actions";
+import { BookmarkToggle } from "./bookmark-toggle";
 import { toast } from "sonner";
 import type { ArticleWithAuthor } from "@/types/database.types";
 
@@ -32,6 +33,7 @@ interface ArticleListItemProps {
   article: ArticleWithAuthor;
   categorySlug: string;
   canEdit: boolean;
+  isBookmarked?: boolean;
   onDelete?: () => void;
   onMove?: () => void;
   onUnlink?: () => void;
@@ -47,6 +49,7 @@ export function ArticleListItem({
   article,
   categorySlug: _categorySlug,
   canEdit,
+  isBookmarked = false,
   onDelete,
   onMove,
   onUnlink,
@@ -119,6 +122,12 @@ export function ArticleListItem({
             {isPublished ? "Updated" : "Draft · edited"} {formatDate(displayDate)}
           </div>
         </div>
+
+        {isPublished && (
+          <div className="relative z-10" onClick={(e) => e.preventDefault()}>
+            <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+          </div>
+        )}
 
         {canEdit && (
           <div className="relative z-10">

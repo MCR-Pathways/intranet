@@ -31,6 +31,7 @@ import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDate } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
+import { BookmarkToggle } from "./bookmark-toggle";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
 import { createSlugDeduplicator, ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES, APP_ORIGIN } from "@/lib/article-constants";
@@ -49,6 +50,7 @@ interface GoogleDocArticleViewProps {
   category: ResourceCategory;
   parentCategory: { name: string; slug: string } | null;
   canEdit: boolean;
+  isBookmarked?: boolean;
   siblings?: SiblingArticle[];
   categoryPath?: string;
   serverNow: number;
@@ -60,6 +62,7 @@ export function GoogleDocArticleView({
   category,
   parentCategory,
   canEdit,
+  isBookmarked = false,
   siblings = [],
   categoryPath = "",
   serverNow,
@@ -336,6 +339,9 @@ export function GoogleDocArticleView({
             <h1 className="text-[26px] font-bold tracking-tight leading-tight">
               {article.title}
             </h1>
+            {article.status === "published" && (
+              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+            )}
             {canEdit && article.status === "draft" && (
               <Badge
                 variant="secondary"

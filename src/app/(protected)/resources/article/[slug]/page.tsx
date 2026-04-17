@@ -4,7 +4,7 @@ import {
   isHRAdminEffective,
   isContentEditorEffective,
 } from "@/lib/auth";
-import { fetchArticleBySlugOnly, fetchSiblingArticles } from "../../actions";
+import { fetchArticleBySlugOnly, fetchSiblingArticles, fetchUserBookmarkIds } from "../../actions";
 import { logger } from "@/lib/logger";
 import { COMPONENT_REGISTRY } from "@/lib/resource-components";
 import { GoogleDocArticleView } from "@/components/resources/google-doc-article-view";
@@ -22,8 +22,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const canEdit =
     isHRAdminEffective(profile) || isContentEditorEffective(profile);
-  // Draft visibility is content-editor-only; HR admins without editor flag
-  // get 404 on a draft slug, same as readers.
   const canViewDrafts = isContentEditorEffective(profile);
 
   const { article, category, parentCategory } =
@@ -31,19 +29,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!article || !category) notFound();
 
-  // Fetch sibling articles for "More in [folder]" section
-  const siblings = await fetchSiblingArticles(supabase, category.id);
-  // Server-rendered timestamp for freshness indicator. Date.now() in an async
-  // Server Component generates a per-request value and is the intended pattern.
+  const [siblings, bookmarkIds] = await Promise.all([
+    fetchSiblingArticles(supabase, category.id),
+    fetchUserBookmarkIds(supabase, user.id),
+  ]);
+
   // eslint-disable-next-line react-hooks/purity
   const serverNow = Date.now();
   const categoryPath = parentCategory
     ? `${parentCategory.slug}/${category.slug}`
     : category.slug;
+  const isBookmarked = bookmarkIds.has(article.id);
 
-  // Google Doc articles — renders synced HTML with sync controls
   if (article.content_type === "google_doc") {
-    // Build cross-link map: google_doc_id → slug for published Google Docs
     const crossLinkMap: Record<string, string> = {};
     const { data: crossLinks, error: crossLinkError } = await supabase
       .from("resource_articles")
@@ -68,6 +66,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         category={category}
         parentCategory={parentCategory}
         canEdit={canEdit}
+        isBookmarked={isBookmarked}
         siblings={siblings}
         categoryPath={categoryPath}
         serverNow={serverNow}
@@ -76,7 +75,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     );
   }
 
-  // Component pages — renders registered React component with fetched data
   if (
     article.content_type === "component" &&
     article.component_name &&
@@ -93,18 +91,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         article={article}
         category={category}
         parentCategory={parentCategory}
+        isBookmarked={isBookmarked}
         componentData={componentData}
       />
     );
   }
 
-  // Native Plate articles (fallback for any non-google_doc, non-component type)
   return (
     <NativeArticleView
       article={article}
       category={category}
       parentCategory={parentCategory}
       canEdit={canEdit}
+      isBookmarked={isBookmarked}
       siblings={siblings}
       categoryPath={categoryPath}
       serverNow={serverNow}

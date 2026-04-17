@@ -25,6 +25,7 @@ interface GroupedIndexProps {
   parentSlugPath: string;
   parentIconColour?: string | null;
   canEdit?: boolean;
+  bookmarkedIds?: Set<string>;
 }
 
 /**
@@ -41,6 +42,7 @@ export function GroupedIndex({
   parentSlugPath,
   parentIconColour,
   canEdit = false,
+  bookmarkedIds = new Set(),
 }: GroupedIndexProps) {
   // Empty sections start collapsed to reduce noise
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -166,6 +168,7 @@ export function GroupedIndex({
                       article={article}
                       categorySlug={subcategory.slug}
                       canEdit={canEdit}
+                      isBookmarked={bookmarkedIds.has(article.id)}
                       variant="compact"
                       onDelete={() => setDeleteTarget(article)}
                       onMove={() => setMoveTarget(article)}
