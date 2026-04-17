@@ -179,9 +179,9 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           </TableHeader>
           <TableBody>
             {memberSchedules.map((member) => (
-              <TableRow key={member.id}>
+              <TableRow key={member.id} className="group/row">
                 {/* Name cell (sticky left) */}
-                <TableCell className="sticky left-0 z-5 bg-card border-r border-border">
+                <TableCell className="sticky left-0 z-5 bg-card group-odd/row:bg-muted/50 group-hover/row:bg-muted transition-colors border-r border-border">
                   <div className="flex items-center gap-2">
                     {member.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
