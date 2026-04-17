@@ -14,8 +14,6 @@ import { PlateStatic } from "platejs/static";
 import {
   MoreHorizontal,
   Pencil,
-  Star,
-  StarOff,
   FolderInput,
   Trash2,
   Eye,
@@ -36,7 +34,6 @@ import { ArticleOutline } from "./article-outline";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { DeleteResourceDialog } from "./delete-resource-dialog";
 import {
-  toggleArticleFeatured,
   deleteArticle,
 } from "@/app/(protected)/resources/actions";
 import {
@@ -160,21 +157,6 @@ export function NativeArticleView({
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
-  const handleToggleFeatured = () => {
-    startTransition(async () => {
-      const result = await toggleArticleFeatured(article.id);
-      if (result.success) {
-        setArticle((prev) => ({
-          ...prev,
-          is_featured: !prev.is_featured,
-        }));
-        toast.success(
-          article.is_featured ? "Removed from featured" : "Added to featured"
-        );
-      }
-    });
-  };
-
   const handleTogglePublish = () => {
     const isPublished = article.status === "published";
     startTransition(async () => {
@@ -277,19 +259,6 @@ export function NativeArticleView({
                     </>
                   )}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleToggleFeatured}>
-                  {article.is_featured ? (
-                    <>
-                      <StarOff className="h-4 w-4" />
-                      Unfeature
-                    </>
-                  ) : (
-                    <>
-                      <Star className="h-4 w-4" />
-                      Feature
-                    </>
-                  )}
-                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
                   <FolderInput className="h-4 w-4" />
                   Move to...
@@ -313,15 +282,6 @@ export function NativeArticleView({
             Updated {formatDate(new Date(updatedAt))}
             {isStale && " — may need review"}
           </span>
-          {canEdit && article.is_featured && (
-            <>
-              <span className="text-border">&middot;</span>
-              <Badge variant="secondary" className="text-[10px] py-0">
-                Featured
-              </Badge>
-            </>
-          )}
-          {/* Draft indicator is the prominent title-adjacent Badge above; meta-line duplicate removed. */}
         </div>
       </div>
 

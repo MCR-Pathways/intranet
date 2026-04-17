@@ -164,7 +164,6 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 
 **`canViewDrafts` is separate from `canEdit`.** Compute `canViewDrafts = isContentEditorEffective(profile)` at caller level, not `isHRAdminEffective(profile) || isContentEditorEffective(profile)`. HR admins without the content-editor flag don't see drafts on category lists or via article URLs. `canEdit` stays as the union for edit-affordance decisions. Both pages under `[...slug]/page.tsx` and `article/[slug]/page.tsx` compute both values and pass the narrower one to fetchers. Don't collapse them back — that was the bug.
 
-**Unpublish must clear `is_featured` + `featured_sort_order`.** A stale `is_featured=true AND status=draft` row is invisible on the landing (filtered by `status='published'`) but still counts against `MAX_FEATURED_ARTICLES`, which silently caps how many new articles you can feature. Apply to `updateArticle` on `status === 'draft'` branch AND `unpublishNativeArticle`. `deleteArticle` already clears it.
 
 **Handle Postgres `23505` on slug mutations.** `ensureUniqueArticleSlug` pre-checks, but a concurrent insert can still win the slug between check and insert. Catch `error.code === "23505"` in `createNativeArticle`, `linkGoogleDoc`, and `updateArticle` — return "A resource with this slug already exists — try a different title." Generic error copy here is user-hostile and hides a retryable condition.
 
