@@ -38,15 +38,35 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Evaluate each table column's value before migrating.** Fold sparse data into related cells to reduce visual noise.
 
-## Lightweight Table Pattern (Finder-style)
+## Lightweight Table Pattern (table-04 / rounded striped)
 
-**Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use `Table`/`TableHeader`/`TableHead`/`TableBody`/`TableRow`/`TableCell` with these overrides. This is an intentional exception to the card-wrapped, sticky-header DataTable rules above — lightweight tables sit directly on the page with minimal chrome.
+**Use the table-04 pattern for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use raw Shadcn Table primitives inside a rounded wrapper. Based on `shadcnui-blocks.com/r/table-04.json`.
 
-- Header: `bg-background h-8 px-3 text-xs font-medium text-muted-foreground border-b border-border` on `TableHead` (override default `bg-table-header h-12 px-4 font-semibold`). Use `bg-background` not `bg-transparent` so content doesn't bleed through if the table is in a scrollable container.
-- Cells: `px-3 py-2` (tighter than default `px-4 py-3`)
-- Header row: add `hover:bg-transparent` to prevent hover highlight
-- Zebra striping is built in: `TableRow` has `even:bg-muted/50`
-- No card wrapper — sits directly on `bg-background`
+```tsx
+<div className="w-full overflow-hidden rounded-md border">
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Title</TableHead>
+        <TableHead>Category</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {items.map((item) => (
+        <TableRow key={item.id}>
+          <TableCell className="font-medium">{item.title}</TableCell>
+          <TableCell>{item.category}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</div>
+```
+
+- Wrapper: `overflow-hidden rounded-md border` — clips table corners cleanly (border-radius on `<table>` is unreliable)
+- Use default `TableHead` styling (no overrides) — `bg-table-header`, `h-12`, `font-semibold`
+- Use default `TableCell` styling (no overrides) — `px-4 py-3`
+- Zebra striping is built in: `TableRow` has `odd:bg-muted/50`
 - Clickable rows: put a `<Link>` in the title cell, not `onClick` on the row
 
 ## Button Intent
