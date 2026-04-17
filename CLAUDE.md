@@ -285,7 +285,7 @@ These are universal rules that apply to every task regardless of which module yo
 
 ### UI Component Patterns
 
-**Use the table-04 pattern for lightweight tables.** Wrap in `<div className="w-full overflow-hidden rounded-md border">`, use default `TableHead`/`TableCell` styling (no overrides), add `hover:bg-background odd:bg-background` on header `TableRow` to reset inherited striping. Full DataTable (TanStack) for data management; table-04 for activity feeds, bookmarks, and recent items. See `src/lib/CLAUDE.md` for the full code example.
+**All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-background odd:bg-background` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
 
 **Use button variants by intent.** `default` (navy) for routine actions, `success` (green) for Publish/Approve, `destructive` (red) for Delete/Remove, `outline` + `bg-card` for secondary navigation on grey pages, `ghost` for utility (Settings, kebabs). All buttons have `active:scale-95` tap animation built into the base component.
 

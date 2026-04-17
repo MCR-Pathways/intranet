@@ -3,6 +3,14 @@
 import { useMemo, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Download, Building2, Home, Split, CheckCircle2 } from "lucide-react";
 import { getTeamSchedule } from "@/app/(protected)/sign-in/actions";
 import { LOCATION_CONFIG, getLocationLabel } from "@/lib/sign-in";
@@ -241,27 +249,20 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                      Name
-                    </th>
+            <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-background odd:bg-background">
+                    <TableHead>Name</TableHead>
                     {Object.entries(LOCATION_CONFIG).map(([key, config]) => (
-                      <th
-                        key={key}
-                        className="text-centre px-3 py-3 font-medium text-muted-foreground"
-                      >
+                      <TableHead key={key} className="text-center">
                         {config.shortLabel}
-                      </th>
+                      </TableHead>
                     ))}
-                    <th className="text-centre px-3 py-3 font-medium text-muted-foreground">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    <TableHead className="text-center">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {members.map((member) => {
                     const counts: Record<string, number> = {};
                     let total = 0;
@@ -271,12 +272,12 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
                       total += dayValue;
                     }
                     return (
-                      <tr key={member.id} className="border-b">
-                        <td className="px-4 py-2.5 font-medium">
+                      <TableRow key={member.id}>
+                        <TableCell className="font-medium">
                           {member.preferred_name ?? member.full_name}
-                        </td>
+                        </TableCell>
                         {Object.keys(LOCATION_CONFIG).map((key) => (
-                          <td key={key} className="text-centre px-3 py-2.5">
+                          <TableCell key={key} className="text-center">
                             {counts[key] ? (
                               <span className={LOCATION_CONFIG[key].textClass}>
                                 {counts[key]}
@@ -284,16 +285,16 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
                             ) : (
                               <span className="text-muted-foreground/30">—</span>
                             )}
-                          </td>
+                          </TableCell>
                         ))}
-                        <td className="text-centre px-3 py-2.5 font-medium">
+                        <TableCell className="text-center font-medium">
                           {total || "—"}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

@@ -44,7 +44,7 @@ export function BookmarksContent({ articles }: BookmarksContentProps) {
       </div>
 
       {articles.length > 0 ? (
-        <div className="w-full overflow-hidden rounded-md border">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-background odd:bg-background">
