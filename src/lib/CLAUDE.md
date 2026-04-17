@@ -69,6 +69,10 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 - Zebra striping is built in: `TableRow` has `odd:bg-muted/50`. Header rows need `hover:bg-background odd:bg-background` to reset the inherited stripe and hover
 - Clickable rows: put a `<Link>` in the title cell, not `onClick` on the row
 
+**Use `group/row` + `group-odd/row` for sticky column backgrounds.** Sticky cells need an explicit background to cover content that scrolls underneath. Use `bg-card` as the base (covers even rows), then add `group-odd/row:bg-muted/50` and `group-hover/row:bg-muted` to sync with row state. Put `className="group/row"` on the `<TableRow>`. See `team-schedule-grid.tsx` for the full pattern.
+
+**Outer `overflow-clip` and inner `overflow-auto` coexist on nested elements.** The standard wrapper uses `overflow-clip` (clips rounded corners). The Shadcn `<Table>` component wraps `<table>` in `<div className="relative w-full overflow-auto">` (handles horizontal scroll). These are on different DOM elements and work independently. Don't remove one thinking it conflicts with the other.
+
 ## Button Intent
 
 **Use button variants by intent, not just hierarchy.**

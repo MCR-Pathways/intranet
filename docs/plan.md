@@ -84,7 +84,7 @@
 
 ### UI/UX Polish- Collapsible sidebar (YouTube-style), shared PageHeader, breadcrumbs
 - Colour/UX overhaul (neutral greys, cool grey background, brand colour palette)
-- Table standardisation (TanStack Table + Shadcn, 15 of 17 tables migrated)
+- Table standardisation complete (all 21 data tables use one visual pattern: `bg-card rounded-xl border border-border shadow-sm overflow-clip`)
 - Tab bar redesign (underline variant), badge tonal redesign
 - Brand colour refinement (link token, icon palette, avatar hash, Google avatar filter)
 

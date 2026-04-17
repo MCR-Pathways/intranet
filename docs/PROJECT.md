@@ -2,7 +2,7 @@
 
 > **Owner:** Abdulmuiz Adaranijo
 > **Status:** Active development
-> **Last reviewed:** 2026-04-16
+> **Last reviewed:** 2026-04-17
 
 ---
 
@@ -618,7 +618,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 **Decision:** Standardise on `@tanstack/react-table` (headless) + Shadcn `<Table>` primitives. Shared `DataTable` component with `DataTableColumnHeader` and `DataTablePagination`.
 
-**Consequences:** Consistent UX across all tables, built-in sorting/filtering/pagination. 15 of 17 tables migrated (2 skipped: calendar grid and simple report table).
+**Consequences:** Consistent UX across all tables, built-in sorting/filtering/pagination. All 21 data tables now use one visual pattern (`bg-card rounded-xl border border-border shadow-sm overflow-clip`). 4 content rendering tables (Google Doc, Tiptap, Plate) intentionally excluded.
 
 ### ADR-007: CSP-compliant image proxying
 
@@ -723,6 +723,8 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 | Date | Author | Summary |
 |---|---|---|
 | 2026-04-16 | Abdulmuiz Adaranijo | Resources WS5 search improvements. Config-as-code script (scripts/algolia-settings.mjs) for all 3 Algolia indices — sets searchableAttributes, attributesToSnippet, attributesToHighlight, and distinct dedup on resources_articles (1 hit per article instead of 1 per section). Content snippets now rendered in global Cmd+K search for resources and Tool Shed results (data was requested from Algolia but thrown away). Highlight contrast improved from bg-amber-100 to bg-amber-200/60. Used SDK Hit<T> type instead of custom wrapper. 3 files, +77/-6. |
+| 2026-04-17 | Abdulmuiz Adaranijo | Table standardisation complete. All 21 data tables now use one visual pattern: rounded-xl with crisp border edge, bg-table-header, odd:bg-muted/50 striping. DataTable component wrapper updated (shadow-md to shadow-sm, border added). 5 non-conforming tables migrated from raw HTML/CSS Grid to Shadcn Table primitives. Fixed text-centre bug in reports-panel (Tailwind only recognises text-center). Sticky column background sync via group-odd/row + group-hover/row. |
+| 2026-04-17 | Abdulmuiz Adaranijo | Resources UX overhaul COMPLETE. All 6 workstreams landed. Per-user bookmarks replaced featured articles. Button intent system (success variant). Tap animation on all buttons. |
 | 2026-04-16 | Abdulmuiz Adaranijo | Resources WS4 article reading polish. Fixed sticky TOC offset (top-6 to top-20 to clear 71px header). Added card surface to TOC sidebar (border + bg-card). Extracted ArticleBreadcrumb shared component from 3 duplicated inline breadcrumbs — fixed ComponentArticleView starting with "Home" instead of "Resources" and missing category icon. Heading indent in TOC made dynamic (was hardcoded to H2 baseline, now computes from shallowest heading level). 5 files, +113/-134. |
 | 2026-04-16 | Abdulmuiz Adaranijo | Resources WS3 landing polish. Dropped category card metadata row (format was inconsistent across cards). Standardised "Updated" date prefix across all landing sections. Grid changed from 3-col to sm:2/md:3/lg:4 for symmetric layout. Recently Updated promoted above Browse by Category. Editor-only placeholder for empty featured section. Heading moved into CategoryGrid component to prevent empty-heading risk. Key Resources section deduplicated. Search input swap attempted and reverted for WCAG 3.2.1 compliance (Radix focus-loop). 5 commits, 2 files. |
 | 2026-04-15 | Abdulmuiz Adaranijo | Category parent-join fix. PostgREST self-referential join `parent:resource_categories!parent_id(...)` was resolving as a reverse join (returning children, not the parent). Fix: `parent:parent_id(...)` (column-as-alias forward join). Touched 4 fetcher functions. |
