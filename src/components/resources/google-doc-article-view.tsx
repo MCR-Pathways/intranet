@@ -12,7 +12,6 @@ import {
   Loader2,
   Link as LinkIcon,
   FileEdit,
-  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -325,7 +324,7 @@ export function GoogleDocArticleView({
                 rel="noopener noreferrer"
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
-                Open in Google Docs
+                Edit in Google Docs
               </a>
             </Button>
           </div>
@@ -356,22 +355,8 @@ export function GoogleDocArticleView({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Primary Edit button (WS2) — always visible to editors. */}
-            {canEdit && article.google_doc_url && (
-              <Button size="sm" asChild>
-                <a
-                  href={article.google_doc_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </a>
-              </Button>
-            )}
-
-          {/* Kebab menu — editor mode only (transitional; removed in PR-2). */}
+          {/* Editor actions — Move / Unlink. Edit lives in the banner above
+              because editing happens in Google Docs, not on the intranet. */}
           {canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

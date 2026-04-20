@@ -12,6 +12,7 @@ import {
   Send,
   EyeOff,
   Link2Off,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -153,6 +154,9 @@ export function ArticleListItem({
                     >
                       <Pencil className="h-4 w-4" />
                       Edit
+                      {isGoogleDoc && (
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                      )}
                     </Link>
                   </DropdownMenuItem>
                 )}
