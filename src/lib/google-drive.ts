@@ -427,7 +427,9 @@ export async function syncDocumentContent(
  * Set up a Drive push notification watch channel for a file.
  * Google will POST to webhookUrl when the file changes.
  *
- * Watch channels expire after 7 days max. Must be renewed before expiry.
+ * Docs say up to 7 days, but in practice Drive issues ~24h-lifetime
+ * channels. The `renew-drive-watches` cron renews daily to stay ahead
+ * of expiry. Parse the returned `expiration` field for the real value.
  */
 export async function watchFile(
   fileId: string,

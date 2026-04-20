@@ -26,7 +26,9 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Encode compound webhook tokens as `{secret}:{id}`.** Google Doc IDs use only `[a-zA-Z0-9_-]`, so a colon is a safe delimiter. Split on first colon, verify secret with `timingSafeTokenCompare()`, then use the ID to look up the article.
 
-**Drive watches are tracked via a column triple on `resource_articles`.** `google_watch_channel_id` (unique per renewal), `google_watch_resource_id` (Google's handle for the watched resource), `google_watch_expires_at` (7-day hard expiry). Any feature touching watches needs to read/write all three — reconstructing the channel id from `resource-${article.id}` only works for rows written before migration 00081.
+**Drive watches are tracked via a column triple on `resource_articles`.** `google_watch_channel_id` (unique per renewal), `google_watch_resource_id` (Google's handle for the watched resource), `google_watch_expires_at` (whatever Drive returns; in practice ~24h per watch, even though Drive docs say up to 7 days). Any feature touching watches needs to read/write all three — reconstructing the channel id from `resource-${article.id}` only works for rows written before migration 00081.
+
+**Drive watch lifetime is ~24 hours in practice, not 7 days.** Drive's `files.watch` docs say "up to 7 days" but the observed value in our setup is ~24h per channel. The `renew-drive-watches` cron runs daily at 03:00 UTC with a 36h renewal threshold, which means every linked doc gets renewed every run. Don't optimise the query to "only expiring soon" rows — at this lifetime it's effectively everything. Verified 2026-04-20.
 
 **Channel ids must be unique per watch.** Google rejects duplicate active channels. `linkGoogleDoc` and the renewal cron both use `resource-${article.id}-${Date.now()}`. Stopping the old channel uses the stored `google_watch_channel_id` with a `resource-${article.id}` fallback for pre-00081 rows.
 
