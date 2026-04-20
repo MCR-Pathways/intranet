@@ -420,11 +420,14 @@ export async function linkGoogleDoc(
 
         // Persist the full watch lifecycle state so the renewal cron and
         // unlink path can both operate without reconstructing the channel id.
+        // Fallback matches the renewal cron: +7 days, the actual channel
+        // lifetime on Drive's side. Using null here would trigger an immediate
+        // unnecessary renewal on the next cron run.
         if (watchResult?.resourceId) {
           const expirationMs = Number(watchResult.expiration);
           const expiresAt = Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : null;
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
           await serviceClient
             .from("resource_articles")
             .update({
