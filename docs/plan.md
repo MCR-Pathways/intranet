@@ -113,7 +113,7 @@
 - [ ] Mobile responsiveness pass (currently desktop/laptop only)
 - [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - [x] Regenerate `database.types.ts` from production Supabase — 70+ tables, typed clients, 72 type errors fixed
-- [ ] Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
+- [x] Google Drive webhook renewal cron — Supabase pg_cron (migration 00083), PR #260. Drive returns ~24h-lifetime channels in practice; daily 03:00 UTC renewal handles all linked docs.
 - [x] Resend email activation (domain verification + env vars) — PRs #175, #198, #200, #201
 
 ### Larger Features
@@ -135,7 +135,7 @@
 - [ ] Error monitoring integration (swap logger transport)
 - [ ] Mobile responsiveness
 - [x] `database.types.ts` regeneration — 70+ tables, typed clients, post-process script
-- [ ] Google Drive webhook renewal cron (watch channels expire after 7 days)
+- [x] Google Drive webhook renewal cron — Supabase pg_cron, PR #260
 - [ ] CI/CD pipeline (GitHub Actions — currently relies on Vercel Git integration only)
 - [ ] Absence records soft-delete (currently hard-deletes, no audit trail)
 - [ ] Large action file splitting — flexible-working (1,241 lines), onboarding (1,192 lines), absence (1,012 lines)

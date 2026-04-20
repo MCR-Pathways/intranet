@@ -26,13 +26,23 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Encode compound webhook tokens as `{secret}:{id}`.** Google Doc IDs use only `[a-zA-Z0-9_-]`, so a colon is a safe delimiter. Split on first colon, verify secret with `timingSafeTokenCompare()`, then use the ID to look up the article.
 
-**Drive watches are tracked via a column triple on `resource_articles`.** `google_watch_channel_id` (unique per renewal), `google_watch_resource_id` (Google's handle for the watched resource), `google_watch_expires_at` (7-day hard expiry). Any feature touching watches needs to read/write all three — reconstructing the channel id from `resource-${article.id}` only works for rows written before migration 00081.
+**Drive watches are tracked via a column triple on `resource_articles`.** `google_watch_channel_id` (unique per renewal), `google_watch_resource_id` (Google's handle for the watched resource), `google_watch_expires_at` (whatever Drive returns; in practice ~24h per watch, even though Drive docs say up to 7 days). Any feature touching watches needs to read/write all three — reconstructing the channel id from `resource-${article.id}` only works for rows written before migration 00081.
+
+**Drive watch lifetime is ~24 hours in practice, not 7 days.** Drive's `files.watch` docs say "up to 7 days" but the observed value in our setup is ~24h per channel. The `renew-drive-watches` cron runs daily at 03:00 UTC with a 36h renewal threshold, which means every linked doc gets renewed every run. Don't optimise the query to "only expiring soon" rows — at this lifetime it's effectively everything. Verified 2026-04-20.
 
 **Channel ids must be unique per watch.** Google rejects duplicate active channels. `linkGoogleDoc` and the renewal cron both use `resource-${article.id}-${Date.now()}`. Stopping the old channel uses the stored `google_watch_channel_id` with a `resource-${article.id}` fallback for pre-00081 rows.
 
 **Drive watch renewal runs as a Supabase pg_cron job, not a Vercel cron.** Schedule lives in migration `00083_renew_drive_watches_cron.sql`; route handler at `src/app/api/cron/renew-drive-watches/route.ts`. Daily at 03:00 UTC, renews any linked doc whose watch expires in the next 36h. Each run writes to the `cron_runs` audit table.
 
-**Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var. (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401.
+**Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var (and redeploy to apply). (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401 on the nightly fire.
+
+**Manual smoke-testing the cron adds a third source of truth: the local shell.** If you want to invoke the endpoint with curl to verify the deployment, the Bearer token has to match what's on Vercel (post-redeploy) and what's in Vault. All three sources produce identical 401 responses on any pair mismatch, so diagnosis means checking each independently. Template for an idempotent smoke test is kept in chat history; the verification path is: `export CRON_SECRET='...'` (64-char length check), then `curl -H "Authorization: Bearer $CRON_SECRET" ...` — with the secret exported in a separate terminal first so only `$CRON_SECRET` enters any `!` prefixed command, not the literal value.
+
+**`pg_net.http_get` is async and fire-and-forget from the SQL side.** The response is not surfaced back to the `cron.schedule` body. Observability for scheduled work must come from the app handler itself writing to an audit table like `cron_runs`, not from pg_net. If you need to know whether a cron successfully reached its endpoint, check `cron_runs`, not `cron.job_run_details`.
+
+**Vault secrets are retrieved via `vault.decrypted_secrets`, not `vault.secrets`.** The raw `vault.secrets` table stores ciphertext. Pattern: `SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret'`. The view handles decryption on read.
+
+**Filtering on `IS NULL` in a cron query creates a first-run thundering herd.** When a new column is added and the cron predicate uses `column IS NULL OR column < X`, every pre-existing row matches on the first run and gets processed at once. Self-healing (subsequent rows are populated and skipped next time), but size `maxDuration` for the worst case — we picked `300` not `60` for `renew-drive-watches` precisely because of this.
 
 ## Category Hierarchy
 

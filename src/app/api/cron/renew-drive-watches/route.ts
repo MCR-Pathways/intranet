@@ -1,10 +1,15 @@
 /**
  * Cron job: renew Google Drive push-notification watch channels before they
- * hit the 7-day hard expiry. Keeps linked Google Docs auto-syncing forever.
+ * expire. Keeps linked Google Docs auto-syncing forever.
  *
- * Triggered by Supabase pg_cron (see migration 00083) at 03:00 UTC daily via
- * pg_net.http_get → this endpoint. The request header carries CRON_SECRET as
- * a Bearer token; we verify via timing-safe compare.
+ * Drive documents "up to 7 days" for watch lifetime, but in practice files.watch
+ * returns channels that live ~24 hours. The daily 03:00 UTC schedule renews
+ * every linked doc every run because the 36h threshold always catches a 24h
+ * channel. Verified empirically on 2026-04-20.
+ *
+ * Triggered by Supabase pg_cron (see migration 00083) via pg_net.http_get →
+ * this endpoint. The request header carries CRON_SECRET as a Bearer token;
+ * we verify via timing-safe compare.
  *
  * Writes a row to `cron_runs` per invocation so run history is
  * SQL-queryable and owned by the app, not the pg_cron system tables.
@@ -55,15 +60,19 @@ export async function GET(request: Request) {
   }
 
   // ── Env ─────────────────────────────────────────────────────
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/drive/webhook`;
-  const webhookSecret = process.env.GOOGLE_DRIVE_WEBHOOK_SECRET;
-  if (!process.env.NEXT_PUBLIC_APP_URL || !webhookSecret) {
+  // Trim defensively — env vars pasted via dashboards can pick up trailing
+  // newlines that Google then rejects as "No valid host or IP for WebHook
+  // callback". Observed once in production on 2026-04-20.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const webhookSecret = process.env.GOOGLE_DRIVE_WEBHOOK_SECRET?.trim();
+  if (!appUrl || !webhookSecret) {
     logger.error("Drive webhook env missing", {
-      hasAppUrl: !!process.env.NEXT_PUBLIC_APP_URL,
+      hasAppUrl: !!appUrl,
       hasWebhookSecret: !!webhookSecret,
     });
     return Response.json({ error: "Server misconfigured" }, { status: 500 });
   }
+  const webhookUrl = `${appUrl}/api/drive/webhook`;
 
   const supabase = createServiceClient();
   const startTime = Date.now();
@@ -131,13 +140,17 @@ export async function GET(request: Request) {
         }
 
         // Parse expiration with a fallback for empty/malformed strings.
-        // Google Drive watches live for 7 days; record that exactly so the
-        // 36h renewal threshold can do the "pick up early" work on its own.
+        // Fallback to 25h: matches Drive's observed ~24h lifetime plus a small
+        // buffer. The value is advisory for our cron's decision; Drive controls
+        // real channel expiry. 25h over 23h so the row doesn't read as
+        // "expired" between renewals while the underlying channel is still
+        // live. Both values trigger renewal via the 36h threshold on the next
+        // daily fire; 25h is the honest one. Verified 2026-04-20.
         const expirationMs = Number(watchResult.expiration);
         const expiresAt =
           Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            : new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
 
         // Persist new state first so retries and unlink always see fresh values.
         const { error: updateErr } = await supabase

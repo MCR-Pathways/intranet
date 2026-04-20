@@ -406,10 +406,13 @@ export async function linkGoogleDoc(
 
     // Set up webhook watch channel (non-critical — don't fail if this errors)
     try {
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/drive/webhook`;
-      const webhookSecret = process.env.GOOGLE_DRIVE_WEBHOOK_SECRET;
+      // Trim both env vars — trailing whitespace from dashboard paste has
+      // bitten us once (Drive rejected the webhook URL over a trailing \n).
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+      const webhookSecret = process.env.GOOGLE_DRIVE_WEBHOOK_SECRET?.trim();
 
-      if (webhookUrl && webhookSecret) {
+      if (appUrl && webhookSecret) {
+        const webhookUrl = `${appUrl}/api/drive/webhook`;
         const channelId = `resource-${article.id}-${Date.now()}`;
         const watchResult = await watchFile(
           docId,
@@ -420,14 +423,16 @@ export async function linkGoogleDoc(
 
         // Persist the full watch lifecycle state so the renewal cron and
         // unlink path can both operate without reconstructing the channel id.
-        // Fallback matches the renewal cron: +7 days, the actual channel
-        // lifetime on Drive's side. Using null here would trigger an immediate
-        // unnecessary renewal on the next cron run.
+        // Fallback to 25h: matches Drive's observed ~24h lifetime plus buffer.
+        // The value is advisory for our cron's decision; Drive controls real
+        // channel expiry. 25h over shorter values so the row doesn't read as
+        // "expired" while the underlying channel is still live. Verified
+        // 2026-04-20.
         if (watchResult?.resourceId) {
           const expirationMs = Number(watchResult.expiration);
           const expiresAt = Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            : new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
           await serviceClient
             .from("resource_articles")
             .update({

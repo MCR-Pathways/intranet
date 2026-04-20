@@ -482,6 +482,13 @@ Vercel — automatic deployments from `main` branch.
 
 No GitHub Actions workflows configured. Deployments rely on Vercel's Git integration.
 
+### Scheduled Jobs
+
+Two systems running in parallel. New jobs default to Supabase pg_cron.
+
+- **Supabase pg_cron** (default going forward). Scheduled via `cron.schedule` in migration files; trigger source is `pg_net.http_get` hitting our own route handlers. Secrets stored in Supabase Vault. Run history written to `public.cron_runs` by the handlers themselves (not by pg_net, which is fire-and-forget). Current jobs: `renew-drive-watches` (03:00 UTC daily, migration 00083).
+- **Vercel Cron** (existing jobs). Configured in `vercel.json`, hits routes with `Authorization: Bearer $CRON_SECRET`. Current jobs: `process-emails` (08:03 UTC), `daily-reminders` (07:47 UTC).
+
 ### Image Remotes
 
 Allowed domains for `next/image`: `*.googleusercontent.com`, `*.supabase.co`.
@@ -496,7 +503,7 @@ Domain-wide delegation via Google service account. Setup documented in `docs/goo
 
 ### Google Drive Integration (Resources)
 
-Service account accesses files shared with it directly (domain-wide delegation not yet configured for Drive — requires Super Admin). Webhook endpoint at `/api/drive/webhook` with timing-safe token verification. Watch channels expire after 7 days — renewal cron needed. Shared auth in `src/lib/google-auth.ts`. Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_DRIVE_WEBHOOK_SECRET`.
+Service account impersonates `intranet-service-account@mcrpathways.org` via domain-wide delegation. Webhook endpoint at `/api/drive/webhook` with timing-safe token verification. Drive documents watch lifetime as "up to 7 days" but in practice issues ~24h channels; `renew-drive-watches` pg_cron (migration 00083) runs daily at 03:00 UTC and renews every linked doc each run. Shared auth in `src/lib/google-auth.ts`. Env vars: `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_DRIVE_WEBHOOK_SECRET`, `GOOGLE_DRIVE_ADMIN_EMAIL`. Each linked article stores a watch column triple: `google_watch_channel_id`, `google_watch_resource_id`, `google_watch_expires_at`.
 
 ### Algolia Search (Resources)
 
@@ -653,7 +660,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 **Decision:** Replace the Tiptap article editor with Google Docs integration. Content editors link existing Google Docs, which are synced via Drive API webhooks. HTML is sanitised, cached in the DB (`synced_html`), and rendered with Tailwind `prose` classes. Editing stays in Google Docs — the intranet is read-only with live updates via Supabase Realtime.
 
-**Consequences:** Zero learning curve for content editors (they already use Google Docs). Live sync via webhooks (~4-10s). Trade-offs: dependency on Google Drive API (7-day webhook expiry needs renewal cron), base64 images in exported HTML can make large docs heavy, requires Google service account setup.
+**Consequences:** Zero learning curve for content editors (they already use Google Docs). Live sync via webhooks (~4-10s). Trade-offs: dependency on Google Drive API (watch channels need a daily renewal cron; see migration 00083), base64 images in exported HTML can make large docs heavy, requires Google service account setup.
 
 ### ADR-011: Algolia over PostgreSQL FTS for search
 
@@ -687,7 +694,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - **No CI/CD pipeline** — no GitHub Actions; relies entirely on Vercel's Git integration.
 - **Absence hard-deletes** — `absence/actions.ts` hard-deletes records. Soft-delete with `deleted_at` would be safer for audit trails.
 - **No bulk operations** — leave entitlements, compliance assignments, onboarding checklists are all one-at-a-time.
-- **Google Drive webhook expiry** — watch channels expire after 7 days; no auto-renewal cron configured.
 
 ### Low Priority / UX
 
@@ -714,7 +720,6 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 - Error monitoring integration (Sentry or Datadog)
 - CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - Scheduled notification jobs (daily digest for HR)
-- Google Drive webhook renewal cron (7-day expiry, no auto-renewal)
 
 ---
 
@@ -722,6 +727,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-04-20 | Abdulmuiz Adaranijo | Drive webhook renewal + Google Doc article UX cleanup. PR #259 removed the teal banner on Google Doc articles entirely; Sync now + Edit in Google Docs moved into the kebab alongside Move and Unlink; BookmarkToggle moved from the title cluster to the right-side action cluster. PR #260 adds Supabase pg_cron to renew Drive watch channels before they expire. Migrations 00081 (google_watch_channel_id, google_watch_expires_at, partial index), 00082 (cron_runs audit table), 00083 (pg_cron schedule via pg_net.http_get with Vault-stored secrets). New route at /api/cron/renew-drive-watches with production guard, per-row try/catch, scale-threshold warnings. Supabase pg_cron is now the default for new cron jobs; existing Vercel crons stay. Smoke test revealed Drive returns ~24h-lifetime channels in practice despite docs saying up to 7 days — fallback values and comments updated to match, defensive .trim() added on NEXT_PUBLIC_APP_URL after a trailing newline in the env var broke the first production watch setup. Gemini review refined the fallback from 23h to 25h so rows don't read as expired between renewals while the underlying channel is still live. Root CLAUDE.md Process section gained two new lessons (fold smoke-test corrections into the sync PR; apply rules at their specified scope rather than extrapolating defensive fixes). The existing MEMORY.md rule on passing credentials through Claude was corrected: `!` prefix runs commands in the local shell but the command text still enters Claude's context, so literal secret values embedded inline still leak. Safe pattern is export in a separate terminal first, then reference by variable name. Concrete failure mode captured in memory/feedback_claude_code_bang_prefix.md after a CRON_SECRET leak during smoke-testing forced a rotation. |
 | 2026-04-16 | Abdulmuiz Adaranijo | Resources WS5 search improvements. Config-as-code script (scripts/algolia-settings.mjs) for all 3 Algolia indices — sets searchableAttributes, attributesToSnippet, attributesToHighlight, and distinct dedup on resources_articles (1 hit per article instead of 1 per section). Content snippets now rendered in global Cmd+K search for resources and Tool Shed results (data was requested from Algolia but thrown away). Highlight contrast improved from bg-amber-100 to bg-amber-200/60. Used SDK Hit<T> type instead of custom wrapper. 3 files, +77/-6. |
 | 2026-04-17 | Abdulmuiz Adaranijo | Table standardisation complete. All 21 data tables now use one visual pattern: rounded-xl with crisp border edge, bg-table-header, odd:bg-muted/50 striping. DataTable component wrapper updated (shadow-md to shadow-sm, border added). 5 non-conforming tables migrated from raw HTML/CSS Grid to Shadcn Table primitives. Fixed text-centre bug in reports-panel (Tailwind only recognises text-center). Sticky column background sync via group-odd/row + group-hover/row. |
 | 2026-04-17 | Abdulmuiz Adaranijo | Resources UX overhaul COMPLETE. All 6 workstreams landed. Per-user bookmarks replaced featured articles. Button intent system (success variant). Tap animation on all buttons. |
