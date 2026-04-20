@@ -21,6 +21,14 @@ export const maxDuration = 300;
 const JOB_NAME = "renew-drive-watches";
 const RENEW_WITHIN_HOURS = 36;
 
+// Trigger thresholds: when this run processes more rows or takes longer than
+// these values, emit a warning so we revisit the sequential-loop design
+// (see memory/feedback_supabase_cron.md for options — `.limit()` escape hatch
+// or `Promise.all` concurrency). The values sit comfortably below the hard
+// ceiling (maxDuration=300s, Drive API quotas) to give us lead time to act.
+const SCALE_WARN_TOTAL = 250;
+const SCALE_WARN_RUNTIME_MS = 200_000;
+
 export async function GET(request: Request) {
   // ── Production guard ────────────────────────────────────────
   // Dev/preview environments must not fire this cron against the production
@@ -58,6 +66,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceClient();
+  const startTime = Date.now();
 
   // ── Start audit row ─────────────────────────────────────────
   const { data: run, error: runInsertErr } = await supabase
@@ -174,6 +183,21 @@ export async function GET(request: Request) {
       }
     }
 
+    // ── Scale trigger ─────────────────────────────────────────
+    // When the batch crosses the pre-set thresholds, warn so the next
+    // periodic sync / log review picks it up and we revisit the design
+    // before we actually hit maxDuration. The flag is also written into
+    // cron_runs.result for SQL-side visibility.
+    const runtimeMs = Date.now() - startTime;
+    const scaleWarning =
+      total >= SCALE_WARN_TOTAL || runtimeMs >= SCALE_WARN_RUNTIME_MS;
+    if (scaleWarning) {
+      logger.warn(
+        "renew-drive-watches approaching scale threshold — consider adding .limit() or concurrent batching (see memory/feedback_supabase_cron.md)",
+        { total, runtimeMs, threshold: { SCALE_WARN_TOTAL, SCALE_WARN_RUNTIME_MS } }
+      );
+    }
+
     // ── Finalise audit row ────────────────────────────────────
     if (runId) {
       const { error: finaliseErr } = await supabase
@@ -181,7 +205,13 @@ export async function GET(request: Request) {
         .update({
           finished_at: new Date().toISOString(),
           status: "success",
-          result: { renewed, failed, total },
+          result: {
+            renewed,
+            failed,
+            total,
+            runtimeMs,
+            scaleWarning,
+          },
         })
         .eq("id", runId);
       if (finaliseErr) {
@@ -194,8 +224,13 @@ export async function GET(request: Request) {
       }
     }
 
-    logger.info("Drive watch renewal cron complete", { renewed, failed, total });
-    return Response.json({ renewed, failed, total });
+    logger.info("Drive watch renewal cron complete", {
+      renewed,
+      failed,
+      total,
+      runtimeMs,
+    });
+    return Response.json({ renewed, failed, total, runtimeMs });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("Drive watch renewal cron failed", { error: message });
