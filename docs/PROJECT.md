@@ -114,7 +114,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (81 files, `00001` through `00080` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (84 files, `00001` through `00083` plus a combined migration).
 
 ### Local Supabase
 
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**81 migration files** in `supabase/migrations/`, numbered `00001` through `00080` plus a combined migration.
+**84 migration files** in `supabase/migrations/`, numbered `00001` through `00083` plus a combined migration.
 
 **70+ tables** — key ones:
 

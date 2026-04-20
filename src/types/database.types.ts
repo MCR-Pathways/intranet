@@ -884,6 +884,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_runs: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          result: Json | null
+          started_at: string
+          status: "running" | "success" | "failed"
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          result?: Json | null
+          started_at?: string
+          status: "running" | "success" | "failed"
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          result?: Json | null
+          started_at?: string
+          status?: "running" | "success" | "failed"
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           colour: string
@@ -2828,6 +2858,8 @@ export type Database = {
           editing_by: string | null
           google_doc_id: string | null
           google_doc_url: string | null
+          google_watch_channel_id: string | null
+          google_watch_expires_at: string | null
           google_watch_resource_id: string | null
           id: string
           last_published_at: string | null
@@ -2854,6 +2886,8 @@ export type Database = {
           editing_by?: string | null
           google_doc_id?: string | null
           google_doc_url?: string | null
+          google_watch_channel_id?: string | null
+          google_watch_expires_at?: string | null
           google_watch_resource_id?: string | null
           id?: string
           last_published_at?: string | null
@@ -2880,6 +2914,8 @@ export type Database = {
           editing_by?: string | null
           google_doc_id?: string | null
           google_doc_url?: string | null
+          google_watch_channel_id?: string | null
+          google_watch_expires_at?: string | null
           google_watch_resource_id?: string | null
           id?: string
           last_published_at?: string | null
