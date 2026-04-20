@@ -34,6 +34,12 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var. (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401.
 
+**`pg_net.http_get` is async and fire-and-forget from the SQL side.** The response is not surfaced back to the `cron.schedule` body. Observability for scheduled work must come from the app handler itself writing to an audit table like `cron_runs`, not from pg_net. If you need to know whether a cron successfully reached its endpoint, check `cron_runs`, not `cron.job_run_details`.
+
+**Vault secrets are retrieved via `vault.decrypted_secrets`, not `vault.secrets`.** The raw `vault.secrets` table stores ciphertext. Pattern: `SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_secret'`. The view handles decryption on read.
+
+**Filtering on `IS NULL` in a cron query creates a first-run thundering herd.** When a new column is added and the cron predicate uses `column IS NULL OR column < X`, every pre-existing row matches on the first run and gets processed at once. Self-healing (subsequent rows are populated and skipped next time), but size `maxDuration` for the worst case — we picked `300` not `60` for `renew-drive-watches` precisely because of this.
+
 ## Category Hierarchy
 
 **Use cascading selects for hierarchical data, not flat dropdowns.** Show progressive `<Select>` components: mandatory top level, then optional child levels. Derive child lists via `useMemo`. Reset child selections when parent changes. Use `resolveParentChain()` to pre-select all levels from a `defaultId`.
