@@ -122,13 +122,13 @@ export async function GET(request: Request) {
         }
 
         // Parse expiration with a fallback for empty/malformed strings.
+        // Google Drive watches live for 7 days; record that exactly so the
+        // 36h renewal threshold can do the "pick up early" work on its own.
         const expirationMs = Number(watchResult.expiration);
         const expiresAt =
           Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : new Date(
-                Date.now() + (7 * 24 - RENEW_WITHIN_HOURS) * 60 * 60 * 1000
-              ).toISOString();
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
         // Persist new state first so retries and unlink always see fresh values.
         const { error: updateErr } = await supabase
@@ -176,7 +176,7 @@ export async function GET(request: Request) {
 
     // ── Finalise audit row ────────────────────────────────────
     if (runId) {
-      await supabase
+      const { error: finaliseErr } = await supabase
         .from("cron_runs")
         .update({
           finished_at: new Date().toISOString(),
@@ -184,6 +184,14 @@ export async function GET(request: Request) {
           result: { renewed, failed, total },
         })
         .eq("id", runId);
+      if (finaliseErr) {
+        // Row will remain at status='running' — log so we know if audit
+        // drift shows up in the table.
+        logger.warn("Failed to finalise cron_runs row (success)", {
+          runId,
+          error: finaliseErr.message,
+        });
+      }
     }
 
     logger.info("Drive watch renewal cron complete", { renewed, failed, total });
@@ -192,7 +200,7 @@ export async function GET(request: Request) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("Drive watch renewal cron failed", { error: message });
     if (runId) {
-      await supabase
+      const { error: finaliseErr } = await supabase
         .from("cron_runs")
         .update({
           finished_at: new Date().toISOString(),
@@ -200,6 +208,12 @@ export async function GET(request: Request) {
           error: message,
         })
         .eq("id", runId);
+      if (finaliseErr) {
+        logger.warn("Failed to finalise cron_runs row (failed)", {
+          runId,
+          error: finaliseErr.message,
+        });
+      }
     }
     return Response.json({ error: "Cron failed" }, { status: 500 });
   }
