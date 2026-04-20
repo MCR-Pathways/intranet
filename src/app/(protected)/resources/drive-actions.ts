@@ -423,14 +423,16 @@ export async function linkGoogleDoc(
 
         // Persist the full watch lifecycle state so the renewal cron and
         // unlink path can both operate without reconstructing the channel id.
-        // Drive returns ~24h-lifetime channels in practice; fallback is 23h
-        // so bad expiration data self-heals on the next daily cron instead
-        // of storing a stale future timestamp that the threshold query skips.
+        // Fallback to 25h: matches Drive's observed ~24h lifetime plus buffer.
+        // The value is advisory for our cron's decision; Drive controls real
+        // channel expiry. 25h over shorter values so the row doesn't read as
+        // "expired" while the underlying channel is still live. Verified
+        // 2026-04-20.
         if (watchResult?.resourceId) {
           const expirationMs = Number(watchResult.expiration);
           const expiresAt = Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
+            : new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
           await serviceClient
             .from("resource_articles")
             .update({

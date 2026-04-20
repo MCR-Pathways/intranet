@@ -140,15 +140,17 @@ export async function GET(request: Request) {
         }
 
         // Parse expiration with a fallback for empty/malformed strings.
-        // Drive returns ~24h-lifetime channels in practice (verified 2026-04-20).
-        // Fallback to 23h so bad expiration data self-heals on the next daily
-        // run instead of storing a stale future timestamp that the threshold
-        // query would skip until the actual channel has silently died.
+        // Fallback to 25h: matches Drive's observed ~24h lifetime plus a small
+        // buffer. The value is advisory for our cron's decision; Drive controls
+        // real channel expiry. 25h over 23h so the row doesn't read as
+        // "expired" between renewals while the underlying channel is still
+        // live. Both values trigger renewal via the 36h threshold on the next
+        // daily fire; 25h is the honest one. Verified 2026-04-20.
         const expirationMs = Number(watchResult.expiration);
         const expiresAt =
           Number.isFinite(expirationMs) && expirationMs > 0
             ? new Date(expirationMs).toISOString()
-            : new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString();
+            : new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
 
         // Persist new state first so retries and unlink always see fresh values.
         const { error: updateErr } = await supabase

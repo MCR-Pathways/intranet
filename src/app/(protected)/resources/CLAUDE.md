@@ -34,7 +34,9 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Drive watch renewal runs as a Supabase pg_cron job, not a Vercel cron.** Schedule lives in migration `00083_renew_drive_watches_cron.sql`; route handler at `src/app/api/cron/renew-drive-watches/route.ts`. Daily at 03:00 UTC, renews any linked doc whose watch expires in the next 36h. Each run writes to the `cron_runs` audit table.
 
-**Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var. (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401.
+**Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var (and redeploy to apply). (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401 on the nightly fire.
+
+**Manual smoke-testing the cron adds a third source of truth: the local shell.** If you want to invoke the endpoint with curl to verify the deployment, the Bearer token has to match what's on Vercel (post-redeploy) and what's in Vault. All three sources produce identical 401 responses on any pair mismatch, so diagnosis means checking each independently. Template for an idempotent smoke test is kept in chat history; the verification path is: `export CRON_SECRET='...'` (64-char length check), then `curl -H "Authorization: Bearer $CRON_SECRET" ...` — with the secret exported in a separate terminal first so only `$CRON_SECRET` enters any `!` prefixed command, not the literal value.
 
 **`pg_net.http_get` is async and fire-and-forget from the SQL side.** The response is not surfaced back to the `cron.schedule` body. Observability for scheduled work must come from the app handler itself writing to an audit table like `cron_runs`, not from pg_net. If you need to know whether a cron successfully reached its endpoint, check `cron_runs`, not `cron.job_run_details`.
 
