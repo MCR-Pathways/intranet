@@ -291,47 +291,6 @@ export function GoogleDocArticleView({
         title={article.title}
       />
 
-      {/* Google Docs bar — editor mode only */}
-      {canEdit && (
-        <div className="flex items-center justify-between rounded-lg bg-mcr-teal/[0.06] border border-mcr-teal/15 px-5 py-3">
-          <div className="flex items-center gap-2 text-[13px] text-mcr-teal font-medium">
-            <ExternalLink className="h-4 w-4" />
-            Synced from Google Docs
-            {lastSynced && (
-              <span className="text-muted-foreground font-normal ml-1">
-                &middot; Last synced {lastSynced}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSync}
-              disabled={isSyncing || isPending}
-              className="text-mcr-teal hover:text-mcr-teal"
-            >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-1" />
-              )}
-              Sync now
-            </Button>
-            <Button size="sm" asChild className="bg-mcr-pink hover:bg-mcr-pink/90">
-              <a
-                href={article.google_doc_url ?? "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Open in Google Docs
-              </a>
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Article header */}
       <div>
         <div className="flex items-start justify-between gap-4">
@@ -339,9 +298,6 @@ export function GoogleDocArticleView({
             <h1 className="text-[26px] font-bold tracking-tight leading-tight">
               {article.title}
             </h1>
-            {article.status === "published" && (
-              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
-            )}
             {canEdit && article.status === "draft" && (
               <Badge
                 variant="secondary"
@@ -355,52 +311,79 @@ export function GoogleDocArticleView({
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Primary Edit button (WS2) — always visible to editors. */}
-            {canEdit && article.google_doc_url && (
-              <Button size="sm" asChild>
-                <a
-                  href={article.google_doc_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </a>
-              </Button>
+          <div className="flex items-center gap-1 shrink-0">
+            {article.status === "published" && (
+              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
             )}
-
-          {/* Kebab menu — editor mode only (transitional; removed in PR-2). */}
-          {canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  disabled={isPending}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Actions for {article.title}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
-                  <FolderInput className="h-4 w-4" />
-                  Move to...
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={() => setShowUnlinkDialog(true)}
-                >
-                  <Unlink className="h-4 w-4" />
-                  Unlink
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={isPending}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Actions for {article.title}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {lastSynced && (
+                    <div
+                      className="px-2 py-1.5 text-xs text-muted-foreground select-none"
+                      aria-hidden
+                    >
+                      Synced from Google Docs
+                      <div className="text-[11px] mt-0.5 opacity-80">
+                        Last synced {lastSynced}
+                      </div>
+                    </div>
+                  )}
+                  {lastSynced && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      handleSync();
+                    }}
+                    disabled={isSyncing || isPending}
+                  >
+                    {isSyncing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Sync now
+                  </DropdownMenuItem>
+                  {article.google_doc_url && (
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={article.google_doc_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit in Google Docs
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
+                    <FolderInput className="h-4 w-4" />
+                    Move to...
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={() => setShowUnlinkDialog(true)}
+                  >
+                    <Unlink className="h-4 w-4" />
+                    Unlink
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
@@ -429,7 +412,7 @@ export function GoogleDocArticleView({
         </div>
       ) : (
         <div className="text-sm text-muted-foreground italic py-8">
-          This document has no content yet. Click &ldquo;Sync now&rdquo; to fetch content from Google Docs.
+          This document has no content yet. Use the actions menu to sync from Google Docs.
         </div>
       )}
 
