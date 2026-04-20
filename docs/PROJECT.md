@@ -114,7 +114,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (80 files, `00001` through `00079` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (81 files, `00001` through `00080` plus a combined migration).
 
 ### Local Supabase
 
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**80 migration files** in `supabase/migrations/`, numbered `00001` through `00079` plus a combined migration.
+**81 migration files** in `supabase/migrations/`, numbered `00001` through `00080` plus a combined migration.
 
 **70+ tables** — key ones:
 
@@ -440,7 +440,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 61 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,433 tests
+- **Coverage:** 1,432 tests
 
 ### Test Categories
 
