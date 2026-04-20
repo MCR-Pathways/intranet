@@ -410,7 +410,7 @@ export async function linkGoogleDoc(
       const webhookSecret = process.env.GOOGLE_DRIVE_WEBHOOK_SECRET;
 
       if (webhookUrl && webhookSecret) {
-        const channelId = `resource-${article.id}`;
+        const channelId = `resource-${article.id}-${Date.now()}`;
         const watchResult = await watchFile(
           docId,
           channelId,
@@ -418,11 +418,23 @@ export async function linkGoogleDoc(
           `${webhookSecret}:${docId}`
         );
 
-        // Store the resourceId so we can stop the channel on unlink
+        // Persist the full watch lifecycle state so the renewal cron and
+        // unlink path can both operate without reconstructing the channel id.
+        // Fallback matches the renewal cron: +7 days, the actual channel
+        // lifetime on Drive's side. Using null here would trigger an immediate
+        // unnecessary renewal on the next cron run.
         if (watchResult?.resourceId) {
+          const expirationMs = Number(watchResult.expiration);
+          const expiresAt = Number.isFinite(expirationMs) && expirationMs > 0
+            ? new Date(expirationMs).toISOString()
+            : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
           await serviceClient
             .from("resource_articles")
-            .update({ google_watch_resource_id: watchResult.resourceId })
+            .update({
+              google_watch_channel_id: watchResult.channelId,
+              google_watch_resource_id: watchResult.resourceId,
+              google_watch_expires_at: expiresAt,
+            })
             .eq("id", article.id);
         }
       }
@@ -472,7 +484,7 @@ export async function unlinkGoogleDoc(
     // Get article to verify it's a Google Doc
     const { data: article } = await supabase
       .from("resource_articles")
-      .select("id, google_doc_id, content_type, google_watch_resource_id")
+      .select("id, google_doc_id, content_type, google_watch_channel_id, google_watch_resource_id")
       .eq("id", articleId)
       .single();
 
@@ -484,10 +496,12 @@ export async function unlinkGoogleDoc(
       return { success: false, error: "This article is not a linked Google Doc" };
     }
 
-    // Stop the Drive watch channel if we have the resourceId
+    // Stop the Drive watch channel if we have the resourceId. Pre-00081 rows
+    // stored only the resource id and relied on the `resource-${id}` channel
+    // id pattern — fall back to that for rows that haven't been renewed yet.
     if (article.google_watch_resource_id) {
       try {
-        const channelId = `resource-${articleId}`;
+        const channelId = article.google_watch_channel_id ?? `resource-${articleId}`;
         await stopWatchChannel(channelId, article.google_watch_resource_id);
       } catch (watchError) {
         logger.warn("Failed to stop Drive watch channel during unlink", {

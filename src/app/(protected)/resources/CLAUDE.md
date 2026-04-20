@@ -26,6 +26,14 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Encode compound webhook tokens as `{secret}:{id}`.** Google Doc IDs use only `[a-zA-Z0-9_-]`, so a colon is a safe delimiter. Split on first colon, verify secret with `timingSafeTokenCompare()`, then use the ID to look up the article.
 
+**Drive watches are tracked via a column triple on `resource_articles`.** `google_watch_channel_id` (unique per renewal), `google_watch_resource_id` (Google's handle for the watched resource), `google_watch_expires_at` (7-day hard expiry). Any feature touching watches needs to read/write all three — reconstructing the channel id from `resource-${article.id}` only works for rows written before migration 00081.
+
+**Channel ids must be unique per watch.** Google rejects duplicate active channels. `linkGoogleDoc` and the renewal cron both use `resource-${article.id}-${Date.now()}`. Stopping the old channel uses the stored `google_watch_channel_id` with a `resource-${article.id}` fallback for pre-00081 rows.
+
+**Drive watch renewal runs as a Supabase pg_cron job, not a Vercel cron.** Schedule lives in migration `00083_renew_drive_watches_cron.sql`; route handler at `src/app/api/cron/renew-drive-watches/route.ts`. Daily at 03:00 UTC, renews any linked doc whose watch expires in the next 36h. Each run writes to the `cron_runs` audit table.
+
+**Rotating CRON_SECRET is a two-step operation.** (1) Update the Vercel env var. (2) Update the Supabase Vault secret: `SELECT vault.update_secret((SELECT id FROM vault.secrets WHERE name = 'cron_secret'), 'NEW_VALUE');`. Both must match or Supabase's pg_net call will 401.
+
 ## Category Hierarchy
 
 **Use cascading selects for hierarchical data, not flat dropdowns.** Show progressive `<Select>` components: mandatory top level, then optional child levels. Derive child lists via `useMemo`. Reset child selections when parent changes. Use `resolveParentChain()` to pre-select all levels from a `defaultId`.
