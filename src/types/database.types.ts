@@ -2857,6 +2857,7 @@ export type Database = {
           editing_at: string | null
           editing_by: string | null
           google_doc_id: string | null
+          google_doc_modified_at: string | null
           google_doc_url: string | null
           google_watch_channel_id: string | null
           google_watch_expires_at: string | null
@@ -2885,6 +2886,7 @@ export type Database = {
           editing_at?: string | null
           editing_by?: string | null
           google_doc_id?: string | null
+          google_doc_modified_at?: string | null
           google_doc_url?: string | null
           google_watch_channel_id?: string | null
           google_watch_expires_at?: string | null
@@ -2913,6 +2915,7 @@ export type Database = {
           editing_at?: string | null
           editing_by?: string | null
           google_doc_id?: string | null
+          google_doc_modified_at?: string | null
           google_doc_url?: string | null
           google_watch_channel_id?: string | null
           google_watch_expires_at?: string | null

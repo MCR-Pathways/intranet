@@ -357,10 +357,12 @@ export async function linkGoogleDoc(
     // Sync content from Google Docs
     let html = "";
     let plaintext = "";
+    let modifiedTime: string | null = null;
     try {
       const synced = await syncDocumentContent(docId);
       html = synced.html;
       plaintext = synced.plaintext;
+      modifiedTime = synced.modifiedTime;
     } catch (syncError) {
       logger.warn("Failed to sync doc content during link — proceeding with empty content", {
         docId,
@@ -381,6 +383,7 @@ export async function linkGoogleDoc(
         google_doc_url: metadata.webViewLink,
         synced_html: html,
         last_synced_at: new Date().toISOString(),
+        google_doc_modified_at: modifiedTime,
         status: "published",
         author_id: user.id,
         visibility: null, // Inherit from category
@@ -572,7 +575,7 @@ export async function syncArticle(
     }
 
     // Fetch and sanitise content
-    const { html, plaintext } = await syncDocumentContent(article.google_doc_id);
+    const { html, plaintext, modifiedTime } = await syncDocumentContent(article.google_doc_id);
 
     // Update the article
     const { error: updateError } = await supabase
@@ -581,6 +584,7 @@ export async function syncArticle(
         synced_html: html,
         content: plaintext,
         last_synced_at: new Date().toISOString(),
+        google_doc_modified_at: modifiedTime,
         updated_at: new Date().toISOString(),
       })
       .eq("id", article.id);
@@ -650,7 +654,7 @@ export async function syncAllArticles(): Promise<{
       if (!article.google_doc_id) continue;
 
       try {
-        const { html, plaintext } = await syncDocumentContent(
+        const { html, plaintext, modifiedTime } = await syncDocumentContent(
           article.google_doc_id
         );
 
@@ -660,6 +664,7 @@ export async function syncAllArticles(): Promise<{
             synced_html: html,
             content: plaintext,
             last_synced_at: new Date().toISOString(),
+            google_doc_modified_at: modifiedTime,
             updated_at: new Date().toISOString(),
           })
           .eq("id", article.id);
