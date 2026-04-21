@@ -29,7 +29,7 @@ import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, timeAgo } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { BookmarkToggle } from "./bookmark-toggle";
 import { recordArticleView } from "@/lib/recently-viewed";
@@ -230,6 +230,8 @@ export function GoogleDocArticleView({
             ...prev,
             synced_html: (updated.synced_html as string) ?? prev.synced_html,
             last_synced_at: (updated.last_synced_at as string) ?? prev.last_synced_at,
+            google_doc_modified_at:
+              (updated.google_doc_modified_at as string | null) ?? prev.google_doc_modified_at,
             updated_at: (updated.updated_at as string) ?? prev.updated_at,
             title: (updated.title as string) ?? prev.title,
           }));
@@ -269,19 +271,56 @@ export function GoogleDocArticleView({
     });
   }
 
-  const lastSynced = article.last_synced_at
+  // Sync state derived from `last_synced_at` (when intranet copy was
+  // refreshed) and `google_doc_modified_at` (when Drive says source changed).
+  // 60s drift threshold absorbs clock skew between Drive and us, webhook
+  // race timing, and trivial edit-then-save cycles. Tuneable if we see
+  // false positives.
+  const DRIFT_THRESHOLD_MS = 60_000;
+  const lastSyncedMs = article.last_synced_at
+    ? new Date(article.last_synced_at).getTime()
+    : null;
+  const sourceModifiedMs = article.google_doc_modified_at
+    ? new Date(article.google_doc_modified_at).getTime()
+    : null;
+  const syncState: "in-sync" | "drift" | "never-synced" = lastSyncedMs === null
+    ? "never-synced"
+    : sourceModifiedMs !== null &&
+      sourceModifiedMs > lastSyncedMs + DRIFT_THRESHOLD_MS
+      ? "drift"
+      : "in-sync";
+
+  // Absolute timestamps for the hover tooltips — timezone-locked via formatDate.
+  const lastSyncedAbsolute = article.last_synced_at
     ? formatDate(new Date(article.last_synced_at))
     : null;
+  const sourceModifiedAbsolute = article.google_doc_modified_at
+    ? formatDate(new Date(article.google_doc_modified_at))
+    : null;
 
-  // Content freshness — flag articles not updated in 12+ months
-  const updatedAt = new Date(article.updated_at);
+  // Effective "last content change" — source edit time for Google Doc articles,
+  // with fallback to updated_at for pre-migration rows that haven't synced yet.
+  // Drives both the isStale calc and the article meta line so they agree on
+  // what "updated" means for a linked Google Doc.
+  const effectiveModifiedAt = useMemo(
+    () =>
+      article.google_doc_modified_at
+        ? new Date(article.google_doc_modified_at)
+        : new Date(article.updated_at),
+    [article.google_doc_modified_at, article.updated_at]
+  );
+
+  // Content freshness — flag articles whose source content hasn't changed
+  // in 12+ months. Previously computed against updated_at (which bumps on
+  // every sync), so a never-edited doc re-synced last night would show
+  // as fresh. Now computed against source edit time.
   const isStale = useMemo(() => {
-    const ts = new Date(article.updated_at).getTime();
+    const ts = effectiveModifiedAt.getTime();
     const monthsOld = Math.floor(
       (serverNow - ts) / (1000 * 60 * 60 * 24 * 30)
     );
     return monthsOld >= 12;
-  }, [article.updated_at, serverNow]);
+  }, [effectiveModifiedAt, serverNow]);
 
   return (
     <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
@@ -329,18 +368,49 @@ export function GoogleDocArticleView({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  {lastSynced && (
-                    <div
-                      className="px-2 py-1.5 text-xs text-muted-foreground select-none"
-                      aria-hidden
-                    >
-                      Synced from Google Docs
-                      <div className="text-[11px] mt-0.5 opacity-80">
-                        Last synced {lastSynced}
+                  {/* Sync-state header — the "shape" of this block is the
+                      signal: one line = in sync, two lines = action needed.
+                      Native `title` attribute is used for absolute-timestamp
+                      tooltips; Radix Tooltip inside DropdownMenu has z-index
+                      and focus-trap issues that surfaced earlier in the
+                      project. */}
+                  <div className="px-2 py-2 select-none" aria-hidden>
+                    {syncState === "in-sync" && article.last_synced_at && (
+                      <div
+                        className="text-xs text-muted-foreground"
+                        title={lastSyncedAbsolute ?? undefined}
+                      >
+                        Synced {timeAgo(article.last_synced_at)}
                       </div>
-                    </div>
-                  )}
-                  {lastSynced && <DropdownMenuSeparator />}
+                    )}
+                    {syncState === "drift" && article.google_doc_modified_at && article.last_synced_at && (
+                      <>
+                        <div
+                          className="text-xs font-medium text-amber-600"
+                          title={sourceModifiedAbsolute ?? undefined}
+                        >
+                          Source edited {timeAgo(article.google_doc_modified_at)}
+                        </div>
+                        <div
+                          className="text-[11px] text-amber-600/75 mt-0.5"
+                          title={lastSyncedAbsolute ?? undefined}
+                        >
+                          Synced {timeAgo(article.last_synced_at)}
+                        </div>
+                      </>
+                    )}
+                    {syncState === "never-synced" && (
+                      <>
+                        <div className="text-xs font-medium text-amber-600">
+                          Not yet synced
+                        </div>
+                        <div className="text-[11px] text-amber-600/75 mt-0.5">
+                          Click Sync now to fetch content
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
@@ -387,10 +457,13 @@ export function GoogleDocArticleView({
           </div>
         </div>
 
-        {/* Article meta */}
+        {/* Article meta — uses effectiveModifiedAt (source edit time for
+            linked Google Docs, with fallback to updated_at for rows that
+            predate the google_doc_modified_at column or haven't re-synced
+            yet). Honest provenance for readers. */}
         <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
           <span className={isStale ? "text-amber-600" : undefined}>
-            Updated {formatDate(updatedAt)}
+            Updated {formatDate(effectiveModifiedAt)}
             {isStale && " — may need review"}
           </span>
         </div>

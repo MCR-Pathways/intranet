@@ -407,16 +407,26 @@ export function extractPlainTextFromHtml(html: string): string {
 
 /**
  * Full sync pipeline: export Google Doc → sanitise HTML → extract plaintext.
+ * Fetches the source-modified timestamp in parallel so callers can persist
+ * it alongside `last_synced_at` for drift signalling.
  *
- * Returns the cleaned HTML and plaintext (for search indexing).
+ * `files.export` returns binary content only; metadata requires a separate
+ * `files.get` call. Running them in parallel avoids the serialised round-trip.
+ * `modifiedTime` is null only if Drive unexpectedly omits it — defensive
+ * callers should treat null as "unknown" and fall back to existing logic.
  */
 export async function syncDocumentContent(
   docId: string
-): Promise<{ html: string; plaintext: string }> {
-  const rawHtml = await exportDocAsHtml(docId);
+): Promise<{ html: string; plaintext: string; modifiedTime: string | null }> {
+  const drive = getDriveClient();
+  const [rawHtml, metadata] = await Promise.all([
+    exportDocAsHtml(docId),
+    drive.files.get({ fileId: docId, fields: "modifiedTime" }),
+  ]);
   const html = sanitiseGoogleDocsHtml(rawHtml);
   const plaintext = extractPlainTextFromHtml(html);
-  return { html, plaintext };
+  const modifiedTime = metadata.data.modifiedTime ?? null;
+  return { html, plaintext, modifiedTime };
 }
 
 // =============================================

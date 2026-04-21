@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Re-sync content from Google Docs
-    const { html, plaintext } = await syncDocumentContent(googleDocId);
+    const { html, plaintext, modifiedTime } = await syncDocumentContent(googleDocId);
 
     // Update the article with fresh content
     const { error: updateError } = await supabase
@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
         synced_html: html,
         content: plaintext,
         last_synced_at: new Date().toISOString(),
+        google_doc_modified_at: modifiedTime,
         updated_at: new Date().toISOString(),
       })
       .eq("id", article.id);
