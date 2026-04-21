@@ -210,9 +210,6 @@ export function NativeArticleView({
             <h1 className="text-[26px] font-bold tracking-tight leading-tight">
               {article.title}
             </h1>
-            {article.status === "published" && (
-              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
-            )}
             {canEdit && article.status === "draft" && (
               <Badge
                 variant="secondary"
@@ -226,8 +223,21 @@ export function NativeArticleView({
             )}
           </div>
 
+          {/* gap-2 intentionally differs from google-doc-article-view's
+              gap-1: its cluster is all ghost icons with "halo" of transparent
+              space, so 4px between them breathes. This cluster mixes ghost
+              icons with the solid-fill Edit button, which has no halo — 4px
+              reads cramped, 8px restores breathing room. Numeric parity on
+              gap value is less important than within-cluster visual balance. */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Primary Edit button (WS2) — always visible to editors. */}
+            {article.status === "published" && (
+              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+            )}
+            {/* Navy Edit button — kept on native because it routes to the
+                in-product Plate editor at /edit (a real product surface).
+                google-doc-article-view deliberately removed its Edit button
+                because it would just punt to Drive, which the banner already
+                covers. Intentional asymmetry between the two views. */}
             {canEdit && (
               <Button size="sm" asChild>
                 <Link href={editUrl}>
