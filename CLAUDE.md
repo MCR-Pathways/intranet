@@ -205,6 +205,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Don't over-widen prop-type unions when subtypes share the base type.** A prop typed `ResourceCategory | CategoryTreeNode | CategoryWithCount` is equivalent to `ResourceCategory` because both descendants extend it. Structural typing lets you pass the subtype where the parent is expected. Wider unions don't improve safety — they read as "the author wasn't sure what shape to accept".
 
+**When adding a column that will be read downstream, sweep every `.select()` that reads the table.** Explicit select-list constants (`ARTICLE_SELECT`, `PROFILE_SELECT`, anywhere a string literal lists columns) are invisible to the typed Supabase client: types like `ArticleWithAuthor extends ResourceArticle` have every column on the Row regardless of what the runtime fetch returns, so TypeScript will happily agree the property is there while the server actually strips it. Symptom is a component reading `undefined` for a column that definitely exists in the DB — logic falls through to whatever the null-branch does. PR #262 added `google_doc_modified_at`, populated it on every sync path, but forgot to add it to `ARTICLE_SELECT` in `src/app/(protected)/resources/actions.ts:23` — the kebab never rendered its drift state because the client always saw `undefined`. Fix in PR #263. Grep for `*_SELECT` constants or inline select strings against the affected table before merging any column-addition PR.
+
 ### Database & Migrations
 
 **Make all migrations idempotent.** Use `IF NOT EXISTS` / `DROP IF EXISTS` guards so migrations can be re-run safely.
