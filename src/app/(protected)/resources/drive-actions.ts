@@ -358,11 +358,18 @@ export async function linkGoogleDoc(
     let html = "";
     let plaintext = "";
     let modifiedTime: string | null = null;
+    // Track whether the initial content fetch actually worked. We deliberately
+    // swallow the error so the article row still gets created (editors can
+    // retry via Sync now later), but we must not record last_synced_at = now
+    // for a failed sync — that would mislead the kebab state machine into
+    // rendering "Synced just now" when there's no content.
+    let syncSuccess = false;
     try {
       const synced = await syncDocumentContent(docId);
       html = synced.html;
       plaintext = synced.plaintext;
       modifiedTime = synced.modifiedTime;
+      syncSuccess = true;
     } catch (syncError) {
       logger.warn("Failed to sync doc content during link — proceeding with empty content", {
         docId,
@@ -382,7 +389,7 @@ export async function linkGoogleDoc(
         google_doc_id: docId,
         google_doc_url: metadata.webViewLink,
         synced_html: html,
-        last_synced_at: new Date().toISOString(),
+        last_synced_at: syncSuccess ? new Date().toISOString() : null,
         google_doc_modified_at: modifiedTime,
         status: "published",
         author_id: user.id,
