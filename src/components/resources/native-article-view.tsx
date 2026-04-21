@@ -223,7 +223,13 @@ export function NativeArticleView({
             )}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          {/* gap-2 intentionally differs from google-doc-article-view's
+              gap-1: its cluster is all ghost icons with "halo" of transparent
+              space, so 4px between them breathes. This cluster mixes ghost
+              icons with the solid-fill Edit button, which has no halo — 4px
+              reads cramped, 8px restores breathing room. Numeric parity on
+              gap value is less important than within-cluster visual balance. */}
+          <div className="flex items-center gap-2 shrink-0">
             {article.status === "published" && (
               <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
             )}
