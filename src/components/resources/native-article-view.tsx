@@ -210,9 +210,6 @@ export function NativeArticleView({
             <h1 className="text-[26px] font-bold tracking-tight leading-tight">
               {article.title}
             </h1>
-            {article.status === "published" && (
-              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
-            )}
             {canEdit && article.status === "draft" && (
               <Badge
                 variant="secondary"
@@ -226,8 +223,15 @@ export function NativeArticleView({
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Primary Edit button (WS2) — always visible to editors. */}
+          <div className="flex items-center gap-1 shrink-0">
+            {article.status === "published" && (
+              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+            )}
+            {/* Navy Edit button — kept on native because it routes to the
+                in-product Plate editor at /edit (a real product surface).
+                google-doc-article-view deliberately removed its Edit button
+                because it would just punt to Drive, which the banner already
+                covers. Intentional asymmetry between the two views. */}
             {canEdit && (
               <Button size="sm" asChild>
                 <Link href={editUrl}>
