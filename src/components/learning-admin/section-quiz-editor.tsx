@@ -460,6 +460,7 @@ export function SectionQuizEditor({
           variant="outline"
           onClick={handleCreateQuiz}
           disabled={isPending}
+          aria-busy={isPending}
         >
           {isPending ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -513,7 +514,7 @@ export function SectionQuizEditor({
                 Active
               </Label>
             </div>
-            <Button size="sm" onClick={handleSaveMeta} disabled={isPending}>
+            <Button size="sm" onClick={handleSaveMeta} disabled={isPending} aria-busy={isPending}>
               {isPending ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : null}
@@ -641,6 +642,7 @@ export function SectionQuizEditor({
                     size="sm"
                     onClick={handleSaveEditQuestion}
                     disabled={isPending}
+                    aria-busy={isPending}
                   >
                     {isPending ? (
                       <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -778,6 +780,7 @@ export function SectionQuizEditor({
               size="sm"
               onClick={handleSaveNewQuestion}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />

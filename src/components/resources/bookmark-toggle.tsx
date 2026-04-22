@@ -35,6 +35,7 @@ export function BookmarkToggle({
       size="icon-sm"
       onClick={handleToggle}
       disabled={isPending}
+      aria-busy={isPending}
       aria-pressed={bookmarked}
       aria-label={bookmarked ? "Remove bookmark" : "Bookmark this article"}
       title={bookmarked ? "Remove bookmark" : "Bookmark"}

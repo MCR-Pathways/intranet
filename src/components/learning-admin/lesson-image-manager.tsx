@@ -131,6 +131,7 @@ export function LessonImageManager({
                   size="sm"
                   onClick={() => setDeleteTarget(img)}
                   disabled={isPending}
+                  aria-busy={isPending}
                   aria-label={`Delete image ${img.file_name}`}
                 >
                   <Trash2 />
@@ -168,6 +169,7 @@ export function LessonImageManager({
               variant="destructive"
               onClick={handleDelete}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? "Deleting..." : "Delete"}
             </Button>

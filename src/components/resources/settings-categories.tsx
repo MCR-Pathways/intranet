@@ -223,6 +223,7 @@ function CategoryRow({
           variant="ghost"
           size="icon-xs"
           disabled={isFirst || isPending}
+          aria-busy={isPending}
           onClick={() => onReorder("up")}
           aria-label={`Move ${category.name} up`}
           title="Move up"
@@ -233,6 +234,7 @@ function CategoryRow({
           variant="ghost"
           size="icon-xs"
           disabled={isLast || isPending}
+          aria-busy={isPending}
           onClick={() => onReorder("down")}
           aria-label={`Move ${category.name} down`}
           title="Move down"
@@ -243,6 +245,7 @@ function CategoryRow({
           variant="ghost"
           size="icon-xs"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={onEdit}
           aria-label={`Edit ${category.name}`}
           title="Edit"
@@ -254,6 +257,7 @@ function CategoryRow({
           size="icon-xs"
           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={onDelete}
           aria-label={`Delete ${category.name}`}
           title="Delete"

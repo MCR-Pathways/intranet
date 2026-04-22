@@ -237,6 +237,7 @@ export function CourseAssignmentManager({
                       className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => handleRemove(assignment)}
                       disabled={isPending}
+                      aria-busy={isPending}
                       aria-label="Remove assignment"
                       title="Remove assignment"
                     >
@@ -405,7 +406,7 @@ export function CourseAssignmentManager({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !assignValue}>
+              <Button type="submit" disabled={isPending || !assignValue} aria-busy={isPending}>
                 {isPending ? "Assigning..." : "Assign Course"}
               </Button>
             </DialogFooter>
@@ -438,6 +439,7 @@ export function CourseAssignmentManager({
               variant="destructive"
               onClick={handleConfirmRemove}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? "Removing..." : "Remove"}
             </Button>

@@ -297,6 +297,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
               variant="destructive"
               onClick={handleDelete}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? "Deleting..." : "Delete Lesson"}
             </Button>

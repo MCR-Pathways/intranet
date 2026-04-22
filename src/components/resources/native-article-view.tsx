@@ -255,6 +255,7 @@ export function NativeArticleView({
                   size="icon-sm"
                   className="shrink-0"
                   disabled={isPending}
+                  aria-busy={isPending}
                   aria-label={`Actions for ${article.title}`}
                   title="Actions"
                 >

@@ -214,7 +214,7 @@ export function SectionManager({ courseId, sections }: SectionManagerProps) {
             Course Sections ({sortedSections.length})
             <InfoTooltip text="Organise your course into sections. Each section can have lessons and an optional quiz that gates access to the next section." />
           </CardTitle>
-          <Button size="sm" onClick={handleCreate} disabled={isPending}>
+          <Button size="sm" onClick={handleCreate} disabled={isPending} aria-busy={isPending}>
             <Plus className="h-4 w-4 mr-1" />
             Add Section
           </Button>
@@ -303,6 +303,7 @@ export function SectionManager({ courseId, sections }: SectionManagerProps) {
               variant="destructive"
               onClick={handleDelete}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? "Deleting..." : "Delete Section"}
             </Button>
@@ -475,7 +476,7 @@ function SortableSectionRow({
               <X className="h-3.5 w-3.5 mr-1" />
               Cancel
             </Button>
-            <Button size="sm" onClick={onSaveEdit} disabled={isPending}>
+            <Button size="sm" onClick={onSaveEdit} disabled={isPending} aria-busy={isPending}>
               <Check className="h-3.5 w-3.5 mr-1" />
               {isPending ? "Saving..." : "Save"}
             </Button>
