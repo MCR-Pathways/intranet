@@ -78,7 +78,7 @@ const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "ou
 export function AssetPageContent({
   assets, assetTypes, employees, isHRAdmin, summary,
 }: AssetPageContentProps) {
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -336,6 +336,8 @@ export function AssetPageContent({
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isPending}
+              aria-busy={isPending}
               onClick={() => {
                 if (retireTarget) handleRetire(retireTarget.id);
               }}

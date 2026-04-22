@@ -220,6 +220,8 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
                 </AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isPending}
+                  aria-busy={isPending}
                   onClick={() => handleDelete(kd.id)}
                 >
                   Delete
