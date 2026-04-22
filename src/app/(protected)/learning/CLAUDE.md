@@ -53,3 +53,8 @@ Course management, section-level quizzes, Tool Shed social learning, and admin b
 ## Email Notifications
 
 Phase D is ACTIVE. Emails send immediately via Resend. Colour-coded headers by type (green/amber/red/blue/wine), XSS-safe templates, branded logo, preheaders, welcome email. Email preview at `/api/email-preview?type=X` (dev only). 11 email types, preferences UI on Settings page. L&D triggers: `course_assigned` (admin assigns), `course_completed` and `certificate_earned` (learner finishes), `course_overdue_digest` and `course_overdue_manager` (daily cron).
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.

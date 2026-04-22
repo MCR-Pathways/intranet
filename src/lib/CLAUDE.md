@@ -130,3 +130,8 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 **Research before redesigning — don't iterate blindly.** Check how top platforms handle it, verify claims against actual products, then cherry-pick the best patterns. Always ask: does the scale (~80 staff) justify the complexity? Evaluate cherry-picked features for overkill before implementing — personal bookmarks and Cmd+K quick actions were rejected as overkill for ~80 staff.
 
 **Update documentation BEFORE implementing features.** Update `docs/plan.md`, `docs/PROJECT.md`, `memory/MEMORY.md`, and `CLAUDE.md` in Phase 0.
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.

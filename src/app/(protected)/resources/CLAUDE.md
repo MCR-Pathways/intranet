@@ -192,3 +192,8 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 **Log DB errors before returning `[]`.** The file-wide pattern `if (error || !data) return []` silently swallows Supabase errors, surfacing a broken page as "no results". Split into two checks: `if (error) { logger.error(...); return [] }` then `if (!data) return []`. `fetchDraftArticles` does this; 7 other sites in `actions.ts` + 1 in `native-actions.ts` still need cleanup — tracked tech debt.
 
 **Drafts never enter "recently viewed" localStorage.** Gate `recordArticleView(...)` on `article.status === "published"` inside both `google-doc-article-view.tsx` and `native-article-view.tsx`. Without the gate, an editor viewing a draft stores it in localStorage; if the article then unpublishes or the user loses editor rights, the recents entry becomes stale and clicking it 404s.
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.

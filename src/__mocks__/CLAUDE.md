@@ -17,3 +17,8 @@ Vitest 4 + React Testing Library + jsdom. See root `CLAUDE.md` for basic setup.
 - `src/__mocks__/supabase.ts` — mock factory documenting the full Supabase mocking strategy
 - `src/app/(protected)/hr/users/actions.test.ts` — server action test reference
 - `src/proxy.test.ts` — proxy test reference
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.

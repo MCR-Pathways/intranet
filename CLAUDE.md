@@ -289,11 +289,7 @@ These are universal rules that apply to every task regardless of which module yo
 
 **All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-background odd:bg-background` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
 
-**Use button variants by intent.** `default` (navy) for routine actions, `success` (green) for Publish/Approve, `destructive` (red) for Delete/Remove, `outline` + `bg-card` for secondary navigation on grey pages, `ghost` for utility (Settings, kebabs). All buttons have `active:scale-95` tap animation built into the base component.
-
-**Inline delete triggers in tables use `variant="ghost"`** — not destructive. The destructive styling goes on the confirmation button inside the AlertDialog. Keeps table rows clean.
-
-**Add `bg-card` to outline buttons on grey `bg-background` pages.** The outline variant uses `bg-background` as fill, making it invisible on grey. `className="bg-card"` pops as white.
+**Buttons: follow `docs/button-system.md`.** Single source of truth for variants, sizes, label casing, a11y, helpers (`TooltipButton`, `ButtonSpinner`, `DestructiveMenuItem`), and per-context patterns (Edit, kebab migration, AlertDialog footers, long labels, toggle buttons). Never use `className="h-X w-X"` on Button — an ESLint rule enforces this. Cancel uses `secondary`; destructive inline uses `ghost` or moves to kebab; primary CTAs must be `default`, `lg`, or `hero` (never `sm`).
 
 ### Server Actions & Middleware
 
