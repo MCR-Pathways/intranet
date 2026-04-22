@@ -159,12 +159,12 @@ Use `<DestructiveMenuItem>`:
 ```
 
 ### AlertDialog footers
-Radix's `AlertDialogAction` / `AlertDialogCancel` don't auto-use our Button variants. Apply them explicitly:
+Radix's `AlertDialogAction` / `AlertDialogCancel` already ship their own base styling (`h-10`, `rounded-md`, `px-4 py-2`, `font-medium`, `transition-colors`). Apply only variant-colour utility classes via `className` — don't use `buttonVariants()`, which drags in the Button base (`inline-flex`, `rounded-lg`, `motion-safe:active:scale-95`, `[&_svg]:size-4`) that conflicts with Radix's internal structure and would give a commit button decorative tap-scale that doesn't suit a consequential action:
 ```tsx
-<AlertDialogCancel className={buttonVariants({ variant: "secondary" })}>
+<AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
   Cancel
 </AlertDialogCancel>
-<AlertDialogAction className={buttonVariants({ variant: "destructive" })}>
+<AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
   Delete
 </AlertDialogAction>
 ```

@@ -22,7 +22,18 @@
  */
 
 const BUTTON_COMPONENTS = new Set(["Button", "TooltipButton"]);
-const BANNED_RE = /\b(h|w)-\d+(\.\d+)?\b/;
+// Match a standalone `h-<digits>` or `w-<digits>` class. Splitting by
+// whitespace before the per-token regex avoids false positives on
+// `min-h-4` / `max-w-10` / `min-w-full` etc., where a word-boundary
+// regex would otherwise match inside the prefixed form.
+const BANNED_TOKEN_RE = /^(h|w)-\d+(\.\d+)?$/;
+
+function findBannedSizingClass(str) {
+  for (const cls of str.split(/\s+/)) {
+    if (cls && BANNED_TOKEN_RE.test(cls)) return cls;
+  }
+  return null;
+}
 
 /** Extract every string literal from a JSX attribute's value AST. */
 function extractStringsFromValue(node) {
@@ -83,13 +94,13 @@ const rule = {
 
           const strings = extractStringsFromValue(attr.value);
           for (const s of strings) {
-            const match = s.match(BANNED_RE);
+            const match = findBannedSizingClass(s);
             if (match) {
               context.report({
                 node: attr,
                 messageId: "customSizing",
                 data: {
-                  match: match[0],
+                  match,
                   component: nameNode.name,
                 },
               });

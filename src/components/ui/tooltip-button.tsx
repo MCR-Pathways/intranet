@@ -8,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export interface TooltipButtonProps extends ButtonProps {
   /**
@@ -67,10 +68,20 @@ export const TooltipButton = React.forwardRef<
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* The span catches pointer events the disabled button can't. */}
+        {/*
+         * The span catches pointer events the disabled button can't.
+         * `cursor-not-allowed` gives sighted users the visual cue that
+         * the button is unavailable. The user's `className` is forwarded
+         * so layout classes like `w-full` apply to the outer box (the
+         * span claims the width), not just the inner button which would
+         * otherwise fill an inline-flex parent.
+         */}
         <span
           tabIndex={0}
-          className="inline-flex"
+          className={cn(
+            "inline-flex cursor-not-allowed",
+            props.className
+          )}
           aria-disabled="true"
         >
           <Button
