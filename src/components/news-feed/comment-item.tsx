@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { cn, timeAgo, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { Trash2, Loader2, Pencil, Check, X, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -202,23 +203,22 @@ export function CommentItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs"
                       onClick={handleSaveEdit}
                       disabled={isPending || !editContent.trim()}
+                      aria-busy={isPending}
                     >
-                      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                      <span className="ml-1">Save</span>
+                      {isPending ? <Loader2 className="animate-spin" /> : <Check />}
+                      {isPending ? "Saving..." : "Save"}
                     </Button>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
-                      className="h-6 px-2 text-xs text-muted-foreground"
                       onClick={handleCancelEdit}
                       disabled={isPending}
                     >
-                      <X className="h-3 w-3" />
-                      <span className="ml-1">Cancel</span>
+                      <X />
+                      Cancel
                     </Button>
                   </div>
                 </div>
@@ -250,10 +250,12 @@ export function CommentItem({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  size="icon-xs"
+                  className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  aria-label="Comment actions"
+                  title="Actions"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -264,13 +266,12 @@ export function CommentItem({
                   </DropdownMenuItem>
                 )}
                 {canDelete && (
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
+                  <DestructiveMenuItem
                     onSelect={() => setShowDeleteDialog(true)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 />
                     Delete
-                  </DropdownMenuItem>
+                  </DestructiveMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

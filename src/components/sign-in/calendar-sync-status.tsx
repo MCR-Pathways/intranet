@@ -79,10 +79,10 @@ export function CalendarSyncStatus({
         type="button"
         onClick={handleSync}
         disabled={isPending}
-        className="h-6 px-2 text-xs"
+        aria-busy={isPending}
       >
-        <RefreshCw className={cn("h-3 w-3 mr-1", isPending && "animate-spin")} />
-        Sync
+        <RefreshCw className={cn(isPending && "animate-spin")} />
+        {isPending ? "Syncing..." : "Sync"}
       </Button>
     </div>
   );

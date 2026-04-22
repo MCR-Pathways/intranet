@@ -217,16 +217,19 @@ export function CommentSection({
                       />
                     </div>
                     <Button
-                      size="icon"
+                      size="icon-xs"
                       variant="ghost"
-                      className="h-7 w-7 shrink-0 self-end"
+                      className="shrink-0 self-end"
                       onClick={() => handleReplySubmit(comment.id)}
                       disabled={isPending || !replyContent.trim()}
+                      aria-busy={isPending}
+                      aria-label="Post reply"
+                      title="Post reply"
                     >
                       {isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="animate-spin" />
                       ) : (
-                        <Send className="h-3.5 w-3.5" />
+                        <Send />
                       )}
                     </Button>
                   </div>
@@ -262,16 +265,19 @@ export function CommentSection({
             />
           </div>
           <Button
-            size="icon"
+            size="icon-sm"
             variant="ghost"
-            className="h-8 w-8 shrink-0 self-end"
+            className="shrink-0 self-end"
             onClick={handleSubmit}
             disabled={isPending || !newComment.trim()}
+            aria-busy={isPending}
+            aria-label="Post comment"
+            title="Post comment"
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send />
             )}
           </Button>
         </div>

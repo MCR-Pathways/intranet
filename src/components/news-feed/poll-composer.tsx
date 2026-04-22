@@ -113,13 +113,14 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+          size="icon-xs"
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           onClick={onRemove}
           disabled={disabled}
+          aria-label="Remove poll"
+          title="Remove poll"
         >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Remove poll</span>
+          <X />
         </Button>
       </div>
 
@@ -149,13 +150,14 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                size="icon-sm"
+                className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => removeOption(index)}
                 disabled={disabled}
+                aria-label={`Remove option ${index + 1}`}
+                title="Remove option"
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Remove option</span>
+                <Trash2 />
               </Button>
             )}
           </div>
