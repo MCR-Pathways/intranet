@@ -31,12 +31,14 @@ const buttonVariants = cva(
           "text-link font-medium underline underline-offset-[3px] decoration-1 hover:decoration-2 hover:underline-offset-4 active:scale-100 duration-150",
       },
       size: {
-        // Hero size carries prominence via height, text-base, gap, and the
-        // extra shadow. Font-weight follows the variant — a hero outline
-        // (e.g. login page Google Sign In) stays font-medium so the primary
-        // default/success hero button (Magic Link) can claim the visual
-        // lead via font-semibold.
-        hero: "h-12 px-6 text-base gap-3 shadow-lg [&_svg]:size-5",
+        // Hero carries prominence via height, text-base, and gap. Shadow
+        // is applied via compoundVariants below — only for filled-primary
+        // variants — so a hero ghost/link (theoretical; not used in
+        // practice) doesn't sprout a shadow that contradicts the variant.
+        // Font-weight follows the variant: a hero outline (login page
+        // Google Sign In) stays font-medium so the primary default hero
+        // button (Magic Link) can claim the visual lead via font-semibold.
+        hero: "h-12 px-6 text-base gap-3 [&_svg]:size-5",
         lg: "h-11 px-8 [&_svg]:size-5",
         default: "h-10 px-4 py-2 [&_svg]:size-4",
         sm: "h-9 px-3 text-xs [&_svg]:size-3.5",
@@ -45,6 +47,18 @@ const buttonVariants = cva(
         "icon-xs": "h-7 w-7 [&_svg]:size-3.5",
       },
     },
+    compoundVariants: [
+      // Hero prominence via shadow-lg only lands on filled primaries.
+      // Outline/secondary/ghost/link at hero size keep their variant's
+      // own shadow (or none). Keeps hero visually consistent with the
+      // variant's design intent: Magic Link (default+hero) gets heavy
+      // shadow-lg; Google Sign In (outline+hero) stays shadow-sm.
+      {
+        variant: ["default", "success", "destructive"],
+        size: "hero",
+        class: "shadow-lg",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
