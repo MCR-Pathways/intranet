@@ -89,22 +89,20 @@ function StatusBadge({ article }: { article: DriveWatchArticle }) {
         </Badge>
       )}
       {state === "sync-failed" && (
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 gap-1 cursor-help">
-                <AlertCircle className="h-3 w-3" />
-                Sync failed
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-sm">
-              <p className="text-xs font-medium">Last sync error</p>
-              <p className="text-xs mt-1 whitespace-pre-wrap break-words">
-                {article.last_sync_error}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 gap-1 cursor-help">
+              <AlertCircle className="h-3 w-3" />
+              Sync failed
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm">
+            <p className="text-xs font-medium">Last sync error</p>
+            <p className="text-xs mt-1 whitespace-pre-wrap break-words">
+              {article.last_sync_error}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       )}
       {article.status === "draft" && (
         <Badge variant="secondary" className="font-medium">
@@ -403,20 +401,18 @@ export function SettingsDriveWatches() {
         cell: ({ row }) => {
           const article = row.original;
           return (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={`/resources/article/${article.slug}`}
-                    className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
-                  >
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{article.title}</span>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>{article.title}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`/resources/article/${article.slug}`}
+                  className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{article.title}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>{article.title}</TooltipContent>
+            </Tooltip>
           );
         },
       },
@@ -513,6 +509,10 @@ export function SettingsDriveWatches() {
   ];
 
   return (
+    // Single TooltipProvider for all Tooltips in this component — Radix
+    // recommends one high-level provider rather than per-use. Nested
+    // instances in cells aren't wrong but waste render work on every row.
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-8">
       {/* Linked Google Docs */}
       <section className="space-y-3">
@@ -607,18 +607,16 @@ export function SettingsDriveWatches() {
                     <TableCell>{cronResultSummary(run.result)}</TableCell>
                     <TableCell className="max-w-[30ch]">
                       {run.error ? (
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="truncate block text-destructive">
-                                {run.error}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-md">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="truncate block text-destructive">
                               {run.error}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-md">
+                            {run.error}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -631,5 +629,6 @@ export function SettingsDriveWatches() {
         )}
       </section>
     </div>
+    </TooltipProvider>
   );
 }
