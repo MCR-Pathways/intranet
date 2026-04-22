@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsFolders } from "./settings-folders";
 import { SettingsCategories } from "./settings-categories";
+import { SettingsDriveWatches } from "./settings-drive-watches";
 
 export function ResourcesSettings() {
   return (
@@ -21,7 +22,7 @@ export function ResourcesSettings() {
           Resources Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage folders and categories.
+          Manage folders, categories, and Drive watch state.
         </p>
       </div>
 
@@ -29,12 +30,16 @@ export function ResourcesSettings() {
         <TabsList variant="line">
           <TabsTrigger value="folders">Registered Folders</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="watches">Drive Watches</TabsTrigger>
         </TabsList>
         <TabsContent value="folders" className="mt-4">
           <SettingsFolders />
         </TabsContent>
         <TabsContent value="categories" className="mt-4">
           <SettingsCategories />
+        </TabsContent>
+        <TabsContent value="watches" className="mt-4">
+          <SettingsDriveWatches />
         </TabsContent>
       </Tabs>
     </div>
