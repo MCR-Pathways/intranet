@@ -24,3 +24,8 @@ User management, profile, leave, absence, assets, compliance, key dates, departm
 - **Scheduled notifications active** (PRs #175, #198, #200, #201): leave decisions (immediate), compliance expiry + stale leave + probation (daily cron). XSS-safe, branded templates with CTA buttons.
 - **No bulk operations**: Leave entitlements, compliance assignments, onboarding checklists all one-at-a-time
 - **Absence hard-deletes** (line 381 of absence/actions.ts) — soft-delete with `deleted_at` safer for tribunal audit
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.
