@@ -689,8 +689,8 @@ export function OrgChartContent({
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
+            size="icon-sm"
+            className="bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomIn}
             aria-label="Zoom in"
           >
@@ -699,8 +699,8 @@ export function OrgChartContent({
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
+            size="icon-sm"
+            className="bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomOut}
             aria-label="Zoom out"
           >
@@ -709,8 +709,8 @@ export function OrgChartContent({
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-sm"
+            size="icon-sm"
+            className="bg-background/90 backdrop-blur-sm shadow-sm"
             onClick={handleFitToScreen}
             aria-label="Fit to screen"
           >

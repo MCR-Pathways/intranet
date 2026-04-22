@@ -199,11 +199,12 @@ export function ComplianceUploadDialog({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
+                    size="icon-xs"
                     onClick={handleRemoveFile}
+                    aria-label="Remove selected file"
+                    title="Remove file"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X />
                   </Button>
                 </div>
               ) : (

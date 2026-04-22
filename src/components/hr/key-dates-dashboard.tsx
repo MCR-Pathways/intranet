@@ -13,12 +13,21 @@ import {
 } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
+import { buttonVariants } from "@/components/ui/button";
 import { KeyDateDialog } from "@/components/hr/key-date-dialog";
 import { completeKeyDate, deleteKeyDate } from "@/app/(protected)/hr/key-dates/actions";
 import { formatHRDate } from "@/lib/hr";
-import { Plus, Search, Check, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Check, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -58,6 +67,7 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
   const [showCompleted, setShowCompleted] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<KeyDateRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<KeyDateRow | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -159,38 +169,72 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
       cell: ({ row }) => {
         const kd = row.original;
         return (
-          <div className="flex gap-1">
-            {!kd.is_completed && (
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleComplete(kd.id)} title="Mark complete" disabled={isPending}>
-                <Check className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(kd)} title="Edit">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" title="Delete">
-                  <Trash2 className="h-3.5 w-3.5" />
+          <AlertDialog
+            open={deleteTarget?.id === kd.id}
+            onOpenChange={(open) => !open && setDeleteTarget(null)}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={isPending}
+                  aria-label={`Actions for ${kd.title}`}
+                  title="Actions"
+                >
+                  <MoreHorizontal />
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete key date?</AlertDialogTitle>
-                  <AlertDialogDescription>This will permanently remove this key date.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleDelete(kd.id)}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!kd.is_completed && (
+                  <DropdownMenuItem
+                    onSelect={() => handleComplete(kd.id)}
+                    disabled={isPending}
+                  >
+                    <Check />
+                    Mark complete
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => setEditTarget(kd)}>
+                  <Pencil />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DestructiveMenuItem
+                  onSelect={() => setDeleteTarget(kd)}
+                >
+                  <Trash2 />
+                  Delete
+                </DestructiveMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete key date?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove this key date.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className={buttonVariants({ variant: "destructive" })}
+                  onClick={() => handleDelete(kd.id)}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         );
       },
       enableSorting: false,
     },
-  ], [today, isPending, handleComplete, handleDelete]);
+  ], [today, isPending, handleComplete, handleDelete, deleteTarget?.id]);
 
   return (
     <div className="space-y-6">

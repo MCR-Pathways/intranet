@@ -252,9 +252,13 @@ function DepartmentRowActions({
     <div className="text-right">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Actions for {dept.name}</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${dept.name}`}
+            title="Actions"
+          >
+            <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

@@ -8,6 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
+import { MoreHorizontal } from "lucide-react";
+import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
@@ -183,52 +192,54 @@ export function ProfileDocumentsTab({
         cell: ({ row }) => {
           const doc = row.original;
           return (
-            <div className="flex items-center gap-1">
-              {doc.file_path && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-7 px-2"
-                  onClick={() => handleDownload(doc.file_path!)}
+                  size="icon-sm"
                   disabled={isPending}
-                  title="Download"
+                  aria-label={`Actions for ${doc.document_type_name}`}
+                  title="Actions"
                 >
-                  <Download className="h-3.5 w-3.5" />
+                  <MoreHorizontal />
                 </Button>
-              )}
-              {!doc.verified_at && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-green-600 hover:text-green-700"
-                  onClick={() => handleVerify(doc.id)}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {doc.file_path && (
+                  <DropdownMenuItem
+                    onSelect={() => handleDownload(doc.file_path!)}
+                    disabled={isPending}
+                  >
+                    <Download />
+                    Download
+                  </DropdownMenuItem>
+                )}
+                {!doc.verified_at && (
+                  <DropdownMenuItem
+                    onSelect={() => handleVerify(doc.id)}
+                    disabled={isPending}
+                  >
+                    <CheckCircle />
+                    Verify
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onSelect={() => setEditingDoc(doc)}
                   disabled={isPending}
-                  title="Verify"
                 >
-                  <CheckCircle className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2"
-                onClick={() => setEditingDoc(doc)}
-                disabled={isPending}
-                title="Edit"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-destructive hover:text-destructive"
-                onClick={() => setDeleteTarget(doc)}
-                disabled={isPending}
-                title="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+                  <Pencil />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DestructiveMenuItem
+                  onSelect={() => setDeleteTarget(doc)}
+                  disabled={isPending}
+                >
+                  <Trash2 />
+                  Delete
+                </DestructiveMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         },
         enableSorting: false,

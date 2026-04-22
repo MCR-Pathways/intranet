@@ -151,37 +151,41 @@ function UserRowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Actions for {profile.full_name}</span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Actions for ${profile.full_name}`}
+          title="Actions"
+        >
+          <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
           <Link href={`/hr/users/${profile.id}`}>
-            <Eye className="h-4 w-4" />
-            View Profile
+            <Eye />
+            View profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => onEditProfile(profile)}>
-          <Pencil className="h-4 w-4" />
-          Edit Profile
+          <Pencil />
+          Edit profile
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onEditEmployment(profile)}>
-          <Briefcase className="h-4 w-4" />
-          Edit Employment
+          <Briefcase />
+          Edit employment
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onEditPermissions(profile)}>
-          <Shield className="h-4 w-4" />
-          Edit Permissions
+          <Shield />
+          Edit permissions
         </DropdownMenuItem>
         {isCurrentUserHRAdmin && !profile.induction_completed_at && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onCompleteInduction(profile)}>
-              <CheckCircle className="h-4 w-4" />
-              Complete Induction
+              <CheckCircle />
+              Complete induction
             </DropdownMenuItem>
           </>
         )}
@@ -189,8 +193,8 @@ function UserRowActions({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onResetInduction(profile)}>
-              <RotateCcw className="h-4 w-4" />
-              Reset Induction
+              <RotateCcw />
+              Reset induction
             </DropdownMenuItem>
           </>
         )}

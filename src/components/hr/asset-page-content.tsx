@@ -14,13 +14,22 @@ import {
 } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
+import { buttonVariants } from "@/components/ui/button";
 import { AssetDialog } from "@/components/hr/asset-dialog";
 import { AssetAssignDialog } from "@/components/hr/asset-assign-dialog";
 import { AssetReturnDialog } from "@/components/hr/asset-return-dialog";
 import { retireAsset } from "@/app/(protected)/hr/assets/actions";
-import { Plus, Search, Package, Pencil, UserPlus, RotateCcw, Archive } from "lucide-react";
+import { Plus, Search, Package, Pencil, UserPlus, RotateCcw, Archive, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 interface AssetType {
@@ -78,6 +87,7 @@ export function AssetPageContent({
   const [editAsset, setEditAsset] = useState<AssetRow | null>(null);
   const [assignTarget, setAssignTarget] = useState<AssetRow | null>(null);
   const [returnTarget, setReturnTarget] = useState<AssetRow | null>(null);
+  const [retireTarget, setRetireTarget] = useState<AssetRow | null>(null);
 
   const filtered = useMemo(() => {
     return assets.filter((a) => {
@@ -165,43 +175,50 @@ export function AssetPageContent({
         header: "Actions",
         cell: ({ row }) => {
           const asset = row.original;
+          const canRetire =
+            asset.status === "available" || asset.status === "in_repair";
           return (
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditAsset(asset)} title="Edit">
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              {asset.status === "available" && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignTarget(asset)} title="Assign">
-                  <UserPlus className="h-3.5 w-3.5" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Actions for asset ${asset.asset_tag}`}
+                  title="Actions"
+                >
+                  <MoreHorizontal />
                 </Button>
-              )}
-              {asset.status === "assigned" && asset.current_assignment_id && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setReturnTarget(asset)} title="Return">
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              {(asset.status === "available" || asset.status === "in_repair") && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Retire">
-                      <Archive className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Retire asset {asset.asset_tag}?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will mark the asset as retired. It will no longer be available for assignment.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleRetire(asset.id)}>Retire</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setEditAsset(asset)}>
+                  <Pencil />
+                  Edit
+                </DropdownMenuItem>
+                {asset.status === "available" && (
+                  <DropdownMenuItem onSelect={() => setAssignTarget(asset)}>
+                    <UserPlus />
+                    Assign
+                  </DropdownMenuItem>
+                )}
+                {asset.status === "assigned" && asset.current_assignment_id && (
+                  <DropdownMenuItem onSelect={() => setReturnTarget(asset)}>
+                    <RotateCcw />
+                    Return
+                  </DropdownMenuItem>
+                )}
+                {canRetire && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DestructiveMenuItem
+                      onSelect={() => setRetireTarget(asset)}
+                    >
+                      <Archive />
+                      Retire
+                    </DestructiveMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         },
         enableSorting: false,
@@ -209,7 +226,7 @@ export function AssetPageContent({
     }
 
     return cols;
-  }, [isHRAdmin, handleRetire]);
+  }, [isHRAdmin]);
 
   return (
     <div className="space-y-6">
@@ -300,6 +317,37 @@ export function AssetPageContent({
           onOpenChange={(val) => { if (!val) setReturnTarget(null); }}
         />
       )}
+      <AlertDialog
+        open={!!retireTarget}
+        onOpenChange={(open) => !open && setRetireTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Retire asset {retireTarget?.asset_tag}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the asset as retired. It will no longer be
+              available for assignment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={() => {
+                if (retireTarget) handleRetire(retireTarget.id);
+              }}
+            >
+              Retire
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

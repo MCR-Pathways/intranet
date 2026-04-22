@@ -25,6 +25,7 @@ import type { Profile } from "@/types/database.types";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import type { NotificationData } from "@/types/notification";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 
 interface HeaderProps {
   user: SupabaseUser;
@@ -65,9 +66,10 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
               size="icon"
               className="hidden md:flex ml-3"
               onClick={onSidebarToggle}
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
             >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle sidebar</span>
+              <Menu />
             </Button>
           )}
           {/* Mobile hamburger */}
@@ -77,9 +79,10 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
               size="icon"
               className="ml-4 md:hidden"
               onClick={onMenuToggle}
+              aria-label="Toggle menu"
+              title="Toggle menu"
             >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle mobile menu</span>
+              <Menu />
             </Button>
           )}
           <Link href="/intranet" className="flex items-center ml-4 md:ml-4">
@@ -108,7 +111,9 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-10 w-10 rounded-full"
+                size="icon"
+                className="relative rounded-full"
+                aria-label={`User menu for ${displayName}`}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage
@@ -141,25 +146,25 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
               {isInternalStaff && (
                 <DropdownMenuItem asChild>
                   <Link href="/hr/profile" className="cursor-pointer">
-                    <User className="h-4 w-4" />
-                    My Profile
+                    <User />
+                    My profile
                   </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
                 <Link href="/settings" className="cursor-pointer">
-                  <Settings className="h-4 w-4" />
+                  <Settings />
                   Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer text-destructive focus:text-destructive"
+              <DestructiveMenuItem
+                className="cursor-pointer"
                 onSelect={handleSignOut}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut />
                 Sign out
-              </DropdownMenuItem>
+              </DestructiveMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
