@@ -15,3 +15,8 @@ Working location tracking, Google Calendar sync, team history, kiosk mode, CSV/P
 ## Google Calendar Integration
 
 Setup docs in `docs/google-calendar-setup.md`. Domain-wide delegation via Google service account. Calendar events created/updated when setting working location for full-day entries.
+
+
+## Buttons
+
+Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.
