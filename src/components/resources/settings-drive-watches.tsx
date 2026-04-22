@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import {
@@ -211,15 +212,16 @@ function RowActions({
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-8 w-8"
+            size="icon-sm"
             disabled={isBusy}
+            aria-busy={isBusy}
             aria-label={`Actions for ${article.title}`}
+            title="Actions"
           >
             {isBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -247,13 +249,10 @@ function RowActions({
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onSelect={() => setUnlinkOpen(true)}
-          >
-            <Unlink className="h-4 w-4" />
+          <DestructiveMenuItem onSelect={() => setUnlinkOpen(true)}>
+            <Unlink />
             Unlink
-          </DropdownMenuItem>
+          </DestructiveMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <UnlinkDialog

@@ -560,21 +560,22 @@ function SortableSectionRow({
             >
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
+                size="icon-xs"
                 onClick={onStartEdit}
                 aria-label={`Edit ${section.title}`}
+                title="Edit"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil />
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                size="icon-xs"
+                className="hover:bg-destructive/10 hover:text-destructive"
                 onClick={onDelete}
                 aria-label={`Delete ${section.title}`}
+                title="Delete"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 />
               </Button>
             </div>
           </div>

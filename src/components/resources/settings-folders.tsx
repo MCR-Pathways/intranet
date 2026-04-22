@@ -130,12 +130,13 @@ export function SettingsFolders() {
               </div>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                size="icon-sm"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => setRemoveTarget(folder)}
+                aria-label={`Remove ${folder.name}`}
+                title="Remove folder"
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Remove {folder.name}</span>
+                <Trash2 />
               </Button>
             </div>
           ))}

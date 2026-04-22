@@ -75,12 +75,12 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
+          size="icon-sm"
           aria-label="Link to article"
+          title="Link to article"
           onMouseDown={(e) => e.preventDefault()}
         >
-          <LinkIcon className="h-4 w-4" />
+          <LinkIcon />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start" sideOffset={8}>

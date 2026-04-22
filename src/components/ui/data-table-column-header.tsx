@@ -26,18 +26,19 @@ export function DataTableColumnHeader<TData, TValue>({
       variant="ghost"
       size="sm"
       className={cn(
-        "-ml-3 h-8 font-semibold data-[state=open]:bg-accent",
+        "-ml-3 font-semibold data-[state=open]:bg-accent",
         className
       )}
       onClick={() => column.toggleSorting()}
+      aria-label={`Sort by ${title}`}
     >
       <span>{title}</span>
       {column.getIsSorted() === "desc" ? (
-        <ArrowDown className="ml-2 h-4 w-4" />
+        <ArrowDown className="ml-2" />
       ) : column.getIsSorted() === "asc" ? (
-        <ArrowUp className="ml-2 h-4 w-4" />
+        <ArrowUp className="ml-2" />
       ) : (
-        <ChevronsUpDown className="ml-2 h-4 w-4" />
+        <ChevronsUpDown className="ml-2" />
       )}
     </Button>
   );

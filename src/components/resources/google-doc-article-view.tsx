@@ -365,12 +365,13 @@ export function GoogleDocArticleView({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
+                    size="icon-sm"
+                    className="shrink-0"
                     disabled={isPending}
+                    aria-label={`Actions for ${article.title}`}
+                    title="Actions"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Actions for {article.title}</span>
+                    <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

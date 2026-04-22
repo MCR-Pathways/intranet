@@ -548,20 +548,23 @@ export function SectionQuizEditor({
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
+                size="icon-xs"
                 onClick={() => setIsEditingMeta(true)}
+                aria-label="Edit quiz metadata"
+                title="Edit"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil />
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete section quiz"
+                    title="Delete quiz"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
