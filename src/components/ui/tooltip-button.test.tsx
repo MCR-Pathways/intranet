@@ -2,11 +2,20 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import { TooltipButton } from "./tooltip-button";
+import { TooltipProvider } from "./tooltip";
 
+// TooltipButton relies on a root-level TooltipProvider (present in
+// `src/app/(protected)/layout.tsx`). Tests render it in isolation, so we
+// wrap each case in a TooltipProvider manually.
+//
 // jsdom renders Radix Tooltip's portal content lazily on hover/focus. We
 // assert the structural contract (span wrapper vs bare button) rather than
 // the tooltip's rendered text, which would require interaction we don't
 // need for the unit-level guarantees.
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -14,7 +23,7 @@ afterEach(() => {
 
 describe("TooltipButton", () => {
   it("renders a plain Button (no wrapper span) when not disabled", () => {
-    const { container } = render(
+    const { container } = renderWithProvider(
       <TooltipButton>Click me</TooltipButton>
     );
     // No wrapping span with tabIndex=0; the button is the outermost element.
@@ -23,7 +32,7 @@ describe("TooltipButton", () => {
   });
 
   it("wraps the disabled Button in a focusable span when `reason` is provided", () => {
-    const { container } = render(
+    const { container } = renderWithProvider(
       <TooltipButton disabled reason="Fill in required fields first">
         Submit
       </TooltipButton>
@@ -39,7 +48,7 @@ describe("TooltipButton", () => {
 
   it("renders a bare disabled Button and warns in dev when `reason` is missing", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const { container } = render(
+    const { container } = renderWithProvider(
       <TooltipButton disabled>Submit</TooltipButton>
     );
     const outer = container.firstElementChild;
@@ -49,7 +58,7 @@ describe("TooltipButton", () => {
   });
 
   it("surfaces the reason as accessible text", () => {
-    render(
+    renderWithProvider(
       <TooltipButton disabled reason="Course not yet assigned">
         Enrol
       </TooltipButton>
