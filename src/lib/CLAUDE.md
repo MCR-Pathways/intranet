@@ -89,7 +89,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Inline delete triggers in tables** (e.g. Trash2 icon in a table row) use `variant="ghost"` — not destructive. The destructive styling goes on the confirmation button inside the AlertDialog, not the trigger. Keeps table rows visually clean.
 
-**All buttons have tap animation.** `active:scale-95` is in the base Button component. Every button shrinks slightly on press for tactile feedback. Works automatically — no per-button class needed. Disabled buttons don't scale (`disabled:pointer-events-none` prevents the active state).
+**All buttons have tap animation.** `motion-safe:active:scale-95` is in the base Button component — Tailwind's `motion-safe:` prefix makes the tap feedback respect the user's `prefers-reduced-motion` setting automatically (no CSS override needed). Every button shrinks slightly on press for tactile feedback. Disabled buttons don't scale (`disabled:pointer-events-none` prevents the active state). Filled primaries (default/success/destructive) also use `motion-safe:hover:-translate-y-px` for a subtle lift on hover.
 
 ## Tiptap / Editor Patterns
 

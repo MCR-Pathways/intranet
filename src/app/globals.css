@@ -186,17 +186,6 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-
-  /* Transform-based pseudo-classes are not caught by transition-duration.
-     Override explicitly so button tap-feedback and hover-lift don't fire
-     when the user has asked for reduced motion. */
-  .active\:scale-95:active {
-    transform: none !important;
-  }
-
-  .hover\:-translate-y-px:hover {
-    transform: none !important;
-  }
 }
 
 /* Scrollbar Styles */
