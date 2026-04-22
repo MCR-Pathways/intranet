@@ -579,7 +579,9 @@ function CalloutDropdown({ editor }: { editor: Editor }) {
               variant="ghost"
               size="sm"
               className={cn(
-                "gap-0.5 text-xs",
+                // `text-xs` is inherited from size="sm" (button.tsx sm) — no
+                // need to duplicate it here.
+                "gap-0.5",
                 editor.isActive("callout") && "bg-accent text-accent-foreground"
               )}
               aria-label="Insert callout"

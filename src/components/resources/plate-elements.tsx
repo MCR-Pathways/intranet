@@ -698,7 +698,6 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
           <Button
             variant="secondary"
             size="sm"
-            className="text-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowAltInput(!showAltInput);
@@ -710,14 +709,17 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
           <Button
             variant="secondary"
             size="sm"
-            className="text-xs hover:bg-destructive/10 hover:text-destructive"
+            // secondary (not ghost) for contrast over hovered media; ghost
+            // would be invisible on dark images. Destructive-tint hover
+            // still signals the danger intent.
+            className="hover:bg-destructive/10 hover:text-destructive"
             aria-label="Delete image"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowDeleteConfirm(true);
             }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 />
           </Button>
         </div>
 
