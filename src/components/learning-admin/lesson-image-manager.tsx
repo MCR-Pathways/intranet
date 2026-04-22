@@ -129,11 +129,11 @@ export function LessonImageManager({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  className="h-7 px-2"
                   onClick={() => setDeleteTarget(img)}
                   disabled={isPending}
+                  aria-label={`Delete image ${img.file_name}`}
                 >
-                  <Trash2 className="h-3 w-3 mr-1" />
+                  <Trash2 />
                   Delete
                 </Button>
               </div>

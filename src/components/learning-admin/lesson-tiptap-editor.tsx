@@ -308,16 +308,14 @@ function ToolbarButton({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className={cn(
-            "h-7 w-7 p-0",
-            active && "bg-accent text-accent-foreground"
-          )}
+          size="icon-xs"
+          className={cn(active && "bg-accent text-accent-foreground")}
           onClick={onClick}
           disabled={disabled}
+          aria-label={label}
+          aria-pressed={active}
         >
-          {createElement(icon, { className: "h-3.5 w-3.5" })}
-          <span className="sr-only">{label}</span>
+          {createElement(icon)}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">
@@ -355,11 +353,13 @@ function HeadingDropdown({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 gap-1 text-xs font-normal"
+          className="gap-1 font-normal"
+          aria-label="Heading level"
+          title="Heading level"
         >
-          <Type className="h-3.5 w-3.5" />
+          <Type />
           {headingLabels[level]}
-          <ChevronDown className="h-3 w-3" />
+          <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -409,11 +409,10 @@ function ColourPicker({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
+              size="icon-xs"
+              aria-label={label}
             >
-              {createElement(icon, { className: "h-3.5 w-3.5" })}
-              <span className="sr-only">{label}</span>
+              {createElement(icon)}
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -471,14 +470,14 @@ function LinkPopover({ editor }: { editor: Editor }) {
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon-xs"
               className={cn(
-                "h-7 w-7 p-0",
                 editor.isActive("link") && "bg-accent text-accent-foreground"
               )}
+              aria-label="Link"
+              aria-pressed={editor.isActive("link")}
             >
-              <LinkIcon className="h-3.5 w-3.5" />
-              <span className="sr-only">Link</span>
+              <LinkIcon />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -501,7 +500,7 @@ function LinkPopover({ editor }: { editor: Editor }) {
               }
             }}
           />
-          <Button size="sm" className="h-8" onClick={handleSubmit}>
+          <Button size="sm" onClick={handleSubmit}>
             Set
           </Button>
         </div>
@@ -532,11 +531,10 @@ function ImagePopover({ editor }: { editor: Editor }) {
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
+              size="icon-xs"
+              aria-label="Image"
             >
-              <ImageIcon className="h-3.5 w-3.5" />
-              <span className="sr-only">Image</span>
+              <ImageIcon />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -559,7 +557,7 @@ function ImagePopover({ editor }: { editor: Editor }) {
               }
             }}
           />
-          <Button size="sm" className="h-8" onClick={handleSubmit}>
+          <Button size="sm" onClick={handleSubmit}>
             Add
           </Button>
         </div>
@@ -581,12 +579,14 @@ function CalloutDropdown({ editor }: { editor: Editor }) {
               variant="ghost"
               size="sm"
               className={cn(
-                "h-7 px-1.5 gap-0.5 text-xs",
+                "gap-0.5 text-xs",
                 editor.isActive("callout") && "bg-accent text-accent-foreground"
               )}
+              aria-label="Insert callout"
+              aria-pressed={editor.isActive("callout")}
             >
-              <span className="text-xs">Callout</span>
-              <ChevronDown className="h-3 w-3" />
+              <span>Callout</span>
+              <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

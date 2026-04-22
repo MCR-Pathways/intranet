@@ -233,12 +233,14 @@ export function CourseAssignmentManager({
                     </div>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      size="icon-xs"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => handleRemove(assignment)}
                       disabled={isPending}
+                      aria-label="Remove assignment"
+                      title="Remove assignment"
                     >
-                      <X className="h-4 w-4" />
+                      <X />
                     </Button>
                   </div>
                 );

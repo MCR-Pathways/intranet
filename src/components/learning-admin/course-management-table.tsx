@@ -167,9 +167,13 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Actions for {course.title}</span>
-                <MoreHorizontal className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Actions for ${course.title}`}
+                title="Actions"
+              >
+                <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
