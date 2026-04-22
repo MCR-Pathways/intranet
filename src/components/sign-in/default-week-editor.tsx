@@ -325,9 +325,9 @@ export function DefaultWeekEditor({
                         size="sm"
                         type="button"
                         onClick={() => copyToAll(day)}
-                        className="text-xs text-muted-foreground shrink-0"
+                        className="text-muted-foreground shrink-0"
                       >
-                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        <Copy />
                         Copy to all
                       </Button>
                     )}

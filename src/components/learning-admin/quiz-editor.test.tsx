@@ -228,7 +228,7 @@ describe("QuizEditor", () => {
 
     // Start with 2 options, add 4 more to reach max 6
     for (let i = 0; i < 4; i++) {
-      await user.click(screen.getByText("Add Option"));
+      await user.click(screen.getByText("Add option"));
     }
 
     // Should have 6 option inputs
@@ -236,7 +236,7 @@ describe("QuizEditor", () => {
     expect(optionInputs).toHaveLength(6);
 
     // Add Option button should be gone
-    expect(screen.queryByText("Add Option")).not.toBeInTheDocument();
+    expect(screen.queryByText("Add option")).not.toBeInTheDocument();
   });
 
   // =============================================
