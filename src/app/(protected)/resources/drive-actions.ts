@@ -706,3 +706,114 @@ export async function syncAllArticles(): Promise<{
     return { success: false, synced: 0, failed: 0, error: "Failed to sync articles" };
   }
 }
+
+// =============================================
+// ADMIN DASHBOARD READS
+// =============================================
+
+export interface DriveWatchArticle {
+  id: string;
+  title: string;
+  slug: string;
+  status: "draft" | "published";
+  google_doc_id: string;
+  google_doc_url: string | null;
+  last_synced_at: string | null;
+  google_doc_modified_at: string | null;
+  google_watch_channel_id: string | null;
+  google_watch_expires_at: string | null;
+}
+
+/**
+ * Read-only list of every linked Google Doc article with the columns the
+ * admin Drive-watches dashboard needs to render status/drift/expiry state.
+ * Excludes component and native articles (they don't have Drive watches),
+ * excludes soft-deleted rows.
+ */
+export async function getDriveWatchArticles(): Promise<
+  | { success: true; articles: DriveWatchArticle[] }
+  | { success: false; error: string }
+> {
+  try {
+    const { supabase } = await requireContentEditor();
+    const { data, error } = await supabase
+      .from("resource_articles")
+      .select(
+        "id, title, slug, status, google_doc_id, google_doc_url, last_synced_at, google_doc_modified_at, google_watch_channel_id, google_watch_expires_at"
+      )
+      .eq("content_type", "google_doc")
+      .not("google_doc_id", "is", null)
+      .is("deleted_at", null);
+
+    if (error) {
+      logger.error("Failed to load Drive watch articles", {
+        error: error.message,
+      });
+      return { success: false, error: "Failed to load linked Google Docs" };
+    }
+
+    return {
+      success: true,
+      articles: (data ?? []) as DriveWatchArticle[],
+    };
+  } catch (error) {
+    logger.error("getDriveWatchArticles error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to load linked Google Docs" };
+  }
+}
+
+export interface DriveCronRun {
+  id: string;
+  job_name: string;
+  status: "running" | "success" | "failed";
+  started_at: string;
+  finished_at: string | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+}
+
+/**
+ * Read-only list of recent rows from `public.cron_runs` filtered to the
+ * `renew-drive-watches` job. Uses the service client because cron_runs has
+ * RLS on with no SELECT policies (service role only per migration 00082).
+ *
+ * Gate is `requireContentEditor()` — same tier as the rest of this page.
+ * Deliberately wider than 00082's "HR admin only" design intent; see
+ * `src/app/(protected)/resources/CLAUDE.md` for the rationale.
+ */
+export async function getRecentDriveCronRuns(
+  limit = 20
+): Promise<
+  | { success: true; runs: DriveCronRun[] }
+  | { success: false; error: string }
+> {
+  try {
+    await requireContentEditor();
+    const service = createServiceClient();
+    const { data, error } = await service
+      .from("cron_runs")
+      .select("id, job_name, status, started_at, finished_at, result, error")
+      .eq("job_name", "renew-drive-watches")
+      .order("started_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      logger.error("Failed to load Drive cron runs", {
+        error: error.message,
+      });
+      return { success: false, error: "Failed to load recent cron runs" };
+    }
+
+    return {
+      success: true,
+      runs: (data ?? []) as DriveCronRun[],
+    };
+  } catch (error) {
+    logger.error("getRecentDriveCronRuns error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to load recent cron runs" };
+  }
+}
