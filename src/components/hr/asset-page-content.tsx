@@ -24,7 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
-import { buttonVariants } from "@/components/ui/button";
 import { AssetDialog } from "@/components/hr/asset-dialog";
 import { AssetAssignDialog } from "@/components/hr/asset-assign-dialog";
 import { AssetReturnDialog } from "@/components/hr/asset-return-dialog";
@@ -332,13 +331,11 @@ export function AssetPageContent({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              className={buttonVariants({ variant: "secondary" })}
-            >
+            <AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (retireTarget) handleRetire(retireTarget.id);
               }}

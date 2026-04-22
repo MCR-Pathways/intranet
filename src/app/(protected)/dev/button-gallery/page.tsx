@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ButtonSpinner } from "@/components/ui/button-spinner";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { TooltipButton } from "@/components/ui/tooltip-button";
@@ -226,7 +226,7 @@ export default function ButtonGalleryPage() {
         <section className="space-y-4">
           <SectionHeader
             title="AlertDialog footer pattern"
-            description="Radix's AlertDialogAction/Cancel don't auto-use our variants. Apply buttonVariants explicitly."
+            description="AlertDialogAction/Cancel are raw buttons. Override colour via utility classes — don't use buttonVariants (would fight their native styling)."
           />
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -234,18 +234,18 @@ export default function ButtonGalleryPage() {
               default) right.
             </p>
             <div className="flex justify-end gap-2">
-              <button className={buttonVariants({ variant: "secondary" })}>
+              <button className="mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:bg-secondary/90 sm:mt-0">
                 Cancel
               </button>
-              <button className={buttonVariants({ variant: "destructive" })}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground ring-offset-background transition-colors hover:bg-destructive/90">
                 Delete article
               </button>
             </div>
             <div className="flex justify-end gap-2">
-              <button className={buttonVariants({ variant: "secondary" })}>
+              <button className="mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:bg-secondary/90 sm:mt-0">
                 Cancel
               </button>
-              <button className={buttonVariants({ variant: "success" })}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground ring-offset-background transition-colors hover:bg-success/90">
                 Publish
               </button>
             </div>

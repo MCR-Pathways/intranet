@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
-import { buttonVariants } from "@/components/ui/button";
 import { KeyDateDialog } from "@/components/hr/key-date-dialog";
 import { completeKeyDate, deleteKeyDate } from "@/app/(protected)/hr/key-dates/actions";
 import { formatHRDate } from "@/lib/hr";
@@ -216,13 +215,11 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel
-                  className={buttonVariants({ variant: "secondary" })}
-                >
+                <AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  className={buttonVariants({ variant: "destructive" })}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={() => handleDelete(kd.id)}
                 >
                   Delete

@@ -159,15 +159,22 @@ Use `<DestructiveMenuItem>`:
 ```
 
 ### AlertDialog footers
-Radix's `AlertDialogAction` / `AlertDialogCancel` don't auto-use our Button variants. Apply them explicitly:
+Radix's `AlertDialogAction` and `AlertDialogCancel` are raw `<button>` elements with their own base styling (`rounded-md`, `h-10`, `font-medium`, focus ring). They do NOT accept a `variant` prop, and they should NOT be styled with `buttonVariants()` — that would override their native layout/radius/focus treatment with Button's styles and create coupling between the AlertDialog and Button systems.
+
+Instead, override only the colour with semantic utility classes:
 ```tsx
-<AlertDialogCancel className={buttonVariants({ variant: "secondary" })}>
+<AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
   Cancel
 </AlertDialogCancel>
-<AlertDialogAction className={buttonVariants({ variant: "destructive" })}>
+<AlertDialogAction
+  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+  onClick={handleDelete}
+>
   Delete
 </AlertDialogAction>
 ```
+
+This respects AlertDialog's native sizing and focus behaviour, keeps AlertDialog decoupled from Button, and still conveys variant intent through colour.
 
 Order: Cancel (secondary) left, primary action (default/success/destructive) right. Always.
 
