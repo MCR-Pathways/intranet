@@ -93,16 +93,35 @@ export function ProfileKeyDatesSection({
                   </div>
                   {isHRAdmin && (
                     <div className="flex gap-1 shrink-0 ml-2">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleComplete(kd.id)} disabled={isPending} title="Complete">
-                        <Check className="h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleComplete(kd.id)}
+                        disabled={isPending}
+                        aria-label={`Mark ${kd.title} complete`}
+                        title="Complete"
+                      >
+                        <Check />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditTarget(kd)} title="Edit">
-                        <Pencil className="h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => setEditTarget(kd)}
+                        aria-label={`Edit ${kd.title}`}
+                        title="Edit"
+                      >
+                        <Pencil />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Delete">
-                            <Trash2 className="h-3 w-3" />
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="hover:bg-destructive/10 hover:text-destructive"
+                            aria-label={`Delete ${kd.title}`}
+                            title="Delete"
+                          >
+                            <Trash2 />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>

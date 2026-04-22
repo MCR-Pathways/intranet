@@ -161,13 +161,15 @@ export default function LoginPage() {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading}
+            aria-busy={isGoogleLoading}
             variant="outline"
-            className="w-full h-12 text-base"
+            size="hero"
+            className="w-full"
           >
             {isGoogleLoading ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
+              <svg viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -217,14 +219,16 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading || !email}
-              className="w-full h-12 text-base"
+              aria-busy={isLoading}
+              size="hero"
+              className="w-full"
             >
               {isLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="animate-spin" />
               ) : (
-                <Mail className="mr-2 h-5 w-5" />
+                <Mail />
               )}
-              Send Magic Link
+              {isLoading ? "Sending magic link..." : "Send magic link"}
             </Button>
           </form>
 
