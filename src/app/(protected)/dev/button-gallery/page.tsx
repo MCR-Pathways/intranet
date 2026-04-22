@@ -226,7 +226,7 @@ export default function ButtonGalleryPage() {
         <section className="space-y-4">
           <SectionHeader
             title="AlertDialog footer pattern"
-            description="Radix's AlertDialogAction/Cancel ship their own base styling — apply only variant-colour utility classes via className."
+            description="AlertDialogAction/Cancel are raw buttons. Override colour via utility classes — don't use buttonVariants (would fight their native styling)."
           />
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -235,18 +235,18 @@ export default function ButtonGalleryPage() {
               primitives so the same colour classes apply at runtime.
             </p>
             <div className="flex justify-end gap-2">
-              <button className="inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90">
+              <button className="mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:bg-secondary/90 sm:mt-0">
                 Cancel
               </button>
-              <button className="inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground ring-offset-background transition-colors hover:bg-destructive/90">
                 Delete article
               </button>
             </div>
             <div className="flex justify-end gap-2">
-              <button className="inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90">
+              <button className="mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:bg-secondary/90 sm:mt-0">
                 Cancel
               </button>
-              <button className="inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-success text-success-foreground hover:bg-success/90">
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground ring-offset-background transition-colors hover:bg-success/90">
                 Publish
               </button>
             </div>

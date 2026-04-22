@@ -7,20 +7,6 @@ import noCustomButtonSizing from "./eslint-rules/no-custom-button-sizing.mjs";
 // lands. Each sweep PR (2, 3, 4) removes its files from this list as
 // they clean up. PR 5 verifies this list is empty.
 const BUTTON_SIZING_OVERRIDE_FILES = [
-  "src/app/(auth)/login/page.tsx",
-  "src/components/hr/asset-page-content.tsx",
-  "src/components/hr/compliance-upload-dialog.tsx",
-  "src/components/hr/department-management-content.tsx",
-  "src/components/hr/key-dates-dashboard.tsx",
-  "src/components/hr/onboarding-template-management.tsx",
-  "src/components/hr/org-chart-content.tsx",
-  "src/components/hr/profile-absence-tab.tsx",
-  "src/components/hr/profile-documents-tab.tsx",
-  "src/components/hr/profile-key-dates-section.tsx",
-  "src/components/hr/profile-personal-tab.tsx",
-  "src/components/hr/team-member-card.tsx",
-  "src/components/hr/user-table.tsx",
-  "src/components/layout/header.tsx",
   "src/components/learning-admin/course-assignment-manager.tsx",
   "src/components/learning-admin/course-management-table.tsx",
   "src/components/learning-admin/lesson-image-manager.tsx",

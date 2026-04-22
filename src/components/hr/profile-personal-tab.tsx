@@ -379,19 +379,22 @@ export function ProfilePersonalTab({
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
+                      size="icon-sm"
                       onClick={() => handleOpenEditContact(contact)}
+                      aria-label={`Edit emergency contact ${contact.full_name}`}
+                      title="Edit"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      size="icon-sm"
+                      className="hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => setDeleteTarget(contact)}
+                      aria-label={`Delete emergency contact ${contact.full_name}`}
+                      title="Delete"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 />
                     </Button>
                   </div>
                 </div>

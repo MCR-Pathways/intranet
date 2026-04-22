@@ -324,11 +324,13 @@ export function OnboardingTemplateManagement({
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
+                        size="icon-sm"
+                        className="shrink-0"
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={`Actions for template ${template.name}`}
+                        title="Actions"
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -666,8 +668,14 @@ function TemplateItemsList({
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="shrink-0"
+                      aria-label={`Actions for ${item.title}`}
+                      title="Actions"
+                    >
+                      <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
