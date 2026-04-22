@@ -6,7 +6,6 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -35,6 +34,10 @@ export interface TooltipButtonProps extends ButtonProps {
  *
  * When the button is enabled, `TooltipButton` renders a plain Button and
  * skips the wrapper entirely. Zero runtime cost for the common path.
+ *
+ * Relies on a single root-level `TooltipProvider` (present in
+ * `src/app/(protected)/layout.tsx`) — per the project rule documented in
+ * `src/lib/CLAUDE.md`. Do not wrap instances in their own `TooltipProvider`.
  */
 export const TooltipButton = React.forwardRef<
   HTMLButtonElement,
@@ -62,31 +65,29 @@ export const TooltipButton = React.forwardRef<
   }
 
   return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {/* The span catches pointer events the disabled button can't. */}
-          <span
-            tabIndex={0}
-            className="inline-flex"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {/* The span catches pointer events the disabled button can't. */}
+        <span
+          tabIndex={0}
+          className="inline-flex"
+          aria-disabled="true"
+        >
+          <Button
+            ref={ref}
+            disabled
             aria-disabled="true"
+            // Pointer events on the inner button stay off; tabIndex on
+            // the span takes the focus so keyboard users get the tooltip.
+            tabIndex={-1}
+            {...props}
           >
-            <Button
-              ref={ref}
-              disabled
-              aria-disabled="true"
-              // Pointer events on the inner button stay off; tabIndex on
-              // the span takes the focus so keyboard users get the tooltip.
-              tabIndex={-1}
-              {...props}
-            >
-              {children}
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top">{reason}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+            {children}
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top">{reason}</TooltipContent>
+    </Tooltip>
   );
 });
 TooltipButton.displayName = "TooltipButton";

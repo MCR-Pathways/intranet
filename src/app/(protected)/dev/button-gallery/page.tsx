@@ -26,7 +26,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipProvider } from "@/components/ui/tooltip";
+// Root TooltipProvider wraps the (protected) tree in layout.tsx — no local
+// provider needed per src/lib/CLAUDE.md.
 
 export const metadata = {
   title: "Button Gallery (dev)",
@@ -76,8 +77,7 @@ export default function ButtonGalleryPage() {
   }
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <main className="mx-auto max-w-6xl px-6 py-10 space-y-12">
+    <main className="mx-auto max-w-6xl px-6 py-10 space-y-12">
         <header className="space-y-2 border-b pb-6">
           <h1 className="text-3xl font-semibold tracking-tight">
             Button gallery
@@ -335,6 +335,5 @@ export default function ButtonGalleryPage() {
           </div>
         </section>
       </main>
-    </TooltipProvider>
   );
 }

@@ -2,7 +2,7 @@
  * ESLint rule: no-custom-button-sizing
  *
  * Flags `<Button>` / `<TooltipButton>` JSX with `className` containing
- * height/width/text-size tokens that should live in the `size` prop instead.
+ * numeric height/width tokens that should live in the `size` prop instead.
  *
  * Banned patterns (word-bounded digit suffixes):
  *   h-<digit>, w-<digit>, h-<digit>.<digit>, w-<digit>.<digit>
@@ -14,6 +14,11 @@
  * The rule supports conditional classNames too, because devs sometimes
  * wrap a string literal in `cn(...)` or use ternaries. We walk template
  * literals and array / call-expression argument strings.
+ *
+ * Text-size overrides (`text-xs`, `text-sm`, `text-base`) are a separate
+ * concern — the `size` prop already sets appropriate text size per variant
+ * — but that check is added in a follow-up PR rather than here, to keep
+ * the rule's scope tight in the PR where it lands.
  */
 
 const BUTTON_COMPONENTS = new Set(["Button", "TooltipButton"]);
