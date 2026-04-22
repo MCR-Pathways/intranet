@@ -283,12 +283,18 @@ export function GoogleDocArticleView({
   const sourceModifiedMs = article.google_doc_modified_at
     ? new Date(article.google_doc_modified_at).getTime()
     : null;
-  const syncState: "in-sync" | "drift" | "never-synced" = lastSyncedMs === null
-    ? "never-synced"
-    : sourceModifiedMs !== null &&
-      sourceModifiedMs > lastSyncedMs + DRIFT_THRESHOLD_MS
-      ? "drift"
-      : "in-sync";
+  // `sync-failed` wins over everything: if the last attempt threw, any
+  // drift/in-sync claim is unreliable because we couldn't compare source
+  // to the intranet copy. Cleared to null on the next successful sync.
+  const syncState: "sync-failed" | "never-synced" | "drift" | "in-sync" =
+    article.last_sync_error
+      ? "sync-failed"
+      : lastSyncedMs === null
+        ? "never-synced"
+        : sourceModifiedMs !== null &&
+          sourceModifiedMs > lastSyncedMs + DRIFT_THRESHOLD_MS
+          ? "drift"
+          : "in-sync";
 
   // Absolute timestamps for the hover tooltips — timezone-locked via formatDate.
   const lastSyncedAbsolute = article.last_synced_at
@@ -406,6 +412,19 @@ export function GoogleDocArticleView({
                         </div>
                         <div className="text-[11px] text-amber-600/75 mt-0.5">
                           Click Sync now to fetch content
+                        </div>
+                      </>
+                    )}
+                    {syncState === "sync-failed" && article.last_sync_error && (
+                      <>
+                        <div
+                          className="text-xs font-medium text-red-600"
+                          title={article.last_sync_error}
+                        >
+                          Sync failed
+                        </div>
+                        <div className="text-[11px] text-red-600/75 mt-0.5">
+                          Click Sync now to retry
                         </div>
                       </>
                     )}

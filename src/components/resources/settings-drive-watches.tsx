@@ -51,9 +51,13 @@ import { toast } from "sonner";
 
 const DRIFT_THRESHOLD_MS = 60_000;
 
-type SyncState = "in-sync" | "drift" | "never-synced";
+type SyncState = "sync-failed" | "never-synced" | "drift" | "in-sync";
 
+// Derive the primary sync state. `sync-failed` wins over everything else
+// because if the last attempt failed, drift and in-sync claims are
+// unreliable — we couldn't actually compare source and intranet copies.
 function deriveSyncState(article: DriveWatchArticle): SyncState {
+  if (article.last_sync_error) return "sync-failed";
   if (!article.last_synced_at) return "never-synced";
   if (!article.google_doc_modified_at) return "in-sync";
   const sourceMs = new Date(article.google_doc_modified_at).getTime();
@@ -83,6 +87,22 @@ function StatusBadge({ article }: { article: DriveWatchArticle }) {
           <AlertCircle className="h-3 w-3" />
           Never synced
         </Badge>
+      )}
+      {state === "sync-failed" && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 gap-1 cursor-help">
+              <AlertCircle className="h-3 w-3" />
+              Sync failed
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm">
+            <p className="text-xs font-medium">Last sync error</p>
+            <p className="text-xs mt-1 whitespace-pre-wrap break-words">
+              {article.last_sync_error}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       )}
       {article.status === "draft" && (
         <Badge variant="secondary" className="font-medium">
@@ -381,20 +401,18 @@ export function SettingsDriveWatches() {
         cell: ({ row }) => {
           const article = row.original;
           return (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={`/resources/article/${article.slug}`}
-                    className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
-                  >
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{article.title}</span>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>{article.title}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`/resources/article/${article.slug}`}
+                  className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{article.title}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>{article.title}</TooltipContent>
+            </Tooltip>
           );
         },
       },
@@ -453,6 +471,27 @@ export function SettingsDriveWatches() {
         ),
       },
       {
+        // Hidden column used as the primary sort key so attention-needed rows
+        // (failed/never-synced/drift/not-watched) cluster at the top. Renders
+        // nothing — only affects default ordering. User-chosen column sorts
+        // still replace this as expected (single-column sort on click).
+        id: "attention",
+        accessorFn: (row) => {
+          if (row.last_sync_error) return 5;
+          if (row.last_synced_at === null) return 4;
+          const synced = new Date(row.last_synced_at).getTime();
+          const edited = row.google_doc_modified_at
+            ? new Date(row.google_doc_modified_at).getTime()
+            : null;
+          if (edited !== null && edited > synced + DRIFT_THRESHOLD_MS) return 3;
+          if (row.google_watch_channel_id === null) return 2;
+          return 1;
+        },
+        enableHiding: true,
+        header: () => null,
+        cell: () => null,
+      },
+      {
         id: "actions",
         header: "",
         cell: ({ row }) => (
@@ -470,6 +509,10 @@ export function SettingsDriveWatches() {
   ];
 
   return (
+    // Single TooltipProvider for all Tooltips in this component — Radix
+    // recommends one high-level provider rather than per-use. Nested
+    // instances in cells aren't wrong but waste render work on every row.
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-8">
       {/* Linked Google Docs */}
       <section className="space-y-3">
@@ -502,7 +545,11 @@ export function SettingsDriveWatches() {
             data={articles}
             searchKey="title"
             searchPlaceholder="Search by title…"
-            initialSorting={[{ id: "expires", desc: false }]}
+            initialSorting={[
+              { id: "attention", desc: true },
+              { id: "expires", desc: false },
+            ]}
+            initialColumnVisibility={{ attention: false }}
             pageSize={25}
           />
         )}
@@ -560,18 +607,16 @@ export function SettingsDriveWatches() {
                     <TableCell>{cronResultSummary(run.result)}</TableCell>
                     <TableCell className="max-w-[30ch]">
                       {run.error ? (
-                        <TooltipProvider delayDuration={200}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="truncate block text-destructive">
-                                {run.error}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-md">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="truncate block text-destructive">
                               {run.error}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-md">
+                            {run.error}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -584,5 +629,6 @@ export function SettingsDriveWatches() {
         )}
       </section>
     </div>
+    </TooltipProvider>
   );
 }

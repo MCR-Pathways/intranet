@@ -21,7 +21,7 @@ const CATEGORY_SELECT =
   "id, name, slug, description, icon, icon_colour, sort_order, parent_id, visibility, created_at, updated_at, deleted_at, deleted_by";
 
 const ARTICLE_SELECT =
-  "id, category_id, title, slug, content, content_json, content_type, google_doc_id, google_doc_modified_at, google_doc_url, synced_html, last_synced_at, component_name, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, visibility";
+  "id, category_id, title, slug, content, content_json, content_type, google_doc_id, google_doc_modified_at, google_doc_url, synced_html, last_synced_at, last_sync_error, component_name, status, author_id, created_at, updated_at, published_at, deleted_at, deleted_by, visibility";
 
 const AUTHOR_SELECT = "id, full_name, preferred_name, avatar_url";
 

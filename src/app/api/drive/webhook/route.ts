@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { syncDocumentContent } from "@/lib/google-drive";
+import { syncDocumentContent, truncateSyncError } from "@/lib/google-drive";
 import { timingSafeTokenCompare } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { rateLimiters } from "@/lib/ratelimit";
@@ -88,8 +88,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Re-sync content from Google Docs
-    const { html, plaintext, modifiedTime } = await syncDocumentContent(googleDocId);
+    // Re-sync content from Google Docs. Record any sync failure on the
+    // article row so the dashboard / kebab surface it, then 200 to Google.
+    let html: string;
+    let plaintext: string;
+    let modifiedTime: string | null;
+    try {
+      const synced = await syncDocumentContent(googleDocId);
+      html = synced.html;
+      plaintext = synced.plaintext;
+      modifiedTime = synced.modifiedTime;
+    } catch (syncErr) {
+      const errorMsg = truncateSyncError(
+        syncErr instanceof Error ? syncErr.message : String(syncErr)
+      );
+      await supabase
+        .from("resource_articles")
+        .update({ last_sync_error: errorMsg })
+        .eq("id", article.id);
+      logger.error("Drive webhook: syncDocumentContent failed", {
+        articleId: article.id,
+        googleDocId,
+        error: errorMsg,
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     // Update the article with fresh content
     const { error: updateError } = await supabase
@@ -99,6 +122,7 @@ export async function POST(request: NextRequest) {
         content: plaintext,
         last_synced_at: new Date().toISOString(),
         google_doc_modified_at: modifiedTime,
+        last_sync_error: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", article.id);
