@@ -159,15 +159,22 @@ Use `<DestructiveMenuItem>`:
 ```
 
 ### AlertDialog footers
-Radix's `AlertDialogAction` / `AlertDialogCancel` already ship their own base styling (`h-10`, `rounded-md`, `px-4 py-2`, `font-medium`, `transition-colors`). Apply only variant-colour utility classes via `className` — don't use `buttonVariants()`, which drags in the Button base (`inline-flex`, `rounded-lg`, `motion-safe:active:scale-95`, `[&_svg]:size-4`) that conflicts with Radix's internal structure and would give a commit button decorative tap-scale that doesn't suit a consequential action:
+Radix's `AlertDialogAction` and `AlertDialogCancel` are raw `<button>` elements with their own base styling (`rounded-md`, `h-10`, `font-medium`, `transition-colors`, focus ring). They do NOT accept a `variant` prop, and they should NOT be styled with `buttonVariants()` — that would drag in the Button base (`inline-flex`, `rounded-lg`, `motion-safe:active:scale-95`, `[&_svg]:size-4`), override Radix's native layout/radius/focus treatment via twMerge last-wins, couple AlertDialog to the Button system, and hand a decorative tap-scale to what should be a consequential-action commit.
+
+Instead, override only the colour with semantic utility classes:
 ```tsx
 <AlertDialogCancel className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
   Cancel
 </AlertDialogCancel>
-<AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+<AlertDialogAction
+  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+  onClick={handleDelete}
+>
   Delete
 </AlertDialogAction>
 ```
+
+This respects AlertDialog's native sizing and focus behaviour, keeps AlertDialog decoupled from Button, and still conveys variant intent through colour.
 
 Order: Cancel (secondary) left, primary action (default/success/destructive) right. Always.
 
