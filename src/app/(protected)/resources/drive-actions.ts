@@ -18,6 +18,7 @@ import {
   listFolderDocuments,
   getDocumentMetadata,
   syncDocumentContent,
+  truncateSyncError,
   watchFile,
   stopWatchChannel,
 } from "@/lib/google-drive";
@@ -358,6 +359,7 @@ export async function linkGoogleDoc(
     let html = "";
     let plaintext = "";
     let modifiedTime: string | null = null;
+    let syncErrorMessage: string | null = null;
     // Track whether the initial content fetch actually worked. We deliberately
     // swallow the error so the article row still gets created (editors can
     // retry via Sync now later), but we must not record last_synced_at = now
@@ -371,9 +373,12 @@ export async function linkGoogleDoc(
       modifiedTime = synced.modifiedTime;
       syncSuccess = true;
     } catch (syncError) {
+      syncErrorMessage = truncateSyncError(
+        syncError instanceof Error ? syncError.message : String(syncError)
+      );
       logger.warn("Failed to sync doc content during link — proceeding with empty content", {
         docId,
-        error: syncError instanceof Error ? syncError.message : String(syncError),
+        error: syncErrorMessage,
       });
     }
 
@@ -391,6 +396,7 @@ export async function linkGoogleDoc(
         synced_html: html,
         last_synced_at: syncSuccess ? new Date().toISOString() : null,
         google_doc_modified_at: modifiedTime,
+        last_sync_error: syncErrorMessage,
         status: "published",
         author_id: user.id,
         visibility: null, // Inherit from category
@@ -581,8 +587,30 @@ export async function syncArticle(
       return { success: false, error: "This article is not a linked Google Doc" };
     }
 
-    // Fetch and sanitise content
-    const { html, plaintext, modifiedTime } = await syncDocumentContent(article.google_doc_id);
+    // Fetch and sanitise content. On failure, record the error message on the
+    // article row so the dashboard / kebab can surface it, then bail.
+    let html: string;
+    let plaintext: string;
+    let modifiedTime: string | null;
+    try {
+      const synced = await syncDocumentContent(article.google_doc_id);
+      html = synced.html;
+      plaintext = synced.plaintext;
+      modifiedTime = synced.modifiedTime;
+    } catch (syncErr) {
+      const errorMsg = truncateSyncError(
+        syncErr instanceof Error ? syncErr.message : String(syncErr)
+      );
+      await supabase
+        .from("resource_articles")
+        .update({ last_sync_error: errorMsg })
+        .eq("id", article.id);
+      logger.error("syncArticle: syncDocumentContent failed", {
+        articleId: article.id,
+        error: errorMsg,
+      });
+      return { success: false, error: "Failed to sync article" };
+    }
 
     // Update the article
     const { error: updateError } = await supabase
@@ -592,6 +620,7 @@ export async function syncArticle(
         content: plaintext,
         last_synced_at: new Date().toISOString(),
         google_doc_modified_at: modifiedTime,
+        last_sync_error: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", article.id);
@@ -672,6 +701,7 @@ export async function syncAllArticles(): Promise<{
             content: plaintext,
             last_synced_at: new Date().toISOString(),
             google_doc_modified_at: modifiedTime,
+            last_sync_error: null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", article.id);
@@ -687,12 +717,16 @@ export async function syncAllArticles(): Promise<{
         }
       } catch (syncError) {
         failed++;
+        const errorMsg = truncateSyncError(
+          syncError instanceof Error ? syncError.message : String(syncError)
+        );
+        await supabase
+          .from("resource_articles")
+          .update({ last_sync_error: errorMsg })
+          .eq("id", article.id);
         logger.error("Bulk sync: failed to fetch doc content", {
           articleId: article.id,
-          error:
-            syncError instanceof Error
-              ? syncError.message
-              : String(syncError),
+          error: errorMsg,
         });
       }
     }
@@ -722,6 +756,7 @@ export interface DriveWatchArticle {
   google_doc_modified_at: string | null;
   google_watch_channel_id: string | null;
   google_watch_expires_at: string | null;
+  last_sync_error: string | null;
 }
 
 /**
@@ -739,7 +774,7 @@ export async function getDriveWatchArticles(): Promise<
     const { data, error } = await supabase
       .from("resource_articles")
       .select(
-        "id, title, slug, status, google_doc_id, google_doc_url, last_synced_at, google_doc_modified_at, google_watch_channel_id, google_watch_expires_at"
+        "id, title, slug, status, google_doc_id, google_doc_url, last_synced_at, google_doc_modified_at, google_watch_channel_id, google_watch_expires_at, last_sync_error"
       )
       .eq("content_type", "google_doc")
       .not("google_doc_id", "is", null)

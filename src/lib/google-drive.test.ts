@@ -4,6 +4,7 @@ import {
   extractFolderId,
   sanitiseGoogleDocsHtml,
   extractPlainTextFromHtml,
+  truncateSyncError,
 } from "./google-drive";
 
 // Re-export smoke test — verify extractDocId/extractFolderId still work via google-drive.ts
@@ -214,5 +215,31 @@ describe("sanitiseGoogleDocsHtml — image alignment", () => {
     const result = sanitiseGoogleDocsHtml(html);
     expect(result).not.toContain("mx-auto");
     expect(result).not.toContain("ml-auto");
+  });
+});
+
+describe("truncateSyncError", () => {
+  it("returns short messages unchanged", () => {
+    expect(truncateSyncError("403 Forbidden")).toBe("403 Forbidden");
+  });
+
+  it("returns exactly-at-limit messages unchanged", () => {
+    const msg = "x".repeat(500);
+    expect(truncateSyncError(msg)).toBe(msg);
+    expect(truncateSyncError(msg).length).toBe(500);
+  });
+
+  it("truncates over-limit messages and appends an ellipsis", () => {
+    const msg = "x".repeat(1000);
+    const result = truncateSyncError(msg);
+    expect(result.length).toBe(500);
+    expect(result.endsWith("…")).toBe(true);
+    expect(result.slice(0, 499)).toBe("x".repeat(499));
+  });
+
+  it("respects a custom max", () => {
+    const result = truncateSyncError("abcdefghij", 5);
+    expect(result).toBe("abcd…");
+    expect(result.length).toBe(5);
   });
 });

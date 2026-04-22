@@ -415,6 +415,16 @@ export function extractPlainTextFromHtml(html: string): string {
  * `modifiedTime` is null only if Drive unexpectedly omits it — defensive
  * callers should treat null as "unknown" and fall back to existing logic.
  */
+/**
+ * Truncate a Drive API error message for storage in `resource_articles.last_sync_error`.
+ * The column is free-form TEXT, but Drive errors can occasionally be long stack
+ * traces. Cap at ~500 chars with a trailing ellipsis so the DB row stays lean
+ * and the dashboard tooltip renders sensibly.
+ */
+export function truncateSyncError(message: string, max = 500): string {
+  return message.length <= max ? message : message.slice(0, max - 1) + "…";
+}
+
 export async function syncDocumentContent(
   docId: string
 ): Promise<{ html: string; plaintext: string; modifiedTime: string | null }> {

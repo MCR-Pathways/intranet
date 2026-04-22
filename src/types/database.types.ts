@@ -2864,6 +2864,7 @@ export type Database = {
           google_watch_resource_id: string | null
           id: string
           last_published_at: string | null
+          last_sync_error: string | null
           last_synced_at: string | null
           published_at: string | null
           slug: string
@@ -2893,6 +2894,7 @@ export type Database = {
           google_watch_resource_id?: string | null
           id?: string
           last_published_at?: string | null
+          last_sync_error?: string | null
           last_synced_at?: string | null
           published_at?: string | null
           slug: string
@@ -2922,6 +2924,7 @@ export type Database = {
           google_watch_resource_id?: string | null
           id?: string
           last_published_at?: string | null
+          last_sync_error?: string | null
           last_synced_at?: string | null
           published_at?: string | null
           slug?: string
