@@ -38,6 +38,8 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Evaluate each table column's value before migrating.** Fold sparse data into related cells to reduce visual noise.
 
+**Use a hidden priority column to group attention-needed rows at the top.** TanStack's `sorting` state is a multi-key array, so you can ship a hidden `accessorFn` column that returns a numeric priority (higher = more urgent) and list it first in `initialSorting`. Second key is your normal sort. Hide the column via `initialColumnVisibility={{ [columnId]: false }}` plus `enableHiding: false` on the def — `row.getVisibleCells()` skips it, `getSortedRowModel` still sees it, and `column.getCanHide()` returns false so a column-visibility menu (present or future) can never un-hide what renders as an empty column. Clicking any visible column header replaces the sort as expected (user intent wins). Used in `settings-drive-watches.tsx` to cluster failed/never-synced/drift/not-watched rows above healthy ones without breaking user-driven sorts. Pre-sorting the `data` prop in `useMemo` does NOT work for this — TanStack's sort state runs after and overrides input order.
+
 ## Lightweight Table Pattern
 
 **Use raw Shadcn Table primitives for lightweight read-only lists (2-10 rows).** Full DataTable (TanStack + sorting + pagination) is for data management surfaces (HR Users, Assets, Compliance). For activity feeds, bookmarks, and recent items, use the same visual wrapper as DataTable.
@@ -116,6 +118,8 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 ## Radix Component Patterns
 
 **Don't use `mr-2` on icons inside Shadcn `DropdownMenuItem`.** Already has `gap-2`. Use just `h-4 w-4`. `Button` does NOT have `gap-2`, so `mr-2` is still needed there.
+
+**One `TooltipProvider` per component, not per cell.** Radix recommends a single provider at the app root or wrapping the table/section — each `TooltipProvider` runs its own event listeners and delay state. Per-row instantiation inside table cells works but wastes render work on every visible row. Wrap the component's top-level `<div>` once with `<TooltipProvider delayDuration={200}>`; bare `<Tooltip>` children all use it. Caught by Gemini review on PR #266.
 
 ## Global Search
 

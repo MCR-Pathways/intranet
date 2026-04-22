@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-17
+> Last updated: 2026-04-22
 
 ---
 
@@ -114,6 +114,9 @@
 - [ ] CI/CD pipeline (GitHub Actions for automated test runs, lint, type-check)
 - [x] Regenerate `database.types.ts` from production Supabase — 70+ tables, typed clients, 72 type errors fixed
 - [x] Google Drive webhook renewal cron — Supabase pg_cron (migration 00083), PR #260. Drive returns ~24h-lifetime channels in practice; daily 03:00 UTC renewal handles all linked docs.
+- [x] Google Doc source-edit time tracked for drift signalling — `google_doc_modified_at` column (migration 00084). Three-state kebab header: in-sync / drift / never-synced. PRs #262, #263.
+- [x] Admin Drive Watches dashboard at `/resources/settings` — linked docs table + recent renewal runs + per-row Sync/Unlink. PR #265.
+- [x] Per-article sync failure surface — `last_sync_error` column (migration 00085) + red "Sync failed" badge on dashboard and kebab header. Dashboard default sort groups attention-needed rows at the top. PR #266.
 - [x] Resend email activation (domain verification + env vars) — PRs #175, #198, #200, #201
 
 ### Larger Features

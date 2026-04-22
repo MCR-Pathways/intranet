@@ -487,7 +487,7 @@ export function SettingsDriveWatches() {
           if (row.google_watch_channel_id === null) return 2;
           return 1;
         },
-        enableHiding: true,
+        enableHiding: false,
         header: () => null,
         cell: () => null,
       },
