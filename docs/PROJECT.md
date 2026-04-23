@@ -114,7 +114,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (84 files, `00001` through `00083` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (87 files, `00001` through `00086` plus a combined migration).
 
 ### Local Supabase
 
@@ -306,7 +306,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**84 migration files** in `supabase/migrations/`, numbered `00001` through `00083` plus a combined migration.
+**87 migration files** in `supabase/migrations/`, numbered `00001` through `00086` plus a combined migration.
 
 **70+ tables** — key ones:
 
@@ -440,7 +440,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 61 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,436 tests
+- **Coverage:** 1,457 tests
 
 ### Test Categories
 
@@ -729,6 +729,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 | Date | Author | Summary |
 |---|---|---|
+| 2026-04-23 | Abdulmuiz Adaranijo | Vercel-to-Supabase cron migration finished. `process-emails` and `daily-reminders` now run under Supabase pg_cron + pg_net via migration `00086`, reusing the vault secrets (`app_base_url`, `cron_secret`) set up for `00083`. All three app crons are now on one scheduler; `vercel.json` has no more entries. Both routes gained the `cron_runs` audit-write pattern from `renew-drive-watches`, with the Gemini-driven refinements: `daily-reminders` tracks per-block failures in a `blockErrors` array so the audit status is honest when either L&D or HR crashes; `process-emails` checks every `.update()` in the retry loop, counts a `persistenceFailed` metric, breaks the loop on success-branch persistence drift (the cascade-double-send risk), and writes `status='failed'` with an explicit error message when drift is detected. Type-regen of `database.types.ts` was attempted but abandoned: production Supabase is behind on migrations `00074`, `00077`, and the flexible-working tables, so regen would have lost type coverage across the codebase. Captured as a deferred task with concrete pick-up triggers. Three lessons to root CLAUDE.md: outer try/catch is blind to error-swallowing inner catches, batch loops with external side effects must break on post-send persistence failure, and prod migration parity must be confirmed before any type regen. Test count 1,436 → 1,457. |
 | 2026-04-22 | Abdulmuiz Adaranijo | Drive-integration polish. PR #261 corrected the "up to 7 days" Drive watch lifetime assumption — channels observed at ~24h in practice; fallback values, comments, and docs all aligned with reality, plus defensive trim on NEXT_PUBLIC_APP_URL after a trailing-newline env var broke first production watch setup. PR #262 added google_doc_modified_at (migration 00084) with three-state kebab drift signalling (in-sync / drift / never-synced, 60s threshold). PR #263 one-line fix — ARTICLE_SELECT missed the new column. PR #264 native article header parity (BookmarkToggle moved to right cluster to match Google Doc view). PR #265 admin Drive Watches dashboard on /resources/settings — new tab with two stacked sections (linked docs DataTable, 25/page with multi-column sort + title search; recent renewal runs, last 20 cron_runs rows). Row kebab with Sync now / Open in Drive / Unlink. PR #266 last_sync_error column (migration 00085) + red-tonal Sync failed state on both dashboard (Radix Tooltip hover for error text) and article kebab header (native title attribute — Radix Tooltip inside DropdownMenu has z-index issues). New truncateSyncError helper caps stored errors at 500 chars. Dashboard gained a hidden attention sort column so failed/never-synced/drift/not-watched rows cluster at the top by default with soonest-expiring watch as tiebreaker. Gemini flagged per-row TooltipProvider; swept to a single container-level provider across all three uses in the file. Test count 1,432 → 1,436. Two new src/lib/CLAUDE.md patterns captured: hidden-priority sort column for DataTable default grouping, and single TooltipProvider per component. |
 | 2026-04-20 | Abdulmuiz Adaranijo | Drive webhook renewal + Google Doc article UX cleanup. PR #259 removed the teal banner on Google Doc articles entirely; Sync now + Edit in Google Docs moved into the kebab alongside Move and Unlink; BookmarkToggle moved from the title cluster to the right-side action cluster. PR #260 adds Supabase pg_cron to renew Drive watch channels before they expire. Migrations 00081 (google_watch_channel_id, google_watch_expires_at, partial index), 00082 (cron_runs audit table), 00083 (pg_cron schedule via pg_net.http_get with Vault-stored secrets). New route at /api/cron/renew-drive-watches with production guard, per-row try/catch, scale-threshold warnings. Supabase pg_cron is now the default for new cron jobs; existing Vercel crons stay. Smoke test revealed Drive returns ~24h-lifetime channels in practice despite docs saying up to 7 days — fallback values and comments updated to match, defensive .trim() added on NEXT_PUBLIC_APP_URL after a trailing newline in the env var broke the first production watch setup. Gemini review refined the fallback from 23h to 25h so rows don't read as expired between renewals while the underlying channel is still live. Root CLAUDE.md Process section gained two new lessons (fold smoke-test corrections into the sync PR; apply rules at their specified scope rather than extrapolating defensive fixes). The existing MEMORY.md rule on passing credentials through Claude was corrected: `!` prefix runs commands in the local shell but the command text still enters Claude's context, so literal secret values embedded inline still leak. Safe pattern is export in a separate terminal first, then reference by variable name. Concrete failure mode captured in memory/feedback_claude_code_bang_prefix.md after a CRON_SECRET leak during smoke-testing forced a rotation. |
 | 2026-04-16 | Abdulmuiz Adaranijo | Resources WS5 search improvements. Config-as-code script (scripts/algolia-settings.mjs) for all 3 Algolia indices — sets searchableAttributes, attributesToSnippet, attributesToHighlight, and distinct dedup on resources_articles (1 hit per article instead of 1 per section). Content snippets now rendered in global Cmd+K search for resources and Tool Shed results (data was requested from Algolia but thrown away). Highlight contrast improved from bg-amber-100 to bg-amber-200/60. Used SDK Hit<T> type instead of custom wrapper. 3 files, +77/-6. |
