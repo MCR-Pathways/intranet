@@ -311,8 +311,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               insertTableRow(editor, { before: true });
@@ -331,8 +330,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               insertTableRow(editor);
@@ -351,8 +349,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               insertTableColumn(editor, { before: true });
@@ -371,8 +368,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               insertTableColumn(editor);
@@ -393,8 +389,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               deleteRow(editor);
@@ -413,8 +408,7 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7"
+            size="icon-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               deleteColumn(editor);
@@ -433,8 +427,8 @@ function TableFloatingToolbar() {
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive hover:text-destructive"
+            size="icon-xs"
+            className="hover:bg-destructive/10 hover:text-destructive"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowDeleteConfirm(true);
@@ -502,8 +496,7 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
+                  size="icon-xs"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const at = editor.api.findPath(element);
@@ -530,8 +523,8 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
+                size="icon-xs"
+                className="hover:bg-destructive/10 hover:text-destructive"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setShowRemoveConfirm(true);
@@ -705,26 +698,28 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 text-xs"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowAltInput(!showAltInput);
             }}
           >
-            <Pencil className="h-3 w-3 mr-1" />
+            <Pencil />
             Alt text
           </Button>
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 text-xs text-destructive hover:text-destructive"
+            // secondary (not ghost) for contrast over hovered media; ghost
+            // would be invisible on dark images. Destructive-tint hover
+            // still signals the danger intent.
+            className="hover:bg-destructive/10 hover:text-destructive"
             aria-label="Delete image"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowDeleteConfirm(true);
             }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 />
           </Button>
         </div>
 
@@ -748,7 +743,6 @@ export function ImageElement({ children, element, ...props }: PlateElementProps)
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
               onMouseDown={(e) => {
                 e.preventDefault();
                 const path = editor.api.findPath(element);
@@ -828,27 +822,29 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 text-xs"
+            className="text-xs"
             aria-label="Edit video URL"
+            title="Edit"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowEditDialog(true);
             }}
           >
-            <Pencil className="h-3 w-3 mr-1" />
+            <Pencil />
             Edit
           </Button>
           <Button
             variant="secondary"
             size="sm"
-            className="h-7 text-xs text-destructive hover:text-destructive"
+            className="text-xs hover:bg-destructive/10 hover:text-destructive"
             aria-label="Remove video embed"
+            title="Remove"
             onMouseDown={(e) => {
               e.preventDefault();
               setShowDeleteConfirm(true);
             }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 />
           </Button>
         </div>
       </div>
@@ -934,12 +930,13 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
         </a>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-xs"
           className={cn(
-            "h-7 w-7 text-destructive hover:text-destructive transition-opacity",
+            "hover:bg-destructive/10 hover:text-destructive transition-opacity",
             selected ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
           aria-label="Remove file attachment"
+          title="Remove"
           onMouseDown={(e) => {
             e.preventDefault();
             setShowDeleteConfirm(true);

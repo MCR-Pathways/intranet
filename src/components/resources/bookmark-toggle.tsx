@@ -32,16 +32,19 @@ export function BookmarkToggle({
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="icon-sm"
       onClick={handleToggle}
       disabled={isPending}
+      aria-busy={isPending}
+      aria-pressed={bookmarked}
       aria-label={bookmarked ? "Remove bookmark" : "Bookmark this article"}
-      className="h-8 w-8 shrink-0"
+      title={bookmarked ? "Remove bookmark" : "Bookmark"}
+      className="shrink-0"
     >
       {bookmarked ? (
-        <BookmarkCheck className="h-4 w-4 text-primary" />
+        <BookmarkCheck className="text-primary" />
       ) : (
-        <Bookmark className="h-4 w-4" />
+        <Bookmark />
       )}
     </Button>
   );

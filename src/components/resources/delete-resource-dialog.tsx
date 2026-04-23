@@ -58,6 +58,7 @@ export function DeleteResourceDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={disabled}
+            aria-busy={disabled}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Delete

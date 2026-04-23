@@ -221,39 +221,48 @@ function CategoryRow({
       <div className="flex items-center gap-0.5">
         <Button
           variant="ghost"
-          size="icon"
-          className="h-7 w-7"
+          size="icon-xs"
           disabled={isFirst || isPending}
+          aria-busy={isPending}
           onClick={() => onReorder("up")}
+          aria-label={`Move ${category.name} up`}
+          title="Move up"
         >
-          <ArrowUp className="h-3.5 w-3.5" />
+          <ArrowUp />
         </Button>
         <Button
           variant="ghost"
-          size="icon"
-          className="h-7 w-7"
+          size="icon-xs"
           disabled={isLast || isPending}
+          aria-busy={isPending}
           onClick={() => onReorder("down")}
+          aria-label={`Move ${category.name} down`}
+          title="Move down"
         >
-          <ArrowDown className="h-3.5 w-3.5" />
+          <ArrowDown />
         </Button>
         <Button
           variant="ghost"
-          size="icon"
-          className="h-7 w-7"
+          size="icon-xs"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={onEdit}
+          aria-label={`Edit ${category.name}`}
+          title="Edit"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil />
         </Button>
         <Button
           variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          size="icon-xs"
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={onDelete}
+          aria-label={`Delete ${category.name}`}
+          title="Delete"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 />
         </Button>
       </div>
     </div>

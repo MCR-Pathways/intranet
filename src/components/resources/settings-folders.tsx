@@ -130,12 +130,13 @@ export function SettingsFolders() {
               </div>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                size="icon-sm"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => setRemoveTarget(folder)}
+                aria-label={`Remove ${folder.name}`}
+                title="Remove folder"
               >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Remove {folder.name}</span>
+                <Trash2 />
               </Button>
             </div>
           ))}
@@ -171,10 +172,10 @@ export function SettingsFolders() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAdd(false)} disabled={isPending}>
+            <Button variant="ghost" onClick={() => setShowAdd(false)} disabled={isPending} aria-busy={isPending}>
               Cancel
             </Button>
-            <Button onClick={handleAdd} disabled={!folderUrl || !folderName.trim() || isPending}>
+            <Button onClick={handleAdd} disabled={!folderUrl || !folderName.trim() || isPending} aria-busy={isPending}>
               {isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Register
             </Button>
@@ -192,10 +193,11 @@ export function SettingsFolders() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending} aria-busy={isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
               disabled={isPending}
+              aria-busy={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove

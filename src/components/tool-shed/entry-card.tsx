@@ -4,6 +4,7 @@ import { useState, useRef, createElement } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -279,25 +280,24 @@ export function EntryCard({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
+                    size="icon-sm"
                     aria-label={`Actions for ${entry.title}`}
+                    title="Actions"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => onEdit(entry)}>
-                    <Pencil className="h-4 w-4" />
+                    <Pencil />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem
+                  <DestructiveMenuItem
                     onSelect={() => onDelete(entry.id)}
-                    className="text-destructive focus:text-destructive"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 />
                     Delete
-                  </DropdownMenuItem>
+                  </DestructiveMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

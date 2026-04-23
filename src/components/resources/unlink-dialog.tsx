@@ -41,6 +41,7 @@ export function UnlinkDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={disabled}
+            aria-busy={disabled}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Unlink

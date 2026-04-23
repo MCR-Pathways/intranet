@@ -238,16 +238,15 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
               </Select>
               <Button
                 size="sm"
-                className="h-8"
                 onClick={handleInlineCreate}
                 disabled={isPending}
+                aria-busy={isPending}
               >
                 {isPending ? "Adding..." : "Add"}
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                className="h-8"
+                variant="secondary"
                 onClick={() => setShowAddForm(false)}
               >
                 Cancel
@@ -298,6 +297,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
               variant="destructive"
               onClick={handleDelete}
               disabled={isPending}
+              aria-busy={isPending}
             >
               {isPending ? "Deleting..." : "Delete Lesson"}
             </Button>
@@ -386,21 +386,22 @@ function SortableLessonRow({
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
+          size="icon-xs"
           onClick={onEdit}
           aria-label={`Edit ${lesson.title}`}
+          title="Edit"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil />
         </Button>
         <Button
           variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+          size="icon-xs"
+          className="hover:bg-destructive/10 hover:text-destructive"
           onClick={onDelete}
           aria-label={`Delete ${lesson.title}`}
+          title="Delete"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 />
         </Button>
       </div>
     </div>
