@@ -822,7 +822,6 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
           <Button
             variant="secondary"
             size="sm"
-            className="text-xs"
             aria-label="Edit video URL"
             title="Edit"
             onMouseDown={(e) => {
@@ -836,7 +835,7 @@ export function MediaEmbedElement({ children, element, ...props }: PlateElementP
           <Button
             variant="secondary"
             size="sm"
-            className="text-xs hover:bg-destructive/10 hover:text-destructive"
+            className="hover:bg-destructive/10 hover:text-destructive"
             aria-label="Remove video embed"
             title="Remove"
             onMouseDown={(e) => {

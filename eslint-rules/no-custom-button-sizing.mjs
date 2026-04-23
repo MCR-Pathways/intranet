@@ -15,18 +15,22 @@
  * wrap a string literal in `cn(...)` or use ternaries. We walk template
  * literals and array / call-expression argument strings.
  *
- * Text-size overrides (`text-xs`, `text-sm`, `text-base`) are a separate
- * concern — the `size` prop already sets appropriate text size per variant
- * — but that check is added in a follow-up PR rather than here, to keep
- * the rule's scope tight in the PR where it lands.
+ * Text-size overrides are caught here too: all standard Tailwind text-size
+ * tokens (xs, sm, base, lg, xl, 2xl–9xl). The `size` prop already sets
+ * appropriate text size per variant; overriding `text-*` on className both
+ * breaks the variant hierarchy and lets devs bypass the design system via
+ * arbitrarily large text.
  */
 
 const BUTTON_COMPONENTS = new Set(["Button", "TooltipButton"]);
-// Match a standalone `h-<digits>` or `w-<digits>` class. Splitting by
-// whitespace before the per-token regex avoids false positives on
-// `min-h-4` / `max-w-10` / `min-w-full` etc., where a word-boundary
-// regex would otherwise match inside the prefixed form.
-const BANNED_TOKEN_RE = /^(h|w)-\d+(\.\d+)?$/;
+// Per-token banned set: standalone `h-<digits>` / `w-<digits>` sizing, plus
+// every standard Tailwind text-size token (xs..9xl). Splitting the className
+// by whitespace before testing each token against the anchored regex avoids
+// false positives on prefixed forms (`min-h-4`, `max-w-10`, `min-w-full`,
+// `text-muted-foreground`, etc.) — a word-boundary regex would otherwise
+// match inside those.
+const BANNED_TOKEN_RE =
+  /^(h|w)-\d+(\.\d+)?$|^text-(xs|sm|base|lg|xl|[2-9]xl)$/;
 
 function findBannedSizingClass(str) {
   for (const cls of str.split(/\s+/)) {
@@ -73,12 +77,12 @@ const rule = {
     type: "problem",
     docs: {
       description:
-        "Disallow h-X / w-X sizing classNames on Button and TooltipButton; use the size prop instead.",
+        "Disallow h-X / w-X / text-size classNames on Button and TooltipButton; use the size prop instead.",
     },
     schema: [],
     messages: {
       customSizing:
-        "Do not set sizing classes ({{ match }}) on {{ component }}. Use the `size` prop (icon-xs / icon-sm / icon / sm / default / lg / hero) instead. See docs/button-system.md.",
+        "Do not set sizing classes ({{ match }}) on {{ component }}. Use the `size` prop (icon-xs / icon-sm / icon / sm / default / lg / hero) instead — it handles height, width, and per-size text/SVG sizing for you. See docs/button-system.md.",
     },
   },
   create(context) {

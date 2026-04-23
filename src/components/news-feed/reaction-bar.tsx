@@ -179,7 +179,7 @@ export function ReactionBar({
             variant="ghost"
             size="sm"
             className={cn(
-              "w-full gap-2 text-sm font-medium",
+              "w-full gap-2 font-medium",
               currentReaction
                 ? REACTION_COLORS[currentReaction.type]
                 : "text-muted-foreground"
@@ -204,7 +204,7 @@ export function ReactionBar({
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-2 text-sm font-medium text-muted-foreground"
+          className="flex-1 gap-2 font-medium text-muted-foreground"
           onClick={onCommentClick}
         >
           <MessageCircle className="h-4 w-4" />

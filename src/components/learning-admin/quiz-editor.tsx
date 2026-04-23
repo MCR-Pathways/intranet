@@ -338,10 +338,9 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
             variant="ghost"
             size="sm"
             onClick={() => handleAddOption(opts, setOpts)}
-            className="text-xs"
           >
-            <Plus className="mr-1 h-3 w-3" />
-            Add Option
+            <Plus />
+            Add option
           </Button>
         )}
       </div>

@@ -138,10 +138,10 @@ export function NotificationBell({ initialNotifications }: NotificationBellProps
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
               onClick={handleMarkAllRead}
             >
-              <CheckCheck className="mr-1 h-3 w-3" />
+              <CheckCheck />
               Mark all read
             </Button>
           )}

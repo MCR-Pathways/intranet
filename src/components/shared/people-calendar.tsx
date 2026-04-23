@@ -270,7 +270,7 @@ export function PeopleCalendar({
             ))}
           </select>
           {!isCurrentMonth && (
-            <Button variant="ghost" size="sm" onClick={goToToday} type="button" className="text-xs">
+            <Button variant="ghost" size="sm" onClick={goToToday} type="button">
               Today
             </Button>
           )}
