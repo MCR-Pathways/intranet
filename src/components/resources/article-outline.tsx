@@ -27,35 +27,35 @@ export function ArticleOutline({
   const minLevel = Math.min(...headings.map((h) => h.level));
 
   return (
-    <nav className="hidden lg:block w-48 shrink-0 sticky top-20 self-start">
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          On this page
-        </h4>
-        <ul className="space-y-1">
-          {headings.map((h) => (
-            <li key={h.slug}>
-              <a
-                href={`#${h.slug}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth" });
-                  onHeadingClick?.(h.slug);
-                }}
-                className={cn(
-                  "text-xs block truncate py-1 transition-colors",
-                  activeHeadingId === h.slug
-                    ? "text-primary font-medium"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                style={h.level > minLevel ? { paddingLeft: `${(h.level - minLevel) * 12}px` } : undefined}
-              >
-                {h.text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <nav className="hidden lg:block lg:w-56 xl:w-64 shrink-0 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg border border-border p-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        On this page
+      </h4>
+      <ul className="space-y-1">
+        {headings.map((h) => (
+          <li key={h.slug}>
+            <a
+              href={`#${h.slug}`}
+              aria-current={activeHeadingId === h.slug ? "location" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth" });
+                onHeadingClick?.(h.slug);
+              }}
+              className={cn(
+                "text-sm block break-words py-1.5 px-3 rounded-md transition-colors duration-200 ease-out text-muted-foreground",
+                h.level > minLevel && "opacity-80",
+                activeHeadingId === h.slug
+                  ? "bg-accent opacity-100"
+                  : "hover:bg-accent/50 hover:text-foreground"
+              )}
+              style={h.level > minLevel ? { paddingLeft: `${12 + (h.level - minLevel) * 12}px` } : undefined}
+            >
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ul>
     </nav>
   );
 }

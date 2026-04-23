@@ -40,7 +40,7 @@ import {
   publishNativeArticle,
   unpublishNativeArticle,
 } from "@/app/(protected)/resources/native-actions";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate, timeAgo } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { BookmarkToggle } from "./bookmark-toggle";
 import { recordArticleView } from "@/lib/recently-viewed";
@@ -200,136 +200,127 @@ export function NativeArticleView({
       <ArticleBreadcrumb
         category={category}
         parentCategory={parentCategory}
-        title={article.title}
       />
 
-      {/* Article header */}
-      <div>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 flex-wrap min-w-0">
-            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-              {article.title}
-            </h1>
-            {canEdit && article.status === "draft" && (
-              <Badge
-                variant="secondary"
-                className="gap-1 font-medium"
-                title="Only content editors can see this article"
-                aria-label="Draft — only visible to editors"
+      {/* Article body: title + actions + meta + content all in the left
+          column, TOC on the right. Keeps the kebab dropdown within the
+          article column so it never reaches the TOC. */}
+      <div className="flex gap-8">
+        <div className="flex-1 min-w-0 max-w-[720px] space-y-5">
+          <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3 flex-wrap min-w-0">
+                <h1 className="text-[30px] font-bold tracking-tight leading-tight">
+                  {article.title}
+                </h1>
+                {canEdit && article.status === "draft" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 font-medium"
+                    title="Only content editors can see this article"
+                    aria-label="Draft — only visible to editors"
+                  >
+                    <FileEdit className="h-3 w-3" />
+                    Draft
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {article.status === "published" && (
+                  <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+                )}
+                {canEdit && (
+                  <Button size="sm" asChild>
+                    <Link href={editUrl}>
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </Link>
+                  </Button>
+                )}
+                {canEdit && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        disabled={isPending}
+                        aria-busy={isPending}
+                        aria-label={`Actions for ${article.title}`}
+                        title="Actions"
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={handleTogglePublish}>
+                        {article.status === "published" ? (
+                          <>
+                            <EyeOff />
+                            Unpublish
+                          </>
+                        ) : (
+                          <>
+                            <Eye />
+                            Publish
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
+                        <FolderInput />
+                        Move to...
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
+              <span
+                className={isStale ? "text-amber-600" : undefined}
+                title={formatDate(new Date(updatedAt))}
               >
-                <FileEdit className="h-3 w-3" />
-                Draft
-              </Badge>
-            )}
+                Updated {timeAgo(updatedAt)}
+                {isStale && " — may need review"}
+              </span>
+            </div>
           </div>
 
-          {/* gap-2 intentionally differs from google-doc-article-view's
-              gap-1: its cluster is all ghost icons with "halo" of transparent
-              space, so 4px between them breathes. This cluster mixes ghost
-              icons with the solid-fill Edit button, which has no halo — 4px
-              reads cramped, 8px restores breathing room. Numeric parity on
-              gap value is less important than within-cluster visual balance. */}
-          <div className="flex items-center gap-2 shrink-0">
-            {article.status === "published" && (
-              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
-            )}
-            {/* Navy Edit button — kept on native because it routes to the
-                in-product Plate editor at /edit (a real product surface).
-                google-doc-article-view deliberately removed its Edit button
-                because it would just punt to Drive, which the banner already
-                covers. Intentional asymmetry between the two views. */}
-            {canEdit && (
-              <Button size="sm" asChild>
-                <Link href={editUrl}>
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </Link>
-              </Button>
-            )}
-
-          {canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0"
-                  disabled={isPending}
-                  aria-busy={isPending}
-                  aria-label={`Actions for ${article.title}`}
-                  title="Actions"
-                >
-                  <MoreHorizontal />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Edit is the primary button next to the title — not duplicated here. */}
-                <DropdownMenuItem onSelect={handleTogglePublish}>
-                  {article.status === "published" ? (
-                    <>
-                      <EyeOff className="h-4 w-4" />
-                      Unpublish
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4" />
-                      Publish
-                    </>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
-                  <FolderInput className="h-4 w-4" />
-                  Move to...
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {editor ? (
+            <article className={ARTICLE_PROSE_CLASSES}>
+              <PlateStatic editor={editor} />
+            </article>
+          ) : (
+            <div className="text-sm text-muted-foreground italic py-8">
+              This article has no content yet.
+              {canEdit && (
+                <>
+                  {" "}
+                  <Link href={editUrl} className="text-link underline underline-offset-4">
+                    Start editing
+                  </Link>
+                </>
+              )}
+            </div>
           )}
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
-          <span className={isStale ? "text-amber-600" : undefined}>
-            Updated {formatDate(new Date(updatedAt))}
-            {isStale && " — may need review"}
-          </span>
-        </div>
+        <ArticleOutline
+          headings={headings}
+          activeHeadingId={activeHeadingId}
+          onHeadingClick={setActiveHeadingId}
+        />
       </div>
-
-      {/* Article body — two-column: content + outline sidebar */}
-      {editor ? (
-        <div className="flex gap-8">
-          <article className={cn(ARTICLE_PROSE_CLASSES, "flex-1 min-w-0")}>
-            <PlateStatic editor={editor} />
-          </article>
-
-          {/* Article outline sidebar (table of contents) */}
-          <ArticleOutline
-            headings={headings}
-            activeHeadingId={activeHeadingId}
-            onHeadingClick={setActiveHeadingId}
-          />
-        </div>
-      ) : (
-        <div className="text-sm text-muted-foreground italic py-8">
-          This article has no content yet.
-          {canEdit && (
-            <>
-              {" "}
-              <Link href={editUrl} className="text-link underline underline-offset-4">
-                Start editing
-              </Link>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Sibling navigation */}
       <MoreInSection

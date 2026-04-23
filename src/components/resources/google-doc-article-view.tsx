@@ -29,7 +29,7 @@ import { UnlinkDialog } from "./unlink-dialog";
 import { MoveArticleDialog } from "./move-article-dialog";
 import { syncArticle, unlinkGoogleDoc } from "@/app/(protected)/resources/drive-actions";
 import { createClient } from "@/lib/supabase/client";
-import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { formatDate, timeAgo } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { BookmarkToggle } from "./bookmark-toggle";
 import { recordArticleView } from "@/lib/recently-viewed";
@@ -333,182 +333,174 @@ export function GoogleDocArticleView({
       <ArticleBreadcrumb
         category={category}
         parentCategory={parentCategory}
-        title={article.title}
       />
 
-      {/* Article header */}
-      <div>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 flex-wrap min-w-0">
-            <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-              {article.title}
-            </h1>
-            {canEdit && article.status === "draft" && (
-              <Badge
-                variant="secondary"
-                className="gap-1 font-medium"
-                title="Only content editors can see this article"
-                aria-label="Draft — only visible to editors"
-              >
-                <FileEdit className="h-3 w-3" />
-                Draft
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {article.status === "published" && (
-              <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
-            )}
-            {canEdit && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="shrink-0"
-                    disabled={isPending}
-                    aria-busy={isPending}
-                    aria-label={`Actions for ${article.title}`}
-                    title="Actions"
+      {/* Article body: title + actions + meta + content all in the left
+          column, TOC on the right. Keeps the kebab dropdown within the
+          article column so it never reaches the TOC. */}
+      <div className="flex gap-8">
+        <div className="flex-1 min-w-0 max-w-[720px] space-y-5">
+          <div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3 flex-wrap min-w-0">
+                <h1 className="text-[30px] font-bold tracking-tight leading-tight">
+                  {article.title}
+                </h1>
+                {canEdit && article.status === "draft" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 font-medium"
+                    title="Only content editors can see this article"
+                    aria-label="Draft — only visible to editors"
                   >
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {/* Sync-state header — the "shape" of this block is the
-                      signal: one line = in sync, two lines = action needed.
-                      Native `title` attribute is used for absolute-timestamp
-                      tooltips; Radix Tooltip inside DropdownMenu has z-index
-                      and focus-trap issues that surfaced earlier in the
-                      project. */}
-                  <div className="px-2 py-2 select-none" aria-hidden>
-                    {syncState === "in-sync" && article.last_synced_at && (
-                      <div
-                        className="text-xs text-muted-foreground"
-                        title={lastSyncedAbsolute ?? undefined}
+                    <FileEdit className="h-3 w-3" />
+                    Draft
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                {article.status === "published" && (
+                  <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
+                )}
+                {canEdit && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        disabled={isPending}
+                        aria-busy={isPending}
+                        aria-label={`Actions for ${article.title}`}
+                        title="Actions"
                       >
-                        Synced {timeAgo(article.last_synced_at)}
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <div className="px-2 py-2 select-none" aria-hidden>
+                        {syncState === "in-sync" && article.last_synced_at && (
+                          <div
+                            className="text-xs text-muted-foreground"
+                            title={lastSyncedAbsolute ?? undefined}
+                          >
+                            Synced {timeAgo(article.last_synced_at)}
+                          </div>
+                        )}
+                        {syncState === "drift" && article.google_doc_modified_at && article.last_synced_at && (
+                          <>
+                            <div
+                              className="text-xs font-medium text-amber-600"
+                              title={sourceModifiedAbsolute ?? undefined}
+                            >
+                              Source edited {timeAgo(article.google_doc_modified_at)}
+                            </div>
+                            <div
+                              className="text-[11px] text-amber-600/75 mt-0.5"
+                              title={lastSyncedAbsolute ?? undefined}
+                            >
+                              Synced {timeAgo(article.last_synced_at)}
+                            </div>
+                          </>
+                        )}
+                        {syncState === "never-synced" && (
+                          <>
+                            <div className="text-xs font-medium text-amber-600">
+                              Not yet synced
+                            </div>
+                            <div className="text-[11px] text-amber-600/75 mt-0.5">
+                              Click Sync now to fetch content
+                            </div>
+                          </>
+                        )}
+                        {syncState === "sync-failed" && article.last_sync_error && (
+                          <>
+                            <div
+                              className="text-xs font-medium text-red-600"
+                              title={article.last_sync_error}
+                            >
+                              Sync failed
+                            </div>
+                            <div className="text-[11px] text-red-600/75 mt-0.5">
+                              Click Sync now to retry
+                            </div>
+                          </>
+                        )}
                       </div>
-                    )}
-                    {syncState === "drift" && article.google_doc_modified_at && article.last_synced_at && (
-                      <>
-                        <div
-                          className="text-xs font-medium text-amber-600"
-                          title={sourceModifiedAbsolute ?? undefined}
-                        >
-                          Source edited {timeAgo(article.google_doc_modified_at)}
-                        </div>
-                        <div
-                          className="text-[11px] text-amber-600/75 mt-0.5"
-                          title={lastSyncedAbsolute ?? undefined}
-                        >
-                          Synced {timeAgo(article.last_synced_at)}
-                        </div>
-                      </>
-                    )}
-                    {syncState === "never-synced" && (
-                      <>
-                        <div className="text-xs font-medium text-amber-600">
-                          Not yet synced
-                        </div>
-                        <div className="text-[11px] text-amber-600/75 mt-0.5">
-                          Click Sync now to fetch content
-                        </div>
-                      </>
-                    )}
-                    {syncState === "sync-failed" && article.last_sync_error && (
-                      <>
-                        <div
-                          className="text-xs font-medium text-red-600"
-                          title={article.last_sync_error}
-                        >
-                          Sync failed
-                        </div>
-                        <div className="text-[11px] text-red-600/75 mt-0.5">
-                          Click Sync now to retry
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      handleSync();
-                    }}
-                    disabled={isSyncing || isPending}
-                  >
-                    {isSyncing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Sync now
-                  </DropdownMenuItem>
-                  {article.google_doc_url && (
-                    <DropdownMenuItem asChild>
-                      <a
-                        href={article.google_doc_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          handleSync();
+                        }}
+                        disabled={isSyncing || isPending}
                       >
-                        <Pencil className="h-4 w-4" />
-                        Edit in Google Docs
-                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
-                      </a>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
-                    <FolderInput className="h-4 w-4" />
-                    Move to...
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onSelect={() => setShowUnlinkDialog(true)}
-                  >
-                    <Unlink className="h-4 w-4" />
-                    Unlink
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                        {isSyncing ? (
+                          <Loader2 className="animate-spin" />
+                        ) : (
+                          <RefreshCw />
+                        )}
+                        Sync now
+                      </DropdownMenuItem>
+                      {article.google_doc_url && (
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={article.google_doc_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Pencil />
+                            Edit in Google Docs
+                            <ExternalLink className="ml-auto opacity-60" />
+                          </a>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
+                        <FolderInput />
+                        Move to...
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => setShowUnlinkDialog(true)}
+                      >
+                        <Unlink />
+                        Unlink
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
+              <span
+                className={isStale ? "text-amber-600" : undefined}
+                title={formatDate(effectiveModifiedAt)}
+              >
+                Updated {timeAgo(effectiveModifiedAt.toISOString())}
+                {isStale && " — may need review"}
+              </span>
+            </div>
           </div>
+
+          {article.synced_html ? (
+            <article className={ARTICLE_PROSE_CLASSES}>{parsedContent}</article>
+          ) : (
+            <div className="text-sm text-muted-foreground italic py-8">
+              This document has no content yet. Use the actions menu to sync from Google Docs.
+            </div>
+          )}
         </div>
 
-        {/* Article meta — uses effectiveModifiedAt (source edit time for
-            linked Google Docs, with fallback to updated_at for rows that
-            predate the google_doc_modified_at column or haven't re-synced
-            yet). Honest provenance for readers. */}
-        <div className="flex items-center gap-2 mt-1.5 text-[13px] text-muted-foreground flex-wrap">
-          <span className={isStale ? "text-amber-600" : undefined}>
-            Updated {formatDate(effectiveModifiedAt)}
-            {isStale && " — may need review"}
-          </span>
-        </div>
+        <ArticleOutline
+          headings={headings}
+          activeHeadingId={activeHeadingId}
+          onHeadingClick={setActiveHeadingId}
+        />
       </div>
-
-      {/* Article body — two-column: content + outline sidebar */}
-      {article.synced_html ? (
-        <div className="flex gap-8">
-          <article className={cn(ARTICLE_PROSE_CLASSES, "flex-1 min-w-0")}>
-            {parsedContent}
-          </article>
-
-          {/* Article outline sidebar (table of contents) */}
-          <ArticleOutline
-            headings={headings}
-            activeHeadingId={activeHeadingId}
-            onHeadingClick={setActiveHeadingId}
-          />
-        </div>
-      ) : (
-        <div className="text-sm text-muted-foreground italic py-8">
-          This document has no content yet. Use the actions menu to sync from Google Docs.
-        </div>
-      )}
 
       {/* More in [folder] — sibling article navigation */}
       <MoreInSection
