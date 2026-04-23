@@ -257,18 +257,18 @@ export function NativeArticleView({
                       <DropdownMenuItem onSelect={handleTogglePublish}>
                         {article.status === "published" ? (
                           <>
-                            <EyeOff className="h-4 w-4" />
+                            <EyeOff />
                             Unpublish
                           </>
                         ) : (
                           <>
-                            <Eye className="h-4 w-4" />
+                            <Eye />
                             Publish
                           </>
                         )}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
-                        <FolderInput className="h-4 w-4" />
+                        <FolderInput />
                         Move to...
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -276,7 +276,7 @@ export function NativeArticleView({
                         className="text-destructive focus:text-destructive"
                         onSelect={() => setShowDeleteDialog(true)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>

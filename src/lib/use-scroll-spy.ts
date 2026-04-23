@@ -53,7 +53,7 @@ export function useScrollSpy(
             break;
           }
         }
-        if (above) setActiveId(above);
+        setActiveId(above);
       },
       { rootMargin: "-80px 0px -80% 0px" }
     );

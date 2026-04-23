@@ -437,9 +437,9 @@ export function GoogleDocArticleView({
                         disabled={isSyncing || isPending}
                       >
                         {isSyncing ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="animate-spin" />
                         ) : (
-                          <RefreshCw className="h-4 w-4" />
+                          <RefreshCw />
                         )}
                         Sync now
                       </DropdownMenuItem>
@@ -450,15 +450,15 @@ export function GoogleDocArticleView({
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil />
                             Edit in Google Docs
-                            <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                            <ExternalLink className="ml-auto opacity-60" />
                           </a>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
-                        <FolderInput className="h-4 w-4" />
+                        <FolderInput />
                         Move to...
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -466,7 +466,7 @@ export function GoogleDocArticleView({
                         className="text-destructive focus:text-destructive"
                         onSelect={() => setShowUnlinkDialog(true)}
                       >
-                        <Unlink className="h-4 w-4" />
+                        <Unlink />
                         Unlink
                       </DropdownMenuItem>
                     </DropdownMenuContent>
