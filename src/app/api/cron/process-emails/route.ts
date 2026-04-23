@@ -115,7 +115,7 @@ export async function GET(request: Request) {
       await finaliseRun("success", {
         result: { retried: 0, sent: 0, stillFailed: 0, runtimeMs },
       });
-      return Response.json({ retried: 0, sent: 0, failed: 0 });
+      return Response.json({ retried: 0, sent: 0, stillFailed: 0 });
     }
 
     // ── Batch-fetch fallback emails for entries missing metadata ──
