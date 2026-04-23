@@ -180,16 +180,18 @@ export async function GET(request: Request) {
             error_message: null,
           } as never)
           .eq("id", email.id);
+        sent++;
         if (updateErr) {
           // Email went out but we couldn't mark it sent → will be retried
-          // tomorrow, causing a double-send. Log loudly.
-          logger.error("Sent email but failed to persist status=sent", {
+          // tomorrow, causing a double-send. Break so we don't compound the
+          // problem by sending more emails we can't record.
+          logger.error("Sent email but failed to persist status=sent — aborting batch", {
             emailId: email.id,
             error: updateErr.message,
           });
           persistenceFailed++;
+          break;
         }
-        sent++;
       } else {
         const { error: updateErr } = await supabase
           .from("email_notifications")
@@ -215,7 +217,13 @@ export async function GET(request: Request) {
     }
 
     const runtimeMs = Date.now() - startTime;
-    await finaliseRun("success", {
+    // Treat persistence drift as a failed run. When persistenceFailed > 0,
+    // emails have been sent but the DB doesn't know, so those rows will be
+    // retried tomorrow and the user gets duplicates. Operators need this
+    // surfaced in cron_runs so they can intervene before the next scheduled
+    // run fires.
+    const persistenceDrift = persistenceFailed > 0;
+    await finaliseRun(persistenceDrift ? "failed" : "success", {
       result: {
         retried: failed.length,
         sent,
@@ -223,6 +231,11 @@ export async function GET(request: Request) {
         persistenceFailed,
         runtimeMs,
       },
+      ...(persistenceDrift
+        ? {
+            error: `${persistenceFailed} email_notifications row(s) failed to persist after retry — next run may double-send`,
+          }
+        : {}),
     });
 
     logger.info("Email retry processed", {
