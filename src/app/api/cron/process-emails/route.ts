@@ -113,9 +113,9 @@ export async function GET(request: Request) {
     if (!failed || failed.length === 0) {
       const runtimeMs = Date.now() - startTime;
       await finaliseRun("success", {
-        result: { retried: 0, sent: 0, stillFailed: 0, runtimeMs },
+        result: { retried: 0, sent: 0, stillFailed: 0, persistenceFailed: 0, runtimeMs },
       });
-      return Response.json({ retried: 0, sent: 0, stillFailed: 0 });
+      return Response.json({ retried: 0, sent: 0, stillFailed: 0, persistenceFailed: 0 });
     }
 
     // ── Batch-fetch fallback emails for entries missing metadata ──
@@ -136,6 +136,11 @@ export async function GET(request: Request) {
     // ── Retry sends ─────────────────────────────────────────────
     let sent = 0;
     let stillFailed = 0;
+    // Counter for rows whose DB persistence failed after the send attempt.
+    // Means the email_notifications row is drifting from reality — it'll be
+    // picked up again on the next run since retry_count didn't bump. Logged
+    // for visibility, surfaced in the cron_runs.result payload.
+    let persistenceFailed = 0;
 
     for (const email of failed) {
       let toEmail =
@@ -146,13 +151,20 @@ export async function GET(request: Request) {
       }
 
       if (!toEmail) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from("email_notifications")
           .update({
             error_message: "No recipient email found",
             retry_count: (email.retry_count ?? 0) + 1,
           } as never)
           .eq("id", email.id);
+        if (updateErr) {
+          logger.warn("Failed to persist no-recipient state", {
+            emailId: email.id,
+            error: updateErr.message,
+          });
+          persistenceFailed++;
+        }
         stillFailed++;
         continue;
       }
@@ -160,7 +172,7 @@ export async function GET(request: Request) {
       const result = await sendEmail(toEmail, email.subject, email.body_html ?? "");
 
       if (result.success) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from("email_notifications")
           .update({
             status: "sent",
@@ -168,15 +180,32 @@ export async function GET(request: Request) {
             error_message: null,
           } as never)
           .eq("id", email.id);
+        if (updateErr) {
+          // Email went out but we couldn't mark it sent → will be retried
+          // tomorrow, causing a double-send. Log loudly.
+          logger.error("Sent email but failed to persist status=sent", {
+            emailId: email.id,
+            error: updateErr.message,
+          });
+          persistenceFailed++;
+        }
         sent++;
       } else {
-        await supabase
+        const { error: updateErr } = await supabase
           .from("email_notifications")
           .update({
             error_message: result.error ?? "Unknown error",
             retry_count: (email.retry_count ?? 0) + 1,
           } as never)
           .eq("id", email.id);
+        if (updateErr) {
+          // retry_count didn't bump → row will keep retrying past MAX_RETRIES.
+          logger.warn("Failed to persist retry-failure state", {
+            emailId: email.id,
+            error: updateErr.message,
+          });
+          persistenceFailed++;
+        }
         stillFailed++;
       }
 
@@ -187,17 +216,24 @@ export async function GET(request: Request) {
 
     const runtimeMs = Date.now() - startTime;
     await finaliseRun("success", {
-      result: { retried: failed.length, sent, stillFailed, runtimeMs },
+      result: {
+        retried: failed.length,
+        sent,
+        stillFailed,
+        persistenceFailed,
+        runtimeMs,
+      },
     });
 
     logger.info("Email retry processed", {
       retried: failed.length,
       sent,
       stillFailed,
+      persistenceFailed,
       runtimeMs,
     });
 
-    return Response.json({ retried: failed.length, sent, stillFailed });
+    return Response.json({ retried: failed.length, sent, stillFailed, persistenceFailed });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("process-emails cron failed", { error: message });

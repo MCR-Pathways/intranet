@@ -87,6 +87,10 @@ export async function GET(request: Request) {
 
   let learningReminders = 0;
   let hrReminders = 0;
+  // Track per-block failures so the audit row reflects partial outcomes.
+  // Without these, a crashed L&D or HR block would still be recorded as
+  // 'success' because the inner catches swallow the error.
+  const blockErrors: string[] = [];
 
   try {
   // ── L&D: Overdue / Approaching Course Reminders ─────────────
@@ -261,7 +265,9 @@ export async function GET(request: Request) {
       }
     }
   } catch (err) {
-    logger.error("Failed to generate learning reminders", { error: err });
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error("Failed to generate learning reminders", { error: message });
+    blockErrors.push(`learning: ${message}`);
   }
 
   // ── HR: Compliance Expiry + Stale Leave + Key Dates ───────
@@ -486,18 +492,31 @@ export async function GET(request: Request) {
       }
     }
   } catch (err) {
-    logger.error("Failed to generate HR reminders", { error: err });
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error("Failed to generate HR reminders", { error: message });
+    blockErrors.push(`hr: ${message}`);
   }
 
     const runtimeMs = Date.now() - startTime;
-    await finaliseRun("success", {
-      result: { learningReminders, hrReminders, runtimeMs },
+    // Report as 'failed' when a whole block crashed, 'success' otherwise.
+    // Per-block errors land in result.blockErrors so operators can see which
+    // part bombed without losing the counts from the other part that did run.
+    const partialFailure = blockErrors.length > 0;
+    await finaliseRun(partialFailure ? "failed" : "success", {
+      result: {
+        learningReminders,
+        hrReminders,
+        runtimeMs,
+        ...(partialFailure ? { blockErrors } : {}),
+      },
+      ...(partialFailure ? { error: blockErrors.join("; ") } : {}),
     });
 
     logger.info("Daily reminders generated", {
       learningReminders,
       hrReminders,
       runtimeMs,
+      partialFailure,
     });
     return Response.json({ learningReminders, hrReminders });
   } catch (err) {
