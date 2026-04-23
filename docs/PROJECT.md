@@ -484,10 +484,12 @@ No GitHub Actions workflows configured. Deployments rely on Vercel's Git integra
 
 ### Scheduled Jobs
 
-Two systems running in parallel. New jobs default to Supabase pg_cron.
+All app crons run under Supabase pg_cron. Scheduled via `cron.schedule` in migration files; trigger source is `pg_net.http_get` hitting our own route handlers. Secrets (`app_base_url`, `cron_secret`) stored in Supabase Vault. Each handler writes a row to `public.cron_runs` on start and update on finish, so run history is SQL-queryable.
 
-- **Supabase pg_cron** (default going forward). Scheduled via `cron.schedule` in migration files; trigger source is `pg_net.http_get` hitting our own route handlers. Secrets stored in Supabase Vault. Run history written to `public.cron_runs` by the handlers themselves (not by pg_net, which is fire-and-forget). Current jobs: `renew-drive-watches` (03:00 UTC daily, migration 00083).
-- **Vercel Cron** (existing jobs). Configured in `vercel.json`, hits routes with `Authorization: Bearer $CRON_SECRET`. Current jobs: `process-emails` (08:03 UTC), `daily-reminders` (07:47 UTC).
+Current jobs:
+- `renew-drive-watches` — 03:00 UTC daily
+- `daily-reminders` — 07:47 UTC daily
+- `process-emails` — 08:03 UTC daily
 
 ### Image Remotes
 
