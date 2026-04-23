@@ -57,7 +57,6 @@ export function ComponentArticleView({
         <ArticleBreadcrumb
           category={category}
           parentCategory={parentCategory}
-          title={article.title}
         />
         <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
       </div>
