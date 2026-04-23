@@ -11,7 +11,7 @@
 /** Content-level prose modifiers (no layout constraints). Used by both
  *  the article wrapper and column items. */
 export const ARTICLE_CONTENT_MODIFIERS =
-  "prose-headings:font-semibold prose-headings:tracking-tight prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border";
+  "prose-headings:font-semibold prose-headings:tracking-tight prose-headings:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border";
 
 /** Full prose class string for article content areas. */
 export const ARTICLE_PROSE_CLASSES =

@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveIcon, resolveIconColour } from "@/lib/resource-icons";
 
@@ -11,18 +12,19 @@ interface ArticleBreadcrumbProps {
     icon_colour: string | null;
   };
   parentCategory: { name: string; slug: string } | null;
-  title: string;
 }
 
 const LINK_CLASSES = "hover:text-foreground hover:underline underline-offset-4";
 const SEPARATOR = (
-  <span className="text-muted-foreground/50 select-none">/</span>
+  <ChevronRight
+    className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0"
+    aria-hidden="true"
+  />
 );
 
 export function ArticleBreadcrumb({
   category,
   parentCategory,
-  title,
 }: ArticleBreadcrumbProps) {
   const Icon = resolveIcon(category.icon);
   const colour = resolveIconColour(category.icon_colour);
@@ -56,8 +58,6 @@ export function ArticleBreadcrumb({
         })}
         {category.name}
       </Link>
-      {SEPARATOR}
-      <span className="text-foreground font-medium">{title}</span>
     </nav>
   );
 }
