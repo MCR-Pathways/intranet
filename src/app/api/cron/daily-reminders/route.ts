@@ -1,12 +1,17 @@
 /**
- * Vercel Cron job: Generate and send daily reminder emails.
+ * Cron job: generate and send daily reminder emails.
  *
- * Runs daily at ~7am UTC Mon-Fri (7am GMT winter, 8am BST summer).
- * Scans for overdue courses, expiring compliance docs, stale leave
- * requests, and approaching probation dates. Sends via Resend
- * immediately and logs to email_notifications as audit trail.
+ * Runs daily at 07:47 UTC (07:47 GMT winter, 08:47 BST summer). Scans for
+ * overdue courses, expiring compliance docs, stale leave requests, and
+ * approaching probation dates. Sends via Resend immediately and logs to
+ * email_notifications as an audit trail.
  *
- * Security: Requires CRON_SECRET Bearer token (set by Vercel automatically).
+ * Triggered by Supabase pg_cron (see migration 00086) via pg_net.http_get →
+ * this endpoint. The request header carries CRON_SECRET as a Bearer token,
+ * verified via timing-safe compare.
+ *
+ * Writes a row to `cron_runs` per invocation so run history is
+ * SQL-queryable and owned by the app, not the pg_cron system tables.
  */
 
 import { createServiceClient } from "@/lib/supabase/service";
@@ -16,12 +21,15 @@ import { sendAndLogEmail } from "@/lib/email-queue";
 import { baseTemplate, escapeHtml } from "@/lib/email";
 import { LEAVE_TYPE_CONFIG, type LeaveType } from "@/lib/hr";
 import { formatDate } from "@/lib/utils";
+import type { Json } from "@/types/database.types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+const JOB_NAME = "daily-reminders";
+
 export async function GET(request: Request) {
-  // ── Verify CRON_SECRET ──────────────────────────────────────
+  // ── Auth ────────────────────────────────────────────────────
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     logger.error("CRON_SECRET not configured");
@@ -39,9 +47,48 @@ export async function GET(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.mcrpathways.org";
   const now = new Date();
   const today = now.toISOString().split("T")[0];
+  const startTime = Date.now();
+
+  // ── Start audit row ─────────────────────────────────────────
+  const { data: run, error: runInsertErr } = await supabase
+    .from("cron_runs")
+    .insert({ job_name: JOB_NAME, status: "running" })
+    .select("id")
+    .single();
+  if (runInsertErr) {
+    // Don't fail the whole cron if audit write fails — just proceed without it.
+    logger.warn("Failed to insert cron_runs row", {
+      error: runInsertErr.message,
+    });
+  }
+  const runId = run?.id as string | undefined;
+
+  const finaliseRun = async (
+    status: "success" | "failed",
+    payload: { result?: Json; error?: string }
+  ) => {
+    if (!runId) return;
+    const { error: finaliseErr } = await supabase
+      .from("cron_runs")
+      .update({
+        finished_at: new Date().toISOString(),
+        status,
+        result: payload.result ?? null,
+        error: payload.error ?? null,
+      })
+      .eq("id", runId);
+    if (finaliseErr) {
+      logger.warn(`Failed to finalise cron_runs row (${status})`, {
+        runId,
+        error: finaliseErr.message,
+      });
+    }
+  };
 
   let learningReminders = 0;
+  let hrReminders = 0;
 
+  try {
   // ── L&D: Overdue / Approaching Course Reminders ─────────────
   try {
     // Fetch all non-completed enrolments with due dates
@@ -218,8 +265,6 @@ export async function GET(request: Request) {
   }
 
   // ── HR: Compliance Expiry + Stale Leave + Key Dates ───────
-  let hrReminders = 0;
-
   try {
     // Compliance document expiry (30d, 7d, expired)
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000).toISOString().split("T")[0];
@@ -444,9 +489,21 @@ export async function GET(request: Request) {
     logger.error("Failed to generate HR reminders", { error: err });
   }
 
-  logger.info("Daily reminders generated", {
-    learningReminders,
-    hrReminders,
-  });
-  return Response.json({ learningReminders, hrReminders });
+    const runtimeMs = Date.now() - startTime;
+    await finaliseRun("success", {
+      result: { learningReminders, hrReminders, runtimeMs },
+    });
+
+    logger.info("Daily reminders generated", {
+      learningReminders,
+      hrReminders,
+      runtimeMs,
+    });
+    return Response.json({ learningReminders, hrReminders });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error("daily-reminders cron failed", { error: message });
+    await finaliseRun("failed", { error: message });
+    return Response.json({ error: "Cron failed" }, { status: 500 });
+  }
 }
