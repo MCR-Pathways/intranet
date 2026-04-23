@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -249,8 +250,13 @@ export function PostCard({
               {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Post actions"
+                      title="Actions"
+                    >
+                      <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -303,13 +309,12 @@ export function PostCard({
                       </DropdownMenuItem>
                     )}
                     {canModify && (
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
+                      <DestructiveMenuItem
                         onSelect={() => setShowDeleteDialog(true)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Post
-                      </DropdownMenuItem>
+                        <Trash2 />
+                        Delete post
+                      </DestructiveMenuItem>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
