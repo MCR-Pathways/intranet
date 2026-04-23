@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Use British English** in all user-facing text, error messages, comments, and documentation. Examples: colour, organise, catalogue, defence, unauthorised, enrolment. CSS/Tailwind class names and framework terms (e.g. `text-center`, `color` CSS property) are exempt.
 
-### Writing — avoid AI patterns
+### Writing: avoid AI patterns
 
 Apply the humanizer skill (`~/.claude/skills/humanizer/SKILL.md`) to all text output. Key rules:
 
@@ -59,8 +59,8 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 
 ### Route Groups
 
-- `(auth)/` — Public routes: `/login`, `/auth/callback` (OAuth), `/auth/confirm` (email OTP)
-- `(protected)/` — Authenticated routes wrapped in `AppLayout` (header + sidebar)
+- `(auth)/`: public routes `/login`, `/auth/callback` (OAuth), `/auth/confirm` (email OTP)
+- `(protected)/`: authenticated routes wrapped in `AppLayout` (header + sidebar)
 
 ### Authentication & Authorization
 
@@ -68,20 +68,20 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 - **Domain restriction**: Only `@mcrpathways.org` emails allowed
 - **Proxy** (`src/proxy.ts`): Checks auth, fetches profile, enforces module access by `user_type` + `is_external`, redirects users needing induction
 - **User types**: `staff` (full access for internal, restricted for external), `new_user` (induction only)
-- **External staff** (`is_external = true`): School-employed Pathways Coordinators — can access `/learning` and `/intranet` only
+- **External staff** (`is_external = true`): School-employed Pathways Coordinators. Can access `/learning` and `/intranet` only
 - **Module access**: `/hr` and `/sign-in` → internal staff only; `/learning`, `/intranet`, and `/resources` → all staff (internal + external)
 
 ### Supabase Client Pattern
 
-- **Server**: `createClient()` from `src/lib/supabase/server.ts` — use in Server Components and Server Actions
-- **Browser**: `createClient()` from `src/lib/supabase/client.ts` — use in Client Components
-- **Supabase Middleware**: `updateSession()` from `src/lib/supabase/middleware.ts` — refreshes session cookies
+- **Server**: `createClient()` from `src/lib/supabase/server.ts`. Use in Server Components and Server Actions.
+- **Browser**: `createClient()` from `src/lib/supabase/client.ts`. Use in Client Components.
+- **Supabase Middleware**: `updateSession()` from `src/lib/supabase/middleware.ts`. Refreshes session cookies.
 
 ### Auth Helpers (`src/lib/auth.ts`)
 
-- `getCurrentUser()` — Returns `{ supabase, user, profile }`. Uses `PROFILE_SELECT` to exclude sensitive fields.
-- `requireHRAdmin()` — Gate for admin-only server actions. Throws if not authenticated or not `is_hr_admin`.
-- `requireContentEditor()` — Returns `{ supabase, user }` (no `profile`). Use `user.id` for author/ownership checks.
+- `getCurrentUser()`: returns `{ supabase, user, profile }`. Uses `PROFILE_SELECT` to exclude sensitive fields.
+- `requireHRAdmin()`: gate for admin-only server actions. Throws if not authenticated or not `is_hr_admin`.
+- `requireContentEditor()`: returns `{ supabase, user }` (no `profile`). Use `user.id` for author/ownership checks.
 
 ### Data Flow Pattern
 
@@ -92,15 +92,15 @@ Next.js 16 App Router with Supabase (PostgreSQL) backend. React 19, TypeScript s
 ### Server Actions Location
 
 Each route group has its own `actions.ts` (27 action files total):
-- `src/app/(auth)/actions.ts` — sign out
-- `src/app/(protected)/hr/` — `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
-- `src/app/(protected)/intranet/actions.ts` — news feed posts, polls, comments, mentions
-- `src/app/(protected)/intranet/induction/actions.ts` — induction progress
-- `src/app/(protected)/notifications/actions.ts` — notification read status
-- `src/app/(protected)/sign-in/actions.ts` — sign-in entries, team history, Google Calendar sync
-- `src/app/(protected)/learning/` — `actions.ts` (external courses), `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
-- `src/app/(protected)/settings/actions.ts` — email preferences
-- `src/app/(protected)/resources/` — `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks), `native-actions.ts` (native article CRUD, auto-save, publish, reindex), `media-actions.ts` (file upload to Drive)
+- `src/app/(auth)/actions.ts`: sign out
+- `src/app/(protected)/hr/`: `users/`, `profile/`, `leave/`, `absence/`, `assets/`, `compliance/`, `departments/`, `key-dates/`, `leaving/`, `flexible-working/`, `onboarding/` (each has `actions.ts`, requires `requireHRAdmin()`)
+- `src/app/(protected)/intranet/actions.ts`: news feed posts, polls, comments, mentions
+- `src/app/(protected)/intranet/induction/actions.ts`: induction progress
+- `src/app/(protected)/notifications/actions.ts`: notification read status
+- `src/app/(protected)/sign-in/actions.ts`: sign-in entries, team history, Google Calendar sync
+- `src/app/(protected)/learning/`: `actions.ts` (external courses), `admin/courses/actions.ts`, `admin/courses/section-actions.ts`, `admin/reports/actions.ts`, `courses/[id]/actions.ts`, `tool-shed/actions.ts`
+- `src/app/(protected)/settings/actions.ts`: email preferences
+- `src/app/(protected)/resources/`: `actions.ts` (categories, articles), `drive-actions.ts` (Google Docs linking, sync, webhooks), `native-actions.ts` (native article CRUD, auto-save, publish, reindex), `media-actions.ts` (file upload to Drive)
 
 ### Key Patterns
 
@@ -120,29 +120,29 @@ Types auto-generated in `src/types/database.types.ts` (70+ tables). All three Su
 ## Environment Variables
 
 Required in `.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-only)
-- `NEXT_PUBLIC_APP_URL` — App URL (e.g. `http://localhost:3000`)
-- `NEXT_PUBLIC_ALGOLIA_APP_ID` — Algolia application ID (`CFRPCC52U5`)
-- `NEXT_PUBLIC_ALGOLIA_SEARCH_KEY` — Algolia search-only API key (public)
-- `ALGOLIA_ADMIN_KEY` — Algolia admin API key (server-only)
-- `GOOGLE_SERVICE_ACCOUNT_KEY` — Base64-encoded Google service account JSON (server-only)
-- `GOOGLE_DRIVE_WEBHOOK_SECRET` — Secret for Drive webhook verification (server-only)
-- `GOOGLE_CALENDAR_WEBHOOK_SECRET` — Secret for Calendar webhook verification (server-only)
-- `GOOGLE_DRIVE_ADMIN_EMAIL` — Email to impersonate for Drive API (server-only)
-- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` — Drive folder ID for intranet file uploads (server-only)
-- `KIOSK_TOKEN` — Shared secret for kiosk confirmation endpoint (server-only)
-- `RESEND_API_KEY` — Resend email API key (server-only, sends from `noreply@mcrpathways.co.uk`)
-- `CRON_SECRET` — Vercel Cron job authentication (server-only, used by `/api/cron/*` routes)
-- `UPSTASH_REDIS_REST_URL` — Upstash Redis REST URL (server-only, optional — rate limiting disabled without it)
-- `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis REST token (server-only, optional)
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (server-only)
+- `NEXT_PUBLIC_APP_URL`: App URL (e.g. `http://localhost:3000`)
+- `NEXT_PUBLIC_ALGOLIA_APP_ID`: Algolia application ID (`CFRPCC52U5`)
+- `NEXT_PUBLIC_ALGOLIA_SEARCH_KEY`: Algolia search-only API key (public)
+- `ALGOLIA_ADMIN_KEY`: Algolia admin API key (server-only)
+- `GOOGLE_SERVICE_ACCOUNT_KEY`: Base64-encoded Google service account JSON (server-only)
+- `GOOGLE_DRIVE_WEBHOOK_SECRET`: Secret for Drive webhook verification (server-only)
+- `GOOGLE_CALENDAR_WEBHOOK_SECRET`: Secret for Calendar webhook verification (server-only)
+- `GOOGLE_DRIVE_ADMIN_EMAIL`: Email to impersonate for Drive API (server-only)
+- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`: Drive folder ID for intranet file uploads (server-only)
+- `KIOSK_TOKEN`: Shared secret for kiosk confirmation endpoint (server-only)
+- `RESEND_API_KEY`: Resend email API key (server-only, sends from `noreply@mcrpathways.co.uk`)
+- `CRON_SECRET`: Vercel Cron job authentication (server-only, used by `/api/cron/*` routes)
+- `UPSTASH_REDIS_REST_URL`: Upstash Redis REST URL (server-only, optional; rate limiting disabled without it)
+- `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis REST token (server-only, optional)
 
 ## Workflow
 
 - Create a feature branch for every piece of work: `feature/<name>` for new features, `fix/<name>` for bug fixes.
 - PRs target the `main` branch. Always create a PR via `gh pr create` before merging.
-- **Never add Claude Code attribution to commits or PR bodies.** No "🤖 Generated with [Claude Code](https://claude.com/claude-code)" footer, no "Generated with Claude Code" / "Generated by Claude Code" text in any casing (with or without the emoji or link), no `Co-Authored-By: Claude ...` trailer, no robot emoji, no "Made with Claude" or similar. This overrides the default templates — omit those lines entirely from every commit message and PR description.
+- **Never add Claude Code attribution to commits or PR bodies.** No "🤖 Generated with [Claude Code](https://claude.com/claude-code)" footer, no "Generated with Claude Code" / "Generated by Claude Code" text in any casing (with or without the emoji or link), no `Co-Authored-By: Claude ...` trailer, no robot emoji, no "Made with Claude" or similar. This overrides the default templates. Omit those lines entirely from every commit message and PR description.
 
 ## Testing
 
@@ -154,9 +154,9 @@ Test files are co-located with source files using `.test.ts` / `.test.tsx` suffi
 
 ### Mocking Supabase in Tests
 
-**For server actions** — mock `@/lib/auth` (`requireHRAdmin` / `getCurrentUser`) instead of the low-level Supabase client. Then mock only the simple `.from().update().eq()` chain the action itself uses.
+**For server actions**, mock `@/lib/auth` (`requireHRAdmin` / `getCurrentUser`) instead of the low-level Supabase client. Then mock only the simple `.from().update().eq()` chain the action itself uses.
 
-**For proxy** — mock `@/lib/supabase/middleware` (`updateSession`) to control auth state, then mock the `.from().select().eq().single()` chain for profile fetching.
+**For proxy**, mock `@/lib/supabase/middleware` (`updateSession`) to control auth state, then mock the `.from().select().eq().single()` chain for profile fetching.
 
 **Use `vi.hoisted()`** when mock variables need to be available inside `vi.mock()` factory functions (which are hoisted above all imports).
 
@@ -201,15 +201,15 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Cast `Record<string, unknown>` insert payloads to `Database["public"]["Tables"]["..."]["Insert"]`.** Typed Supabase clients reject `Record<string, unknown>` for `.insert()` and `.update()`. Applies to whitelist-loop sanitised payloads.
 
-**Don't defensively cast properties that are already on the Row type.** Patterns like `(article as { content_type?: string }).content_type` or `(article as { last_published_at?: string }).last_published_at` are a reflex from pre-generated-types days. `ArticleWithAuthor extends ResourceArticle` which IS `Database["public"]["Tables"]["resource_articles"]["Row"]` — every column on the table is on the type. Trust it, write `article.content_type`. Same for `CategoryWithCount` / `CategoryTreeNode` — both extend `ResourceCategory`; structural typing accepts them where `ResourceCategory` is expected, no `as ResourceCategory` cast needed. Legit casts remain: Supabase join results that can be array-or-object (e.g. `row.category` from a `select("...category:resource_categories(...)")` — those genuinely need narrowing), and different-library types like Plate's `Value` on `content_json`.
+**Don't defensively cast properties that are already on the Row type.** Patterns like `(article as { content_type?: string }).content_type` or `(article as { last_published_at?: string }).last_published_at` are a reflex from pre-generated-types days. `ArticleWithAuthor extends ResourceArticle` which IS `Database["public"]["Tables"]["resource_articles"]["Row"]`. Every column on the table is on the type. Trust it, write `article.content_type`. Same for `CategoryWithCount` / `CategoryTreeNode`: both extend `ResourceCategory`; structural typing accepts them where `ResourceCategory` is expected, no `as ResourceCategory` cast needed. Legit casts remain: Supabase join results that can be array-or-object (e.g. `row.category` from a `select("...category:resource_categories(...)")`, which genuinely need narrowing), and different-library types like Plate's `Value` on `content_json`.
 
-**Don't over-widen prop-type unions when subtypes share the base type.** A prop typed `ResourceCategory | CategoryTreeNode | CategoryWithCount` is equivalent to `ResourceCategory` because both descendants extend it. Structural typing lets you pass the subtype where the parent is expected. Wider unions don't improve safety — they read as "the author wasn't sure what shape to accept".
+**Don't over-widen prop-type unions when subtypes share the base type.** A prop typed `ResourceCategory | CategoryTreeNode | CategoryWithCount` is equivalent to `ResourceCategory` because both descendants extend it. Structural typing lets you pass the subtype where the parent is expected. Wider unions don't improve safety. They read as "the author wasn't sure what shape to accept".
 
-**When adding a column that will be read downstream, sweep every `.select()` that reads the table.** Explicit select-list constants (`ARTICLE_SELECT`, `PROFILE_SELECT`, anywhere a string literal lists columns) are invisible to the typed Supabase client: types like `ArticleWithAuthor extends ResourceArticle` have every column on the Row regardless of what the runtime fetch returns, so TypeScript will happily agree the property is there while the server actually strips it. Symptom is a component reading `undefined` for a column that definitely exists in the DB — logic falls through to whatever the null-branch does. PR #262 added `google_doc_modified_at`, populated it on every sync path, but forgot to add it to `ARTICLE_SELECT` in `src/app/(protected)/resources/actions.ts:23` — the kebab never rendered its drift state because the client always saw `undefined`. Fix in PR #263. Grep for `*_SELECT` constants or inline select strings against the affected table before merging any column-addition PR.
+**When adding a column that will be read downstream, sweep every `.select()` that reads the table.** Explicit select-list constants (`ARTICLE_SELECT`, `PROFILE_SELECT`, anywhere a string literal lists columns) are invisible to the typed Supabase client: types like `ArticleWithAuthor extends ResourceArticle` have every column on the Row regardless of what the runtime fetch returns, so TypeScript will happily agree the property is there while the server actually strips it. Symptom is a component reading `undefined` for a column that definitely exists in the DB. Logic falls through to whatever the null-branch does. PR #262 added `google_doc_modified_at`, populated it on every sync path, but forgot to add it to `ARTICLE_SELECT` in `src/app/(protected)/resources/actions.ts:23`. The kebab never rendered its drift state because the client always saw `undefined`. Fix in PR #263. Grep for `*_SELECT` constants or inline select strings against the affected table before merging any column-addition PR.
 
-**An outer try/catch can't see through inner catches that swallow errors.** A common pattern wraps each part of a multi-step job in its own try/catch so that one block failing doesn't abort the others ("do as much as you can"). If you then wrap everything in an outer try to write an audit row, the outer catch is dead code for any failure the inner catches already handled, and the success path runs as if nothing went wrong. The audit row lies. Track a per-block failure flag inside each inner catch and use it when finalising the audit row. PR #275 hit this with `daily-reminders` — both the L&D and HR blocks had inner try/catch, the outer path wrote `cron_runs.status = 'success'` whether or not anything ran successfully. Now a `blockErrors` array flips the status to `'failed'` when any block crashes, with the error text captured in `cron_runs.result.blockErrors` and `cron_runs.error`.
+**An outer try/catch can't see through inner catches that swallow errors.** A common pattern wraps each part of a multi-step job in its own try/catch so that one block failing doesn't abort the others ("do as much as you can"). If you then wrap everything in an outer try to write an audit row, the outer catch is dead code for any failure the inner catches already handled, and the success path runs as if nothing went wrong. The audit row lies. Track a per-block failure flag inside each inner catch and use it when finalising the audit row. PR #275 hit this with `daily-reminders`: both the L&D and HR blocks had inner try/catch, the outer path wrote `cron_runs.status = 'success'` whether or not anything ran successfully. Now a `blockErrors` array flips the status to `'failed'` when any block crashes, with the error text captured in `cron_runs.result.blockErrors` and `cron_runs.error`.
 
-**In a batch loop with an external side effect, break on post-side-effect persistence failure.** If the side effect succeeds (email sent, webhook fired, external record created) but the DB update that records it fails, continuing the loop compounds drift — you do more of the thing, each one undetectable, and the next scheduled run retries every one. Emails become double-sends. Webhooks fire twice. Break the loop on first persistence drift; mark the run `status='failed'` with an error message that names the double-fire risk so operators intervene before the next schedule. `process-emails` got this treatment in PR #275 after Gemini flagged the cascade: one `sent++` plus `break` beats silently producing ten duplicate sends tomorrow.
+**In a batch loop with an external side effect, break on post-side-effect persistence failure.** If the side effect succeeds (email sent, webhook fired, external record created) but the DB update that records it fails, continuing the loop compounds drift. You do more of the thing, each one undetectable, and the next scheduled run retries every one. Emails become double-sends. Webhooks fire twice. Break the loop on first persistence drift; mark the run `status='failed'` with an error message that names the double-fire risk so operators intervene before the next schedule. `process-emails` got this treatment in PR #275 after Gemini flagged the cascade: one `sent++` plus `break` beats silently producing ten duplicate sends tomorrow.
 
 ### Database & Migrations
 
@@ -217,21 +217,21 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Avoid PostgreSQL ENUMs.** Use TEXT columns with CHECK constraints instead. ENUMs cause transaction failures and are difficult to modify in production.
 
-**Run migrations immediately after merging schema-changing PRs.** Supabase `.select()` silently returns `{ data: null }` when a column doesn't exist — the symptom looks like an auth bug (infinite redirect loop), not a missing column.
+**Run migrations immediately after merging schema-changing PRs.** Supabase `.select()` silently returns `{ data: null }` when a column doesn't exist. The symptom looks like an auth bug (infinite redirect loop), not a missing column.
 
 **Raise exceptions for invalid inputs in DB functions, don't silently return.** Use `RAISE EXCEPTION` to make programming errors immediately obvious.
 
-**Split RPCs into single-responsibility functions.** More modular — admin can recalculate without completing a lesson (data fixes, bulk ops).
+**Split RPCs into single-responsibility functions.** More modular: admin can recalculate without completing a lesson (data fixes, bulk ops).
 
 **Don't use `.returns<T>()` with typed Supabase clients.** The `Database` generic makes `.returns<>()` redundant and can produce `CheckMatchingArrayTypes` errors. Let the client infer types from the select string. If a table isn't in `database.types.ts`, add it rather than using `as any`.
 
-**Confirm prod migration parity before regenerating `database.types.ts`.** `supabase gen types typescript --project-id <ref>` reads the live schema. If production is behind on any migration, regen silently drops types for the columns and tables that haven't been applied. TypeScript then either accepts `as never` hacks or quietly breaks places where the old types were accurate. Run `DATABASE_URL=<prod> node scripts/run-migrations.mjs --check-only` first, apply any pending migrations to prod, only then regenerate. Discovered during PR #275 when prod turned out to be behind on migrations `00074` (email queue columns), `00077` (resource_media), and the flexible-working tables — tracked in `memory/prod-migration-sync-backlog.md` with concrete pick-up triggers.
+**Confirm prod migration parity before regenerating `database.types.ts`.** `supabase gen types typescript --project-id <ref>` reads the live schema. If production is behind on any migration, regen silently drops types for the columns and tables that haven't been applied. TypeScript then either accepts `as never` hacks or quietly breaks places where the old types were accurate. Run `DATABASE_URL=<prod> node scripts/run-migrations.mjs --check-only` first, apply any pending migrations to prod, only then regenerate. Discovered during PR #275 when prod turned out to be behind on migrations `00074` (email queue columns), `00077` (resource_media), and the flexible-working tables, tracked in `memory/prod-migration-sync-backlog.md` with concrete pick-up triggers.
 
 ### Security
 
 **Write RLS policies with ownership checks, not blanket `true`.** INSERT/DELETE policies on junction tables should verify the current user owns the parent record via `EXISTS` subqueries.
 
-**Never trust user-supplied IDs in SECURITY DEFINER functions.** Always use `auth.uid()` for identity — treat all parameters as untrusted input.
+**Never trust user-supplied IDs in SECURITY DEFINER functions.** Always use `auth.uid()` for identity. Treat all parameters as untrusted input.
 
 **Always set `search_path = ''` on SECURITY DEFINER functions.** Without a fixed search path, an attacker can hijack execution by creating objects in a schema they control.
 
@@ -269,7 +269,7 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Use custom DOM events, not synthetic KeyboardEvents, for cross-component communication.** Synthetic `KeyboardEvent` dispatch is fragile across browsers.
 
-**Don't nest interactive elements — use sibling layout instead.** A `<Link>` inside a `<button>` is invalid HTML. Split into sibling elements.
+**Don't nest interactive elements. Use sibling layout instead.** A `<Link>` inside a `<button>` is invalid HTML. Split into sibling elements.
 
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` targets the nearest ancestor with `class="group"`.
 
@@ -285,7 +285,7 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Don't re-declare inherited styles on child components.** If a parent sets `text-muted-foreground`, children inherit it via CSS inheritance.
 
-**Use `className` not `style` for Tailwind colour values.** `getAvatarColour()` returns Tailwind classes — using `style={{ backgroundColor }}` puts the class name as a CSS value.
+**Use `className` not `style` for Tailwind colour values.** `getAvatarColour()` returns Tailwind classes. Using `style={{ backgroundColor }}` puts the class name as a CSS value.
 
 **Turbopack aggressively caches CSS custom properties.** After editing `globals.css`, clear `.next/` and restart the dev server. Always hard-refresh (Cmd+Shift+R).
 
@@ -295,7 +295,7 @@ These are universal rules that apply to every task regardless of which module yo
 
 **All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-background odd:bg-background` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
 
-**Buttons: follow `docs/button-system.md`.** Single source of truth for variants, sizes, label casing, a11y, helpers (`TooltipButton`, `ButtonSpinner`, `DestructiveMenuItem`), and per-context patterns (Edit, kebab migration, AlertDialog footers, long labels, toggle buttons). Never use `className="h-X w-X"` on Button — an ESLint rule enforces this. Cancel uses `secondary`; destructive inline uses `ghost` or moves to kebab; primary CTAs must be `default`, `lg`, or `hero` (never `sm`).
+**Buttons: follow `docs/button-system.md`.** Single source of truth for variants, sizes, label casing, a11y, helpers (`TooltipButton`, `ButtonSpinner`, `DestructiveMenuItem`), and per-context patterns (Edit, kebab migration, AlertDialog footers, long labels, toggle buttons). Never use `className="h-X w-X"` on Button; an ESLint rule enforces this. Cancel uses `secondary`; destructive inline uses `ghost` or moves to kebab; primary CTAs must be `default`, `lg`, or `hero` (never `sm`).
 
 ### Server Actions & Middleware
 
@@ -313,9 +313,9 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Verify Tailwind plugins are installed, not just referenced.** `prose` classes do nothing if `@tailwindcss/typography` isn't installed and registered via `@plugin` in `globals.css`.
 
-**Rate limiting on Vercel serverless requires an external store.** Use Upstash Redis (`@upstash/ratelimit`). API routes rate-limited via PR #163. Server action rate limiting deferred — see `memory/rate-limiting.md`.
+**Rate limiting on Vercel serverless requires an external store.** Use Upstash Redis (`@upstash/ratelimit`). API routes rate-limited via PR #163. Server action rate limiting deferred; see `memory/rate-limiting.md`.
 
-**`NextRequest.ip` was removed in Next.js 16.** Use `x-forwarded-for` header parsing. AI tools still suggest it — verify against the actual runtime.
+**`NextRequest.ip` was removed in Next.js 16.** Use `x-forwarded-for` header parsing. AI tools still suggest it. Verify against the actual runtime.
 
 **Return 200 (not 429) when rate-limiting webhook endpoints.** Google retries failed webhooks with exponential backoff. A 429 causes retry storms that compound the problem.
 
@@ -343,9 +343,9 @@ These are universal rules that apply to every task regardless of which module yo
 
 ### Process
 
-**Extract shared logic to `src/lib/` immediately, not after review.** Don't wait for duplication to happen — extract on first write when the logic is non-trivial or security-sensitive.
+**Extract shared logic to `src/lib/` immediately, not after review.** Don't wait for duplication to happen. Extract on first write when the logic is non-trivial or security-sensitive.
 
-**Push feature branches as PRs immediately, don't leave them local.** Even as draft — so the team can see work in progress.
+**Push feature branches as PRs immediately, don't leave them local.** Even as draft, so the team can see work in progress.
 
 **Wrap localStorage access in try/catch.** Can throw in private browsing mode or when storage is disabled/full.
 
@@ -363,12 +363,12 @@ These are universal rules that apply to every task regardless of which module yo
 
 **When deferring an optimisation, make the deferral rediscoverable.** Three layers that work together: a code-level `logger.warn` when a threshold is crossed, a SQL-queryable flag in an audit table, and a workflow rule in MEMORY.md that checks the flag during periodic syncs. Any one of the three will surface the deferred decision if a human review misses it. See `src/app/api/cron/renew-drive-watches/route.ts` for the pattern (SCALE_WARN_TOTAL, SCALE_WARN_RUNTIME_MS, `cron_runs.result.scaleWarning`).
 
-**Don't trust documented max lifetimes from third-party APIs — verify against observed behaviour.** Google Drive's `files.watch` docs say watch channels live "up to 7 days", but in practice Drive issues ~24h-lifetime channels. The whole renewal plan was designed around the 7-day number and only got corrected after the first smoke test revealed the mismatch. Pattern: after the first production invocation of any time-sensitive external-API integration, read back the actual numbers (expiration, TTL, quota refill window) and align code + docs to what you observe, not what the docs promise. Record the observation date in the comment so the next reader knows when the check was made.
+**Don't trust documented max lifetimes from third-party APIs. Verify against observed behaviour.** Google Drive's `files.watch` docs say watch channels live "up to 7 days", but in practice Drive issues ~24h-lifetime channels. The whole renewal plan was designed around the 7-day number and only got corrected after the first smoke test revealed the mismatch. Pattern: after the first production invocation of any time-sensitive external-API integration, read back the actual numbers (expiration, TTL, quota refill window) and align code + docs to what you observe, not what the docs promise. Record the observation date in the comment so the next reader knows when the check was made.
 
 **Trim env vars when their value is used as a URL host.** Env vars pasted via dashboards (Vercel, Supabase Vault) can silently pick up trailing newlines or whitespace. Browsers forgive it by stripping whitespace from URLs; strict API hosts like Google Drive reject outright with opaque errors ("No valid host or IP for WebHook callback"). Apply `process.env.NEXT_PUBLIC_APP_URL?.trim()` (or equivalent) at the point of use for any env var whose downstream consumer is a strict host parser.
 
-**When a smoke test reveals code or docs contradict reality, land the correction in the same PR as the sync.** Rescoping an open PR beats opening a second PR to correct the first. Leaving an inaccurate sync merged on main for even a day creates a window where contributors read the wrong numbers and build on them. PR #261 did this for the 7-day / 24h Drive watch lifetime assumption — the sync PR itself was rescoped to include the correction so both landed together.
+**When a smoke test reveals code or docs contradict reality, land the correction in the same PR as the sync.** Rescoping an open PR beats opening a second PR to correct the first. Leaving an inaccurate sync merged on main for even a day creates a window where contributors read the wrong numbers and build on them. PR #261 did this for the 7-day / 24h Drive watch lifetime assumption. The sync PR itself was rescoped to include the correction so both landed together.
 
-**Apply CLAUDE.md rules at the scope the rule specifies; don't extrapolate defensive fixes.** If a rule says "trim env vars used as URL hosts by strict parsers", don't mass-apply it as "trim everywhere env vars are used". Over-generalising a written rule pays a readability tax forever against scenarios that don't produce observable failures, and it dilutes the rule's specificity for future readers. This is a distinct failure mode from existing rules against premature optimisation or over-defensive coding — it's specifically about expanding the blast radius of a targeted fix.
+**Apply CLAUDE.md rules at the scope the rule specifies; don't extrapolate defensive fixes.** If a rule says "trim env vars used as URL hosts by strict parsers", don't mass-apply it as "trim everywhere env vars are used". Over-generalising a written rule pays a readability tax forever against scenarios that don't produce observable failures, and it dilutes the rule's specificity for future readers. This is a distinct failure mode from existing rules against premature optimisation or over-defensive coding. It's specifically about expanding the blast radius of a targeted fix.
 
-**Deferred-to-implementation-time checks are load-bearing, not decorative.** When a plan says "try X first, switch to Y if it reads cramped" or "visual check at localhost", that implies running the dev server and actually looking. Lint, typecheck, and unit tests passing is NOT a substitute — they don't catch visual judgement calls that the plan itself flagged as visual. Skipped this on PR #264: plan said "visual check at localhost" for a `gap-1` vs `gap-2` spacing call, committed `gap-1` on the strength of static checks alone, Gemini flagged it within minutes, `gap-2` was the right answer all along. Rule: if a plan contains "check X at implementation time", the plan is describing a required step, not a checkbox. Either do the check before pushing, or take the decision out of the plan.
+**Deferred-to-implementation-time checks are load-bearing, not decorative.** When a plan says "try X first, switch to Y if it reads cramped" or "visual check at localhost", that implies running the dev server and actually looking. Lint, typecheck, and unit tests passing is NOT a substitute. They don't catch visual judgement calls that the plan itself flagged as visual. Skipped this on PR #264: plan said "visual check at localhost" for a `gap-1` vs `gap-2` spacing call, committed `gap-1` on the strength of static checks alone, Gemini flagged it within minutes, `gap-2` was the right answer all along. Rule: if a plan contains "check X at implementation time", the plan is describing a required step, not a checkbox. Either do the check before pushing, or take the decision out of the plan.
