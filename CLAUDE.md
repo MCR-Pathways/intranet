@@ -321,6 +321,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Always verify exploration agent claims against actual code.** Agents report false negatives AND false positives. Run your own `git log`, `grep`, and `read` to verify before acting.
 
+**For design-research claims about a specific platform, verify via DOM inspection.** When a research agent describes "Platform X uses pattern Y" with specific CSS classes, animation libraries, or colour tokens, open the platform in Chrome MCP and inspect the live DOM before adopting the pattern. PR #277 turned up an agent claim that React.dev uses a Framer Motion pill — direct DOM inspection showed it actually uses a plain colour-and-weight shift with no background and no animation library. Polaris's described pattern held up. Mixed reliability across platforms in a single agent report is the norm, not the exception.
+
 **Resend FROM address must match the verified domain.** `mcrpathways.co.uk` is verified, not `mcrpathways.org`. Resend rejects sends from unverified domains silently.
 
 **Check migration numbers on `main` before merging long-lived branches.** A branch created weeks ago will have stale migration numbers. Renumber before rebasing.
@@ -346,6 +348,8 @@ These are universal rules that apply to every task regardless of which module yo
 **Extract shared logic to `src/lib/` immediately, not after review.** Don't wait for duplication to happen. Extract on first write when the logic is non-trivial or security-sensitive.
 
 **Push feature branches as PRs immediately, don't leave them local.** Even as draft, so the team can see work in progress.
+
+**Don't pipe `grep` through `| head -N` when enumerating callers before a shared-component change.** The silent truncation hides call sites you'll later miss in your edit. Either omit the head limit or pipe through `wc -l` first to confirm the full count. PR #277 lost a CI round-trip to this: a grep for `ArticleBreadcrumb` callers used `| head -5`, returned 2 of 3 callers, the third (`component-article-view.tsx`) still passed the removed `title` prop, local lint accepted it, Vercel TypeScript caught it on deploy.
 
 **Wrap localStorage access in try/catch.** Can throw in private browsing mode or when storage is disabled/full.
 

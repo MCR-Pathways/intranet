@@ -117,7 +117,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 ## Radix Component Patterns
 
-**Don't use `mr-2` on icons inside Shadcn `DropdownMenuItem`.** Already has `gap-2`. Use just `h-4 w-4`. `Button` does NOT have `gap-2`, so `mr-2` is still needed there.
+**Don't add any sizing classes to icons inside Shadcn `DropdownMenuItem`.** The primitive has `[&>svg]:size-4 [&>svg]:shrink-0` on its base className (see `src/components/ui/dropdown-menu.tsx:86`). Explicit `h-4 w-4` is redundant. Even smaller sizes like `h-3 w-3` are silently overridden — CSS specificity of `.parent > svg` (0,1,1) beats `.h-3` (0,1,0). If you genuinely need a non-default icon size inside a menu item, raise specificity with `!size-3` or restructure. `Button` does NOT have this auto-sizing rule, so icon sizing is still needed there. `gap-2` on `DropdownMenuItem` means `mr-2` between icon and label is also unnecessary; needed on `Button`.
 
 **One `TooltipProvider` per component, not per cell.** Radix recommends a single provider at the app root or wrapping the table/section — each `TooltipProvider` runs its own event listeners and delay state. Per-row instantiation inside table cells works but wastes render work on every visible row. Wrap the component's top-level `<div>` once with `<TooltipProvider delayDuration={200}>`; bare `<Tooltip>` children all use it. Caught by Gemini review on PR #266.
 
