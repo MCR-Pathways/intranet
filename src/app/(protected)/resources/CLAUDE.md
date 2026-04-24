@@ -74,7 +74,9 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Use "More in [folder]" footer on article pages instead of a sidebar tree.** Lists other articles in the same folder, with the current article highlighted.
 
-**Use IntersectionObserver for TOC scroll-spy.** `rootMargin: "-80px 0px -80% 0px"` to detect the topmost visible heading. Highlight in TOC with `text-primary font-medium`.
+**Use IntersectionObserver for TOC scroll-spy with a fallback for the gap state.** `rootMargin: "-80px 0px -80% 0px"` detects the topmost visible heading. The observer alone isn't enough: when the user scrolls slowly between sections and no heading is in the band, the observer fires nothing and the previously active heading gets stuck. Track an `intersecting: Map<slug, boolean>` across callbacks. On each callback: pick the topmost heading whose map entry is `true`; if none, walk the heading list and pick the last one whose `getBoundingClientRect().top < 80` (that's the section the user is currently in, even though its heading scrolled above the viewport). See `src/lib/use-scroll-spy.ts`.
+
+**Highlight the active TOC item with a `bg-accent` rounded pill, not a colour shift.** Whole-row `rounded-md bg-accent` on the active link, transparent on inactive. Text colour and weight stay identical between states — the pill alone carries the signal. Polaris pattern, verified via DOM inspection. Brand colour in TOC chrome competes with article body and is the wrong direction. See `src/components/resources/article-outline.tsx`.
 
 **Remove monolithic card wrappers — let each page manage its own surfaces.** Each page decides its own card surfaces on the grey `bg-background`.
 
