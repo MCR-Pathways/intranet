@@ -1,15 +1,21 @@
 /**
  * Image processing pipeline for news-feed uploads.
  *
- * Runs every uploaded image through Sharp to:
+ * For every uploaded image:
  *   - Strip EXIF metadata (GPS coords from phone photos, camera serial, etc.)
  *   - Bake in EXIF orientation so portrait photos render upright
- *   - Convert HEIC/HEIF to JPEG (browsers can't render HEIC inline)
- *   - Convert Apple ProRAW (DNG) to JPEG via the TIFF path
  *   - Capture width/height for layout-shift-free rendering
- *   - Reject camera RAW (CR2/CR3/NEF/ARW etc.) with a friendly error
  *
- * Documents (PDF/DOCX) bypass Sharp entirely.
+ * Format-specific handling:
+ *   - HEIC/HEIF → JPEG via heic-convert (Sharp's libheif lacks the HEVC
+ *     decoder plugin — patent-encumbered) followed by Sharp post-processing.
+ *   - Apple ProRAW (DNG) → JPEG via Sharp's TIFF decoder.
+ *   - Animated GIF / WebP → Sharp with `{ animated: true }` to preserve frames.
+ *   - Standard JPEG/PNG → Sharp standard pipeline.
+ *   - Camera RAW (CR2/CR3/NEF/ARW etc.) → friendly-error rejection (no
+ *     pure-JS decoder available; Sharp can't either).
+ *
+ * Documents (PDF/DOCX) bypass the pipeline entirely.
  */
 
 import sharp from "sharp";
@@ -206,9 +212,16 @@ async function processAnimated(
       .rotate()
       .keepIccProfile();
 
+    // Sharp's default WebP encode quality is 80 — same silent quality
+    // regression we already fixed for JPEG. Set 90 explicitly to match.
     let out: Buffer;
-    if (claimedMimeType === "image/gif") out = await sharpInstance.gif().toBuffer();
-    else out = await sharpInstance.toBuffer();
+    if (claimedMimeType === "image/gif") {
+      out = await sharpInstance.gif().toBuffer();
+    } else if (claimedMimeType === "image/webp") {
+      out = await sharpInstance.webp({ quality: 90 }).toBuffer();
+    } else {
+      out = await sharpInstance.toBuffer();
+    }
 
     const meta = await sharp(out, { animated: true }).metadata();
     return {
@@ -236,7 +249,7 @@ async function processStandard(
   try {
     // Sharp's default JPEG encode quality is 80. Without an explicit quality
     // setting, every JPEG that reaches this path silently degrades from its
-    // input quality on re-encode. Match convertToJpeg's quality 90.
+    // input quality on re-encode. Match convertDngToJpeg's quality 90.
     let pipeline = sharp(buffer).rotate().keepIccProfile();
     if (claimedMimeType === "image/jpeg") {
       pipeline = pipeline.jpeg({ quality: 90 });

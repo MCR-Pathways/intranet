@@ -78,6 +78,9 @@ function LightboxContent({
         src={currentImage.file_url || undefined}
         alt={currentImage.file_name || "Image"}
         className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+        {...(currentImage.image_width && currentImage.image_height
+          ? { width: currentImage.image_width, height: currentImage.image_height }
+          : {})}
       />
 
       {/* Next button */}

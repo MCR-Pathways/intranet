@@ -1397,7 +1397,8 @@ export async function uploadPostAttachment(
     return { success: false, error: "No file provided" };
   }
 
-  // Per-type size cap. Images allow up to 100 MB to fit iPhone ProRAW DNGs.
+  // Per-type size cap. Held under Vercel Hobby's 4.5 MB platform cap on
+  // function payloads — see src/lib/intranet.ts for the constants.
   const isImage = isImageType(file.type);
   const cap = isImage ? IMAGE_MAX_SIZE_BYTES : DOCUMENT_MAX_SIZE_BYTES;
   if (file.size > cap) {
