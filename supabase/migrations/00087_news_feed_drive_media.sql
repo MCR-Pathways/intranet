@@ -54,4 +54,5 @@ DELETE FROM public.post_attachments
 
 DROP POLICY IF EXISTS "Authenticated users can read post attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Staff can upload post attachments" ON storage.objects;
+DROP POLICY IF EXISTS "Active users can upload post attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Staff can delete own post attachments" ON storage.objects;
