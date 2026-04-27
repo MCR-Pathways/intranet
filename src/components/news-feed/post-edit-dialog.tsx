@@ -245,6 +245,10 @@ export function PostEditDialog({
       }}>
         <DialogContent
           className="max-w-lg gap-0"
+          // No DialogDescription — the editor is visually self-explanatory.
+          // Explicit undefined opts out of Radix's default aria-describedby
+          // warning. Screen readers fall back to the DialogTitle.
+          aria-describedby={undefined}
           onInteractOutside={(e) => {
             if (hasChanges) {
               e.preventDefault();
