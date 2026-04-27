@@ -102,6 +102,42 @@ describe("processUploadedImage", () => {
         expect(result.mimeType).toBe("image/gif");
       }
     });
+
+    it("routes WebP through the animated pipeline (preserves frames)", async () => {
+      // We can't easily synthesise an animated WebP in-memory via Sharp's
+      // create API — animated WebP requires a real multi-frame source.
+      // Instead, verify the routing: a WebP input produces a WebP output via
+      // the animated path. Per Sharp docs, `sharp(buf, { animated: true })`
+      // on a static WebP is a no-op (pages: 1), so this works for both.
+      const webp = await sharp({
+        create: { width: 100, height: 80, channels: 3, background: { r: 0, g: 0, b: 255 } },
+      })
+        .webp()
+        .toBuffer();
+
+      const result = await processUploadedImage(webp, "image/webp", "img.webp");
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.mimeType).toBe("image/webp");
+        const outMeta = await sharp(result.buffer, { animated: true }).metadata();
+        expect(outMeta.format).toBe("webp");
+      }
+    });
+
+    it("treats static WebP correctly (degenerate animated case)", async () => {
+      const webp = await sharp({
+        create: { width: 100, height: 80, channels: 3, background: { r: 0, g: 0, b: 255 } },
+      })
+        .webp()
+        .toBuffer();
+
+      const result = await processUploadedImage(webp, "image/webp", "static.webp");
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.mimeType).toBe("image/webp");
+        expect(result.width).toBe(100);
+      }
+    });
   });
 
   describe("camera RAW rejection", () => {

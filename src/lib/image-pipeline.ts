@@ -31,9 +31,12 @@ const DNG_TYPES = new Set(["image/x-adobe-dng", "image/dng"]);
 const STANDARD_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
-  "image/webp",
 ]);
-const ANIMATED_IMAGE_TYPES = new Set(["image/gif"]);
+// Both GIF and WebP can be animated. Sharp needs `{ animated: true }` to read
+// all frames; the standard pipeline flattens to the first frame, so route both
+// through the animated path. Static GIF/WebP files are a degenerate animated
+// case (pages: 1) and re-encode correctly.
+const ANIMATED_IMAGE_TYPES = new Set(["image/gif", "image/webp"]);
 const DOCUMENT_TYPES = new Set([
   "application/pdf",
   "application/msword",
@@ -124,18 +127,19 @@ async function convertToJpeg(
   fileName: string,
 ): Promise<ProcessedImage> {
   try {
-    const out = await sharp(buffer)
+    // resolveWithObject returns dims from the encode step, avoiding a
+    // redundant Sharp re-parse to read metadata.
+    const { data, info } = await sharp(buffer)
       .rotate()
       .jpeg({ quality: 90 })
       .keepIccProfile()
-      .toBuffer();
-    const meta = await sharp(out).metadata();
+      .toBuffer({ resolveWithObject: true });
     return {
       ok: true,
-      buffer: out,
+      buffer: data,
       mimeType: "image/jpeg",
-      width: meta.width ?? null,
-      height: meta.height ?? null,
+      width: info.width ?? null,
+      height: info.height ?? null,
     };
   } catch (err) {
     logger.error("Image pipeline: convertToJpeg failed", {
@@ -188,17 +192,21 @@ async function processStandard(
   fileName: string,
 ): Promise<ProcessedImage> {
   try {
-    const out = await sharp(buffer)
-      .rotate()
-      .keepIccProfile()
-      .toBuffer();
-    const meta = await sharp(out).metadata();
+    // Sharp's default JPEG encode quality is 80. Without an explicit quality
+    // setting, every JPEG that reaches this path silently degrades from its
+    // input quality on re-encode. Match convertToJpeg's quality 90.
+    let pipeline = sharp(buffer).rotate().keepIccProfile();
+    if (claimedMimeType === "image/jpeg") {
+      pipeline = pipeline.jpeg({ quality: 90 });
+    }
+
+    const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
     return {
       ok: true,
-      buffer: out,
+      buffer: data,
       mimeType: claimedMimeType,
-      width: meta.width ?? null,
-      height: meta.height ?? null,
+      width: info.width ?? null,
+      height: info.height ?? null,
     };
   } catch (err) {
     logger.error("Image pipeline: processStandard failed", {
