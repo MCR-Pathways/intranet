@@ -143,21 +143,26 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
 
             if (result.success && result.url) {
               setAttachments((prev) =>
-                prev.map((a) =>
-                  a.id === tempId
-                    ? {
-                        ...a,
-                        file_url: result.url,
-                        drive_file_id: result.driveFileId,
-                        file_name: result.fileName,
-                        file_size: result.fileSize,
-                        mime_type: result.mimeType,
-                        image_width: result.width ?? undefined,
-                        image_height: result.height ?? undefined,
-                        uploading: false,
-                      }
-                    : a
-                )
+                prev.map((a) => {
+                  if (a.id !== tempId) return a;
+                  // Release the blob URL and switch to the server URL.
+                  // Critical for HEIC: browsers can't render HEIC blobs, so
+                  // the local preview shows a broken icon. The server-side
+                  // pipeline converted to JPEG, which file_url now points at.
+                  if (a.preview) URL.revokeObjectURL(a.preview);
+                  return {
+                    ...a,
+                    preview: undefined,
+                    file_url: result.url,
+                    drive_file_id: result.driveFileId,
+                    file_name: result.fileName,
+                    file_size: result.fileSize,
+                    mime_type: result.mimeType,
+                    image_width: result.width ?? undefined,
+                    image_height: result.height ?? undefined,
+                    uploading: false,
+                  };
+                })
               );
             } else {
               setAttachments((prev) => prev.filter((a) => a.id !== tempId));
