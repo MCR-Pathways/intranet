@@ -5,10 +5,10 @@ const nextConfig: NextConfig = {
   experimental: {
     turbopackFileSystemCacheForDev: true,
     serverActions: {
-      // 100 MB matches IMAGE_MAX_SIZE_BYTES in src/lib/intranet.ts —
-      // bump both together if changing. Sized for iPhone ProRAW DNGs
-      // which run 40–80 MB at 48 MP.
-      bodySizeLimit: "100mb",
+      // 4 MB matches IMAGE_MAX_SIZE_BYTES in src/lib/intranet.ts. Constrained
+      // by Vercel Hobby's hard 4.5 MB function payload cap (which can't be
+      // raised by this setting anyway). Bump to ~100 MB when upgrading to Pro.
+      bodySizeLimit: "4mb",
     },
   },
   images: {

@@ -8,8 +8,9 @@ import { fetchPostsWithClient, fetchActiveRoundupWithClient, getActiveProfilesFo
 import type { PostAuthor } from "@/types/database.types";
 
 // Server Actions invoked from this page inherit this timeout. Sized for the
-// uploadPostAttachment worst case: 100 MB upload over a slow connection +
-// Sharp processing (≤1s) + Drive resumable upload.
+// uploadPostAttachment worst case (4 MB upload + Sharp processing + Drive).
+// On Vercel Hobby this is capped at 60 anyway; raise after Pro upgrade if
+// we hit timeouts on bigger uploads.
 export const maxDuration = 60;
 
 export default async function IntranetPage({

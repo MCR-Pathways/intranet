@@ -24,10 +24,10 @@ Every uploaded image runs through `src/lib/image-pipeline.ts` (Sharp via libvips
 
 ## File Size Caps
 
-- **Images:** 100 MB (`IMAGE_MAX_SIZE_BYTES` in `src/lib/intranet.ts`). Sized for iPhone ProRAW DNGs which routinely run 40–80 MB at 48 MP.
-- **Documents:** 25 MB (`DOCUMENT_MAX_SIZE_BYTES`). Matches the resources module.
-- **`bodySizeLimit` in `next.config.ts` must match `IMAGE_MAX_SIZE_BYTES`** (the larger of the two). They're kept in sync — bump together if changing.
-- **Page-level `maxDuration = 60`** is set on `src/app/(protected)/intranet/page.tsx`. Server Actions invoked from the feed page inherit it. Sized for a 100 MB upload on a slow connection plus Sharp processing (~1s) plus Drive upload of the converted JPEG.
+- **Images and documents both 4 MB** (`IMAGE_MAX_SIZE_BYTES` / `DOCUMENT_MAX_SIZE_BYTES` in `src/lib/intranet.ts`). Constrained by **Vercel Hobby's 4.5 MB platform limit** on serverless function request bodies — that cap is enforced at Vercel's edge and cannot be raised by `bodySizeLimit` in `next.config.ts`.
+- **`bodySizeLimit: "4mb"`** in `next.config.ts` matches the file caps.
+- **Page-level `maxDuration = 60`** is set on `src/app/(protected)/intranet/page.tsx`. Server Actions invoked from the feed page inherit it.
+- **REVISIT ON VERCEL PRO UPGRADE:** raise `IMAGE_MAX_SIZE_BYTES` and `DOCUMENT_MAX_SIZE_BYTES` to ~100 MB (`104857600`), and `bodySizeLimit` to `"100mb"`. Sharp pipeline already handles big files; only the platform cap is the constraint. iPhone ProRAW DNGs (40–80 MB) and larger photos will then work as originally planned. Tracked in `memory/news-feed-drive-media-backlog.md`.
 
 ## Whitelist Pattern
 
