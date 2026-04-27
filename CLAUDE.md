@@ -131,7 +131,8 @@ Required in `.env.local`:
 - `GOOGLE_DRIVE_WEBHOOK_SECRET`: Secret for Drive webhook verification (server-only)
 - `GOOGLE_CALENDAR_WEBHOOK_SECRET`: Secret for Calendar webhook verification (server-only)
 - `GOOGLE_DRIVE_ADMIN_EMAIL`: Email to impersonate for Drive API (server-only)
-- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`: Drive folder ID for intranet file uploads (server-only)
+- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`: Drive folder ID for resources file uploads (server-only)
+- `GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID`: Drive folder ID for news-feed media uploads (server-only). Files organised under auto-created `YYYY/MM` subfolders.
 - `KIOSK_TOKEN`: Shared secret for kiosk confirmation endpoint (server-only)
 - `RESEND_API_KEY`: Resend email API key (server-only, sends from `noreply@mcrpathways.co.uk`)
 - `CRON_SECRET`: Cron job authentication (server-only, used by Supabase pg_cron → `/api/cron/*` routes)

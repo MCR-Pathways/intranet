@@ -1,5 +1,20 @@
-import { describe, it, expect } from "vitest";
-import { validateMagicBytes, DRIVE_FILE_ID_REGEX } from "./google-drive-upload";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockFilesList = vi.hoisted(() => vi.fn());
+const mockFilesCreate = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/google-drive", () => ({
+  getDriveClient: () => ({
+    files: { list: mockFilesList, create: mockFilesCreate },
+  }),
+}));
+
+import {
+  validateMagicBytes,
+  DRIVE_FILE_ID_REGEX,
+  uploadFileToDrive,
+  sanitiseFilename,
+} from "./google-drive-upload";
 
 describe("DRIVE_FILE_ID_REGEX", () => {
   it("accepts valid Google Drive file IDs", () => {
@@ -83,5 +98,160 @@ describe("validateMagicBytes", () => {
       ...Array(100).fill(0),
     ]);
     expect(validateMagicBytes(notWebp, "image/webp")).toBe(false);
+  });
+
+  it("validates HEIC files (ftyp at offset 4)", () => {
+    const heic = Buffer.from([
+      0x00, 0x00, 0x00, 0x18, // box size
+      0x66, 0x74, 0x79, 0x70, // ftyp
+      0x68, 0x65, 0x69, 0x63, // heic
+      ...Array(100).fill(0),
+    ]);
+    expect(validateMagicBytes(heic, "image/heic")).toBe(true);
+  });
+
+  it("validates DNG files (TIFF little-endian header)", () => {
+    const dng = Buffer.from([0x49, 0x49, 0x2a, 0x00, ...Array(100).fill(0)]);
+    expect(validateMagicBytes(dng, "image/x-adobe-dng")).toBe(true);
+    expect(validateMagicBytes(dng, "image/dng")).toBe(true);
+  });
+});
+
+describe("sanitiseFilename", () => {
+  it("strips path separators", () => {
+    expect(sanitiseFilename("a/b\\c.png")).toBe("a_b_c.png");
+  });
+
+  it("collapses whitespace", () => {
+    expect(sanitiseFilename("hello   world.png")).toBe("hello world.png");
+  });
+
+  it("truncates to 200 chars", () => {
+    const long = "a".repeat(300) + ".png";
+    expect(sanitiseFilename(long).length).toBe(200);
+  });
+});
+
+describe("uploadFileToDrive — subfolder resolution", () => {
+  const ROOT = "root-folder-id";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID = ROOT;
+
+    let createId = 1000;
+    mockFilesList.mockResolvedValue({ data: { files: [] } });
+    mockFilesCreate.mockImplementation(async ({ requestBody }) => ({
+      data: {
+        id:
+          requestBody.mimeType === "application/vnd.google-apps.folder"
+            ? `folder-${createId++}`
+            : "uploaded-file-id",
+        mimeType: requestBody.mimeType,
+        size: "100",
+      },
+    }));
+  });
+
+  it("uploads directly to root when no subfolder path is given", async () => {
+    const result = await uploadFileToDrive(
+      Buffer.from("content"),
+      "image/jpeg",
+      "test.jpg",
+    );
+
+    expect(mockFilesList).not.toHaveBeenCalled();
+    expect(mockFilesCreate).toHaveBeenCalledTimes(1);
+    expect(mockFilesCreate.mock.calls[0][0].requestBody.parents).toEqual([
+      ROOT,
+    ]);
+    expect(result.fileId).toBe("uploaded-file-id");
+  });
+
+  it("creates missing subfolders lazily", async () => {
+    await uploadFileToDrive(
+      Buffer.from("content"),
+      "image/jpeg",
+      "test.jpg",
+      { subfolderPath: ["2050", "01"] }, // unique keys to avoid module-cache pollution
+    );
+
+    expect(mockFilesList).toHaveBeenCalledTimes(2);
+    expect(mockFilesCreate).toHaveBeenCalledTimes(3);
+
+    const yearCreate = mockFilesCreate.mock.calls[0][0];
+    expect(yearCreate.requestBody.name).toBe("2050");
+    expect(yearCreate.requestBody.parents).toEqual([ROOT]);
+
+    const monthCreate = mockFilesCreate.mock.calls[1][0];
+    expect(monthCreate.requestBody.name).toBe("01");
+
+    const fileCreate = mockFilesCreate.mock.calls[2][0];
+    expect(fileCreate.requestBody.name).toBe("test.jpg");
+  });
+
+  it("caches resolved subfolders across calls", async () => {
+    await uploadFileToDrive(
+      Buffer.from("a"),
+      "image/jpeg",
+      "first.jpg",
+      { subfolderPath: ["2051", "02"] },
+    );
+    const firstListCount = mockFilesList.mock.calls.length;
+
+    await uploadFileToDrive(
+      Buffer.from("b"),
+      "image/jpeg",
+      "second.jpg",
+      { subfolderPath: ["2051", "02"] },
+    );
+
+    // No new list calls — second upload hit the cache
+    expect(mockFilesList.mock.calls.length).toBe(firstListCount);
+    // Total folder creates: 2. Total file creates: 2. Combined: 4
+    expect(mockFilesCreate).toHaveBeenCalledTimes(4);
+  });
+
+  it("uses options.folderId override when provided", async () => {
+    const NEWS_ROOT = "news-feed-root";
+    await uploadFileToDrive(
+      Buffer.from("content"),
+      "image/jpeg",
+      "test.jpg",
+      { folderId: NEWS_ROOT },
+    );
+
+    expect(mockFilesCreate.mock.calls[0][0].requestBody.parents).toEqual([
+      NEWS_ROOT,
+    ]);
+  });
+
+  it("reuses an existing subfolder when list returns a hit", async () => {
+    mockFilesList.mockResolvedValueOnce({
+      data: { files: [{ id: "existing-2099" }] },
+    });
+    mockFilesList.mockResolvedValueOnce({
+      data: { files: [{ id: "existing-12" }] },
+    });
+
+    await uploadFileToDrive(
+      Buffer.from("content"),
+      "image/jpeg",
+      "test.jpg",
+      { subfolderPath: ["2099", "12"] },
+    );
+
+    expect(mockFilesCreate).toHaveBeenCalledTimes(1);
+    expect(mockFilesCreate.mock.calls[0][0].requestBody.parents).toEqual([
+      "existing-12",
+    ]);
+  });
+
+  it("throws when no folder is configured and none is provided", async () => {
+    delete process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID;
+
+    await expect(
+      uploadFileToDrive(Buffer.from("a"), "image/jpeg", "x.jpg"),
+    ).rejects.toThrow(/No Drive folder configured/);
   });
 });

@@ -12,7 +12,8 @@ export const maxDuration = 60;
  * GET /api/drive-file/[fileId]
  *
  * Authenticated streaming proxy for Google Drive files.
- * Only serves files registered in the resource_media whitelist table.
+ * Only serves files registered in either the resource_media whitelist
+ * (resources articles) or the post_attachments table (news-feed posts).
  * Metadata (mime_type, file_size, original_name) comes from the DB,
  * not from Drive — one API call instead of two.
  */
@@ -50,14 +51,40 @@ export async function GET(
     );
   }
 
-  // 4. Whitelist check + metadata (service client — needs all rows regardless of uploader)
+  // 4. Whitelist check + metadata (service client — needs all rows regardless of uploader).
+  // Two whitelist tables: resource_media (resources articles) and post_attachments
+  // (news-feed posts). Run both in parallel — whichever returns the row wins.
   const service = createServiceClient();
-  const { data: media } = await service
-    .from("resource_media")
-    .select("file_id, original_name, mime_type, file_size")
-    .eq("file_id", fileId)
-    .limit(1)
-    .single();
+  const [resourceRes, postRes] = await Promise.all([
+    service
+      .from("resource_media")
+      .select("original_name, mime_type, file_size")
+      .eq("file_id", fileId)
+      .maybeSingle(),
+    service
+      .from("post_attachments")
+      .select("file_name, mime_type, file_size")
+      .eq("drive_file_id", fileId)
+      .maybeSingle(),
+  ]);
+
+  const media: {
+    name: string | null;
+    mime_type: string | null;
+    file_size: number | null;
+  } | null = resourceRes.data
+    ? {
+        name: resourceRes.data.original_name,
+        mime_type: resourceRes.data.mime_type,
+        file_size: resourceRes.data.file_size,
+      }
+    : postRes.data
+      ? {
+          name: postRes.data.file_name,
+          mime_type: postRes.data.mime_type,
+          file_size: postRes.data.file_size,
+        }
+      : null;
 
   if (!media) {
     return NextResponse.json(
@@ -84,7 +111,7 @@ export async function GET(
     // Uses filename* with UTF-8 encoding for non-ASCII characters (RFC 6266)
     const mimeType = media.mime_type || "application/octet-stream";
     const isImage = mimeType.startsWith("image/");
-    const rawName = media.original_name || "file";
+    const rawName = media.name || "file";
     const disposition = isImage
       ? "inline"
       : `attachment; filename="${rawName.replace(/["\\\n\r\0]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(rawName)}`;

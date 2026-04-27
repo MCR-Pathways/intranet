@@ -12,6 +12,7 @@ import {
   uploadFileToDrive,
   deleteFileFromDrive,
   validateMagicBytes,
+  sanitiseFilename,
 } from "@/lib/google-drive-upload";
 import { logger } from "@/lib/logger";
 import type { Database } from "@/types/database.types";
@@ -41,18 +42,6 @@ const FILE_TYPES = new Set([
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-
-// =============================================
-// FILENAME SANITISATION
-// =============================================
-
-function sanitiseFilename(name: string): string {
-  return name
-    .replace(/[/\\:*?"<>|\x00-\x1f]/g, "_") // strip path separators and control chars
-    .replace(/\s+/g, " ") // collapse whitespace
-    .trim()
-    .slice(0, 200); // truncate
-}
 
 // =============================================
 // UPLOAD

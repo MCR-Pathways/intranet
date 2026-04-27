@@ -16,10 +16,13 @@ function makeImage(id: string, name: string): PostAttachment {
     id,
     post_id: "post-1",
     attachment_type: "image",
-    file_url: `https://example.com/${name}.jpg`,
+    file_url: `/api/drive-file/${id}`,
+    drive_file_id: id,
     file_name: name,
     file_size: 1024,
     mime_type: "image/jpeg",
+    image_width: 800,
+    image_height: 600,
     link_url: null,
     link_title: null,
     link_description: null,
@@ -50,7 +53,7 @@ describe("ImageLightbox", () => {
       />
     );
     const img = screen.getByRole("img");
-    expect(img).toHaveAttribute("src", "https://example.com/cat.jpg");
+    expect(img).toHaveAttribute("src", "/api/drive-file/img-1");
     expect(img).toHaveAttribute("alt", "cat");
   });
 
@@ -64,7 +67,7 @@ describe("ImageLightbox", () => {
       />
     );
     const img = screen.getByRole("img");
-    expect(img).toHaveAttribute("src", "https://example.com/bird.jpg");
+    expect(img).toHaveAttribute("src", "/api/drive-file/img-3");
   });
 
   it("renders nothing when open is false", () => {

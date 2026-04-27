@@ -22,12 +22,11 @@ const mockInsert = vi.hoisted(() => vi.fn());
 const mockUpdate = vi.hoisted(() => vi.fn());
 const mockDelete = vi.hoisted(() => vi.fn());
 const mockFrom = vi.hoisted(() => vi.fn());
-const mockStorageFrom = vi.hoisted(() => vi.fn());
-const mockStorageRemove = vi.hoisted(() => vi.fn());
+const mockDeleteFileFromDrive = vi.hoisted(() => vi.fn());
+const mockUploadFileToDrive = vi.hoisted(() => vi.fn());
 
 const mockSupabase = vi.hoisted(() => ({
   from: mockFrom,
-  storage: { from: mockStorageFrom },
 }));
 
 const mockUser = vi.hoisted(() => ({
@@ -69,6 +68,26 @@ vi.mock("node:dns/promises", () => ({
   default: {
     lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34" }),
   },
+}));
+
+// Drive helpers — uploadPostAttachment and deleteAttachmentFiles route here
+vi.mock("@/lib/google-drive-upload", () => ({
+  uploadFileToDrive: mockUploadFileToDrive,
+  deleteFileFromDrive: mockDeleteFileFromDrive,
+  sanitiseFilename: (name: string) => name,
+  validateMagicBytes: () => true,
+  DRIVE_FILE_ID_REGEX: /^[a-zA-Z0-9_-]+$/,
+}));
+
+// Image pipeline — uploadPostAttachment runs every image through this
+vi.mock("@/lib/image-pipeline", () => ({
+  processUploadedImage: vi.fn(async (buffer: Buffer, mimeType: string) => ({
+    ok: true,
+    buffer,
+    mimeType,
+    width: 800,
+    height: 600,
+  })),
 }));
 
 // ─── Imports (after mocks) ───────────────────────────────────────────
@@ -116,8 +135,12 @@ describe("Intranet Post Actions", () => {
     });
 
     // Storage mock
-    mockStorageRemove.mockResolvedValue({ error: null });
-    mockStorageFrom.mockReturnValue({ remove: mockStorageRemove });
+    mockDeleteFileFromDrive.mockResolvedValue(true);
+    mockUploadFileToDrive.mockResolvedValue({
+      fileId: "drive-file-1",
+      mimeType: "image/jpeg",
+      size: 1024,
+    });
 
     // DNS mock default: resolve to public IP
     vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
@@ -548,7 +571,7 @@ describe("Intranet Post Actions", () => {
       expect(revalidatePath).not.toHaveBeenCalled();
     });
 
-    it("cleans up storage files when post has attachments", async () => {
+    it("cleans up Drive files when post has attachments", async () => {
       // Post lookup
       const selectSingle = vi.fn().mockResolvedValue({
         data: { author_id: "user-1" },
@@ -557,11 +580,11 @@ describe("Intranet Post Actions", () => {
       const selectEq = vi.fn().mockReturnValue({ single: selectSingle });
       const selectChain = vi.fn().mockReturnValue({ eq: selectEq });
 
-      // Attachments with file URLs
+      // Attachments with Drive file IDs (one valid, one null for a link attachment)
       const attEq = vi.fn().mockResolvedValue({
         data: [
-          { file_url: "https://storage.supabase.co/storage/v1/object/public/post-attachments/user-1/abc.png" },
-          { file_url: null },
+          { drive_file_id: "drive-abc" },
+          { drive_file_id: null },
         ],
         error: null,
       });
@@ -582,8 +605,9 @@ describe("Intranet Post Actions", () => {
       const result = await deletePost("post-1");
 
       expect(result).toEqual({ success: true, error: null });
-      expect(mockStorageFrom).toHaveBeenCalledWith("post-attachments");
-      expect(mockStorageRemove).toHaveBeenCalledWith(["user-1/abc.png"]);
+      // Only the non-null drive_file_id should be sent to Drive
+      expect(mockDeleteFileFromDrive).toHaveBeenCalledTimes(1);
+      expect(mockDeleteFileFromDrive).toHaveBeenCalledWith("drive-abc");
     });
   });
 

@@ -25,6 +25,13 @@ const MAGIC_BYTES: Record<string, { bytes: number[]; offset?: number }[]> = {
     { bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF at offset 0
     { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }, // WEBP at offset 8
   ],
+  "image/heic": [{ bytes: [0x66, 0x74, 0x79, 0x70], offset: 4 }], // ftyp at offset 4 (HEIF/HEIC family)
+  "image/heif": [{ bytes: [0x66, 0x74, 0x79, 0x70], offset: 4 }],
+  "image/x-adobe-dng": [
+    // DNG is a TIFF subset — both endianness markers covered
+    { bytes: [0x49, 0x49, 0x2a, 0x00] }, // II*\0 little-endian TIFF
+  ],
+  "image/dng": [{ bytes: [0x49, 0x49, 0x2a, 0x00] }],
   "application/pdf": [{ bytes: [0x25, 0x50, 0x44, 0x46, 0x2d] }], // %PDF-
 };
 
@@ -50,6 +57,73 @@ export function validateMagicBytes(buffer: Buffer, claimedMimeType: string): boo
 }
 
 // =============================================
+// FILENAME SANITISATION
+// =============================================
+
+/** Strip path separators and control chars; collapse whitespace; truncate. */
+export function sanitiseFilename(name: string): string {
+  return name
+    .replace(/[/\\:*?"<>|\x00-\x1f]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+}
+
+// =============================================
+// SUBFOLDER RESOLUTION
+// =============================================
+
+// Module-level cache: maps "<parentId>/<name>" -> resolved childId.
+// Lives on the warm serverless instance (~15 min). One files.list per
+// (parent, name) miss per warm window; zero on hits.
+const subfolderCache = new Map<string, string>();
+
+async function resolveOrCreateSubfolder(
+  parentId: string,
+  name: string,
+): Promise<string> {
+  const key = `${parentId}/${name}`;
+  const cached = subfolderCache.get(key);
+  if (cached) return cached;
+
+  const drive = getDriveClient();
+
+  // Look up existing folder
+  const escaped = name.replace(/'/g, "\\'");
+  const list = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: "files(id)",
+    pageSize: 1,
+  });
+
+  const existing = list.data.files?.[0]?.id;
+  if (existing) {
+    subfolderCache.set(key, existing);
+    return existing;
+  }
+
+  // Create the folder
+  // Race window: two concurrent uploads on a cold instance at month rollover
+  // can each create a duplicate sibling. Drive doesn't enforce unique folder
+  // names. Accepted as cosmetic — admin can merge in the Drive UI.
+  const created = await drive.files.create({
+    requestBody: {
+      name,
+      parents: [parentId],
+      mimeType: "application/vnd.google-apps.folder",
+    },
+    fields: "id",
+  });
+
+  if (!created.data.id) {
+    throw new Error(`Drive API returned no folder ID for ${name}`);
+  }
+
+  subfolderCache.set(key, created.data.id);
+  return created.data.id;
+}
+
+// =============================================
 // UPLOAD
 // =============================================
 
@@ -59,18 +133,40 @@ interface UploadResult {
   size: number;
 }
 
+interface UploadOptions {
+  /** Override the default GOOGLE_DRIVE_UPLOAD_FOLDER_ID. */
+  folderId?: string;
+  /** Subfolder path under the root folder. Each segment resolves or creates lazily. */
+  subfolderPath?: string[];
+}
+
 /**
- * Upload a file to the shared Drive folder.
+ * Upload a file to a Drive folder.
  * Returns the file ID (not a URL — URLs come from the proxy).
+ *
+ * Default folder is GOOGLE_DRIVE_UPLOAD_FOLDER_ID (resources). Pass options.folderId
+ * to upload elsewhere (e.g. GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID for news-feed media).
+ * Pass options.subfolderPath like ["2026", "04"] to upload into nested folders that
+ * are auto-created if missing.
  */
 export async function uploadFileToDrive(
   file: Buffer,
   mimeType: string,
-  fileName: string
+  fileName: string,
+  options?: UploadOptions,
 ): Promise<UploadResult> {
-  const folderId = process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID;
-  if (!folderId) {
-    throw new Error("GOOGLE_DRIVE_UPLOAD_FOLDER_ID is not configured");
+  const rootFolderId =
+    options?.folderId ?? process.env.GOOGLE_DRIVE_UPLOAD_FOLDER_ID;
+  if (!rootFolderId) {
+    throw new Error(
+      "No Drive folder configured (GOOGLE_DRIVE_UPLOAD_FOLDER_ID or options.folderId required)",
+    );
+  }
+
+  // Walk the subfolder path, resolving or creating each level.
+  let parentId = rootFolderId;
+  for (const segment of options?.subfolderPath ?? []) {
+    parentId = await resolveOrCreateSubfolder(parentId, segment);
   }
 
   const drive = getDriveClient();
@@ -78,7 +174,7 @@ export async function uploadFileToDrive(
   const res = await drive.files.create({
     requestBody: {
       name: fileName,
-      parents: [folderId],
+      parents: [parentId],
       mimeType,
     },
     media: {

@@ -4,9 +4,17 @@ import { getCurrentUser, isSystemsAdminEffective } from "@/lib/auth";
 import {
   POST_MAX_LENGTH,
   ATTACHMENT_MAX_COUNT,
-  ATTACHMENT_MAX_SIZE_BYTES,
+  IMAGE_MAX_SIZE_BYTES,
+  DOCUMENT_MAX_SIZE_BYTES,
   ALLOWED_FILE_TYPES,
+  isImageType,
 } from "@/lib/intranet";
+import {
+  uploadFileToDrive,
+  deleteFileFromDrive,
+  sanitiseFilename,
+} from "@/lib/google-drive-upload";
+import { processUploadedImage } from "@/lib/image-pipeline";
 import { extractUrls } from "@/lib/url";
 import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
@@ -83,7 +91,7 @@ async function sendMentionEmails(
 const POST_SELECT =
   "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
-  "id, post_id, attachment_type, file_url, file_name, file_size, mime_type, link_url, link_title, link_description, link_image_url, sort_order, created_at";
+  "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
 const COMMENT_SELECT =
   "id, post_id, author_id, content, content_json, parent_id, created_at, updated_at";
@@ -100,42 +108,43 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
-const POST_ATTACHMENTS_BUCKET = "post-attachments";
-
 const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
   "attachment_type",
   "file_url",
+  "drive_file_id",
   "file_name",
   "file_size",
   "mime_type",
+  "image_width",
+  "image_height",
   "link_url",
   "link_title",
   "link_description",
   "link_image_url",
 ] as const;
 
-/** Extract storage paths from attachment file URLs and delete them. */
+/**
+ * Delete the underlying Drive files for the given attachments.
+ * Best-effort — logs failures but doesn't throw, so DB cleanup can proceed.
+ * Drive 404s are already swallowed by deleteFileFromDrive.
+ */
 async function deleteAttachmentFiles(
-  supabase: SupabaseClient,
-  fileUrls: (string | null)[]
+  driveFileIds: (string | null)[],
 ): Promise<void> {
-  const filePaths = fileUrls
-    .filter((url): url is string => url !== null)
-    .map((url) => {
-      try {
-        const parsed = new URL(url);
-        const segments = parsed.pathname.split(`/${POST_ATTACHMENTS_BUCKET}/`);
-        if (segments.length < 2 || !segments[1]) return null;
-        return segments[1];
-      } catch {
-        return null;
-      }
-    })
-    .filter((p): p is string => p !== null);
+  const ids = driveFileIds.filter((id): id is string => id !== null);
+  if (ids.length === 0) return;
 
-  if (filePaths.length > 0) {
-    await supabase.storage.from(POST_ATTACHMENTS_BUCKET).remove(filePaths);
-  }
+  const results = await Promise.allSettled(
+    ids.map((id) => deleteFileFromDrive(id)),
+  );
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      logger.warn("Drive attachment delete failed", {
+        fileId: ids[i],
+        reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
+      });
+    }
+  });
 }
 
 // ─── Weekly Roundup Types ─────────────────────────────────────────────
@@ -677,9 +686,12 @@ export async function createPost(data: {
   attachments?: {
     attachment_type: "image" | "document" | "link";
     file_url?: string;
+    drive_file_id?: string;
     file_name?: string;
     file_size?: number;
     mime_type?: string;
+    image_width?: number;
+    image_height?: number;
     link_url?: string;
     link_title?: string;
     link_description?: string;
@@ -835,9 +847,12 @@ interface AttachmentInput {
   id?: string;
   attachment_type: string;
   file_url?: string;
+  drive_file_id?: string;
   file_name?: string;
   file_size?: number;
   mime_type?: string;
+  image_width?: number;
+  image_height?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;
@@ -911,7 +926,7 @@ export async function editPost(
     // Fetch existing attachments for this post
     const { data: existingAttachments } = await supabase
       .from("post_attachments")
-      .select("id, file_url")
+      .select("id, drive_file_id")
       .eq("post_id", postId);
 
     const existingIds = new Set(
@@ -934,8 +949,7 @@ export async function editPost(
     const removedIds = removedAttachments.map((a) => a.id);
     if (removedIds.length > 0) {
       await deleteAttachmentFiles(
-        supabase,
-        removedAttachments.map((a) => a.file_url)
+        removedAttachments.map((a) => a.drive_file_id),
       );
 
       const { error: deleteError } = await supabase
@@ -1050,15 +1064,15 @@ export async function deletePost(
     return { success: false, error: "Not authorised to delete this post" };
   }
 
-  // Fetch file URLs before deleting the DB record (needed for storage cleanup)
+  // Fetch Drive file IDs before deleting the DB record (needed for cleanup)
   const { data: attachments } = await supabase
     .from("post_attachments")
-    .select("file_url")
+    .select("drive_file_id")
     .eq("post_id", postId);
 
   // Delete DB record first (cascade handles attachments, reactions, comments).
-  // If this fails, file references remain valid. Orphaned files are preferable
-  // to broken DB references (orphaned files can be batch-cleaned later).
+  // If this fails, file references remain valid. Orphaned Drive files are
+  // preferable to broken DB references (orphans can be batch-cleaned later).
   const { error } = await supabase.from("posts").delete().eq("id", postId);
 
   if (error) {
@@ -1066,12 +1080,9 @@ export async function deletePost(
     return { success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Clean up storage files after successful DB delete
+  // Clean up Drive files after successful DB delete
   if (attachments && attachments.length > 0) {
-    await deleteAttachmentFiles(
-      supabase,
-      attachments.map((a) => a.file_url)
-    );
+    await deleteAttachmentFiles(attachments.map((a) => a.drive_file_id));
   }
 
   revalidatePath("/intranet", "layout");
@@ -1363,16 +1374,19 @@ export async function deleteComment(
 // ─── Attachments ─────────────────────────────────────────────────────
 
 export async function uploadPostAttachment(
-  formData: FormData
+  formData: FormData,
 ): Promise<{
   success: boolean;
   error: string | null;
   url?: string;
+  driveFileId?: string;
   fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  width?: number | null;
+  height?: number | null;
 }> {
-  const { supabase, user, profile } = await getCurrentUser();
+  const { user, profile } = await getCurrentUser();
 
   if (!user || !profile) {
     return { success: false, error: "Not authenticated" };
@@ -1383,43 +1397,74 @@ export async function uploadPostAttachment(
     return { success: false, error: "No file provided" };
   }
 
-  if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
-    return { success: false, error: "File too large (max 50MB)" };
+  // Per-type size cap. Images allow up to 100 MB to fit iPhone ProRAW DNGs.
+  const isImage = isImageType(file.type);
+  const cap = isImage ? IMAGE_MAX_SIZE_BYTES : DOCUMENT_MAX_SIZE_BYTES;
+  if (file.size > cap) {
+    const limitMB = cap / (1024 * 1024);
+    return { success: false, error: `File too large (max ${limitMB} MB)` };
   }
 
   if (
     !ALLOWED_FILE_TYPES.includes(
-      file.type as (typeof ALLOWED_FILE_TYPES)[number]
+      file.type as (typeof ALLOWED_FILE_TYPES)[number],
     )
   ) {
     return { success: false, error: "File type not allowed" };
   }
 
-  const fileExt = file.name.split(".").pop();
-  const uniqueName = `${crypto.randomUUID()}.${fileExt}`;
-  const filePath = `${user.id}/${uniqueName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(POST_ATTACHMENTS_BUCKET)
-    .upload(filePath, file);
-
-  if (uploadError) {
-    logger.error("Failed to upload post attachment", { error: uploadError.message });
-    return { success: false, error: "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  const folderId = process.env.GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID;
+  if (!folderId) {
+    logger.error("GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID is not configured");
+    return {
+      success: false,
+      error: "Upload is temporarily unavailable. Please contact Helpdesk@mcrpathways.org.",
+    };
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(POST_ATTACHMENTS_BUCKET).getPublicUrl(filePath);
+  // Buffer the file for magic-byte validation + Sharp pipeline + Drive upload.
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const processed = await processUploadedImage(buffer, file.type, file.name);
+  if (!processed.ok) {
+    return { success: false, error: processed.error };
+  }
 
-  return {
-    success: true,
-    error: null,
-    url: publicUrl,
-    fileName: file.name,
-    fileSize: file.size,
-    mimeType: file.type,
-  };
+  // Upload the processed buffer to Drive under YYYY/MM (UTC) subfolders.
+  const now = new Date();
+  const yyyy = String(now.getUTCFullYear());
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const driveFileName = `${crypto.randomUUID()}-${sanitiseFilename(file.name) || "unnamed"}`;
+
+  try {
+    const drive = await uploadFileToDrive(
+      processed.buffer,
+      processed.mimeType,
+      driveFileName,
+      { folderId, subfolderPath: [yyyy, mm] },
+    );
+
+    return {
+      success: true,
+      error: null,
+      url: `/api/drive-file/${drive.fileId}`,
+      driveFileId: drive.fileId,
+      fileName: file.name,
+      fileSize: processed.buffer.length,
+      mimeType: processed.mimeType,
+      width: processed.width,
+      height: processed.height,
+    };
+  } catch (err) {
+    logger.error("Failed to upload post attachment to Drive", {
+      error: err instanceof Error ? err.message : String(err),
+      fileName: file.name,
+    });
+    return {
+      success: false,
+      error:
+        "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
 }
 
 export async function fetchLinkPreview(

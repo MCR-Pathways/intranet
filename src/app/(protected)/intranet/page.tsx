@@ -7,6 +7,11 @@ import { WeeklyRoundupBanner } from "@/components/news-feed/weekly-roundup-banne
 import { fetchPostsWithClient, fetchActiveRoundupWithClient, getActiveProfilesForMentions } from "./actions";
 import type { PostAuthor } from "@/types/database.types";
 
+// Server Actions invoked from this page inherit this timeout. Sized for the
+// uploadPostAttachment worst case: 100 MB upload over a slow connection +
+// Sharp processing (≤1s) + Drive resumable upload.
+export const maxDuration = 60;
+
 export default async function IntranetPage({
   searchParams,
 }: {
