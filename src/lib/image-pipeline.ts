@@ -13,6 +13,7 @@
  */
 
 import sharp from "sharp";
+import heicConvert from "heic-convert";
 import { logger } from "@/lib/logger";
 import { validateMagicBytes } from "@/lib/google-drive-upload";
 
@@ -97,14 +98,16 @@ export async function processUploadedImage(
     };
   }
 
-  // HEIC/HEIF → JPEG. Browsers can't render HEIC inline.
+  // HEIC/HEIF → JPEG. Browsers can't render HEIC inline. Sharp can't decode
+  // HEIC either — its prebuilt libheif lacks the HEVC decoder plugin (patent
+  // licensing), so we use heic-convert (pure-JS HEVC) for the decode step.
   if (HEIC_TYPES.has(claimedMimeType)) {
-    return convertToJpeg(buffer, claimedMimeType, fileName);
+    return convertHeicToJpeg(buffer, fileName);
   }
 
-  // DNG (incl. Apple ProRAW) → JPEG via the TIFF path.
+  // DNG (incl. Apple ProRAW) → JPEG via Sharp's TIFF decoder.
   if (DNG_TYPES.has(claimedMimeType) || ext === "dng") {
-    return convertToJpeg(buffer, claimedMimeType, fileName);
+    return convertDngToJpeg(buffer, claimedMimeType, fileName);
   }
 
   // Animated formats: preserve animation, strip metadata.
@@ -121,7 +124,7 @@ export async function processUploadedImage(
   return { ok: false, error: UNSUPPORTED_TYPE };
 }
 
-async function convertToJpeg(
+async function convertDngToJpeg(
   buffer: Buffer,
   claimedMimeType: string,
   fileName: string,
@@ -142,9 +145,48 @@ async function convertToJpeg(
       height: info.height ?? null,
     };
   } catch (err) {
-    logger.error("Image pipeline: convertToJpeg failed", {
+    logger.error("Image pipeline: convertDngToJpeg failed", {
       error: err instanceof Error ? err.message : String(err),
       claimedMimeType,
+      fileName,
+    });
+    return { ok: false, error: GENERIC_REJECTION };
+  }
+}
+
+async function convertHeicToJpeg(
+  buffer: Buffer,
+  fileName: string,
+): Promise<ProcessedImage> {
+  try {
+    // Step 1: heic-convert decodes the HEVC-compressed pixels to a JPEG
+    // ArrayBuffer. Sharp can't do this — its prebuilt libheif lacks the
+    // HEVC decoder. heic-convert is pure JS so it works on Vercel.
+    const decoded = await heicConvert({
+      buffer,
+      format: "JPEG",
+      quality: 0.9,
+    });
+
+    // Step 2: pass through Sharp to bake in EXIF orientation, strip
+    // metadata (heic-convert may propagate EXIF from the source), and
+    // capture dimensions for layout-shift-free rendering.
+    const { data, info } = await sharp(Buffer.from(decoded))
+      .rotate()
+      .jpeg({ quality: 90 })
+      .keepIccProfile()
+      .toBuffer({ resolveWithObject: true });
+
+    return {
+      ok: true,
+      buffer: data,
+      mimeType: "image/jpeg",
+      width: info.width ?? null,
+      height: info.height ?? null,
+    };
+  } catch (err) {
+    logger.error("Image pipeline: convertHeicToJpeg failed", {
+      error: err instanceof Error ? err.message : String(err),
       fileName,
     });
     return { ok: false, error: GENERIC_REJECTION };
