@@ -161,6 +161,48 @@ describe("ImageLightbox", () => {
   });
 
   // =============================================
+  // Backdrop click
+  // =============================================
+
+  it("closes when the backdrop is clicked", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    // Click the Dialog Content directly (the backdrop area around the image).
+    // The handler only fires when the click target IS the Content element,
+    // so we have to dispatch the event on it directly rather than through
+    // userEvent (which simulates clicks on child pixels).
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("does not close when the image itself is clicked", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    await user.click(screen.getByRole("img"));
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  // =============================================
   // Keyboard navigation
   // =============================================
 
