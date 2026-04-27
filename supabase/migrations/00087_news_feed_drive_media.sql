@@ -5,7 +5,13 @@
 --
 -- 1. Adds drive_file_id, image_width, image_height columns to post_attachments.
 -- 2. Truncates existing image/document attachment rows (pre-launch — no real content).
--- 3. Drops the Supabase post-attachments bucket and its RLS policies.
+-- 3. Drops the Supabase Storage RLS policies for the post-attachments bucket.
+--
+-- The post-attachments BUCKET itself must be deleted manually via the
+-- Supabase Studio Storage UI — Supabase blocks direct DELETE on
+-- storage.objects / storage.buckets via the protect_delete() trigger,
+-- forcing bucket lifecycle through the management API. Steps documented
+-- in the PR's "Before merging" checklist.
 --
 -- After this migration runs, all news-feed media is uploaded to Drive via
 -- uploadPostAttachment, served via /api/drive-file/[fileId], and identified
@@ -40,17 +46,12 @@ DELETE FROM public.post_attachments
   WHERE attachment_type IN ('image', 'document');
 
 -- ============================================================================
--- 3. Drop Supabase Storage bucket
+-- 3. Drop Supabase Storage RLS policies
 -- ============================================================================
+-- The bucket itself is dropped manually via Studio Storage UI (see header
+-- comment). DROP POLICY is safe to run via SQL — only DELETE on
+-- storage.objects / storage.buckets is guarded by protect_delete().
 
--- Storage RLS policies (created in migrations 00007 and 00035)
 DROP POLICY IF EXISTS "Authenticated users can read post attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Staff can upload post attachments" ON storage.objects;
 DROP POLICY IF EXISTS "Staff can delete own post attachments" ON storage.objects;
-
--- Clear any objects in the bucket before dropping it.
--- Supabase requires the bucket to be empty before deletion.
-DELETE FROM storage.objects WHERE bucket_id = 'post-attachments';
-
--- Drop the bucket
-DELETE FROM storage.buckets WHERE id = 'post-attachments';
