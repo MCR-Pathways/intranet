@@ -22,9 +22,12 @@ export interface PendingAttachment {
   type: AttachmentType;
   isExisting?: boolean;
   file_url?: string;
+  drive_file_id?: string;
   file_name?: string;
   file_size?: number;
   mime_type?: string;
+  image_width?: number;
+  image_height?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;
@@ -145,9 +148,12 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
                     ? {
                         ...a,
                         file_url: result.url,
+                        drive_file_id: result.driveFileId,
                         file_name: result.fileName,
                         file_size: result.fileSize,
                         mime_type: result.mimeType,
+                        image_width: result.width ?? undefined,
+                        image_height: result.height ?? undefined,
                         uploading: false,
                       }
                     : a
