@@ -23,7 +23,7 @@ import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
-import { editPost } from "@/app/(protected)/intranet/actions";
+import { editPost, discardStagedAttachments } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
 import { TiptapComposer } from "./tiptap-composer";
@@ -198,9 +198,19 @@ export function PostEditDialog({
   }, [hasChanges, isPending, onOpenChange]);
 
   const handleDiscard = useCallback(() => {
+    // Clean up newly-uploaded staging files. Existing attachments
+    // (isExisting=true) point at post_attachments rows — leave them alone.
+    const stagedIds = attachments
+      .filter((a) => !a.isExisting && a.drive_file_id)
+      .map((a) => a.drive_file_id as string);
+    if (stagedIds.length > 0) {
+      void discardStagedAttachments(stagedIds).catch(() => {
+        // best-effort
+      });
+    }
     setShowDiscardAlert(false);
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [attachments, onOpenChange]);
 
   const handleSave = () => {
     if (!content.trim()) return;

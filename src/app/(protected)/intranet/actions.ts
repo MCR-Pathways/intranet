@@ -811,6 +811,25 @@ export async function createPost(data: {
         warning: "Post created, but some attachments could not be saved",
       };
     }
+
+    // Promote: post_attachments is now canonical for these files. Drop the
+    // staging rows so the proxy serves via post_attachments going forward.
+    // Best-effort — if this fails, daily cron sweeps the orphan staging row.
+    const stagedFileIds = data.attachments
+      .map((a) => a.drive_file_id)
+      .filter((id): id is string => typeof id === "string");
+    if (stagedFileIds.length > 0) {
+      const { error: unstageError } = await supabase
+        .from("news_feed_media")
+        .delete()
+        .in("file_id", stagedFileIds);
+      if (unstageError) {
+        logger.warn("Failed to clear staging rows after createPost", {
+          error: unstageError.message,
+          fileIds: stagedFileIds,
+        });
+      }
+    }
   }
 
   // Auto-detect first URL in content and create link preview attachment
@@ -1008,6 +1027,23 @@ export async function editPost(
           error: null,
           warning: "Post updated, but some attachments could not be saved",
         };
+      }
+
+      // Promote: drop staging rows for newly added attachments.
+      const stagedFileIds = newAttachments
+        .map((a) => a.drive_file_id as string | null | undefined)
+        .filter((id): id is string => typeof id === "string");
+      if (stagedFileIds.length > 0) {
+        const { error: unstageError } = await supabase
+          .from("news_feed_media")
+          .delete()
+          .in("file_id", stagedFileIds);
+        if (unstageError) {
+          logger.warn("Failed to clear staging rows after editPost", {
+            error: unstageError.message,
+            fileIds: stagedFileIds,
+          });
+        }
       }
     }
 
@@ -1436,6 +1472,7 @@ export async function uploadPostAttachment(
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
   const driveFileName = `${crypto.randomUUID()}-${sanitiseFilename(file.name) || "unnamed"}`;
 
+  let driveFileId: string | null = null;
   try {
     const drive = await uploadFileToDrive(
       processed.buffer,
@@ -1443,6 +1480,47 @@ export async function uploadPostAttachment(
       driveFileName,
       { folderId, subfolderPath: [yyyy, mm] },
     );
+    driveFileId = drive.fileId;
+
+    // Stage the upload so the proxy can serve the converted JPEG/etc. via
+    // /api/drive-file/{id} BEFORE the post is posted. Without this row,
+    // pre-post composer thumbnails 404 because post_attachments.drive_file_id
+    // isn't populated until the post is created. createPost/editPost delete
+    // this row when promoting it to post_attachments (canonical post-creation).
+    // See migration 00088.
+    const { supabase } = await getCurrentUser();
+    const { error: stageError } = await supabase
+      .from("news_feed_media")
+      .insert({
+        file_id: drive.fileId,
+        original_name: file.name,
+        mime_type: processed.mimeType,
+        file_size: processed.buffer.length,
+        image_width: processed.width,
+        image_height: processed.height,
+        uploaded_by: user.id,
+      });
+
+    if (stageError) {
+      // Insert failed — clean up the orphan Drive file before returning.
+      logger.error("Failed to stage uploaded media", {
+        error: stageError.message,
+        fileId: drive.fileId,
+      });
+      try {
+        await deleteFileFromDrive(drive.fileId);
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up orphaned Drive file after stage error", {
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+          fileId: drive.fileId,
+        });
+      }
+      return {
+        success: false,
+        error:
+          "Failed to register uploaded file. Please contact Helpdesk@mcrpathways.org if the issue persists.",
+      };
+    }
 
     return {
       success: true,
@@ -1460,12 +1538,77 @@ export async function uploadPostAttachment(
       error: err instanceof Error ? err.message : String(err),
       fileName: file.name,
     });
+    // If Drive upload succeeded but a later step threw, clean up.
+    if (driveFileId) {
+      try {
+        await deleteFileFromDrive(driveFileId);
+      } catch {
+        // best-effort
+      }
+    }
     return {
       success: false,
       error:
         "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
     };
   }
+}
+
+/**
+ * Discard one or more staged Drive files.
+ *
+ * Called by the composer when the user clicks the X on a thumbnail OR
+ * when the composer is closed via the discard alert. Deletes the Drive
+ * files and their news_feed_media rows. Best-effort: failures are logged
+ * but don't surface to the user (the daily cron sweeps any orphans).
+ *
+ * Only deletes rows owned by the calling user, enforced via the DELETE
+ * RLS policy on news_feed_media.
+ */
+export async function discardStagedAttachments(
+  driveFileIds: string[],
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+  if (driveFileIds.length === 0) {
+    return { success: true, error: null };
+  }
+
+  // Belt-and-braces: only delete rows owned by this user. RLS already
+  // enforces this, but double-check at query time so we don't try to
+  // delete Drive files we shouldn't.
+  const { data: ownedRows } = await supabase
+    .from("news_feed_media")
+    .select("file_id")
+    .in("file_id", driveFileIds)
+    .eq("uploaded_by", user.id);
+
+  const ownedIds = (ownedRows ?? []).map((r) => r.file_id);
+  if (ownedIds.length === 0) {
+    return { success: true, error: null };
+  }
+
+  // Delete Drive files first. If DB delete then fails, cron will sweep
+  // the row but the Drive file is already gone (no harm).
+  await Promise.allSettled(
+    ownedIds.map((id) => deleteFileFromDrive(id)),
+  );
+
+  const { error: deleteError } = await supabase
+    .from("news_feed_media")
+    .delete()
+    .in("file_id", ownedIds);
+
+  if (deleteError) {
+    logger.warn("Failed to delete staged media rows", {
+      error: deleteError.message,
+      fileIds: ownedIds,
+    });
+  }
+
+  return { success: true, error: null };
 }
 
 export async function fetchLinkPreview(

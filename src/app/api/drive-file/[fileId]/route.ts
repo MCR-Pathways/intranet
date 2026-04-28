@@ -12,8 +12,10 @@ export const maxDuration = 60;
  * GET /api/drive-file/[fileId]
  *
  * Authenticated streaming proxy for Google Drive files.
- * Only serves files registered in either the resource_media whitelist
- * (resources articles) or the post_attachments table (news-feed posts).
+ * Only serves files registered in one of three whitelist tables:
+ *   - resource_media (resources articles)
+ *   - post_attachments.drive_file_id (saved news-feed posts)
+ *   - news_feed_media (news-feed pre-post composer state)
  * Metadata (mime_type, file_size, original_name) comes from the DB,
  * not from Drive — one API call instead of two.
  */
@@ -52,10 +54,11 @@ export async function GET(
   }
 
   // 4. Whitelist check + metadata (service client — needs all rows regardless of uploader).
-  // Two whitelist tables: resource_media (resources articles) and post_attachments
-  // (news-feed posts). Run both in parallel — whichever returns the row wins.
+  // Three whitelist tables: resource_media (resources), post_attachments
+  // (saved news-feed posts), news_feed_media (pre-post composer state).
+  // Run all three in parallel — whichever returns the row wins.
   const service = createServiceClient();
-  const [resourceRes, postRes] = await Promise.all([
+  const [resourceRes, postRes, stagedRes] = await Promise.all([
     service
       .from("resource_media")
       .select("original_name, mime_type, file_size")
@@ -65,6 +68,11 @@ export async function GET(
       .from("post_attachments")
       .select("file_name, mime_type, file_size")
       .eq("drive_file_id", fileId)
+      .maybeSingle(),
+    service
+      .from("news_feed_media")
+      .select("original_name, mime_type, file_size")
+      .eq("file_id", fileId)
       .maybeSingle(),
   ]);
 
@@ -84,7 +92,13 @@ export async function GET(
           mime_type: postRes.data.mime_type,
           file_size: postRes.data.file_size,
         }
-      : null;
+      : stagedRes.data
+        ? {
+            name: stagedRes.data.original_name,
+            mime_type: stagedRes.data.mime_type,
+            file_size: stagedRes.data.file_size,
+          }
+        : null;
 
   if (!media) {
     return NextResponse.json(

@@ -23,6 +23,7 @@ import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
+import { discardStagedAttachments } from "@/app/(protected)/intranet/actions";
 import { LinkPreviewCard } from "./link-preview-card";
 import { PollComposer, type PollData } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
@@ -131,9 +132,19 @@ export function PostCreateDialog({
   }, [hasContent, isPending, onOpenChange]);
 
   const handleDiscard = useCallback(() => {
+    // Clean up any Drive files staged in this composer session before closing.
+    // Fire-and-forget — the daily cron sweeps anything that escapes.
+    const stagedIds = attachments
+      .filter((a) => !a.isExisting && a.drive_file_id)
+      .map((a) => a.drive_file_id as string);
+    if (stagedIds.length > 0) {
+      void discardStagedAttachments(stagedIds).catch(() => {
+        // best-effort
+      });
+    }
     setShowDiscardAlert(false);
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [attachments, onOpenChange]);
 
   return (
     <>

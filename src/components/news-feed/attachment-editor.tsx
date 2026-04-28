@@ -14,7 +14,10 @@ import {
   ALLOWED_IMAGE_TYPES,
   ALLOWED_DOCUMENT_TYPES,
 } from "@/lib/intranet";
-import { uploadPostAttachment } from "@/app/(protected)/intranet/actions";
+import {
+  uploadPostAttachment,
+  discardStagedAttachments,
+} from "@/app/(protected)/intranet/actions";
 import type { AttachmentType } from "@/types/database.types";
 
 export interface PendingAttachment {
@@ -175,11 +178,25 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     );
 
     const removeAttachment = useCallback((id: string) => {
+      let stagedDriveId: string | undefined;
       setAttachments((prev) => {
         const att = prev.find((a) => a.id === id);
         if (att?.preview) URL.revokeObjectURL(att.preview);
+        // Only discard the Drive file for NEW (staged) uploads. Existing
+        // attachments from edit-flow point at post_attachments rows; they
+        // get cleaned up server-side when editPost runs.
+        if (att && !att.isExisting && att.drive_file_id) {
+          stagedDriveId = att.drive_file_id;
+        }
         return prev.filter((a) => a.id !== id);
       });
+      // Fire-and-forget Drive cleanup. Failures are logged server-side and
+      // swept by the daily cron — don't block UI.
+      if (stagedDriveId) {
+        void discardStagedAttachments([stagedDriveId]).catch(() => {
+          // best-effort
+        });
+      }
     }, []);
 
     // ─── Drag and drop handlers ────────────────────────────────────────
