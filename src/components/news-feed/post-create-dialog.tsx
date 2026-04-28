@@ -168,7 +168,15 @@ export function PostCreateDialog({
         }}
       >
         <DialogContent
-          className="max-w-lg gap-0 relative"
+          // Don't add `relative` here — DialogContent's base styles use
+          // `position: fixed` for viewport centering. Tailwind treats `fixed`
+          // and `relative` as the same `position` property; whichever class
+          // resolves last wins, and `relative` would drop the dialog to its
+          // natural document position (bottom of the page on a long feed).
+          // `position: fixed` already establishes a containing block for
+          // absolute-positioned children, so the drop overlay's `inset-0`
+          // works without it.
+          className="max-w-lg gap-0"
           // No DialogDescription — the composer is visually self-explanatory.
           // Explicit undefined opts out of Radix's default aria-describedby
           // warning. Screen readers fall back to the DialogTitle.

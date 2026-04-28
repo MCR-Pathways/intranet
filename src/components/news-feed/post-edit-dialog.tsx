@@ -260,7 +260,11 @@ export function PostEditDialog({
         }
       }}>
         <DialogContent
-          className="max-w-lg gap-0 relative"
+          // No `relative` — DialogContent uses `position: fixed` for centering;
+          // adding `relative` would override it via Tailwind precedence and
+          // drop the dialog to the natural document position. The fixed
+          // parent is already a containing block for the absolute drop overlay.
+          className="max-w-lg gap-0"
           // No DialogDescription — the editor is visually self-explanatory.
           // Explicit undefined opts out of Radix's default aria-describedby
           // warning. Screen readers fall back to the DialogTitle.
