@@ -42,6 +42,13 @@ export interface PendingAttachment {
 export interface AttachmentEditorHandle {
   triggerImageUpload: () => void;
   triggerDocumentUpload: () => void;
+  /**
+   * Process files dropped via drag-and-drop on a parent element. Auto-routes
+   * based on the first file's MIME type. The parent owns the drag-zone area
+   * (typically the whole dialog) so users can drop anywhere; this exposes the
+   * upload pipeline as an imperative method.
+   */
+  handleDroppedFiles: (files: FileList) => void;
 }
 
 interface AttachmentEditorProps {
@@ -64,15 +71,19 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     const [attachments, setAttachments] = useState<PendingAttachment[]>(
       initialAttachments ?? []
     );
-    const [isDragging, setIsDragging] = useState(false);
-    const dragCounterRef = useRef(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const docInputRef = useRef<HTMLInputElement>(null);
 
-    // Expose trigger methods for external action bar
+    // Expose trigger methods for external action bar + drag-and-drop bridge
     useImperativeHandle(ref, () => ({
       triggerImageUpload: () => fileInputRef.current?.click(),
       triggerDocumentUpload: () => docInputRef.current?.click(),
+      handleDroppedFiles: (files: FileList) => {
+        if (files.length === 0) return;
+        const firstFile = files[0];
+        const type = isImageType(firstFile.type) ? "image" : "document";
+        handleFileUpload(files, type);
+      },
     }));
 
     // Reset internal state when resetKey changes (intentional setState in effect for prop sync).
@@ -199,48 +210,9 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
       }
     }, []);
 
-    // ─── Drag and drop handlers ────────────────────────────────────────
-
-    const handleDragEnter = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current++;
-      if (e.dataTransfer.types.includes("Files")) {
-        setIsDragging(true);
-      }
-    }, []);
-
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current--;
-      if (dragCounterRef.current === 0) {
-        setIsDragging(false);
-      }
-    }, []);
-
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    }, []);
-
-    const handleDrop = useCallback(
-      (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        dragCounterRef.current = 0;
-
-        const files = e.dataTransfer.files;
-        if (files.length === 0) return;
-
-        // Determine type from first file's MIME type
-        const firstFile = files[0];
-        const type = isImageType(firstFile.type) ? "image" : "document";
-        handleFileUpload(files, type);
-      },
-      [handleFileUpload]
-    );
+    // Drag-and-drop is owned by the parent dialog (see useDialogDropZone).
+    // Files dropped on the dialog flow back via the imperative
+    // handleDroppedFiles handle exposed above.
 
     // ─── Derived values ────────────────────────────────────────────────
 
@@ -253,20 +225,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     const acceptDocs = ALLOWED_DOCUMENT_TYPES.join(",");
 
     return (
-      <div
-        className="relative space-y-3"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {/* Drag overlay */}
-        {isDragging && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5">
-            <p className="text-sm font-medium text-primary">Drop files here</p>
-          </div>
-        )}
-
+      <div className="space-y-3">
         {/* Attachment previews */}
         {attachments.length > 0 && (
           <div className="space-y-2">

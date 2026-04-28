@@ -24,6 +24,7 @@ import type { TiptapDocument } from "@/lib/tiptap";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
 import { discardStagedAttachments } from "@/app/(protected)/intranet/actions";
+import { useDialogDropZone } from "./use-dialog-drop-zone";
 import { LinkPreviewCard } from "./link-preview-card";
 import { PollComposer, type PollData } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
@@ -131,6 +132,14 @@ export function PostCreateDialog({
     }
   }, [hasContent, isPending, onOpenChange]);
 
+  // Drag-and-drop catches drops anywhere on the dialog and routes them
+  // through the AttachmentEditor's upload pipeline. Without this, drops
+  // outside the AttachmentEditor's small wrapper triggered the browser's
+  // default "navigate to file" behaviour (visible as a brief flash).
+  const { isDragging, dropHandlers } = useDialogDropZone((files) => {
+    attachmentEditorRef.current?.handleDroppedFiles(files);
+  });
+
   const handleDiscard = useCallback(() => {
     // Clean up any Drive files staged in this composer session before closing.
     // Fire-and-forget — the daily cron sweeps anything that escapes.
@@ -159,7 +168,7 @@ export function PostCreateDialog({
         }}
       >
         <DialogContent
-          className="max-w-lg gap-0"
+          className="max-w-lg gap-0 relative"
           // No DialogDescription — the composer is visually self-explanatory.
           // Explicit undefined opts out of Radix's default aria-describedby
           // warning. Screen readers fall back to the DialogTitle.
@@ -176,7 +185,15 @@ export function PostCreateDialog({
               setShowDiscardAlert(true);
             }
           }}
+          {...dropHandlers}
         >
+          {/* Drop overlay — covers the whole dialog body so users can drop
+              files anywhere, not just on the AttachmentEditor's wrapper. */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm pointer-events-none">
+              <p className="text-base font-medium text-primary">Drop files to attach</p>
+            </div>
+          )}
           <DialogHeader>
             <DialogTitle>Create post</DialogTitle>
           </DialogHeader>

@@ -28,6 +28,7 @@ import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle }
 import { LinkPreviewCard } from "./link-preview-card";
 import { TiptapComposer } from "./tiptap-composer";
 import { ComposerActionBar } from "./composer-action-bar";
+import { useDialogDropZone } from "./use-dialog-drop-zone";
 import type { MentionUser } from "./mention-list";
 import type { PostAttachment } from "@/types/database.types";
 
@@ -212,6 +213,11 @@ export function PostEditDialog({
     onOpenChange(false);
   }, [attachments, onOpenChange]);
 
+  // Drag-and-drop bridge — see post-create-dialog.tsx for the full reasoning.
+  const { isDragging, dropHandlers } = useDialogDropZone((files) => {
+    attachmentEditorRef.current?.handleDroppedFiles(files);
+  });
+
   const handleSave = () => {
     if (!content.trim()) return;
     if (attachments.some((a) => a.uploading)) return;
@@ -254,7 +260,7 @@ export function PostEditDialog({
         }
       }}>
         <DialogContent
-          className="max-w-lg gap-0"
+          className="max-w-lg gap-0 relative"
           // No DialogDescription — the editor is visually self-explanatory.
           // Explicit undefined opts out of Radix's default aria-describedby
           // warning. Screen readers fall back to the DialogTitle.
@@ -271,7 +277,13 @@ export function PostEditDialog({
               setShowDiscardAlert(true);
             }
           }}
+          {...dropHandlers}
         >
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm pointer-events-none">
+              <p className="text-base font-medium text-primary">Drop files to attach</p>
+            </div>
+          )}
           <DialogHeader>
             <DialogTitle>Edit post</DialogTitle>
           </DialogHeader>
