@@ -50,8 +50,50 @@ The proxy queries both in parallel and serves whichever returns the row. Without
 
 When a post's content contains a URL and no link attachment is explicitly attached, `_fetchLinkPreviewInternal` extracts OG meta tags server-side. The preview image URL is proxied via `/api/og-image?url=...` (separate route with SSRF validation, image whitelist, 2 MB cap) so the CSP `img-src 'self'` can stay tight.
 
+## Document Preview (Lightbox)
+
+Document attachments (`attachment_type = 'document'`) open in an in-app modal lightbox via `src/components/news-feed/document-lightbox.tsx`. Two render paths inside one component:
+
+- **PDFs** (`mime_type === 'application/pdf'`): iframe loads our proxy URL (`/api/drive-file/{id}`). The proxy serves `Content-Disposition: inline` for PDFs (route handler in `src/app/api/drive-file/[fileId]/route.ts`). The browser's native PDF viewer renders inside — page nav, zoom, search, print all available via the viewer's own toolbar.
+- **Non-PDFs** (DOCX, XLSX, PPTX, TXT, CSV): iframe loads Drive's `https://drive.google.com/file/d/{id}/preview` URL. Drive renders the document via its native viewer.
+
+Three download paths exist for the same file:
+1. Card-level download button — `<a href={proxy_url} download={filename}>`. Same proxy URL as the preview; the `download` attribute beats `Content-Disposition: inline` on Chrome and Firefox 82+ for same-origin URLs.
+2. Lightbox toolbar download button — same pattern.
+3. Browser's own PDF viewer toolbar (free; only available for PDFs).
+
+**Don't add `Content-Disposition: inline` for any other type without checking how the browser handles it.** DOCX/XLSX/PPTX would either show a download dialog or unreadable bytes — that's why non-PDFs go via Drive's `/preview` URL instead.
+
+## Domain-Share on Upload
+
+Every uploaded Drive file is shared with the `mcrpathways.org` domain (Reader role) inside `uploadPostAttachment` via `shareFileWithDomain` from `src/lib/google-drive-upload.ts`. This lets signed-in MCR users load Drive's `/preview` URL inside the document lightbox iframe — without domain share, Drive shows a "Request access" page to the user (proxy auth alone doesn't help for Drive's own viewer).
+
+**Domain share is a hard requirement.** If `drive.permissions.create` fails, the upload is aborted and the just-uploaded Drive file is deleted. Better to fail upload than land a non-previewable document.
+
+PDFs technically don't need domain share (proxy + inline disposition cover them). They're domain-shared anyway for consistency — saves a per-mime-type branch.
+
+## File-Type Visual Convention
+
+Document attachments signal their type via the established Adobe / Microsoft colour convention — Adobe Acrobat red for PDF, Word blue for DOC/DOCX, Excel green for XLSX/CSV, PowerPoint orange for PPT/PPTX, slate for TXT and unknown. Single source of truth: `src/lib/file-types.ts` (`FILE_TYPE_CONFIG` + `resolveFileType(mime, fileName)`). Documented in `docs/design-system.md` Section 1.9.
+
+Used by:
+- News-feed attachment card (`src/components/news-feed/attachment-display.tsx`)
+- Document lightbox toolbar (`src/components/news-feed/document-lightbox.tsx`)
+- Composer chip (`src/components/news-feed/attachment-editor.tsx`)
+
+Resources file element will adopt the same convention in a follow-up PR (tracked in `memory/news-feed-drive-media-backlog.md`).
+
+**Never inline mime-to-colour logic anywhere else.** Call `resolveFileType(mime, fileName)` and consume `{ Icon, label, bgClass, fgClass }` from the returned config.
+
+## Page Count
+
+`post_attachments.page_count` and `news_feed_media.page_count` (both `INT NULL`) hold the PDF page count for the card meta line — `PDF · 12 pages · 230 KB`. Extracted at upload time via `unpdf` (pure JS, serverless-safe) inside `extractPdfPageCount` from `src/lib/pdf-metadata.ts`. Stays NULL for non-PDFs and for any PDF where extraction fails (corrupt or password-protected). The UI falls back to a size-only meta line when NULL.
+
+Adding extraction for other types (DOCX page count via JSZip + parsing, etc.) is out of scope — `unpdf` handles only PDFs.
+
 ## Type Conventions
 
 - `post_attachments.drive_file_id` is `string | null` (NULL for link attachments).
 - `image_width` and `image_height` are `number | null` (NULL for documents and link previews).
+- `page_count` is `number | null` (NULL for non-PDFs and extraction failures).
 - `attachment_type` is the `"image" | "document" | "link"` discriminator. Always check this before using `drive_file_id` or image dimensions.
