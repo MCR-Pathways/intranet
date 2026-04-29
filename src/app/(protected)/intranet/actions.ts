@@ -1422,7 +1422,7 @@ export async function uploadPostAttachment(
   width?: number | null;
   height?: number | null;
 }> {
-  const { user, profile } = await getCurrentUser();
+  const { supabase, user, profile } = await getCurrentUser();
 
   if (!user || !profile) {
     return { success: false, error: "Not authenticated" };
@@ -1488,7 +1488,6 @@ export async function uploadPostAttachment(
     // isn't populated until the post is created. createPost/editPost delete
     // this row when promoting it to post_attachments (canonical post-creation).
     // See migration 00088.
-    const { supabase } = await getCurrentUser();
     const { error: stageError } = await supabase
       .from("news_feed_media")
       .insert({

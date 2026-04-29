@@ -58,21 +58,27 @@ export async function GET(
   // (saved news-feed posts), news_feed_media (pre-post composer state).
   // Run all three in parallel — whichever returns the row wins.
   const service = createServiceClient();
+  // .limit(1) on each query: drive_file_id / file_id have no UNIQUE constraint
+  // at the schema level, so .maybeSingle() would error (PGRST116) on a
+  // duplicate. Defensive cap so a future schema slip doesn't 500 the proxy.
   const [resourceRes, postRes, stagedRes] = await Promise.all([
     service
       .from("resource_media")
       .select("original_name, mime_type, file_size")
       .eq("file_id", fileId)
+      .limit(1)
       .maybeSingle(),
     service
       .from("post_attachments")
       .select("file_name, mime_type, file_size")
       .eq("drive_file_id", fileId)
+      .limit(1)
       .maybeSingle(),
     service
       .from("news_feed_media")
       .select("original_name, mime_type, file_size")
       .eq("file_id", fileId)
+      .limit(1)
       .maybeSingle(),
   ]);
 

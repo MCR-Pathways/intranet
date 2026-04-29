@@ -107,7 +107,9 @@ export async function processUploadedImage(
   // HEIC/HEIF → JPEG. Browsers can't render HEIC inline. Sharp can't decode
   // HEIC either — its prebuilt libheif lacks the HEVC decoder plugin (patent
   // licensing), so we use heic-convert (pure-JS HEVC) for the decode step.
-  if (HEIC_TYPES.has(claimedMimeType)) {
+  // Extension fallback mirrors the DNG branch below — defense in depth if a
+  // browser ever sends a generic mime alongside the .heic/.heif extension.
+  if (HEIC_TYPES.has(claimedMimeType) || ext === "heic" || ext === "heif") {
     return convertHeicToJpeg(buffer, fileName);
   }
 

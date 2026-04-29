@@ -87,7 +87,8 @@ export async function GET(request: Request) {
     const { data: candidates, error: queryErr } = await supabase
       .from("news_feed_media")
       .select("id, file_id")
-      .lt("created_at", cutoff);
+      .lt("created_at", cutoff)
+      .limit(500);
 
     if (queryErr) throw queryErr;
 
