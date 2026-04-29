@@ -23,6 +23,7 @@ function makeImage(id: string, name: string): PostAttachment {
     mime_type: "image/jpeg",
     image_width: 800,
     image_height: 600,
+    page_count: null,
     link_url: null,
     link_title: null,
     link_description: null,

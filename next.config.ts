@@ -71,7 +71,28 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net; img-src 'self' blob: data: https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-src 'self' https://docs.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net; img-src 'self' blob: data: https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-src 'self' https://docs.google.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'",
+          },
+        ],
+      },
+      // Per-route CSP override for /api/drive-file/*. The global wildcard
+      // sets frame-ancestors 'none' which would block our own document
+      // lightbox iframe loading the proxy URL. Relax to 'self' for this
+      // route only — same-origin embedding allowed (our app), cross-origin
+      // still blocked. X-Frame-Options: SAMEORIGIN is the legacy fallback
+      // for pre-CSP-Level-2 browsers (modern browsers ignore it when
+      // frame-ancestors is set per the W3C spec).
+      //
+      // Next.js applies last-matching-rule-wins for header keys, so this
+      // entry overrides the global X-Frame-Options: DENY and CSP for any
+      // request to /api/drive-file/<fileId>.
+      {
+        source: "/api/drive-file/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'self'",
           },
         ],
       },

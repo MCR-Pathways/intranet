@@ -103,6 +103,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
           mime_type: a.mime_type,
           image_width: a.image_width,
           image_height: a.image_height,
+          page_count: a.page_count,
         })),
         ...(pollData
           ? {

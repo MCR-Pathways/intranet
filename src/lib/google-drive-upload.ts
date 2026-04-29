@@ -200,6 +200,40 @@ export async function uploadFileToDrive(
 // =============================================
 
 /**
+ * Share a Drive file with an entire Google Workspace domain (Reader role).
+ *
+ * Used by the news-feed upload pipeline so that signed-in MCR users can load
+ * Drive's `https://drive.google.com/file/d/{id}/preview` URL inside our
+ * document lightbox. Without domain share, Drive returns "Request access" to
+ * the user — proxy auth alone doesn't help for Drive's own preview viewer.
+ *
+ * Throws on failure — the upload action wraps this in a try/catch and aborts
+ * the upload (deleting the just-uploaded file) so we don't land non-previewable
+ * documents.
+ */
+export async function shareFileWithDomain(
+  fileId: string,
+  domain: string,
+): Promise<void> {
+  if (!DRIVE_FILE_ID_REGEX.test(fileId)) {
+    throw new Error(`Invalid Drive file ID: ${fileId}`);
+  }
+
+  const drive = getDriveClient();
+  await drive.permissions.create({
+    fileId,
+    requestBody: {
+      role: "reader",
+      type: "domain",
+      domain,
+    },
+    // sendNotificationEmail defaults to true for user/group, but is ignored
+    // for domain shares. Setting explicitly to be safe across API changes.
+    sendNotificationEmail: false,
+  });
+}
+
+/**
  * Delete a file from Google Drive. Returns true on success, false on 404/error.
  */
 export async function deleteFileFromDrive(fileId: string): Promise<boolean> {

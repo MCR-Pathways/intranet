@@ -147,6 +147,30 @@ Badges use **subtle/tonal fills** — light coloured background (`-50`) with dar
 - Badge text should be 1-2 words maximum
 - Use Tailwind's built-in colour scales (`-50` for bg, `-700` for text) — do not create custom hex values
 
+### 1.9 File-Type Colour Convention
+
+Document attachments (PDF, Word, Excel/Sheets, PowerPoint, plain text) signal their type via the established Adobe / Microsoft colour convention — Adobe Acrobat red for PDF, Microsoft Word blue for DOC/DOCX, Excel green for XLSX/CSV, PowerPoint orange for PPT/PPTX, neutral slate for TXT and unknown.
+
+Used by the news-feed attachment card, document lightbox toolbar, and composer chip. The Resources file element will adopt the same convention in a follow-up PR (tracked in `memory/news-feed-drive-media-backlog.md`).
+
+**Mapping** — defined in `src/lib/file-types.ts` (`FILE_TYPE_CONFIG` + `resolveFileType(mime, fileName)`):
+
+| Type key | Mime types | Background | Foreground | Lucide icon | Label |
+|----------|-----------|------------|------------|-------------|-------|
+| `pdf` | `application/pdf` | `bg-red-50 dark:bg-red-950/30` | `text-red-700 dark:text-red-400` | `FileText` | `PDF` |
+| `doc` | `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | `bg-blue-50 dark:bg-blue-950/30` | `text-blue-700 dark:text-blue-400` | `FileText` | `DOC` / `DOCX` |
+| `sheet` | `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `text/csv` | `bg-green-50 dark:bg-green-950/30` | `text-green-700 dark:text-green-400` | `FileSpreadsheet` | `XLS` / `XLSX` / `CSV` |
+| `slide` | `application/vnd.ms-powerpoint`, `application/vnd.openxmlformats-officedocument.presentationml.presentation` | `bg-orange-50 dark:bg-orange-950/30` | `text-orange-700 dark:text-orange-400` | `Presentation` | `PPT` / `PPTX` |
+| `text` | `text/plain`, unknown / fallback | `bg-slate-100 dark:bg-slate-800/40` | `text-slate-600 dark:text-slate-400` | `FileText` | `TXT` / `FILE` |
+
+**Rules:**
+- Mime → visual mapping lives ONLY in `src/lib/file-types.ts`. Never inline mime-to-colour logic anywhere else — call `resolveFileType(mime, fileName)` and consume the returned config.
+- News-feed currently allows PDF and DOC/DOCX (`ALLOWED_DOCUMENT_TYPES` in `src/lib/intranet.ts`). The other types are pre-defined for when that allow-list expands; adding XLSX/PPTX/CSV/TXT later won't require a design-system pass.
+- Resolution falls back to extension lookup when mime is missing or generic (e.g. `application/octet-stream`), then to the neutral `text` slate config. `Object.hasOwn` guards both lookups against prototype-pollution keys.
+- Same Tailwind colour-scale convention as Section 1.8 — direct class strings, no new CSS custom properties. The convention IS Tailwind utilities.
+- Foreground / background tints respect dark mode via the `dark:` prefix.
+- Contrast: every `-700` foreground on `-50` background combination exceeds 4.5:1 (AA for normal text). Dark-mode `-400` on `-950/30` exceeds the 3:1 minimum for icons.
+
 ---
 
 ## 2. Official Brand Guidelines Reference
