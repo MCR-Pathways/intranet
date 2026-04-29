@@ -13,8 +13,10 @@ import {
   uploadFileToDrive,
   deleteFileFromDrive,
   sanitiseFilename,
+  shareFileWithDomain,
 } from "@/lib/google-drive-upload";
 import { processUploadedImage } from "@/lib/image-pipeline";
+import { extractPdfPageCount } from "@/lib/pdf-metadata";
 import { extractUrls } from "@/lib/url";
 import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
@@ -1424,6 +1426,7 @@ export async function uploadPostAttachment(
   mimeType?: string;
   width?: number | null;
   height?: number | null;
+  pageCount?: number | null;
 }> {
   const { supabase, user, profile } = await getCurrentUser();
 
@@ -1469,6 +1472,15 @@ export async function uploadPostAttachment(
     return { success: false, error: processed.error };
   }
 
+  // PDF page count for the card meta line ("PDF · 12 pages · 230 KB").
+  // Only PDFs go through unpdf; everything else stays at null. Failed
+  // extraction (corrupt / encrypted PDF) also returns null — UI falls
+  // back to a size-only meta line.
+  const pageCount =
+    processed.mimeType === "application/pdf"
+      ? await extractPdfPageCount(processed.buffer)
+      : null;
+
   // Upload the processed buffer to Drive under YYYY/MM (UTC) subfolders.
   const now = new Date();
   const yyyy = String(now.getUTCFullYear());
@@ -1485,6 +1497,34 @@ export async function uploadPostAttachment(
     );
     driveFileId = drive.fileId;
 
+    // Domain-share so signed-in MCR users can load Drive's /preview URL
+    // inside the document lightbox (non-PDF doc types render via Drive's
+    // own viewer, which needs the user to have access in their own Google
+    // identity — proxy auth alone doesn't help). PDFs technically don't
+    // need this (proxy + Content-Disposition: inline cover them) but always
+    // domain-share for consistency. Failure here aborts the upload — better
+    // than landing a non-previewable document.
+    try {
+      await shareFileWithDomain(drive.fileId, "mcrpathways.org");
+    } catch (shareErr) {
+      logger.error("Failed to domain-share uploaded Drive file", {
+        error: shareErr instanceof Error ? shareErr.message : String(shareErr),
+        fileId: drive.fileId,
+      });
+      try {
+        await deleteFileFromDrive(drive.fileId);
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up orphan after domain-share failure", {
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+          fileId: drive.fileId,
+        });
+      }
+      return {
+        success: false,
+        error: "Couldn't share file. Please try again.",
+      };
+    }
+
     // Stage the upload so the proxy can serve the converted JPEG/etc. via
     // /api/drive-file/{id} BEFORE the post is posted. Without this row,
     // pre-post composer thumbnails 404 because post_attachments.drive_file_id
@@ -1500,6 +1540,7 @@ export async function uploadPostAttachment(
         file_size: processed.buffer.length,
         image_width: processed.width,
         image_height: processed.height,
+        page_count: pageCount,
         uploaded_by: user.id,
       });
 
@@ -1534,6 +1575,7 @@ export async function uploadPostAttachment(
       mimeType: processed.mimeType,
       width: processed.width,
       height: processed.height,
+      pageCount,
     };
   } catch (err) {
     logger.error("Failed to upload post attachment to Drive", {
