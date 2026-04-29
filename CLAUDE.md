@@ -274,6 +274,8 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` targets the nearest ancestor with `class="group"`.
 
+**Use `href={url ?? undefined}` for anchors with optionally-missing URLs, not `href={url || "#"}`.** A `"#"` fallback turns clicks into a page-jump-to-top side effect when the URL is unresolved. Setting `href={undefined}` keeps the anchor inert — no navigation, no jump. Came up on PR #280 from a Gemini review of the news-feed document download anchor, where `doc.file_url` is conditionally null.
+
 ### CSS & Styling
 
 **`overflow: clip` does NOT break `position: sticky`.** Unlike `overflow: hidden/scroll/auto`, `overflow: clip` does not create a scroll container. Sticky elements work inside `overflow-clip` parents. The `ARTICLE_CARD_CLASSES` constant uses `overflow-clip` intentionally for rounded-corner clipping without affecting the sticky TOC.
