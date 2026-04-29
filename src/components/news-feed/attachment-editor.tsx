@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
-import {
-  X,
-  Loader2,
-  FileText,
-} from "lucide-react";
-import { formatFileSize } from "@/lib/utils";
+import { X, Loader2 } from "lucide-react";
+import { formatFileSize, cn } from "@/lib/utils";
+import { resolveFileType } from "@/lib/file-types";
 import {
   validateFile,
   isImageType,
@@ -262,35 +259,58 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
               </div>
             )}
 
-            {/* Documents — stacked */}
-            {documentAttachments.map((att) => (
-              <div
-                key={att.id}
-                className="relative flex items-center gap-3 rounded-lg border p-3"
-              >
-                <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {att.file_name}
-                  </p>
-                  {att.file_size != null && att.file_size > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(att.file_size)}
-                    </p>
-                  )}
-                </div>
-                {att.uploading && (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                )}
-                <button
-                  onClick={() => removeAttachment(att.id)}
-                  className="shrink-0 rounded-full p-1 hover:bg-muted"
-                  disabled={disabled}
+            {/* Documents — stacked. File-type-aware icon container reuses
+                FILE_TYPE_CONFIG so the composer chip matches the rendered
+                feed card visually. */}
+            {documentAttachments.map((att) => {
+              const fileType = resolveFileType(
+                att.mime_type ?? null,
+                att.file_name ?? null,
+              );
+              const FileIcon = fileType.Icon;
+              const meta = [
+                fileType.label,
+                att.page_count != null
+                  ? `${att.page_count} ${att.page_count === 1 ? "page" : "pages"}`
+                  : null,
+                att.file_size != null && att.file_size > 0
+                  ? formatFileSize(att.file_size)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <div
+                  key={att.id}
+                  className="relative flex items-center gap-3 rounded-lg border p-3"
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
+                      fileType.bgClass,
+                    )}
+                  >
+                    <FileIcon className={cn("h-5 w-5", fileType.fgClass)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {att.file_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{meta}</p>
+                  </div>
+                  {att.uploading && (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  )}
+                  <button
+                    onClick={() => removeAttachment(att.id)}
+                    className="shrink-0 rounded-full p-1 hover:bg-muted"
+                    disabled={disabled}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
