@@ -34,7 +34,7 @@ describe("DocumentLightbox", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the iframe pointing at the proxy URL for PDFs", () => {
+  it("renders the iframe pointing at the proxy URL for PDFs with #toolbar=0", () => {
     const { container } = render(
       <DocumentLightbox
         doc={makeDoc()}
@@ -47,6 +47,9 @@ describe("DocumentLightbox", () => {
     ) as HTMLIFrameElement;
     expect(iframe).not.toBeNull();
     expect(iframe.src).toContain("/api/drive-file/abc123");
+    // Fragment hides Chrome's PDF viewer top toolbar (avoids duplication
+    // with our own toolbar + suppresses the PDF /Title metadata header)
+    expect(iframe.src).toContain("#toolbar=0");
     expect(iframe.title).toBe("policy.pdf");
   });
 

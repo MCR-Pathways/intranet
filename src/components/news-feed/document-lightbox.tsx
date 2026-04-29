@@ -41,8 +41,15 @@ export function DocumentLightbox({
   const proxyUrl = doc.file_url ?? "";
   const driveFileId = doc.drive_file_id ?? "";
 
+  // #toolbar=0 hides Chrome's PDF viewer top toolbar inside the iframe,
+  // which otherwise duplicates our toolbar (download, print, etc.) and
+  // shows the PDF's /Title metadata (set when the source Google Doc was
+  // exported, often unrelated to the user's chosen filename). PDFium
+  // respects this flag; the bottom-right zoom widget stays visible.
+  // newTabUrl deliberately omits the flag so the full Chrome viewer
+  // renders when users want it.
   const iframeSrc = isPdf
-    ? proxyUrl
+    ? `${proxyUrl}#toolbar=0`
     : `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview`;
 
   const newTabUrl = isPdf
