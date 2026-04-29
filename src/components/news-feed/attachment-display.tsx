@@ -108,8 +108,10 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
                 </button>
                 <a
                   // Same-origin proxy path; safe without sanitizeUrl (which
-                  // strips relative URLs).
-                  href={doc.file_url || "#"}
+                  // strips relative URLs). Falls back to undefined (inert
+                  // anchor) rather than "#" so a missing file_url doesn't
+                  // jump the page to top on click.
+                  href={doc.file_url ?? undefined}
                   download={filename}
                   aria-label={`Download ${filename}`}
                   title="Download"

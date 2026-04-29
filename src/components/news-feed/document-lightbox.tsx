@@ -73,12 +73,12 @@ export function DocumentLightbox({
           {/* Floating top-right controls on the backdrop. Stay outside
               the document panel so they don't visually compete with
               Chromium's / Drive's own chrome inside the iframe. */}
-          <div className="absolute right-4 top-4 z-10 flex gap-2">
+          <div className="absolute right-4 top-4 z-10 flex gap-2.5">
             <a
               href={newTabUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
+              className="rounded-full border border-white/20 bg-white/10 p-2.5 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/20"
               aria-label="Open in new tab"
               title="Open in new tab"
             >
@@ -87,7 +87,7 @@ export function DocumentLightbox({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
+              className="rounded-full border border-white/20 bg-white/10 p-2.5 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/20"
               aria-label="Close"
               title="Close"
             >

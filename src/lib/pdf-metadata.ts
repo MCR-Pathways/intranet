@@ -17,8 +17,9 @@ import { logger } from "@/lib/logger";
 export async function extractPdfPageCount(
   buffer: Buffer,
 ): Promise<number | null> {
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | null = null;
   try {
-    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    pdf = await getDocumentProxy(new Uint8Array(buffer));
     const count = pdf.numPages;
     return Number.isFinite(count) && count > 0 ? count : null;
   } catch (err) {
@@ -26,5 +27,17 @@ export async function extractPdfPageCount(
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
+  } finally {
+    // Release the PDFDocumentProxy's internal buffers. Each Vercel
+    // function invocation is a fresh process so leaks don't compound
+    // across requests, but destroy() is the documented pattern from
+    // pdfjs-dist and cheap defensively.
+    if (pdf) {
+      try {
+        await pdf.destroy();
+      } catch {
+        // best-effort
+      }
+    }
   }
 }
