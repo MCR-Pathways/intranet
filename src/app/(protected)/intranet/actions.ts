@@ -91,7 +91,7 @@ async function sendMentionEmails(
 const POST_SELECT =
   "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
-  "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, link_url, link_title, link_description, link_image_url, sort_order, created_at";
+  "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, page_count, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
 const COMMENT_SELECT =
   "id, post_id, author_id, content, content_json, parent_id, created_at, updated_at";
@@ -117,6 +117,7 @@ const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
   "mime_type",
   "image_width",
   "image_height",
+  "page_count",
   "link_url",
   "link_title",
   "link_description",
@@ -692,6 +693,7 @@ export async function createPost(data: {
     mime_type?: string;
     image_width?: number;
     image_height?: number;
+    page_count?: number;
     link_url?: string;
     link_title?: string;
     link_description?: string;
@@ -872,6 +874,7 @@ interface AttachmentInput {
   mime_type?: string;
   image_width?: number;
   image_height?: number;
+  page_count?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;

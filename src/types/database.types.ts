@@ -1812,6 +1812,7 @@ export type Database = {
           file_size: number
           image_width: number | null
           image_height: number | null
+          page_count: number | null
           uploaded_by: string
           created_at: string
         }
@@ -1823,6 +1824,7 @@ export type Database = {
           file_size: number
           image_width?: number | null
           image_height?: number | null
+          page_count?: number | null
           uploaded_by: string
           created_at?: string
         }
@@ -1834,6 +1836,7 @@ export type Database = {
           file_size?: number
           image_width?: number | null
           image_height?: number | null
+          page_count?: number | null
           uploaded_by?: string
           created_at?: string
         }
@@ -2315,6 +2318,7 @@ export type Database = {
           link_title: string | null
           link_url: string | null
           mime_type: string | null
+          page_count: number | null
           post_id: string
           sort_order: number
         }
@@ -2333,6 +2337,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           mime_type?: string | null
+          page_count?: number | null
           post_id: string
           sort_order?: number
         }
@@ -2351,6 +2356,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           mime_type?: string | null
+          page_count?: number | null
           post_id?: string
           sort_order?: number
         }
