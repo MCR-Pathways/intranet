@@ -114,7 +114,7 @@ DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs
 DATABASE_URL="postgresql://..." node scripts/run-migrations.mjs --check-only  # Health check only
 ```
 
-Migration files are in `supabase/migrations/` and run in numeric order (87 files, `00001` through `00086` plus a combined migration).
+Migration files are in `supabase/migrations/` and run in numeric order (90 files, `00001` through `00089` plus a combined migration).
 
 ### Local Supabase
 
@@ -233,7 +233,7 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 
 **Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications active.
 
-**Routes:** 12 pages under `/learning`
+**Routes:** 9 pages under `/learning`
 
 | Feature | Route |
 |---|---|
@@ -265,7 +265,7 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 
 Internal communications — news feed, resources/knowledge base, and induction.
 
-**Routes:** 13 pages under `/intranet` + `/resources`
+**Routes:** 24 pages under `/intranet` + `/resources` (17 + 7, including induction sub-pages, resource catch-alls, and editor-only views)
 
 | Feature | Route |
 |---|---|
@@ -282,7 +282,7 @@ Internal communications — news feed, resources/knowledge base, and induction.
 
 **News-feed media on Google Drive.** Posts back image and document attachments via the service-account Drive (folder structured `YYYY/MM`, auto-created on demand). The `/api/drive-file/[fileId]` proxy authenticates the user, looks the file up across `resource_media` / `post_attachments` / `news_feed_media` (the staging table that lets pre-post composer thumbnails resolve), and streams the bytes from Drive. Image pipeline strips EXIF, bakes in orientation, converts HEIC/HEIF to JPEG via heic-convert, converts Apple ProRAW DNG via Sharp's TIFF path, rejects camera RAW with a friendly error. File caps held at 4 MB by Vercel Hobby's platform limit; revisit on Pro upgrade.
 
-**Document preview lightbox.** Click a document attachment in the feed and a modal opens with the file rendered in-place — PDFs through our proxy with `Content-Disposition: inline` (Chromium's native PDF viewer), DOCX/XLSX/PPTX/TXT/CSV through Drive's `/preview` URL (Drive viewer; files are domain-shared at upload so signed-in MCR users can load them). The modal adds no toolbar of its own — two floating frosted-glass buttons on the dark backdrop top-right (Open in new tab, Close) and the iframe's native chrome inside. Cards in the feed show file-type colour (Adobe red PDF, Word blue, Excel green, PowerPoint orange, slate for txt/unknown) via `FILE_TYPE_CONFIG` + `resolveFileType` from `src/lib/file-types.ts` — same source consumed by the card, the lightbox toolbar (none currently), and the composer chip. Page count for PDFs extracted at upload via `unpdf` and shown in the meta line ("PDF · 12 pages · 230 KB").
+**Document preview lightbox.** Click a document attachment in the feed and a modal opens with the file rendered in-place — PDFs through our proxy with `Content-Disposition: inline` (Chromium's native PDF viewer), DOCX/XLSX/PPTX/TXT/CSV through Drive's `/preview` URL (Drive viewer; files are domain-shared at upload so signed-in MCR users can load them). The modal adds no toolbar of its own — two floating frosted-glass buttons on the dark backdrop top-right (Open in new tab, Close) and the iframe's native chrome inside. Cards in the feed and the composer chip show file-type colour (Adobe red PDF, Word blue, Excel green, PowerPoint orange, slate for txt/unknown) via `FILE_TYPE_CONFIG` + `resolveFileType` from `src/lib/file-types.ts`. Image lightbox shares the same frosted-glass button style on its close + nav buttons. Page count for PDFs extracted at upload via `unpdf` and shown in the meta line ("PDF · 12 pages · 230 KB").
 
 **Resources/Knowledge Base (redesigned):** Google Docs integration replaces Tiptap article editor. Content editors link Google Docs from Drive, HTML synced via webhooks, rendered with Tailwind `prose` classes. Native Plate editor for static reference content (two content paths coexist). Component page system for developer-created pages (e.g. org chart). Contextual editor affordances (kebab menus on cards, drafts pill in header, per-article Edit/Publish). Category grid with grouped index on category pages. Scroll-spy TOC, "More in [folder]" sibling nav. Settings page for folder registration, featured article curation, and category management. Algolia search with section-level indexing and deep links. Supabase Realtime for live content updates while viewing.
 
@@ -310,7 +310,7 @@ Bell icon in header with dropdown. Server-pushed notifications for @mentions, co
 
 PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 
-**87 migration files** in `supabase/migrations/`, numbered `00001` through `00086` plus a combined migration.
+**90 migration files** in `supabase/migrations/`, numbered `00001` through `00089` plus a combined migration.
 
 **70+ tables** — key ones:
 
@@ -472,7 +472,7 @@ Playwright with 2 spec files (`auth-navigation.spec.ts`, `smoke.spec.ts`). Setup
 
 ### Known Test Gaps
 
-- No E2E tests for multi-step HR workflows (18 E2E tests for a 56-page app)
+- No E2E tests for multi-step HR workflows (18 E2E tests for a 60-page app)
 
 ---
 

@@ -151,7 +151,7 @@ Badges use **subtle/tonal fills** — light coloured background (`-50`) with dar
 
 Document attachments (PDF, Word, Excel/Sheets, PowerPoint, plain text) signal their type via the established Adobe / Microsoft colour convention — Adobe Acrobat red for PDF, Microsoft Word blue for DOC/DOCX, Excel green for XLSX/CSV, PowerPoint orange for PPT/PPTX, neutral slate for TXT and unknown.
 
-Used by the news-feed attachment card, document lightbox toolbar, and composer chip. The Resources file element will adopt the same convention in a follow-up PR (tracked in `memory/news-feed-drive-media-backlog.md`).
+Used by the news-feed attachment card and composer chip. The document lightbox itself has no toolbar — it defers to Chromium's PDF viewer or Drive's `/preview` chrome inside the iframe. The Resources file element will adopt the same convention in a follow-up PR (tracked in `memory/news-feed-drive-media-backlog.md`).
 
 **Mapping** — defined in `src/lib/file-types.ts` (`FILE_TYPE_CONFIG` + `resolveFileType(mime, fileName)`):
 

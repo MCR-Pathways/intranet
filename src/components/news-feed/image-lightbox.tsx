@@ -57,18 +57,20 @@ function LightboxContent({
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-white hover:bg-black/80 transition-colors"
+        aria-label="Close"
+        className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-white/10 p-2.5 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/20"
       >
-        <X className="h-6 w-6" />
+        <X className="h-5 w-5" />
       </button>
 
       {/* Previous button */}
       {images.length > 1 && (
         <button
           onClick={goPrev}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 rounded-full bg-black/60 p-2 text-white hover:bg-black/80 transition-colors"
+          aria-label="Previous image"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-white/20 bg-white/10 p-2.5 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/20"
         >
-          <ChevronLeft className="h-6 w-6" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
       )}
 
@@ -87,15 +89,16 @@ function LightboxContent({
       {images.length > 1 && (
         <button
           onClick={goNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 rounded-full bg-black/60 p-2 text-white hover:bg-black/80 transition-colors"
+          aria-label="Next image"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-white/20 bg-white/10 p-2.5 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/20"
         >
-          <ChevronRight className="h-6 w-6" />
+          <ChevronRight className="h-5 w-5" />
         </button>
       )}
 
       {/* Image counter */}
       {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm text-white shadow-lg backdrop-blur-md">
           {currentIndex + 1} / {images.length}
         </div>
       )}

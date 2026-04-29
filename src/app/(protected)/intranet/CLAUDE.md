@@ -59,8 +59,10 @@ Document attachments (`attachment_type = 'document'`) open in an in-app modal li
 
 Three download paths exist for the same file:
 1. Card-level download button — `<a href={proxy_url} download={filename}>`. Same proxy URL as the preview; the `download` attribute beats `Content-Disposition: inline` on Chrome and Firefox 82+ for same-origin URLs.
-2. Lightbox toolbar download button — same pattern.
-3. Browser's own PDF viewer toolbar (free; only available for PDFs).
+2. Chromium's PDF viewer toolbar inside the lightbox iframe (PDFs only) — built-in.
+3. Drive's `/preview` header download button (non-PDFs) — built-in.
+
+The lightbox itself adds no toolbar; that would duplicate buttons #2 / #3.
 
 **Don't add `Content-Disposition: inline` for any other type without checking how the browser handles it.** DOCX/XLSX/PPTX would either show a download dialog or unreadable bytes — that's why non-PDFs go via Drive's `/preview` URL instead.
 
@@ -68,7 +70,7 @@ Three download paths exist for the same file:
 
 **Chromium's PDF toolbar shows the PDF's `/Title` metadata, not the user's filename.** When a Google Doc is exported as PDF, the doc's title becomes the PDF's `/Title` metadata field. Chromium's PDF viewer prefers `/Title` over the URL or `Content-Disposition: filename`. Result: the user's chosen upload filename ("policy.pdf") doesn't appear in Chromium's toolbar; the doc's original title ("Links for resources") does. Two ways to fix: either hide Chromium's toolbar (loses familiar UX) or strip `/Title` at upload via `pdf-lib` (invasive — re-serialises the file, adds ~100ms). PR #280 accepted the metadata as-is rather than mutating the file.
 
-**Drive `/preview` URL embedding needs the file domain-shared with the user's domain.** `https://drive.google.com/file/d/{id}/preview` is Drive's own viewer; it authenticates via the user's Google session, not our proxy. Without `drive.permissions.create({role: "reader", type: "domain", domain: "mcrpathways.org"})` at upload time, the iframe shows Drive's "Request access" page. The upload pipeline does this for every Drive file (PDFs and non-PDFs alike — saves a per-mime-type branch); failure aborts the upload and cleans up the orphan Drive file.
+**Drive `/preview` URL embedding needs the file domain-shared with the user's domain.** `https://drive.google.com/file/d/{id}/preview` is Drive's own viewer; it authenticates via the user's Google session, not our proxy. Without domain share at upload time the iframe shows Drive's "Request access" page. See **Domain-Share on Upload** below for the implementation and failure handling.
 
 ## Domain-Share on Upload
 
@@ -84,8 +86,9 @@ Document attachments signal their type via the established Adobe / Microsoft col
 
 Used by:
 - News-feed attachment card (`src/components/news-feed/attachment-display.tsx`)
-- Document lightbox toolbar (`src/components/news-feed/document-lightbox.tsx`)
 - Composer chip (`src/components/news-feed/attachment-editor.tsx`)
+
+The document lightbox itself does NOT consume `FILE_TYPE_CONFIG` — it has no toolbar, defers to Chromium's PDF viewer / Drive's `/preview` chrome inside the iframe.
 
 Resources file element will adopt the same convention in a follow-up PR (tracked in `memory/news-feed-drive-media-backlog.md`).
 
