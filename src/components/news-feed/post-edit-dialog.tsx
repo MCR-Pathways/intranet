@@ -46,6 +46,7 @@ function mapExistingToPending(
     mime_type: att.mime_type ?? undefined,
     image_width: att.image_width ?? undefined,
     image_height: att.image_height ?? undefined,
+    page_count: att.page_count ?? undefined,
     link_url: att.link_url ?? undefined,
     link_title: att.link_title ?? undefined,
     link_description: att.link_description ?? undefined,
@@ -238,6 +239,7 @@ export function PostEditDialog({
           mime_type: a.mime_type,
           image_width: a.image_width,
           image_height: a.image_height,
+          page_count: a.page_count,
         })),
       });
       if (result.success) {

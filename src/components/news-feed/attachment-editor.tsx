@@ -31,6 +31,7 @@ export interface PendingAttachment {
   mime_type?: string;
   image_width?: number;
   image_height?: number;
+  page_count?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;
@@ -174,6 +175,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
                     mime_type: result.mimeType,
                     image_width: result.width ?? undefined,
                     image_height: result.height ?? undefined,
+                    page_count: result.pageCount ?? undefined,
                     uploading: false,
                   };
                 })
