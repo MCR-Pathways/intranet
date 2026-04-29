@@ -23,6 +23,8 @@ import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
+import { discardStagedAttachments } from "@/app/(protected)/intranet/actions";
+import { useDialogDropZone } from "./use-dialog-drop-zone";
 import { LinkPreviewCard } from "./link-preview-card";
 import { PollComposer, type PollData } from "./poll-composer";
 import { TiptapComposer } from "./tiptap-composer";
@@ -130,10 +132,28 @@ export function PostCreateDialog({
     }
   }, [hasContent, isPending, onOpenChange]);
 
+  // Drag-and-drop catches drops anywhere on the dialog and routes them
+  // through the AttachmentEditor's upload pipeline. Without this, drops
+  // outside the AttachmentEditor's small wrapper triggered the browser's
+  // default "navigate to file" behaviour (visible as a brief flash).
+  const { isDragging, dropHandlers } = useDialogDropZone((files) => {
+    attachmentEditorRef.current?.handleDroppedFiles(files);
+  });
+
   const handleDiscard = useCallback(() => {
+    // Clean up any Drive files staged in this composer session before closing.
+    // Fire-and-forget — the daily cron sweeps anything that escapes.
+    const stagedIds = attachments
+      .filter((a) => !a.isExisting && a.drive_file_id)
+      .map((a) => a.drive_file_id as string);
+    if (stagedIds.length > 0) {
+      void discardStagedAttachments(stagedIds).catch(() => {
+        // best-effort
+      });
+    }
     setShowDiscardAlert(false);
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [attachments, onOpenChange]);
 
   return (
     <>
@@ -148,7 +168,19 @@ export function PostCreateDialog({
         }}
       >
         <DialogContent
+          // Don't add `relative` here — DialogContent's base styles use
+          // `position: fixed` for viewport centering. Tailwind treats `fixed`
+          // and `relative` as the same `position` property; whichever class
+          // resolves last wins, and `relative` would drop the dialog to its
+          // natural document position (bottom of the page on a long feed).
+          // `position: fixed` already establishes a containing block for
+          // absolute-positioned children, so the drop overlay's `inset-0`
+          // works without it.
           className="max-w-lg gap-0"
+          // No DialogDescription — the composer is visually self-explanatory.
+          // Explicit undefined opts out of Radix's default aria-describedby
+          // warning. Screen readers fall back to the DialogTitle.
+          aria-describedby={undefined}
           onInteractOutside={(e) => {
             if (hasContent) {
               e.preventDefault();
@@ -161,7 +193,15 @@ export function PostCreateDialog({
               setShowDiscardAlert(true);
             }
           }}
+          {...dropHandlers}
         >
+          {/* Drop overlay — covers the whole dialog body so users can drop
+              files anywhere, not just on the AttachmentEditor's wrapper. */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm pointer-events-none">
+              <p className="text-base font-medium text-primary">Drop files to attach</p>
+            </div>
+          )}
           <DialogHeader>
             <DialogTitle>Create post</DialogTitle>
           </DialogHeader>

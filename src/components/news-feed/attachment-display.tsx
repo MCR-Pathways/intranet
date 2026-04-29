@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileText, Download } from "lucide-react";
 import { LinkPreviewCard } from "./link-preview-card";
 import { ImageLightbox } from "./image-lightbox";
-import { sanitizeUrl, formatFileSize } from "@/lib/utils";
+import { formatFileSize } from "@/lib/utils";
 import type { PostAttachment } from "@/types/database.types";
 
 interface AttachmentDisplayProps {
@@ -51,6 +51,12 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
                 src={img.file_url || undefined}
                 alt={img.file_name || "Image"}
                 className="w-full object-cover max-h-[400px] bg-muted"
+                // width + height attrs let the browser compute aspect-ratio
+                // and reserve space, preventing layout shift while the image
+                // streams in. CSS w-full overrides the rendered width.
+                {...(img.image_width && img.image_height
+                  ? { width: img.image_width, height: img.image_height }
+                  : {})}
               />
             </button>
           ))}
@@ -63,7 +69,12 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
           {documents.map((doc) => (
             <a
               key={doc.id}
-              href={sanitizeUrl(doc.file_url)}
+              // file_url is the server-generated proxy path
+              // (/api/drive-file/{id}) — same-origin, not user input. Don't
+              // wrap in sanitizeUrl: that helper requires absolute http(s)
+              // URLs and strips relative paths to undefined, so wrapping
+              // would break every document download link.
+              href={doc.file_url || undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"

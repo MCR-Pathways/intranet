@@ -14,7 +14,10 @@ import {
   ALLOWED_IMAGE_TYPES,
   ALLOWED_DOCUMENT_TYPES,
 } from "@/lib/intranet";
-import { uploadPostAttachment } from "@/app/(protected)/intranet/actions";
+import {
+  uploadPostAttachment,
+  discardStagedAttachments,
+} from "@/app/(protected)/intranet/actions";
 import type { AttachmentType } from "@/types/database.types";
 
 export interface PendingAttachment {
@@ -22,9 +25,12 @@ export interface PendingAttachment {
   type: AttachmentType;
   isExisting?: boolean;
   file_url?: string;
+  drive_file_id?: string;
   file_name?: string;
   file_size?: number;
   mime_type?: string;
+  image_width?: number;
+  image_height?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;
@@ -36,6 +42,13 @@ export interface PendingAttachment {
 export interface AttachmentEditorHandle {
   triggerImageUpload: () => void;
   triggerDocumentUpload: () => void;
+  /**
+   * Process files dropped via drag-and-drop on a parent element. Auto-routes
+   * based on the first file's MIME type. The parent owns the drag-zone area
+   * (typically the whole dialog) so users can drop anywhere; this exposes the
+   * upload pipeline as an imperative method.
+   */
+  handleDroppedFiles: (files: FileList) => void;
 }
 
 interface AttachmentEditorProps {
@@ -58,15 +71,19 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     const [attachments, setAttachments] = useState<PendingAttachment[]>(
       initialAttachments ?? []
     );
-    const [isDragging, setIsDragging] = useState(false);
-    const dragCounterRef = useRef(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const docInputRef = useRef<HTMLInputElement>(null);
 
-    // Expose trigger methods for external action bar
+    // Expose trigger methods for external action bar + drag-and-drop bridge
     useImperativeHandle(ref, () => ({
       triggerImageUpload: () => fileInputRef.current?.click(),
       triggerDocumentUpload: () => docInputRef.current?.click(),
+      handleDroppedFiles: (files: FileList) => {
+        if (files.length === 0) return;
+        const firstFile = files[0];
+        const type = isImageType(firstFile.type) ? "image" : "document";
+        handleFileUpload(files, type);
+      },
     }));
 
     // Reset internal state when resetKey changes (intentional setState in effect for prop sync).
@@ -140,18 +157,26 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
 
             if (result.success && result.url) {
               setAttachments((prev) =>
-                prev.map((a) =>
-                  a.id === tempId
-                    ? {
-                        ...a,
-                        file_url: result.url,
-                        file_name: result.fileName,
-                        file_size: result.fileSize,
-                        mime_type: result.mimeType,
-                        uploading: false,
-                      }
-                    : a
-                )
+                prev.map((a) => {
+                  if (a.id !== tempId) return a;
+                  // Release the blob URL and switch to the server URL.
+                  // Critical for HEIC: browsers can't render HEIC blobs, so
+                  // the local preview shows a broken icon. The server-side
+                  // pipeline converted to JPEG, which file_url now points at.
+                  if (a.preview) URL.revokeObjectURL(a.preview);
+                  return {
+                    ...a,
+                    preview: undefined,
+                    file_url: result.url,
+                    drive_file_id: result.driveFileId,
+                    file_name: result.fileName,
+                    file_size: result.fileSize,
+                    mime_type: result.mimeType,
+                    image_width: result.width ?? undefined,
+                    image_height: result.height ?? undefined,
+                    uploading: false,
+                  };
+                })
               );
             } else {
               setAttachments((prev) => prev.filter((a) => a.id !== tempId));
@@ -164,55 +189,30 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     );
 
     const removeAttachment = useCallback((id: string) => {
+      let stagedDriveId: string | undefined;
       setAttachments((prev) => {
         const att = prev.find((a) => a.id === id);
         if (att?.preview) URL.revokeObjectURL(att.preview);
+        // Only discard the Drive file for NEW (staged) uploads. Existing
+        // attachments from edit-flow point at post_attachments rows; they
+        // get cleaned up server-side when editPost runs.
+        if (att && !att.isExisting && att.drive_file_id) {
+          stagedDriveId = att.drive_file_id;
+        }
         return prev.filter((a) => a.id !== id);
       });
-    }, []);
-
-    // ─── Drag and drop handlers ────────────────────────────────────────
-
-    const handleDragEnter = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current++;
-      if (e.dataTransfer.types.includes("Files")) {
-        setIsDragging(true);
+      // Fire-and-forget Drive cleanup. Failures are logged server-side and
+      // swept by the daily cron — don't block UI.
+      if (stagedDriveId) {
+        void discardStagedAttachments([stagedDriveId]).catch(() => {
+          // best-effort
+        });
       }
     }, []);
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounterRef.current--;
-      if (dragCounterRef.current === 0) {
-        setIsDragging(false);
-      }
-    }, []);
-
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    }, []);
-
-    const handleDrop = useCallback(
-      (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-        dragCounterRef.current = 0;
-
-        const files = e.dataTransfer.files;
-        if (files.length === 0) return;
-
-        // Determine type from first file's MIME type
-        const firstFile = files[0];
-        const type = isImageType(firstFile.type) ? "image" : "document";
-        handleFileUpload(files, type);
-      },
-      [handleFileUpload]
-    );
+    // Drag-and-drop is owned by the parent dialog (see useDialogDropZone).
+    // Files dropped on the dialog flow back via the imperative
+    // handleDroppedFiles handle exposed above.
 
     // ─── Derived values ────────────────────────────────────────────────
 
@@ -225,20 +225,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
     const acceptDocs = ALLOWED_DOCUMENT_TYPES.join(",");
 
     return (
-      <div
-        className="relative space-y-3"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {/* Drag overlay */}
-        {isDragging && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5">
-            <p className="text-sm font-medium text-primary">Drop files here</p>
-          </div>
-        )}
-
+      <div className="space-y-3">
         {/* Attachment previews */}
         {attachments.length > 0 && (
           <div className="space-y-2">

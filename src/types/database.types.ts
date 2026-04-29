@@ -1803,6 +1803,50 @@ export type Database = {
           },
         ]
       }
+      news_feed_media: {
+        Row: {
+          id: string
+          file_id: string
+          original_name: string
+          mime_type: string
+          file_size: number
+          image_width: number | null
+          image_height: number | null
+          uploaded_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          file_id: string
+          original_name: string
+          mime_type: string
+          file_size: number
+          image_width?: number | null
+          image_height?: number | null
+          uploaded_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          file_id?: string
+          original_name?: string
+          mime_type?: string
+          file_size?: number
+          image_width?: number | null
+          image_height?: number | null
+          uploaded_by?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_feed_media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -2259,10 +2303,13 @@ export type Database = {
         Row: {
           attachment_type: "image" | "document" | "link"
           created_at: string
+          drive_file_id: string | null
           file_name: string | null
           file_size: number | null
           file_url: string | null
           id: string
+          image_height: number | null
+          image_width: number | null
           link_description: string | null
           link_image_url: string | null
           link_title: string | null
@@ -2274,10 +2321,13 @@ export type Database = {
         Insert: {
           attachment_type: "image" | "document" | "link"
           created_at?: string
+          drive_file_id?: string | null
           file_name?: string | null
           file_size?: number | null
           file_url?: string | null
           id?: string
+          image_height?: number | null
+          image_width?: number | null
           link_description?: string | null
           link_image_url?: string | null
           link_title?: string | null
@@ -2289,10 +2339,13 @@ export type Database = {
         Update: {
           attachment_type?: "image" | "document" | "link"
           created_at?: string
+          drive_file_id?: string | null
           file_name?: string | null
           file_size?: number | null
           file_url?: string | null
           id?: string
+          image_height?: number | null
+          image_width?: number | null
           link_description?: string | null
           link_image_url?: string | null
           link_title?: string | null

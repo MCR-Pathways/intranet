@@ -23,11 +23,12 @@ import { POST_MAX_LENGTH } from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
-import { editPost } from "@/app/(protected)/intranet/actions";
+import { editPost, discardStagedAttachments } from "@/app/(protected)/intranet/actions";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
 import { LinkPreviewCard } from "./link-preview-card";
 import { TiptapComposer } from "./tiptap-composer";
 import { ComposerActionBar } from "./composer-action-bar";
+import { useDialogDropZone } from "./use-dialog-drop-zone";
 import type { MentionUser } from "./mention-list";
 import type { PostAttachment } from "@/types/database.types";
 
@@ -39,9 +40,12 @@ function mapExistingToPending(
     type: att.attachment_type,
     isExisting: true,
     file_url: att.file_url ?? undefined,
+    drive_file_id: att.drive_file_id ?? undefined,
     file_name: att.file_name ?? undefined,
     file_size: att.file_size ?? undefined,
     mime_type: att.mime_type ?? undefined,
+    image_width: att.image_width ?? undefined,
+    image_height: att.image_height ?? undefined,
     link_url: att.link_url ?? undefined,
     link_title: att.link_title ?? undefined,
     link_description: att.link_description ?? undefined,
@@ -195,9 +199,24 @@ export function PostEditDialog({
   }, [hasChanges, isPending, onOpenChange]);
 
   const handleDiscard = useCallback(() => {
+    // Clean up newly-uploaded staging files. Existing attachments
+    // (isExisting=true) point at post_attachments rows — leave them alone.
+    const stagedIds = attachments
+      .filter((a) => !a.isExisting && a.drive_file_id)
+      .map((a) => a.drive_file_id as string);
+    if (stagedIds.length > 0) {
+      void discardStagedAttachments(stagedIds).catch(() => {
+        // best-effort
+      });
+    }
     setShowDiscardAlert(false);
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [attachments, onOpenChange]);
+
+  // Drag-and-drop bridge — see post-create-dialog.tsx for the full reasoning.
+  const { isDragging, dropHandlers } = useDialogDropZone((files) => {
+    attachmentEditorRef.current?.handleDroppedFiles(files);
+  });
 
   const handleSave = () => {
     if (!content.trim()) return;
@@ -213,9 +232,12 @@ export function PostEditDialog({
           id: a.isExisting ? a.id : undefined,
           attachment_type: a.type,
           file_url: a.file_url,
+          drive_file_id: a.drive_file_id,
           file_name: a.file_name,
           file_size: a.file_size,
           mime_type: a.mime_type,
+          image_width: a.image_width,
+          image_height: a.image_height,
         })),
       });
       if (result.success) {
@@ -238,7 +260,15 @@ export function PostEditDialog({
         }
       }}>
         <DialogContent
+          // No `relative` — DialogContent uses `position: fixed` for centering;
+          // adding `relative` would override it via Tailwind precedence and
+          // drop the dialog to the natural document position. The fixed
+          // parent is already a containing block for the absolute drop overlay.
           className="max-w-lg gap-0"
+          // No DialogDescription — the editor is visually self-explanatory.
+          // Explicit undefined opts out of Radix's default aria-describedby
+          // warning. Screen readers fall back to the DialogTitle.
+          aria-describedby={undefined}
           onInteractOutside={(e) => {
             if (hasChanges) {
               e.preventDefault();
@@ -251,7 +281,13 @@ export function PostEditDialog({
               setShowDiscardAlert(true);
             }
           }}
+          {...dropHandlers}
         >
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm pointer-events-none">
+              <p className="text-base font-medium text-primary">Drop files to attach</p>
+            </div>
+          )}
           <DialogHeader>
             <DialogTitle>Edit post</DialogTitle>
           </DialogHeader>

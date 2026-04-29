@@ -4,9 +4,17 @@ import { getCurrentUser, isSystemsAdminEffective } from "@/lib/auth";
 import {
   POST_MAX_LENGTH,
   ATTACHMENT_MAX_COUNT,
-  ATTACHMENT_MAX_SIZE_BYTES,
+  IMAGE_MAX_SIZE_BYTES,
+  DOCUMENT_MAX_SIZE_BYTES,
   ALLOWED_FILE_TYPES,
+  isImageType,
 } from "@/lib/intranet";
+import {
+  uploadFileToDrive,
+  deleteFileFromDrive,
+  sanitiseFilename,
+} from "@/lib/google-drive-upload";
+import { processUploadedImage } from "@/lib/image-pipeline";
 import { extractUrls } from "@/lib/url";
 import { extractMentionIds, type TiptapDocument } from "@/lib/tiptap";
 import { revalidatePath } from "next/cache";
@@ -83,7 +91,7 @@ async function sendMentionEmails(
 const POST_SELECT =
   "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
-  "id, post_id, attachment_type, file_url, file_name, file_size, mime_type, link_url, link_title, link_description, link_image_url, sort_order, created_at";
+  "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
 const COMMENT_SELECT =
   "id, post_id, author_id, content, content_json, parent_id, created_at, updated_at";
@@ -100,42 +108,43 @@ const VALID_REACTIONS: ReactionType[] = [
   "curious",
 ];
 
-const POST_ATTACHMENTS_BUCKET = "post-attachments";
-
 const ALLOWED_ATTACHMENT_FIELDS_SHARED = [
   "attachment_type",
   "file_url",
+  "drive_file_id",
   "file_name",
   "file_size",
   "mime_type",
+  "image_width",
+  "image_height",
   "link_url",
   "link_title",
   "link_description",
   "link_image_url",
 ] as const;
 
-/** Extract storage paths from attachment file URLs and delete them. */
+/**
+ * Delete the underlying Drive files for the given attachments.
+ * Best-effort — logs failures but doesn't throw, so DB cleanup can proceed.
+ * Drive 404s are already swallowed by deleteFileFromDrive.
+ */
 async function deleteAttachmentFiles(
-  supabase: SupabaseClient,
-  fileUrls: (string | null)[]
+  driveFileIds: (string | null)[],
 ): Promise<void> {
-  const filePaths = fileUrls
-    .filter((url): url is string => url !== null)
-    .map((url) => {
-      try {
-        const parsed = new URL(url);
-        const segments = parsed.pathname.split(`/${POST_ATTACHMENTS_BUCKET}/`);
-        if (segments.length < 2 || !segments[1]) return null;
-        return segments[1];
-      } catch {
-        return null;
-      }
-    })
-    .filter((p): p is string => p !== null);
+  const ids = driveFileIds.filter((id): id is string => id !== null);
+  if (ids.length === 0) return;
 
-  if (filePaths.length > 0) {
-    await supabase.storage.from(POST_ATTACHMENTS_BUCKET).remove(filePaths);
-  }
+  const results = await Promise.allSettled(
+    ids.map((id) => deleteFileFromDrive(id)),
+  );
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      logger.warn("Drive attachment delete failed", {
+        fileId: ids[i],
+        reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
+      });
+    }
+  });
 }
 
 // ─── Weekly Roundup Types ─────────────────────────────────────────────
@@ -677,9 +686,12 @@ export async function createPost(data: {
   attachments?: {
     attachment_type: "image" | "document" | "link";
     file_url?: string;
+    drive_file_id?: string;
     file_name?: string;
     file_size?: number;
     mime_type?: string;
+    image_width?: number;
+    image_height?: number;
     link_url?: string;
     link_title?: string;
     link_description?: string;
@@ -799,6 +811,25 @@ export async function createPost(data: {
         warning: "Post created, but some attachments could not be saved",
       };
     }
+
+    // Promote: post_attachments is now canonical for these files. Drop the
+    // staging rows so the proxy serves via post_attachments going forward.
+    // Best-effort — if this fails, daily cron sweeps the orphan staging row.
+    const stagedFileIds = data.attachments
+      .map((a) => a.drive_file_id)
+      .filter((id): id is string => typeof id === "string");
+    if (stagedFileIds.length > 0) {
+      const { error: unstageError } = await supabase
+        .from("news_feed_media")
+        .delete()
+        .in("file_id", stagedFileIds);
+      if (unstageError) {
+        logger.warn("Failed to clear staging rows after createPost", {
+          error: unstageError.message,
+          fileIds: stagedFileIds,
+        });
+      }
+    }
   }
 
   // Auto-detect first URL in content and create link preview attachment
@@ -835,9 +866,12 @@ interface AttachmentInput {
   id?: string;
   attachment_type: string;
   file_url?: string;
+  drive_file_id?: string;
   file_name?: string;
   file_size?: number;
   mime_type?: string;
+  image_width?: number;
+  image_height?: number;
   link_url?: string;
   link_title?: string;
   link_description?: string;
@@ -911,7 +945,7 @@ export async function editPost(
     // Fetch existing attachments for this post
     const { data: existingAttachments } = await supabase
       .from("post_attachments")
-      .select("id, file_url")
+      .select("id, drive_file_id")
       .eq("post_id", postId);
 
     const existingIds = new Set(
@@ -934,8 +968,7 @@ export async function editPost(
     const removedIds = removedAttachments.map((a) => a.id);
     if (removedIds.length > 0) {
       await deleteAttachmentFiles(
-        supabase,
-        removedAttachments.map((a) => a.file_url)
+        removedAttachments.map((a) => a.drive_file_id),
       );
 
       const { error: deleteError } = await supabase
@@ -995,6 +1028,23 @@ export async function editPost(
           warning: "Post updated, but some attachments could not be saved",
         };
       }
+
+      // Promote: drop staging rows for newly added attachments.
+      const stagedFileIds = newAttachments
+        .map((a) => a.drive_file_id as string | null | undefined)
+        .filter((id): id is string => typeof id === "string");
+      if (stagedFileIds.length > 0) {
+        const { error: unstageError } = await supabase
+          .from("news_feed_media")
+          .delete()
+          .in("file_id", stagedFileIds);
+        if (unstageError) {
+          logger.warn("Failed to clear staging rows after editPost", {
+            error: unstageError.message,
+            fileIds: stagedFileIds,
+          });
+        }
+      }
     }
 
     // Auto-detect first URL in content and create link preview attachment
@@ -1050,15 +1100,15 @@ export async function deletePost(
     return { success: false, error: "Not authorised to delete this post" };
   }
 
-  // Fetch file URLs before deleting the DB record (needed for storage cleanup)
+  // Fetch Drive file IDs before deleting the DB record (needed for cleanup)
   const { data: attachments } = await supabase
     .from("post_attachments")
-    .select("file_url")
+    .select("drive_file_id")
     .eq("post_id", postId);
 
   // Delete DB record first (cascade handles attachments, reactions, comments).
-  // If this fails, file references remain valid. Orphaned files are preferable
-  // to broken DB references (orphaned files can be batch-cleaned later).
+  // If this fails, file references remain valid. Orphaned Drive files are
+  // preferable to broken DB references (orphans can be batch-cleaned later).
   const { error } = await supabase.from("posts").delete().eq("id", postId);
 
   if (error) {
@@ -1066,12 +1116,9 @@ export async function deletePost(
     return { success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Clean up storage files after successful DB delete
+  // Clean up Drive files after successful DB delete
   if (attachments && attachments.length > 0) {
-    await deleteAttachmentFiles(
-      supabase,
-      attachments.map((a) => a.file_url)
-    );
+    await deleteAttachmentFiles(attachments.map((a) => a.drive_file_id));
   }
 
   revalidatePath("/intranet", "layout");
@@ -1363,14 +1410,17 @@ export async function deleteComment(
 // ─── Attachments ─────────────────────────────────────────────────────
 
 export async function uploadPostAttachment(
-  formData: FormData
+  formData: FormData,
 ): Promise<{
   success: boolean;
   error: string | null;
   url?: string;
+  driveFileId?: string;
   fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  width?: number | null;
+  height?: number | null;
 }> {
   const { supabase, user, profile } = await getCurrentUser();
 
@@ -1383,43 +1433,181 @@ export async function uploadPostAttachment(
     return { success: false, error: "No file provided" };
   }
 
-  if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
-    return { success: false, error: "File too large (max 50MB)" };
+  // Per-type size cap. Held under Vercel Hobby's 4.5 MB platform cap on
+  // function payloads — see src/lib/intranet.ts for the constants.
+  const isImage = isImageType(file.type);
+  const cap = isImage ? IMAGE_MAX_SIZE_BYTES : DOCUMENT_MAX_SIZE_BYTES;
+  if (file.size > cap) {
+    const limitMB = cap / (1024 * 1024);
+    return { success: false, error: `File too large (max ${limitMB} MB)` };
   }
 
   if (
     !ALLOWED_FILE_TYPES.includes(
-      file.type as (typeof ALLOWED_FILE_TYPES)[number]
+      file.type as (typeof ALLOWED_FILE_TYPES)[number],
     )
   ) {
     return { success: false, error: "File type not allowed" };
   }
 
-  const fileExt = file.name.split(".").pop();
-  const uniqueName = `${crypto.randomUUID()}.${fileExt}`;
-  const filePath = `${user.id}/${uniqueName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(POST_ATTACHMENTS_BUCKET)
-    .upload(filePath, file);
-
-  if (uploadError) {
-    logger.error("Failed to upload post attachment", { error: uploadError.message });
-    return { success: false, error: "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
+  const folderId = process.env.GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID;
+  if (!folderId) {
+    logger.error("GOOGLE_DRIVE_NEWS_FEED_FOLDER_ID is not configured");
+    return {
+      success: false,
+      error: "Upload is temporarily unavailable. Please contact Helpdesk@mcrpathways.org.",
+    };
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(POST_ATTACHMENTS_BUCKET).getPublicUrl(filePath);
+  // Buffer the file for magic-byte validation + Sharp pipeline + Drive upload.
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const processed = await processUploadedImage(buffer, file.type, file.name);
+  if (!processed.ok) {
+    return { success: false, error: processed.error };
+  }
 
-  return {
-    success: true,
-    error: null,
-    url: publicUrl,
-    fileName: file.name,
-    fileSize: file.size,
-    mimeType: file.type,
-  };
+  // Upload the processed buffer to Drive under YYYY/MM (UTC) subfolders.
+  const now = new Date();
+  const yyyy = String(now.getUTCFullYear());
+  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const driveFileName = `${crypto.randomUUID()}-${sanitiseFilename(file.name) || "unnamed"}`;
+
+  let driveFileId: string | null = null;
+  try {
+    const drive = await uploadFileToDrive(
+      processed.buffer,
+      processed.mimeType,
+      driveFileName,
+      { folderId, subfolderPath: [yyyy, mm] },
+    );
+    driveFileId = drive.fileId;
+
+    // Stage the upload so the proxy can serve the converted JPEG/etc. via
+    // /api/drive-file/{id} BEFORE the post is posted. Without this row,
+    // pre-post composer thumbnails 404 because post_attachments.drive_file_id
+    // isn't populated until the post is created. createPost/editPost delete
+    // this row when promoting it to post_attachments (canonical post-creation).
+    // See migration 00088.
+    const { error: stageError } = await supabase
+      .from("news_feed_media")
+      .insert({
+        file_id: drive.fileId,
+        original_name: file.name,
+        mime_type: processed.mimeType,
+        file_size: processed.buffer.length,
+        image_width: processed.width,
+        image_height: processed.height,
+        uploaded_by: user.id,
+      });
+
+    if (stageError) {
+      // Insert failed — clean up the orphan Drive file before returning.
+      logger.error("Failed to stage uploaded media", {
+        error: stageError.message,
+        fileId: drive.fileId,
+      });
+      try {
+        await deleteFileFromDrive(drive.fileId);
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up orphaned Drive file after stage error", {
+          error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+          fileId: drive.fileId,
+        });
+      }
+      return {
+        success: false,
+        error:
+          "Failed to register uploaded file. Please contact Helpdesk@mcrpathways.org if the issue persists.",
+      };
+    }
+
+    return {
+      success: true,
+      error: null,
+      url: `/api/drive-file/${drive.fileId}`,
+      driveFileId: drive.fileId,
+      fileName: file.name,
+      fileSize: processed.buffer.length,
+      mimeType: processed.mimeType,
+      width: processed.width,
+      height: processed.height,
+    };
+  } catch (err) {
+    logger.error("Failed to upload post attachment to Drive", {
+      error: err instanceof Error ? err.message : String(err),
+      fileName: file.name,
+    });
+    // If Drive upload succeeded but a later step threw, clean up.
+    if (driveFileId) {
+      try {
+        await deleteFileFromDrive(driveFileId);
+      } catch {
+        // best-effort
+      }
+    }
+    return {
+      success: false,
+      error:
+        "Failed to upload attachment. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
+}
+
+/**
+ * Discard one or more staged Drive files.
+ *
+ * Called by the composer when the user clicks the X on a thumbnail OR
+ * when the composer is closed via the discard alert. Deletes the Drive
+ * files and their news_feed_media rows. Best-effort: failures are logged
+ * but don't surface to the user (the daily cron sweeps any orphans).
+ *
+ * Only deletes rows owned by the calling user, enforced via the DELETE
+ * RLS policy on news_feed_media.
+ */
+export async function discardStagedAttachments(
+  driveFileIds: string[],
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+  if (driveFileIds.length === 0) {
+    return { success: true, error: null };
+  }
+
+  // Belt-and-braces: only delete rows owned by this user. RLS already
+  // enforces this, but double-check at query time so we don't try to
+  // delete Drive files we shouldn't.
+  const { data: ownedRows } = await supabase
+    .from("news_feed_media")
+    .select("file_id")
+    .in("file_id", driveFileIds)
+    .eq("uploaded_by", user.id);
+
+  const ownedIds = (ownedRows ?? []).map((r) => r.file_id);
+  if (ownedIds.length === 0) {
+    return { success: true, error: null };
+  }
+
+  // Delete Drive files first. If DB delete then fails, cron will sweep
+  // the row but the Drive file is already gone (no harm).
+  await Promise.allSettled(
+    ownedIds.map((id) => deleteFileFromDrive(id)),
+  );
+
+  const { error: deleteError } = await supabase
+    .from("news_feed_media")
+    .delete()
+    .in("file_id", ownedIds);
+
+  if (deleteError) {
+    logger.warn("Failed to delete staged media rows", {
+      error: deleteError.message,
+      fileIds: ownedIds,
+    });
+  }
+
+  return { success: true, error: null };
 }
 
 export async function fetchLinkPreview(

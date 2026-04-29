@@ -78,6 +78,9 @@ function LightboxContent({
         src={currentImage.file_url || undefined}
         alt={currentImage.file_name || "Image"}
         className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+        {...(currentImage.image_width && currentImage.image_height
+          ? { width: currentImage.image_width, height: currentImage.image_height }
+          : {})}
       />
 
       {/* Next button */}
@@ -113,6 +116,12 @@ export function ImageLightbox({
         <DialogPrimitive.Content
           className="fixed inset-0 z-50 flex items-center justify-center focus:outline-none"
           aria-describedby={undefined}
+          // Click on the backdrop (empty space around the image) closes the
+          // lightbox. Children (image, buttons) don't trigger this because
+          // the click target is the child, not the Content itself.
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onOpenChange(false);
+          }}
         >
           {/* Key forces remount on each open, so initialIndex is always fresh */}
           <LightboxContent

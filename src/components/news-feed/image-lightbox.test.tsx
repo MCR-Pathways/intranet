@@ -16,10 +16,13 @@ function makeImage(id: string, name: string): PostAttachment {
     id,
     post_id: "post-1",
     attachment_type: "image",
-    file_url: `https://example.com/${name}.jpg`,
+    file_url: `/api/drive-file/${id}`,
+    drive_file_id: id,
     file_name: name,
     file_size: 1024,
     mime_type: "image/jpeg",
+    image_width: 800,
+    image_height: 600,
     link_url: null,
     link_title: null,
     link_description: null,
@@ -50,7 +53,7 @@ describe("ImageLightbox", () => {
       />
     );
     const img = screen.getByRole("img");
-    expect(img).toHaveAttribute("src", "https://example.com/cat.jpg");
+    expect(img).toHaveAttribute("src", "/api/drive-file/img-1");
     expect(img).toHaveAttribute("alt", "cat");
   });
 
@@ -64,7 +67,7 @@ describe("ImageLightbox", () => {
       />
     );
     const img = screen.getByRole("img");
-    expect(img).toHaveAttribute("src", "https://example.com/bird.jpg");
+    expect(img).toHaveAttribute("src", "/api/drive-file/img-3");
   });
 
   it("renders nothing when open is false", () => {
@@ -155,6 +158,48 @@ describe("ImageLightbox", () => {
     await user.click(buttons[2]);
 
     expect(screen.getByText("2 / 3")).toBeInTheDocument();
+  });
+
+  // =============================================
+  // Backdrop click
+  // =============================================
+
+  it("closes when the backdrop is clicked", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    // Click the Dialog Content directly (the backdrop area around the image).
+    // The handler only fires when the click target IS the Content element,
+    // so we have to dispatch the event on it directly rather than through
+    // userEvent (which simulates clicks on child pixels).
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("does not close when the image itself is clicked", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(
+      <ImageLightbox
+        images={threeImages}
+        initialIndex={0}
+        open={true}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    await user.click(screen.getByRole("img"));
+
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   // =============================================

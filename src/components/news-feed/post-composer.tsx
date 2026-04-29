@@ -97,9 +97,12 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         attachments: attachments.map((a) => ({
           attachment_type: a.type,
           file_url: a.file_url,
+          drive_file_id: a.drive_file_id,
           file_name: a.file_name,
           file_size: a.file_size,
           mime_type: a.mime_type,
+          image_width: a.image_width,
+          image_height: a.image_height,
         })),
         ...(pollData
           ? {
