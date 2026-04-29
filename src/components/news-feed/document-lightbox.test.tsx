@@ -34,7 +34,7 @@ describe("DocumentLightbox", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the iframe pointing at the proxy URL for PDFs with #toolbar=0", () => {
+  it("renders the iframe pointing at the proxy URL for PDFs", () => {
     const { container } = render(
       <DocumentLightbox
         doc={makeDoc()}
@@ -46,10 +46,12 @@ describe("DocumentLightbox", () => {
       "iframe",
     ) as HTMLIFrameElement;
     expect(iframe).not.toBeNull();
-    expect(iframe.src).toContain("/api/drive-file/abc123");
-    // Fragment hides Chrome's PDF viewer top toolbar (avoids duplication
-    // with our own toolbar + suppresses the PDF /Title metadata header)
-    expect(iframe.src).toContain("#toolbar=0");
+    // Plain proxy URL — no #toolbar=0 fragment. Chromium's full PDF
+    // viewer toolbar is intentionally visible (familiar UX); duplication
+    // is avoided by us not adding our own toolbar.
+    expect(iframe.src).toBe(
+      "http://localhost:3000/api/drive-file/abc123",
+    );
     expect(iframe.title).toBe("policy.pdf");
   });
 
@@ -75,36 +77,7 @@ describe("DocumentLightbox", () => {
     expect(iframe.title).toBe("memo.docx");
   });
 
-  it("shows page count for PDFs", () => {
-    render(
-      <DocumentLightbox doc={makeDoc()} open={true} onOpenChange={() => {}} />,
-    );
-    expect(screen.getByText("12 pages")).toBeInTheDocument();
-  });
-
-  it("uses singular 'page' when page_count is 1", () => {
-    render(
-      <DocumentLightbox
-        doc={makeDoc({ page_count: 1 })}
-        open={true}
-        onOpenChange={() => {}}
-      />,
-    );
-    expect(screen.getByText("1 page")).toBeInTheDocument();
-  });
-
-  it("hides page count when page_count is null", () => {
-    render(
-      <DocumentLightbox
-        doc={makeDoc({ page_count: null })}
-        open={true}
-        onOpenChange={() => {}}
-      />,
-    );
-    expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
-  });
-
-  it("Open-in-new-tab anchor goes to the proxy URL for PDFs", () => {
+  it("Open-in-new-tab floating button goes to the proxy URL for PDFs", () => {
     render(
       <DocumentLightbox doc={makeDoc()} open={true} onOpenChange={() => {}} />,
     );
@@ -114,7 +87,7 @@ describe("DocumentLightbox", () => {
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
   });
 
-  it("Open-in-new-tab anchor goes to Drive's /view URL for non-PDFs", () => {
+  it("Open-in-new-tab floating button goes to Drive's /view URL for non-PDFs", () => {
     render(
       <DocumentLightbox
         doc={makeDoc({
@@ -132,17 +105,6 @@ describe("DocumentLightbox", () => {
     );
   });
 
-  it("Download anchor uses the proxy URL with download attribute", () => {
-    render(
-      <DocumentLightbox doc={makeDoc()} open={true} onOpenChange={() => {}} />,
-    );
-    const link = screen.getByLabelText(
-      "Download policy.pdf",
-    ) as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe("/api/drive-file/abc123");
-    expect(link.getAttribute("download")).toBe("policy.pdf");
-  });
-
   it("Close button calls onOpenChange(false)", () => {
     const onOpenChange = vi.fn();
     render(
@@ -154,5 +116,15 @@ describe("DocumentLightbox", () => {
     );
     fireEvent.click(screen.getByLabelText("Close"));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("does not render its own download/print/page-count chrome (delegates to Chromium / Drive viewers)", () => {
+    render(
+      <DocumentLightbox doc={makeDoc()} open={true} onOpenChange={() => {}} />,
+    );
+    // No download anchor or visible page-count text in the lightbox —
+    // Chromium's PDF toolbar / Drive's preview header handle those.
+    expect(screen.queryByLabelText(/^Download /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/12 pages/)).not.toBeInTheDocument();
   });
 });

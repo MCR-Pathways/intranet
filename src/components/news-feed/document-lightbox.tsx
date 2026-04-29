@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-import { X, Download, ExternalLink, Loader2 } from "lucide-react";
+import { X, ExternalLink, Loader2 } from "lucide-react";
 import type { PostAttachment } from "@/types/database.types";
-import { resolveFileType } from "@/lib/file-types";
 
 interface DocumentLightboxProps {
   doc: PostAttachment | null;
@@ -16,18 +15,25 @@ interface DocumentLightboxProps {
 /**
  * In-app modal for previewing document attachments. Two render paths:
  *
- *   - PDFs: iframe loads our proxy URL (`/api/drive-file/{id}`) which serves
- *     `Content-Disposition: inline` for application/pdf. Browser's native
- *     PDF viewer renders inside the iframe (page nav, zoom, search, print
- *     all available via the viewer's own toolbar).
+ *   - PDFs: iframe loads our proxy URL (`/api/drive-file/{id}`). The
+ *     proxy serves `Content-Disposition: inline` for application/pdf,
+ *     so Chrome's native PDF viewer renders inside with its full
+ *     toolbar — page nav, zoom, search, download, print all available
+ *     via the familiar Chromium UI.
  *
  *   - Non-PDFs (DOCX, XLSX, PPTX, TXT, CSV): iframe loads Drive's
- *     `https://drive.google.com/file/d/{id}/preview` URL. The upload
- *     pipeline domain-shares each file with mcrpathways.org so signed-in
- *     MCR users have access via their own Google identity.
+ *     `https://drive.google.com/file/d/{id}/preview` URL. Drive's
+ *     embedded viewer shows its own toolbar with download/print/etc.
+ *     The upload pipeline domain-shares each file with mcrpathways.org
+ *     so signed-in MCR users have access via their own Google identity.
  *
- * Mirrors image-lightbox.tsx structure: DialogPrimitive directly, no
- * styled Dialog wrapper. Backdrop click closes; ESC closes.
+ * The modal itself adds NO toolbar of its own — that would duplicate
+ * Chromium's PDF toolbar / Drive's preview header. Two floating buttons
+ * sit on the dark backdrop top-right (matching image-lightbox.tsx
+ * style): "Open in new tab" and "Close". Neither is provided by
+ * Chromium PDF viewer or Drive preview, so no duplication.
+ *
+ * Backdrop click closes; ESC closes (Radix default).
  */
 export function DocumentLightbox({
   doc,
@@ -41,15 +47,8 @@ export function DocumentLightbox({
   const proxyUrl = doc.file_url ?? "";
   const driveFileId = doc.drive_file_id ?? "";
 
-  // #toolbar=0 hides Chrome's PDF viewer top toolbar inside the iframe,
-  // which otherwise duplicates our toolbar (download, print, etc.) and
-  // shows the PDF's /Title metadata (set when the source Google Doc was
-  // exported, often unrelated to the user's chosen filename). PDFium
-  // respects this flag; the bottom-right zoom widget stays visible.
-  // newTabUrl deliberately omits the flag so the full Chrome viewer
-  // renders when users want it.
   const iframeSrc = isPdf
-    ? `${proxyUrl}#toolbar=0`
+    ? proxyUrl
     : `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview`;
 
   const newTabUrl = isPdf
@@ -71,17 +70,37 @@ export function DocumentLightbox({
             <DialogPrimitive.Title>{filename}</DialogPrimitive.Title>
           </VisuallyHidden.Root>
 
+          {/* Floating top-right controls on the backdrop. Stay outside
+              the document panel so they don't visually compete with
+              Chromium's / Drive's own chrome inside the iframe. */}
+          <div className="absolute right-4 top-4 z-10 flex gap-2">
+            <a
+              href={newTabUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
+              aria-label="Open in new tab"
+              title="Open in new tab"
+            >
+              <ExternalLink className="h-5 w-5" />
+            </a>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"
+              aria-label="Close"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
           {/* Key forces remount when the doc changes, resetting iframe + loading state */}
           <LightboxBody
             key={doc.id}
             iframeSrc={iframeSrc}
-            newTabUrl={newTabUrl}
-            downloadUrl={proxyUrl}
             filename={filename}
-            mimeType={doc.mime_type}
-            pageCount={doc.page_count}
             isPdf={isPdf}
-            onClose={() => onOpenChange(false)}
           />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -91,102 +110,37 @@ export function DocumentLightbox({
 
 interface LightboxBodyProps {
   iframeSrc: string;
-  newTabUrl: string;
-  downloadUrl: string;
   filename: string;
-  mimeType: string | null;
-  pageCount: number | null;
   isPdf: boolean;
-  onClose: () => void;
 }
 
-function LightboxBody({
-  iframeSrc,
-  newTabUrl,
-  downloadUrl,
-  filename,
-  mimeType,
-  pageCount,
-  isPdf,
-  onClose,
-}: LightboxBodyProps) {
+function LightboxBody({ iframeSrc, filename, isPdf }: LightboxBodyProps) {
   const [loading, setLoading] = useState(true);
-  const fileType = resolveFileType(mimeType, filename);
 
-  // Defensive timeout: if the iframe's load event never fires (rare network
-  // edge cases / cross-origin quirks), hide the spinner after 8s so the
-  // user isn't stuck looking at a "Loading…" overlay.
+  // Defensive timeout: if the iframe's load event never fires (rare
+  // network edge cases / cross-origin quirks), hide the spinner after 8s
+  // so the user isn't stuck looking at a "Loading…" overlay.
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 8000);
     return () => clearTimeout(timer);
   }, []);
 
-  const downloadFilename = filename.includes(".")
-    ? filename
-    : `${filename}.${fileType.label.toLowerCase()}`;
-
   const loadingLabel = isPdf ? "Loading PDF…" : "Loading document…";
 
   return (
-    <div className="bg-card rounded-lg shadow-2xl overflow-hidden w-full max-w-5xl h-[90vh] flex flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3 shrink-0">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" title={filename}>
-            {filename}
-          </p>
-          {pageCount != null && (
-            <p className="text-xs text-muted-foreground">
-              {pageCount} {pageCount === 1 ? "page" : "pages"}
-            </p>
-          )}
+    <div className="relative h-[90vh] w-full max-w-5xl overflow-hidden rounded-lg bg-card shadow-2xl">
+      {loading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-muted text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {loadingLabel}
         </div>
-
-        <a
-          href={newTabUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label="Open in new tab"
-          title="Open in new tab"
-        >
-          <ExternalLink className="h-4 w-4" />
-        </a>
-
-        <a
-          href={downloadUrl}
-          download={downloadFilename}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label={`Download ${filename}`}
-          title="Download"
-        >
-          <Download className="h-4 w-4" />
-        </a>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label="Close"
-          title="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="relative flex-1 bg-muted">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-muted text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {loadingLabel}
-          </div>
-        )}
-        <iframe
-          src={iframeSrc}
-          title={filename}
-          className="absolute inset-0 h-full w-full border-0"
-          onLoad={() => setLoading(false)}
-        />
-      </div>
+      )}
+      <iframe
+        src={iframeSrc}
+        title={filename}
+        className="absolute inset-0 h-full w-full border-0"
+        onLoad={() => setLoading(false)}
+      />
     </div>
   );
 }
