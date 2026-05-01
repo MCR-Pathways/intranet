@@ -217,9 +217,8 @@ export function CommentSection({
                       />
                     </div>
                     <Button
-                      size="icon-xs"
-                      variant="ghost"
-                      className="shrink-0 self-end"
+                      size="icon"
+                      className="rounded-full shrink-0 self-end"
                       onClick={() => handleReplySubmit(comment.id)}
                       disabled={isPending || !replyContent.trim()}
                       aria-busy={isPending}
@@ -265,9 +264,8 @@ export function CommentSection({
             />
           </div>
           <Button
-            size="icon-sm"
-            variant="ghost"
-            className="shrink-0 self-end"
+            size="icon"
+            className="rounded-full shrink-0 self-end"
             onClick={handleSubmit}
             disabled={isPending || !newComment.trim()}
             aria-busy={isPending}

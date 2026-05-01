@@ -401,7 +401,6 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
                   {renderOptionEditor(editOptions, setEditOptions, editQuestionType)}
                   <div className="flex gap-2">
                     <Button
-                      size="sm"
                       onClick={handleSaveEdit}
                       disabled={isPending}
                     >
@@ -411,8 +410,7 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
                       Save
                     </Button>
                     <Button
-                      size="sm"
-                      variant="ghost"
+                      variant="secondary"
                       onClick={() => setEditingId(null)}
                     >
                       Cancel

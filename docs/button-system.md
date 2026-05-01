@@ -232,6 +232,7 @@ Pick the slot by the structural test, not by intuition:
 | Sidebar nav item | `<Button variant="ghost" asChild><Link>`. Active state: `aria-current="page"` + `bg-accent`. |
 | Notification bell | `<Button variant="ghost" size="icon" aria-label="Notifications">` with `<Bell />`. Badge absolutely positioned. |
 | Avatar menu trigger | `<DropdownMenuTrigger asChild><Button variant="ghost" className="rounded-full">` with `<Avatar>`. |
+| Inline Submit / Send icon (chat composer) | `<Button size="icon" className="rounded-full">` with `<Send />`. **Default variant** — Send is a Submit, which is a primary CTA. Resist the chat-app instinct to use `ghost` here; the button-system rule "never use ghost for the primary CTA of a view" applies even when the icon is universal. `rounded-full` overrides the base `rounded-lg` to land the chat-app circle convention. Surfaced in PR #282 audit. |
 
 ## Do not do
 
@@ -241,7 +242,8 @@ Pick the slot by the structural test, not by intuition:
 - Do not use `className="h-X w-X"` on Button — use the `size` prop.
 - Do not add `variant="action"` — the variant was removed.
 - Do not use `variant="destructive"` on an inline row trigger — use `ghost` + tinted hover, or move into the kebab.
-- Do not use the `sm` size for a primary CTA — fails WCAG touch-target on Chromebooks.
+- Do not use the `sm` size for a primary CTA — fails WCAG touch-target on Chromebooks. Same rule applies to icon-only equivalents: never `icon-sm` or `icon-xs` for a Submit / Send / Save / Approve. Use `icon` (h-10 w-10).
+- Do not use `variant="ghost"` for any of: Save, Submit, Cancel, Clear, Reset, Approve, Publish, Send. These are all primary CTAs (Cancel sits in the secondary-by-intent group). Smoke-test on PR #282 found 8 instances of this regression spread across 6 files — comment-edit Save read identically grey to Cancel, chat-composer send buttons faded into the toolbar, quiz inline editors had Cancel-as-ghost paired with sm sizes that fail the touch-target rule. Cancel/Clear/Reset → `secondary`. Save/Submit/Send/Approve/Publish → `default` (or `success` if irreversible). Inline-editor toolbars are not exempt; "small container" is not a justification for ghost-on-primary or sm-on-primary.
 
 ## See also
 

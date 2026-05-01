@@ -324,7 +324,7 @@ export function LinkGoogleDocDialog({
 
         <DialogFooter>
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >

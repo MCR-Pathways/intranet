@@ -201,8 +201,6 @@ export function CommentItem({
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="sm"
                       onClick={handleSaveEdit}
                       disabled={isPending || !editContent.trim()}
                       aria-busy={isPending}
@@ -213,7 +211,6 @@ export function CommentItem({
                     <Button
                       type="button"
                       variant="secondary"
-                      size="sm"
                       onClick={handleCancelEdit}
                       disabled={isPending}
                     >

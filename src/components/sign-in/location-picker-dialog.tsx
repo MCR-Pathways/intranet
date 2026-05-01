@@ -172,7 +172,7 @@ export function LocationPickerDialog({
         <DialogFooter className="flex-row justify-between sm:justify-between">
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             onClick={handleClear}
             disabled={!existingEntry || isPending}
           >
