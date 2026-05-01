@@ -217,8 +217,7 @@ export function CommentSection({
                       />
                     </div>
                     <Button
-                      size="icon-xs"
-                      variant="ghost"
+                      size="icon"
                       className="shrink-0 self-end"
                       onClick={() => handleReplySubmit(comment.id)}
                       disabled={isPending || !replyContent.trim()}
@@ -265,8 +264,7 @@ export function CommentSection({
             />
           </div>
           <Button
-            size="icon-sm"
-            variant="ghost"
+            size="icon"
             className="shrink-0 self-end"
             onClick={handleSubmit}
             disabled={isPending || !newComment.trim()}

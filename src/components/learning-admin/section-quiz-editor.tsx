@@ -513,15 +513,14 @@ export function SectionQuizEditor({
                 Active
               </Label>
             </div>
-            <Button size="sm" onClick={handleSaveMeta} disabled={isPending} aria-busy={isPending}>
+            <Button onClick={handleSaveMeta} disabled={isPending} aria-busy={isPending}>
               {isPending ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : null}
               Save
             </Button>
             <Button
-              size="sm"
-              variant="ghost"
+              variant="secondary"
               onClick={() => {
                 setMetaTitle(quiz.title);
                 setMetaPassingScore(quiz.passing_score);
@@ -638,7 +637,6 @@ export function SectionQuizEditor({
                 )}
                 <div className="flex gap-2">
                   <Button
-                    size="sm"
                     onClick={handleSaveEditQuestion}
                     disabled={isPending}
                     aria-busy={isPending}
@@ -649,8 +647,7 @@ export function SectionQuizEditor({
                     Save
                   </Button>
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    variant="secondary"
                     onClick={() => setEditingId(null)}
                   >
                     Cancel
