@@ -92,6 +92,19 @@
 
 ## Remaining Work
 
+### Intranet redesign (in progress)
+
+Multi-PR initiative responding to design feedback (April 2026). Full research and per-workstream PR proposals in [docs/intranet-redesign-research.md](./intranet-redesign-research.md). Anti-bland frontend playbook (referenced before any UI work) in [docs/frontend-design-playbook.md](./frontend-design-playbook.md).
+
+- [x] **W1** — Width sweep + DailyBanner alignment with centre column on `/intranet`. New `src/lib/layout.ts`, `--centre-column` CSS variable, AppLayout wrapper. PR #284.
+- [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Visible at xl (≥1280px); hidden at lg/md/sm with a tab fallback inside the feed page at md.
+- [ ] **W3** — Greeting banner (permanent) + attention banner (conditional, capped at 3, per-item dismiss). Replaces / supplements DailyBanner.
+- [ ] **W4** — Type-pill differentiation on feed cards (tonal Badge in header line; `default`/`success`/`warning` variants matching existing Tool Shed accents). No filter tabs at our scale.
+- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts).
+- [ ] **W6** — Quick-actions rail (role-aware, state-aware; lives in W2's right rail). Audit shortlist in research doc §1.
+- [ ] **W7** — Composer redesign (3-step modal: type picker → form → preview & send).
+- [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only).
+
 ### HR Phase 3
 - [ ] Surveys & pulse checks
 - [ ] DEI / equality monitoring
@@ -121,7 +134,6 @@
 
 ### Larger Features
 - [ ] Kiosk PWA — see `memory/kiosk-overhaul.md` for full requirements
-- [ ] Intranet RHS sidebar (feed stays ~590px, add sidebar alongside)
 - [ ] Google People API photo sync (replace URL-based avatar filter with DB-level flag)
 - [ ] Intranet surveys (multi-question, 5 types, anonymous option, results dashboard)
 
