@@ -52,7 +52,7 @@ export default async function IntranetPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-[590px] space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="News Feed"
         subtitle="Stay updated with the latest news and announcements"

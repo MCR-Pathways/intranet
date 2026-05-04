@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useCallback, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import type { CSSProperties } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { DailyBanner } from "@/components/sign-in/daily-banner";
 import { cn } from "@/lib/utils";
+import { getCentreColumnCSS } from "@/lib/layout";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 import type { NotificationData } from "@/types/notification";
@@ -69,6 +72,16 @@ export function AppLayout({ children, user, profile, initialNotifications, daily
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
+  // Centre-column width for the current route. When set, AppLayout exposes
+  // it via the `--centre-column` CSS variable on <main> so the DailyBanner
+  // (rendered above page content) and the page wrapper below share the same
+  // constrained width. Source of truth: src/lib/layout.ts.
+  const pathname = usePathname();
+  const centreColumnCSS = getCentreColumnCSS(pathname);
+  const mainStyle = centreColumnCSS
+    ? ({ "--centre-column": centreColumnCSS } as CSSProperties)
+    : undefined;
+
   const toggleSidebar = useCallback(() => {
     try {
       const next = !getSidebarSnapshot();
@@ -122,12 +135,17 @@ export function AppLayout({ children, user, profile, initialNotifications, daily
             "flex-1 min-h-[calc(100vh-4rem)] transition-[margin] duration-200",
             isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
+          style={mainStyle}
         >
           <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
             {dailyBannerType && (
-              <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
+              <div className="mx-auto max-w-[var(--centre-column,100%)]">
+                <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
+              </div>
             )}
-            {children}
+            <div className="mx-auto max-w-[var(--centre-column,100%)]">
+              {children}
+            </div>
           </div>
         </main>
       </div>

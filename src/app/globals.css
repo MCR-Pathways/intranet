@@ -58,6 +58,13 @@
 
   /* Border Radius */
   --radius: 0.75rem;
+
+  /* Centre-column width for routes that constrain their main content.
+     AppLayout sets a per-route override on <main> via inline style; routes
+     without an override inherit this 100% default. Used by Tailwind classes
+     of the form `max-w-[var(--centre-column,100%)]`. Source of truth for
+     which routes constrain: src/lib/layout.ts. */
+  --centre-column: 100%;
 }
 
 .dark {
