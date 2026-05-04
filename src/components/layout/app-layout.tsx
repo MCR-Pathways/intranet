@@ -143,7 +143,9 @@ export function AppLayout({ children, user, profile, initialNotifications, daily
                 <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
               </div>
             )}
-            {children}
+            <div className="mx-auto max-w-[var(--centre-column,100%)]">
+              {children}
+            </div>
           </div>
         </main>
       </div>

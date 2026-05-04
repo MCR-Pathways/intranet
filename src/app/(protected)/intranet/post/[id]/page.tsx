@@ -35,7 +35,7 @@ export default async function PostPage({
 
   if (!post) {
     return (
-      <div className="mx-auto max-w-[var(--centre-column,100%)] space-y-6">
+      <div className="space-y-6">
         <PageHeader title="Post" subtitle="View a specific post" />
         <div className="rounded-xl bg-card p-8 text-center shadow-md">
           <p className="text-muted-foreground">
@@ -65,7 +65,7 @@ export default async function PostPage({
   };
 
   return (
-    <div className="mx-auto max-w-[var(--centre-column,100%)] space-y-4">
+    <div className="space-y-4">
       <Link
         href="/intranet"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
