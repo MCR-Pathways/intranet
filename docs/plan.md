@@ -97,7 +97,7 @@
 Multi-PR initiative responding to design feedback (April 2026). Full research and per-workstream PR proposals in [docs/intranet-redesign-research.md](./intranet-redesign-research.md). Anti-bland frontend playbook (referenced before any UI work) in [docs/frontend-design-playbook.md](./frontend-design-playbook.md).
 
 - [x] **W1** — Width sweep + DailyBanner alignment with centre column on `/intranet`. New `src/lib/layout.ts`, `--centre-column` CSS variable, AppLayout wrapper. PR #284.
-- [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Hides at lg, tab fallback at md, full hide at sm.
+- [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Visible at xl (≥1280px); hidden at lg/md/sm with a tab fallback inside the feed page at md.
 - [ ] **W3** — Greeting banner (permanent) + attention banner (conditional, capped at 3, per-item dismiss). Replaces / supplements DailyBanner.
 - [ ] **W4** — Type-pill differentiation on feed cards (tonal Badge in header line; `default`/`success`/`warning` variants matching existing Tool Shed accents). No filter tabs at our scale.
 - [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts).
