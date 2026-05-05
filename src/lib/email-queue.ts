@@ -62,14 +62,13 @@ export async function isEmailEnabled(
     return true;
   }
 
-  // email_preferences table exists in DB but is not yet in database.types.ts
   const supabase = createServiceClient();
-  const { data } = (await supabase
-    .from("email_preferences" as never)
+  const { data } = await supabase
+    .from("email_preferences")
     .select("enabled")
     .eq("user_id", userId)
     .eq("email_type", emailType)
-    .single()) as { data: { enabled: boolean } | null };
+    .single();
 
   // Default to enabled if no preference exists
   return data?.enabled ?? true;
@@ -106,8 +105,7 @@ export async function queueEmail(
 
   const supabase = createServiceClient();
 
-  // email_notifications has columns not yet in database.types.ts (body_html, status, entity_id, entity_type)
-  const { error } = (await supabase.from("email_notifications").insert({
+  const { error } = await supabase.from("email_notifications").insert({
     user_id: params.userId,
     email_type: params.emailType,
     subject: params.subject,
@@ -119,7 +117,7 @@ export async function queueEmail(
       recipient_email: params.email,
     },
     status: "pending",
-  } as never)) as { error: { message: string; code?: string } | null };
+  });
 
   if (error) {
     // Dedup conflict — email already queued for this user+type+entity
@@ -161,9 +159,8 @@ export async function sendAndLogEmail(
   const result = await sendEmail(params.email, params.subject, params.bodyHtml);
 
   // Log to email_notifications as audit trail
-  // email_notifications has columns not yet in database.types.ts
   const supabase = createServiceClient();
-  const { error: insertError } = (await supabase.from("email_notifications").insert({
+  const { error: insertError } = await supabase.from("email_notifications").insert({
     user_id: params.userId,
     email_type: params.emailType,
     subject: params.subject,
@@ -178,7 +175,7 @@ export async function sendAndLogEmail(
     sent_at: result.success ? new Date().toISOString() : null,
     error_message: result.error ?? null,
     retry_count: 0,
-  } as never)) as { error: { message: string } | null };
+  });
 
   if (insertError) {
     logger.warn("Email sent but audit log insert failed", {

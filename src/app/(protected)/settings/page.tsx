@@ -28,7 +28,6 @@ export default async function SettingsPage() {
   }
 
   // Fetch user profile, patterns, and email preferences in parallel
-  // email_preferences table exists in DB but is not yet in database.types.ts
   const [{ data: profile }, patternData, { data: emailPrefs }] = await Promise.all([
     supabase
       .from("profiles")
@@ -39,9 +38,9 @@ export default async function SettingsPage() {
       .single(),
     getMyPatterns(),
     supabase
-      .from("email_preferences" as never)
+      .from("email_preferences")
       .select("email_type, enabled")
-      .eq("user_id", user.id) as unknown as Promise<{ data: { email_type: string; enabled: boolean }[] | null }>,
+      .eq("user_id", user.id),
   ]);
 
   // Build preferences map: emailType → enabled (missing = default true)

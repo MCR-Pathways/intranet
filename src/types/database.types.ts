@@ -987,30 +987,72 @@ export type Database = {
       }
       email_notifications: {
         Row: {
+          body_html: string | null
           created_at: string
           email_type: string
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
           id: string
           metadata: Json | null
+          retry_count: number
           sent_at: string | null
+          status: string
           subject: string
           user_id: string
         }
         Insert: {
+          body_html?: string | null
           created_at?: string
           email_type: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
           id?: string
           metadata?: Json | null
+          retry_count?: number
           sent_at?: string | null
+          status?: string
           subject: string
           user_id: string
         }
         Update: {
+          body_html?: string | null
           created_at?: string
           email_type?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
           id?: string
           metadata?: Json | null
+          retry_count?: number
           sent_at?: string | null
+          status?: string
           subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_preferences: {
+        Row: {
+          email_type: string
+          enabled: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          email_type: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          email_type?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
