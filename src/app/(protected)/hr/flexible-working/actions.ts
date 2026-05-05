@@ -414,12 +414,16 @@ export async function createFlexibleWorkingRequest(data: {
       sourceId: requestId,
     }));
 
-    const { error: notifError } = await createNotifications(notifRows);
-    if (notifError) {
-      logger.warn("Failed to send FWR submission notifications", {
-        requestId,
-        error: notifError.message,
-      });
+    try {
+      const { error: notifError } = await createNotifications(notifRows);
+      if (notifError) {
+        logger.warn("Failed to send FWR submission notifications", {
+          requestId,
+          error: notifError.message,
+        });
+      }
+    } catch (err) {
+      logger.warn("Failed to send FWR submission notifications", { requestId, error: err });
     }
   }
 

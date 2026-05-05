@@ -761,20 +761,34 @@ export async function submitRTWForm(
     return { success: false, error: "Could not submit form. It may have already been submitted." };
   }
 
-  // Send notification to employee
+  // Send notification to employee. Wrap in try/catch so a thrown exception
+  // (e.g. service-client env-var failure or network error) still triggers
+  // the rollback path; without this, the form would stay 'submitted' with
+  // no notification sent.
   const employeeId = form.employee_id as string;
-  const { error: notifError } = await createNotification({
-    userId: employeeId,
-    type: "rtw_confirmation_required",
-    title: "Return-to-Work Form Ready",
-    message: "Your manager has completed a return-to-work form for your recent absence. Please review and confirm.",
-    link: `/hr/absence/rtw/${formId}`,
-    metadata: { form_id: formId, absence_id: form.absence_record_id },
-    sourceKind: NOTIFICATION_SOURCE_KINDS.RTW_FORM,
-    sourceId: formId,
-  });
+  let notifError: { message: string } | null = null;
+  try {
+    const { error } = await createNotification({
+      userId: employeeId,
+      type: "rtw_confirmation_required",
+      title: "Return-to-Work Form Ready",
+      message: "Your manager has completed a return-to-work form for your recent absence. Please review and confirm.",
+      link: `/hr/absence/rtw/${formId}`,
+      metadata: { form_id: formId, absence_id: form.absence_record_id },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.RTW_FORM,
+      sourceId: formId,
+    });
+    notifError = error;
+  } catch (err) {
+    notifError = { message: err instanceof Error ? err.message : String(err) };
+  }
 
   if (notifError) {
+    logger.error("Failed to send RTW notification, rolling back form status", {
+      formId,
+      employeeId,
+      error: notifError.message,
+    });
     // Rollback: revert form status to draft so it can be resubmitted
     const { error: rollbackError } = await supabase
       .from("return_to_work_forms")
