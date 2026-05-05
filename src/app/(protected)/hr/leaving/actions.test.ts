@@ -43,6 +43,17 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/lib/notifications", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/notifications")>(
+    "@/lib/notifications",
+  );
+  return {
+    ...actual,
+    createNotification: vi.fn().mockResolvedValue({ error: null }),
+    createNotifications: vi.fn().mockResolvedValue({ error: null }),
+  };
+});
+
 // ── Import modules under test ──
 
 import {
@@ -56,6 +67,7 @@ import {
   fetchLeavingFormSummary,
 } from "@/app/(protected)/hr/leaving/actions";
 import { getCurrentUser, requireHRAdmin } from "@/lib/auth";
+import { createNotifications } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
 
 // ── Chainable mock helper ──
@@ -430,6 +442,17 @@ describe("HR Leaving Actions", () => {
       updateResult?: { data: unknown; error: unknown };
       notifError?: boolean;
     }) {
+      if (opts?.notifError) {
+        vi.mocked(createNotifications).mockResolvedValueOnce({
+          error: {
+            message: "Notification failed",
+            details: "",
+            hint: "",
+            code: "",
+            name: "PostgrestError",
+          },
+        });
+      }
       const callLog: string[] = [];
       mockFrom.mockImplementation((table: string) => {
         callLog.push(table);

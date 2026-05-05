@@ -1894,37 +1894,49 @@ export type Database = {
       }
       notifications: {
         Row: {
+          cleared_at: string | null
           created_at: string | null
           id: string
+          is_cleared: boolean
           is_read: boolean | null
           link: string | null
           message: string
           metadata: Json | null
           read_at: string | null
+          source_id: string | null
+          source_kind: string | null
           title: string
           type: string
           user_id: string
         }
         Insert: {
+          cleared_at?: string | null
           created_at?: string | null
           id?: string
+          is_cleared?: boolean
           is_read?: boolean | null
           link?: string | null
           message: string
           metadata?: Json | null
           read_at?: string | null
+          source_id?: string | null
+          source_kind?: string | null
           title: string
           type: string
           user_id: string
         }
         Update: {
+          cleared_at?: string | null
           created_at?: string | null
           id?: string
+          is_cleared?: boolean
           is_read?: boolean | null
           link?: string | null
           message?: string
           metadata?: Json | null
           read_at?: string | null
+          source_id?: string | null
+          source_kind?: string | null
           title?: string
           type?: string
           user_id?: string

@@ -10,6 +10,7 @@ import {
 import type { LeavingReason } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -329,23 +330,36 @@ export async function submitLeavingForm(
   const notifRows = (hrAdmins ?? [])
     .filter((admin) => (admin.id as string) !== user.id)
     .map((admin) => ({
-      user_id: admin.id as string,
+      userId: admin.id as string,
       type: "staff_leaving_submitted",
       title: "Leaving Form Submitted",
       message: `A leaving form has been submitted for ${employeeName}. Leaving date: ${leavingDate}.`,
       link: `/hr/leaving/${formId}`,
       metadata: { form_id: formId, profile_id: form.profile_id },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.STAFF_LEAVING_FORM,
+      sourceId: formId,
     }));
 
   let notifFailed = false;
+  let notifFailureMessage: string | null = null;
   if (notifRows.length > 0) {
-    const { error: notifError } = await supabase.from("notifications").insert(notifRows);
-    if (notifError) {
+    try {
+      const { error: notifError } = await createNotifications(notifRows);
+      if (notifError) {
+        notifFailed = true;
+        notifFailureMessage = notifError.message;
+      }
+    } catch (err) {
       notifFailed = true;
+      notifFailureMessage = err instanceof Error ? err.message : String(err);
     }
   }
 
   if (notifFailed) {
+    logger.error("Failed to send leaving submission notifications, rolling back form status", {
+      formId,
+      error: notifFailureMessage,
+    });
     // Rollback: revert form status to draft
     const { error: rollbackError } = await supabase
       .from("staff_leaving_forms")
@@ -523,14 +537,31 @@ export async function completeLeavingForm(
 
     const employeeName = (employee?.full_name as string) ?? "Unknown";
 
-    await supabase.from("notifications").insert({
-      user_id: initiatedBy,
-      type: "staff_leaving_completed",
-      title: "Offboarding Completed",
-      message: `The offboarding process for ${employeeName} has been completed.`,
-      link: `/hr/leaving/${formId}`,
-      metadata: { form_id: formId, profile_id: profileId },
-    });
+    try {
+      const { error: notifError } = await createNotification({
+        userId: initiatedBy,
+        type: "staff_leaving_completed",
+        title: "Offboarding Completed",
+        message: `The offboarding process for ${employeeName} has been completed.`,
+        link: `/hr/leaving/${formId}`,
+        metadata: { form_id: formId, profile_id: profileId },
+        sourceKind: NOTIFICATION_SOURCE_KINDS.STAFF_LEAVING_FORM,
+        sourceId: formId,
+      });
+      if (notifError) {
+        logger.warn("Failed to send leaving completion notification", {
+          formId,
+          profileId,
+          error: notifError.message,
+        });
+      }
+    } catch (err) {
+      logger.warn("Failed to send leaving completion notification", {
+        formId,
+        profileId,
+        error: err,
+      });
+    }
   }
 
   revalidateLeavingPaths(profileId);
