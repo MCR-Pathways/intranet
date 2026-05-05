@@ -241,7 +241,7 @@ Norman's distinction matters in UI because **affordances are invisible without s
 
 The most common signifier failure. NN/g: "a text label must be present alongside an icon" — labels should be permanent, not hidden behind hover (source verified — `nngroup.com/articles/icon-usability/`). Few icons are universally recognised; the article names "home, print, and the magnifying glass for search" as the rare exceptions.
 
-The MCR rule: every icon-only button must have *both* `aria-label` (screen reader) and `title` (sighted hover tooltip). The `<TooltipButton>` helper is for the disabled-state case.
+The MCR rule: every icon-only button must have *both* `aria-label` (screen reader) and `title` (sighted hover tooltip). The `<TooltipButton>` helper is for the disabled-state case. When using Radix Tooltip directly, wrap the component tree in a single `<TooltipProvider>` once — never per-cell or per-button — to avoid duplicate event listeners and DOM bloat (per `src/lib/CLAUDE.md`).
 
 When can an icon-only button skip the visible label? Only when:
 - Density forces it (table row actions, toolbar buttons in a dense composer).
@@ -455,7 +455,7 @@ The MCR L&D admin course builder uses this pattern (course → sections → quiz
 
 ### Inline forms
 
-A short form embedded in another surface (comment composer, quick-add). Same rules: single column, label above input (or use placeholder text *only when context already establishes the field's meaning*). Submit button can be `default` size or `icon` size for a chat-style input (with `rounded-full` for the chat-bubble convention per `docs/button-system.md`).
+A short form embedded in another surface (comment composer, quick-add). Same rules: single column, label above input (or use placeholder text *only when context already establishes the field's meaning*). Submit is a primary CTA — use `variant="default"` (not `ghost`); for chat-style send icons, pair with `size="icon"` and `className="rounded-full"` per `docs/button-system.md` (the convention settled in PR #282).
 
 ---
 
@@ -479,7 +479,7 @@ The standardised TanStack table uses `h-12` headers, `py-3` body cells. This is 
 
 Sortable columns use `<DataTableColumnHeader>` (a ghost button with chevron icon). Click toggles asc → desc → unsorted. NN/g's preattentive research (source verified — `nngroup.com/articles/dashboards-preattentive/`) supports this: position-based comparison is fast, so sorted columns let users scan vertically without conscious effort.
 
-For computed/derived sort values, use `accessorFn` returning a numeric value while the `cell` renders the badge or text. This is the pattern in `src/lib/CLAUDE.md` for the priority column.
+For computed/derived sort values, use `accessorFn` returning a numeric value while the `cell` renders the badge or text. For purely functional columns (e.g. a hidden priority sort key), also set `enableHiding: false` on the column def so `column.getCanHide()` returns false and a future column-visibility menu can never un-hide what renders as an empty column. Pattern documented in `src/lib/CLAUDE.md` for the priority column.
 
 ### Filtering
 
@@ -569,6 +569,8 @@ The MCR rule (from `MEMORY.md` workflow rules): **always add confirmation dialog
 </AlertDialogCancel>
 <AlertDialogAction
   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+  disabled={isPending}
+  aria-busy={isPending}
   onClick={handleDelete}
 >
   Delete
