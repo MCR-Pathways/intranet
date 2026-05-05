@@ -23,10 +23,12 @@ CREATE INDEX IF NOT EXISTS idx_resource_media_article_id
 -- These policies protect against direct Supabase REST API access.
 ALTER TABLE public.resource_media ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view media" ON public.resource_media;
 CREATE POLICY "Authenticated users can view media"
   ON public.resource_media FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Content editors can insert media" ON public.resource_media;
 CREATE POLICY "Content editors can insert media"
   ON public.resource_media FOR INSERT
   WITH CHECK (
@@ -34,6 +36,7 @@ CREATE POLICY "Content editors can insert media"
     OR public.is_hr_admin_effective(auth.uid())
   );
 
+DROP POLICY IF EXISTS "Uploaders can delete own media" ON public.resource_media;
 CREATE POLICY "Uploaders can delete own media"
   ON public.resource_media FOR DELETE
   USING (uploaded_by = auth.uid());
