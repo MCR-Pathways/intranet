@@ -16,6 +16,7 @@ import type { AbsenceType } from "@/types/hr";
 import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -762,13 +763,15 @@ export async function submitRTWForm(
 
   // Send notification to employee
   const employeeId = form.employee_id as string;
-  const { error: notifError } = await supabase.from("notifications").insert({
-    user_id: employeeId,
+  const { error: notifError } = await createNotification({
+    userId: employeeId,
     type: "rtw_confirmation_required",
     title: "Return-to-Work Form Ready",
     message: "Your manager has completed a return-to-work form for your recent absence. Please review and confirm.",
     link: `/hr/absence/rtw/${formId}`,
     metadata: { form_id: formId, absence_id: form.absence_record_id },
+    sourceKind: NOTIFICATION_SOURCE_KINDS.RTW_FORM,
+    sourceId: formId,
   });
 
   if (notifError) {

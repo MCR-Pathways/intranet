@@ -63,6 +63,17 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/lib/notifications", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/notifications")>(
+    "@/lib/notifications",
+  );
+  return {
+    ...actual,
+    createNotification: vi.fn().mockResolvedValue({ error: null }),
+    createNotifications: vi.fn().mockResolvedValue({ error: null }),
+  };
+});
+
 // ── Import modules under test ──
 
 import {

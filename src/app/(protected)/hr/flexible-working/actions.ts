@@ -16,6 +16,7 @@ import type {
 import type { Database } from "@/types/database.types";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
+import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -403,15 +404,17 @@ export async function createFlexibleWorkingRequest(data: {
 
   if (notifTargets.length > 0) {
     const notifRows = notifTargets.map((targetId) => ({
-      user_id: targetId,
+      userId: targetId,
       type: "fwr_submitted",
       title: "Flexible Working Request",
       message: `${employeeName} has submitted a flexible working request.`,
       link: `/hr/flexible-working/${requestId}`,
       metadata: { request_id: requestId, profile_id: user.id },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
+      sourceId: requestId,
     }));
 
-    await supabase.from("notifications").insert(notifRows);
+    await createNotifications(notifRows);
   }
 
   revalidateFWRPaths(user.id);
@@ -694,8 +697,8 @@ export async function approveFlexibleWorkingRequest(
 
   // Notify employee (non-blocking — failure should not break the approval)
   try {
-    await supabase.from("notifications").insert({
-      user_id: profileId,
+    await createNotification({
+      userId: profileId,
       type: "fwr_approved",
       title: "Flexible Working Request Approved",
       message: isTrial
@@ -703,6 +706,8 @@ export async function approveFlexibleWorkingRequest(
         : "Your flexible working request has been approved.",
       link: `/hr/flexible-working/${requestId}`,
       metadata: { request_id: requestId },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
+      sourceId: requestId,
     });
   } catch (notifError) {
     logger.warn("Failed to send FWR approval notification", { requestId, profileId, error: notifError });
@@ -804,13 +809,15 @@ export async function rejectFlexibleWorkingRequest(
 
   // Notify employee (non-blocking — failure should not break the rejection)
   try {
-    await supabase.from("notifications").insert({
-      user_id: profileId,
+    await createNotification({
+      userId: profileId,
       type: "fwr_rejected",
       title: "Flexible Working Request Rejected",
       message: "Your flexible working request has been rejected. You have the right to appeal this decision.",
       link: `/hr/flexible-working/${requestId}`,
       metadata: { request_id: requestId },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
+      sourceId: requestId,
     });
   } catch (notifError) {
     logger.warn("Failed to send FWR rejection notification", { requestId, profileId, error: notifError });
@@ -940,13 +947,15 @@ export async function recordTrialOutcome(
       reverted: "Your flexible working trial has ended and your working pattern will revert to its previous arrangement.",
     };
 
-    await supabase.from("notifications").insert({
-      user_id: profileId,
+    await createNotification({
+      userId: profileId,
       type: "fwr_approved",
       title: "Flexible Working Trial Outcome",
       message: outcomeLabels[data.outcome] ?? "Your trial outcome has been recorded.",
       link: `/hr/flexible-working/${requestId}`,
       metadata: { request_id: requestId },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
+      sourceId: requestId,
     });
   } catch (notifError) {
     logger.warn("Failed to send trial outcome notification", { requestId, profileId, error: notifError });
@@ -1044,16 +1053,18 @@ export async function submitFWRAppeal(
     const notifRows = (hrAdmins ?? [])
       .filter((admin) => (admin.id as string) !== user.id)
       .map((admin) => ({
-        user_id: admin.id as string,
+        userId: admin.id as string,
         type: "fwr_appeal_submitted",
         title: "Flexible Working Appeal",
         message: `${employeeName} has appealed their rejected flexible working request.`,
         link: `/hr/flexible-working/${requestId}`,
         metadata: { request_id: requestId, profile_id: user.id },
+        sourceKind: NOTIFICATION_SOURCE_KINDS.FWR_APPEAL,
+        sourceId: requestId,
       }));
 
     if (notifRows.length > 0) {
-      await supabase.from("notifications").insert(notifRows);
+      await createNotifications(notifRows);
     }
   } catch (notifError) {
     logger.warn("Failed to send FWR appeal notifications", { requestId, error: notifError });
@@ -1205,13 +1216,15 @@ export async function decideFWRAppeal(
       ? "Your flexible working appeal has been reviewed. The original decision has been upheld."
       : "Your flexible working appeal has been successful. Your request has been approved.";
 
-    await supabase.from("notifications").insert({
-      user_id: profileId,
+    await createNotification({
+      userId: profileId,
       type: "fwr_appeal_decided",
       title: "Flexible Working Appeal Decision",
       message: outcomeMessage,
       link: `/hr/flexible-working/${requestId}`,
       metadata: { request_id: requestId },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.FWR_APPEAL,
+      sourceId: requestId,
     });
   } catch (notifError) {
     logger.warn("Failed to send appeal decision notification", { requestId, profileId, error: notifError });

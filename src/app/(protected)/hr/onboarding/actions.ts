@@ -17,7 +17,7 @@ import type {
   OnboardingChecklistWithProgress,
   OnboardingChecklistItem,
 } from "@/types/hr";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
@@ -609,6 +609,8 @@ export async function createOnboardingChecklist(data: {
       message: `Your onboarding checklist has been created. Start date: ${formatHRDate(data.start_date)}.`,
       link: `/hr/onboarding/${checklist.id as string}`,
       metadata: { checklist_id: checklist.id, profile_id: data.profile_id },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
+      sourceId: checklist.id as string,
     });
 
     // Notify line manager if different from initiator
@@ -620,6 +622,8 @@ export async function createOnboardingChecklist(data: {
         message: `An onboarding checklist has been created for ${employeeName}. Start date: ${formatHRDate(data.start_date)}.`,
         link: `/hr/onboarding/${checklist.id as string}`,
         metadata: { checklist_id: checklist.id, profile_id: data.profile_id },
+        sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
+        sourceId: checklist.id as string,
       });
     }
   } catch {
@@ -693,6 +697,8 @@ export async function completeOnboardingChecklist(
       message: "Your onboarding has been marked as complete. Welcome aboard!",
       link: `/hr/onboarding/${checklistId}`,
       metadata: { checklist_id: checklistId, profile_id: profileId },
+      sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
+      sourceId: checklistId,
     });
   } catch {
     console.warn("Failed to send onboarding completion notification");
