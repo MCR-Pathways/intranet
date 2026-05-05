@@ -10,6 +10,14 @@ The MCR Pathways intranet has its own visual identity codified in `docs/design-s
 
 ---
 
+## Read this first: intentionality
+
+Aesthetic principles only land when they're carrying intent. A 510-weight Inter heading is just a 510-weight Inter heading unless you can answer **why this surface, this weight, for this user, in this context**. Before reaching for any pattern in this playbook, run the design through the interrogation framework in `docs/ui-ux-principles.md` (the section right after the intro: "Before you design: interrogate intent"). The questions there — Why? Who for? Is this generic? Is it fit for purpose? Did each element earn its place? — are the gate that decides whether the patterns below produce something distinctive or something that merely doesn't break.
+
+Treat this as the most important section of either document. Skip it and the design will look like every other AI-generated SaaS, regardless of how well you apply the typography rules below.
+
+---
+
 ## How distinctive products do typography
 
 ### Linear (linear.app)

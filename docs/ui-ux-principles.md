@@ -12,6 +12,57 @@ The 13 sources behind this document are listed at the end with their verificatio
 
 ---
 
+## Before you design: interrogate intent
+
+The principles and patterns below are useful only if the design decision is on purpose. The most common failure mode is not violating a rule — it's defaulting to the generic shape because it's the first one that came to mind. Before reaching for a pattern, run the design through these questions. **Treat them as a gate, not a checklist.** If you can't answer them, the design isn't ready, even if the pixels look fine.
+
+### Why does this exist?
+- What problem does this surface / component / element solve?
+- Whose problem is it? An admin? An employee? A first-time user? An infrequent visitor?
+- If you removed it entirely, what would actually break? If nothing breaks, it shouldn't be here.
+
+### Who is this for, doing what?
+- Be specific: "intranet user" is not a user. "A line manager approving a leave request between meetings on a Chromebook" is.
+- What is the user thinking when they arrive at this surface? What state are they in — focused, distracted, frustrated, in a hurry?
+- What's the success outcome from THEIR perspective, not yours?
+
+### Is this generic?
+- Does the design look like every other SaaS dashboard, or does it carry the brand and the specific context it's serving?
+- Did I reach for a default pattern because it fits or because it's the first thing I thought of? "Default" and "best fit" are not the same thing.
+- If a competitor copied this design tomorrow, would it work for them too? If yes, that's a sign it's not specific enough.
+- "Because that's how everyone does it" is the answer when there isn't a real answer. Push past it.
+
+### Is this fit for purpose?
+- Does the design serve **this** use case, in **this** context, for **this** user — or is it a one-size-fits-all that doesn't fit anywhere especially well?
+- Scale check: ~80 staff, ~5 editors. The bar for specificity is HIGHER here than at a SaaS serving millions. We can be specific. We must.
+- Is the abstraction right, or am I forcing this case into a shape that nearly fits?
+
+### Did each element earn its place?
+- For every button, chip, icon, divider, label, helper text, badge, illustration: would anything degrade if it weren't there? If not, cut it.
+- Is this UI element solving a problem the user has, or a problem **I** have because I couldn't decide?
+- Settings panels are the classic dumping ground for "we couldn't agree, so we made it configurable". Real preferences earn settings; punted decisions don't.
+
+### What does the design say?
+- Every choice communicates. Pick a hierarchy because you want one thing to dominate, not because it looked balanced. Pick density because the user needs to see a lot at once, not because the page felt empty. Pick muted greys because subtlety is the point, not because you didn't decide.
+- What's the message of this surface? Does the design match it?
+- Is there ONE thing the user should do here? Make sure the design points there. (If "one thing" is hard to name, the surface is too crowded.)
+
+### Have I checked the rule before breaking it?
+- Departures from `docs/button-system.md`, `docs/design-system.md`, the table pattern in `src/lib/CLAUDE.md`, etc. need a real reason captured in the relevant doc.
+- "It looked better this way" is not a reason. Either the rule is wrong (then update the rule) or the rule applies (then follow it). The third option — silent local exception — is what produces drift across the codebase.
+
+### Have I interrogated the brief?
+- The requirement itself can be wrong. The proposed solution can be the wrong abstraction. The framing can be off.
+- If something feels forced, the brief might be the source of the friction. Push back. "Why are we building this?" is fair to ask the person who asked for it.
+- The W3 banner mistake (catalogued in §13) wasn't a styling failure — it was an interrogation failure. The brief implied "show 5 attention items" and the design dutifully built 5 stacked CTAs. The right response was: "what's the ONE thing the user should do here? Or is this surface the wrong tool entirely?"
+
+### The meta-question
+**Is this design intentional, or am I just adding things?**
+
+If you can't articulate the why for every meaningful element, the design is half-finished — even if the typography is dialled and the spacing is right. Aesthetics and interaction principles only land when they're carrying intent. Without intent they're decoration.
+
+---
+
 ## 1. Foundations
 
 The interaction design rules this whole document depends on. Five concepts, three thinkers.
