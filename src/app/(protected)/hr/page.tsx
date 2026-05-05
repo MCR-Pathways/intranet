@@ -176,11 +176,10 @@ async function fetchDashboardStats(supabase: Awaited<ReturnType<typeof getCurren
       .from("staff_leaving_forms")
       .select("id", { count: "exact", head: true })
       .in("status", ["draft", "submitted", "in_progress"]),
-    // flexible_working_requests table exists in DB but is not yet in database.types.ts
     supabase
-      .from("flexible_working_requests" as never)
+      .from("flexible_working_requests")
       .select("id", { count: "exact", head: true })
-      .in("status", ["submitted", "under_review"]) as unknown as Promise<{ count: number | null }>,
+      .in("status", ["submitted", "under_review"]),
     supabase
       .from("onboarding_checklists")
       .select("id", { count: "exact", head: true })

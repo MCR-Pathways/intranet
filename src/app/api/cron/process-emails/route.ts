@@ -88,23 +88,13 @@ export async function GET(request: Request) {
 
   try {
     // ── Fetch failed emails for retry ───────────────────────────
-    // email_notifications has columns not yet in database.types.ts (body_html, status, retry_count, error_message)
-    type EmailNotificationRow = {
-      id: string;
-      user_id: string;
-      email_type: string;
-      subject: string;
-      body_html: string | null;
-      metadata: Record<string, unknown> | null;
-      retry_count: number;
-    };
-    const { data: failed, error: fetchError } = (await supabase
+    const { data: failed, error: fetchError } = await supabase
       .from("email_notifications")
       .select("id, user_id, email_type, subject, body_html, metadata, retry_count")
-      .eq("status" as never, "failed")
-      .lt("retry_count" as never, MAX_RETRIES)
+      .eq("status", "failed")
+      .lt("retry_count", MAX_RETRIES)
       .order("created_at", { ascending: true })
-      .limit(BATCH_SIZE)) as { data: EmailNotificationRow[] | null; error: { message: string } | null };
+      .limit(BATCH_SIZE);
 
     if (fetchError) {
       throw new Error(`Queue fetch failed: ${fetchError.message}`);
@@ -156,7 +146,7 @@ export async function GET(request: Request) {
           .update({
             error_message: "No recipient email found",
             retry_count: (email.retry_count ?? 0) + 1,
-          } as never)
+          })
           .eq("id", email.id);
         if (updateErr) {
           logger.warn("Failed to persist no-recipient state", {
@@ -178,7 +168,7 @@ export async function GET(request: Request) {
             status: "sent",
             sent_at: new Date().toISOString(),
             error_message: null,
-          } as never)
+          })
           .eq("id", email.id);
         sent++;
         if (updateErr) {
@@ -198,7 +188,7 @@ export async function GET(request: Request) {
           .update({
             error_message: result.error ?? "Unknown error",
             retry_count: (email.retry_count ?? 0) + 1,
-          } as never)
+          })
           .eq("id", email.id);
         if (updateErr) {
           // retry_count didn't bump → row will keep retrying past MAX_RETRIES.
