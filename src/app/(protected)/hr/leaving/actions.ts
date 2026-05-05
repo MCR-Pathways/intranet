@@ -526,7 +526,7 @@ export async function completeLeavingForm(
 
     const employeeName = (employee?.full_name as string) ?? "Unknown";
 
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: initiatedBy,
       type: "staff_leaving_completed",
       title: "Offboarding Completed",
@@ -536,6 +536,13 @@ export async function completeLeavingForm(
       sourceKind: NOTIFICATION_SOURCE_KINDS.STAFF_LEAVING_FORM,
       sourceId: formId,
     });
+    if (notifError) {
+      logger.warn("Failed to send leaving completion notification", {
+        formId,
+        profileId,
+        error: notifError.message,
+      });
+    }
   }
 
   revalidateLeavingPaths(profileId);

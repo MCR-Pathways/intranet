@@ -602,33 +602,47 @@ export async function createOnboardingChecklist(data: {
   // Notify employee (non-critical)
   try {
     const employeeName = employee.full_name as string;
-    await createNotification({
+    const checklistId = checklist.id as string;
+    const { error: employeeNotifError } = await createNotification({
       userId: data.profile_id,
       type: "onboarding_started",
       title: "Onboarding Started",
       message: `Your onboarding checklist has been created. Start date: ${formatHRDate(data.start_date)}.`,
-      link: `/hr/onboarding/${checklist.id as string}`,
-      metadata: { checklist_id: checklist.id, profile_id: data.profile_id },
+      link: `/hr/onboarding/${checklistId}`,
+      metadata: { checklist_id: checklistId, profile_id: data.profile_id },
       sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
-      sourceId: checklist.id as string,
+      sourceId: checklistId,
     });
+    if (employeeNotifError) {
+      logger.warn("Failed to send onboarding notification to employee", {
+        checklistId,
+        profileId: data.profile_id,
+        error: employeeNotifError.message,
+      });
+    }
 
     // Notify line manager if different from initiator
     if (lineManagerId && lineManagerId !== user.id) {
-      await createNotification({
+      const { error: managerNotifError } = await createNotification({
         userId: lineManagerId,
         type: "onboarding_started",
         title: "New Starter Onboarding",
         message: `An onboarding checklist has been created for ${employeeName}. Start date: ${formatHRDate(data.start_date)}.`,
-        link: `/hr/onboarding/${checklist.id as string}`,
-        metadata: { checklist_id: checklist.id, profile_id: data.profile_id },
+        link: `/hr/onboarding/${checklistId}`,
+        metadata: { checklist_id: checklistId, profile_id: data.profile_id },
         sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
-        sourceId: checklist.id as string,
+        sourceId: checklistId,
       });
+      if (managerNotifError) {
+        logger.warn("Failed to send onboarding notification to line manager", {
+          checklistId,
+          lineManagerId,
+          error: managerNotifError.message,
+        });
+      }
     }
-  } catch {
-    // Notification failure is non-critical — log but don't fail the action
-    console.warn("Failed to send onboarding notifications");
+  } catch (err) {
+    logger.warn("Failed to send onboarding notifications", { error: err });
   }
 
   revalidateOnboardingPaths(data.profile_id);
@@ -690,7 +704,7 @@ export async function completeOnboardingChecklist(
 
   // Notify employee (non-critical)
   try {
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: profileId,
       type: "onboarding_completed",
       title: "Onboarding Complete",
@@ -700,8 +714,19 @@ export async function completeOnboardingChecklist(
       sourceKind: NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
       sourceId: checklistId,
     });
-  } catch {
-    console.warn("Failed to send onboarding completion notification");
+    if (notifError) {
+      logger.warn("Failed to send onboarding completion notification", {
+        checklistId,
+        profileId,
+        error: notifError.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to send onboarding completion notification", {
+      checklistId,
+      profileId,
+      error: err,
+    });
   }
 
   revalidateOnboardingPaths(profileId);

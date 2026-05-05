@@ -67,7 +67,7 @@ BEGIN
   WITH inserted AS (
     INSERT INTO public.notifications (user_id, type, title, message, link, metadata, source_kind, source_id)
     SELECT
-      unnest(p_mentioned_user_ids),
+      m.user_id,
       'mention',
       v_title,
       v_message,
@@ -80,7 +80,8 @@ BEGIN
       ),
       v_source_kind,
       v_source_id
-    WHERE unnest(p_mentioned_user_ids) != auth.uid()
+    FROM unnest(p_mentioned_user_ids) AS m(user_id)
+    WHERE m.user_id != auth.uid()
     ON CONFLICT DO NOTHING
     RETURNING 1
   )
@@ -176,7 +177,7 @@ BEGIN
 
     IF v_parent_comment_author_id IS NOT NULL
        AND v_parent_comment_author_id != v_actor_id
-       AND v_parent_comment_author_id != COALESCE(v_post_author_id, '00000000-0000-0000-0000-000000000000'::UUID) THEN
+       AND (v_post_author_id IS NULL OR v_parent_comment_author_id != v_post_author_id) THEN
        -- ^ avoid double-notifying if post author IS the parent comment author
 
       -- Check mention dedup for reply target too

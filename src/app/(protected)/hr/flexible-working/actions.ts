@@ -414,7 +414,13 @@ export async function createFlexibleWorkingRequest(data: {
       sourceId: requestId,
     }));
 
-    await createNotifications(notifRows);
+    const { error: notifError } = await createNotifications(notifRows);
+    if (notifError) {
+      logger.warn("Failed to send FWR submission notifications", {
+        requestId,
+        error: notifError.message,
+      });
+    }
   }
 
   revalidateFWRPaths(user.id);
@@ -697,7 +703,7 @@ export async function approveFlexibleWorkingRequest(
 
   // Notify employee (non-blocking — failure should not break the approval)
   try {
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: profileId,
       type: "fwr_approved",
       title: "Flexible Working Request Approved",
@@ -709,8 +715,15 @@ export async function approveFlexibleWorkingRequest(
       sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
       sourceId: requestId,
     });
-  } catch (notifError) {
-    logger.warn("Failed to send FWR approval notification", { requestId, profileId, error: notifError });
+    if (notifError) {
+      logger.warn("Failed to send FWR approval notification", {
+        requestId,
+        profileId,
+        error: notifError.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to send FWR approval notification", { requestId, profileId, error: err });
   }
 
   revalidateFWRPaths(profileId);
@@ -809,7 +822,7 @@ export async function rejectFlexibleWorkingRequest(
 
   // Notify employee (non-blocking — failure should not break the rejection)
   try {
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: profileId,
       type: "fwr_rejected",
       title: "Flexible Working Request Rejected",
@@ -819,8 +832,15 @@ export async function rejectFlexibleWorkingRequest(
       sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
       sourceId: requestId,
     });
-  } catch (notifError) {
-    logger.warn("Failed to send FWR rejection notification", { requestId, profileId, error: notifError });
+    if (notifError) {
+      logger.warn("Failed to send FWR rejection notification", {
+        requestId,
+        profileId,
+        error: notifError.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to send FWR rejection notification", { requestId, profileId, error: err });
   }
 
   revalidateFWRPaths(profileId);
@@ -947,7 +967,7 @@ export async function recordTrialOutcome(
       reverted: "Your flexible working trial has ended and your working pattern will revert to its previous arrangement.",
     };
 
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: profileId,
       type: "fwr_approved",
       title: "Flexible Working Trial Outcome",
@@ -957,8 +977,15 @@ export async function recordTrialOutcome(
       sourceKind: NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
       sourceId: requestId,
     });
-  } catch (notifError) {
-    logger.warn("Failed to send trial outcome notification", { requestId, profileId, error: notifError });
+    if (notifError) {
+      logger.warn("Failed to send trial outcome notification", {
+        requestId,
+        profileId,
+        error: notifError.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to send trial outcome notification", { requestId, profileId, error: err });
   }
 
   revalidateFWRPaths(profileId);
@@ -1064,10 +1091,16 @@ export async function submitFWRAppeal(
       }));
 
     if (notifRows.length > 0) {
-      await createNotifications(notifRows);
+      const { error: notifError } = await createNotifications(notifRows);
+      if (notifError) {
+        logger.warn("Failed to send FWR appeal notifications", {
+          requestId,
+          error: notifError.message,
+        });
+      }
     }
-  } catch (notifError) {
-    logger.warn("Failed to send FWR appeal notifications", { requestId, error: notifError });
+  } catch (err) {
+    logger.warn("Failed to send FWR appeal notifications", { requestId, error: err });
   }
 
   revalidateFWRPaths(user.id);
@@ -1216,7 +1249,7 @@ export async function decideFWRAppeal(
       ? "Your flexible working appeal has been reviewed. The original decision has been upheld."
       : "Your flexible working appeal has been successful. Your request has been approved.";
 
-    await createNotification({
+    const { error: notifError } = await createNotification({
       userId: profileId,
       type: "fwr_appeal_decided",
       title: "Flexible Working Appeal Decision",
@@ -1226,8 +1259,15 @@ export async function decideFWRAppeal(
       sourceKind: NOTIFICATION_SOURCE_KINDS.FWR_APPEAL,
       sourceId: requestId,
     });
-  } catch (notifError) {
-    logger.warn("Failed to send appeal decision notification", { requestId, profileId, error: notifError });
+    if (notifError) {
+      logger.warn("Failed to send appeal decision notification", {
+        requestId,
+        profileId,
+        error: notifError.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to send appeal decision notification", { requestId, profileId, error: err });
   }
 
   revalidateFWRPaths(profileId);
