@@ -216,9 +216,9 @@ describe("Notification Actions", () => {
       expect(result.rows[0].reason).toBe("Leave request");
     });
 
-    it("falls back to 'Notification' when source_kind is missing", async () => {
+    it("leaves reason empty when source_kind is missing (UI hides the pill)", async () => {
       const result = await getInboxStream();
-      expect(result.rows[0].reason).toBe("Notification");
+      expect(result.rows[0].reason).toBe("");
     });
   });
 

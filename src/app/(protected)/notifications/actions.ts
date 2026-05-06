@@ -97,9 +97,12 @@ export async function getInboxStream(): Promise<{
     link: n.link,
     created_at: n.created_at ?? new Date().toISOString(),
     is_cleared: n.is_cleared ?? false,
+    // Empty reason → row renders without a pill. We deliberately do NOT
+    // fall back to a generic "Notification" label: a pill that says
+    // "Notification" on a notification row is noise, not signal.
     reason: n.source_kind
-      ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "Notification")
-      : "Notification",
+      ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "")
+      : "",
   }));
 
   // Merge + sort by created_at desc. State items typically use either an

@@ -132,11 +132,17 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          {/* Filled bell when there's something to act on. Outline when
+              clear. The fill is the most reliable cross-state signal —
+              it pre-loads the badge's "look at me" before the eye even
+              registers the count. */}
+          <Bell
+            className="h-5 w-5"
+            {...(count > 0 ? { fill: "currentColor" } : {})}
+          />
           {count > 0 && (
             <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center p-0 text-[10px] font-semibold"
+              className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 flex items-center justify-center p-0 text-[10px] font-bold bg-red-500 text-white border-0 hover:bg-red-500 shadow-sm"
             >
               {badgeText}
             </Badge>
@@ -145,7 +151,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-96 flex flex-col p-0"
+        className="w-80 flex flex-col p-0"
         align="end"
         forceMount
       >
@@ -231,10 +237,14 @@ function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
   return (
     <div className="group/row relative flex items-start gap-2 px-3 py-2.5 hover:bg-accent rounded-sm">
       {/* Reason pill — leads the row so a manager scanning sees the
-          category before reading the title. */}
-      <span className="mt-0.5 inline-flex shrink-0 items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-        {row.reason}
-      </span>
+          category before reading the title. Hidden when source_kind is
+          missing (grandfathered notifications): a pill saying
+          "Notification" on a notification row is noise, not signal. */}
+      {row.reason && (
+        <span className="mt-0.5 inline-flex shrink-0 items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          {row.reason}
+        </span>
+      )}
 
       <button
         type="button"
