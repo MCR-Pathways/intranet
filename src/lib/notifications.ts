@@ -22,10 +22,50 @@ export const NOTIFICATION_SOURCE_KINDS = {
   COMMENT_REPLY: "comment_reply",
   WEEKLY_ROUNDUP: "weekly_roundup",
   ONBOARDING_STEP: "onboarding_step",
+  WORKING_LOCATION: "working_location",
 } as const;
 
 export type NotificationSourceKind =
   (typeof NOTIFICATION_SOURCE_KINDS)[keyof typeof NOTIFICATION_SOURCE_KINDS];
+
+/**
+ * Source kinds where the user has nothing to do but read the notification.
+ * Clicking the row navigates AND clears (engaging with the info IS the
+ * intentional act). Distinguished from actionable kinds where clicking
+ * only navigates and the user has to do the underlying work to clear.
+ */
+export const INFORMATIONAL_SOURCE_KINDS = new Set<NotificationSourceKind>([
+  NOTIFICATION_SOURCE_KINDS.POST_MENTION,
+  NOTIFICATION_SOURCE_KINDS.COMMENT_MENTION,
+  NOTIFICATION_SOURCE_KINDS.POST_COMMENT,
+  NOTIFICATION_SOURCE_KINDS.COMMENT_REPLY,
+  NOTIFICATION_SOURCE_KINDS.COURSE_COMPLETION,
+  NOTIFICATION_SOURCE_KINDS.WEEKLY_ROUNDUP,
+  NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
+]);
+
+/**
+ * Human-readable reason-pill labels per source kind. Used by the bell
+ * popover and /notifications page to differentiate event-style rows from
+ * persistent-state rows at a glance.
+ */
+export const SOURCE_KIND_REASON_LABEL: Record<NotificationSourceKind, string> = {
+  leave_request: "Leave request",
+  flexible_working_request: "Flexible working",
+  fwr_appeal: "FWR appeal",
+  rtw_form: "Return to work",
+  staff_leaving_form: "Leaving form",
+  course_assignment: "Course assigned",
+  course_completion: "Course completed",
+  compliance_assignment: "Compliance",
+  post_mention: "Mention",
+  comment_mention: "Mention",
+  post_comment: "Comment",
+  comment_reply: "Reply",
+  weekly_roundup: "Weekly roundup",
+  onboarding_step: "Onboarding",
+  working_location: "Working location",
+};
 
 interface CreateNotificationParams {
   userId: string;
