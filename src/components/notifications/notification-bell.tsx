@@ -16,7 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Inbox, X } from "lucide-react";
+import { Bell, ChevronRight, Inbox, X } from "lucide-react";
+import { createElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
@@ -24,6 +25,8 @@ import { logger } from "@/lib/logger";
 import {
   EMPTY_INBOX_COPY,
   INFORMATIONAL_SOURCE_KINDS,
+  SOURCE_KIND_ACTION_VERB,
+  SOURCE_KIND_ICON,
   type NotificationSourceKind,
 } from "@/lib/notifications";
 import type { InboxRow } from "@/types/notification";
@@ -140,7 +143,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:bg-accent"
+          className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:bg-accent motion-safe:hover:scale-105"
         >
           {/* Filled bell when there's something to act on. Outline when
               clear. The fill is the most reliable cross-state signal —
@@ -243,36 +246,62 @@ interface InboxRowItemProps {
 
 function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
   const isStateRow = row.kind === "state";
+  const sourceKind = row.source_kind as NotificationSourceKind | null;
+  const Icon = sourceKind ? SOURCE_KIND_ICON[sourceKind] : null;
+  const actionVerb = sourceKind ? SOURCE_KIND_ACTION_VERB[sourceKind] : null;
 
   return (
-    <div className="group/row relative flex items-start gap-2 px-3 py-2.5 hover:bg-accent rounded-sm">
-      {/* Reason pill — leads the row so a manager scanning sees the
-          category before reading the title. Hidden when source_kind is
-          missing (grandfathered notifications): a pill saying
-          "Notification" on a notification row is noise, not signal. */}
-      {row.reason && (
-        <span className="mt-0.5 inline-flex shrink-0 items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-          {row.reason}
+    <div className="group/row relative flex items-start gap-2.5 px-3 py-2.5 hover:bg-accent rounded-sm">
+      {/* Icon block — leads the row so a manager scanning sees the
+          category before reading the title. Hidden for grandfathered
+          rows without a source_kind. */}
+      {Icon && (
+        <span
+          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+          aria-label={row.reason || undefined}
+        >
+          {createElement(Icon, { className: "h-3.5 w-3.5" })}
         </span>
       )}
 
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex-1 min-w-0 text-left"
-      >
-        <p className="font-medium text-sm leading-tight line-clamp-1">
-          {row.title}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-          {row.message}
-        </p>
+      <div className="flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={onClick}
+          className="text-left w-full"
+        >
+          <p className="font-medium text-sm leading-tight line-clamp-1">
+            {row.title}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            {row.message}
+          </p>
+        </button>
+
+        {/* Quick action verb — explicit affordance for the next step.
+            "Set location", "Review", "Continue" etc. depending on
+            source_kind. Click does the same as the title click — both
+            paths go through `onClick` so behaviour stays consistent. */}
+        {actionVerb && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            {actionVerb}
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
+
         {!isStateRow && (
           <p className="text-xs text-muted-foreground/70 mt-1">
             {timeAgo(row.created_at)}
           </p>
         )}
-      </button>
+      </div>
 
       {/* Per-row clear (X). Hidden until row hover/focus. State rows
           have no DB id to clear and resolve naturally — no X. */}
