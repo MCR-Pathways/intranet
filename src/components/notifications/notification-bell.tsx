@@ -29,7 +29,7 @@ import { createElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { timeAgo } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import {
   EMPTY_INBOX_COPY,
@@ -154,13 +154,13 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
           size="icon"
           className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:bg-accent motion-safe:hover:scale-105"
         >
-          {/* Filled bell when there's something to act on. Outline when
-              clear. The fill is the most reliable cross-state signal —
-              it pre-loads the badge's "look at me" before the eye even
-              registers the count. */}
+          {/* Red outline bell when there's something to act on, plain
+              outline when clear. Strokes only — a solid red fill
+              over-pushes the trigger when paired with the red badge.
+              The colour shift on the strokes is enough to read at a
+              glance from peripheral vision. */}
           <Bell
-            className="h-5 w-5"
-            {...(count > 0 ? { fill: "currentColor" } : {})}
+            className={cn("h-5 w-5", count > 0 && "text-red-500")}
           />
           {count > 0 && (
             <Badge
@@ -176,6 +176,14 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         className="w-80 flex flex-col p-0"
         align="end"
         forceMount
+        // Prevent Radix from returning focus to the bell trigger on
+        // close. When the user clicks outside to dismiss, Chromium
+        // treats the returned focus as keyboard-driven and renders the
+        // focus-visible ring — the bell ends up looking "stuck" in an
+        // active state with no popover attached. preventDefault stops
+        // the focus return, so the bell goes back to its resting
+        // appearance after close.
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-none items-center justify-between px-3 py-1">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
