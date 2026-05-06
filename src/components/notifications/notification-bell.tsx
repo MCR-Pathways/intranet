@@ -111,38 +111,40 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
     }
   };
 
-  const handleClear = useCallback(
-    async (rowId: string) => {
-      // Synthetic state-row ids start with `state:` and aren't valid DB
-      // notification ids — clearing them server-side is a no-op the API
-      // would reject. State rows resolve naturally when underlying state
-      // changes; the X icon is hidden on them anyway.
-      if (rowId.startsWith("state:")) return;
+  // Mirror rows into a ref so handleClear can read the current row
+  // without depending on `rows` — that dependency forced a fresh
+  // callback identity on every state change and re-rendered every
+  // InboxRowItem each time anything cleared.
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  });
 
-      // Capture only the failed row, not the whole list. Restoring the
-      // whole list on failure would clobber concurrent successful
-      // clears that completed while this one was in flight.
-      const rowToRestore = rows.find((r) => r.id === rowId);
-      if (!rowToRestore) return;
+  const handleClear = useCallback(async (rowId: string) => {
+    // Synthetic state-row ids start with `state:` and aren't valid DB
+    // notification ids — clearing them server-side is a no-op the API
+    // would reject. State rows resolve naturally when underlying state
+    // changes; the X icon is hidden on them anyway.
+    if (rowId.startsWith("state:")) return;
 
-      setRows((prev) => prev.filter((r) => r.id !== rowId));
-      const { error } = await clearNotification(rowId);
-      if (error) {
-        logger.error("Failed to clear notification", { error });
-        setRows((prev) => {
-          if (prev.some((r) => r.id === rowId)) return prev;
-          return [...prev, rowToRestore].sort((a, b) =>
-            a.created_at < b.created_at
-              ? 1
-              : a.created_at > b.created_at
-              ? -1
-              : 0,
-          );
-        });
-      }
-    },
-    [rows],
-  );
+    // Capture only the failed row, not the whole list. Restoring the
+    // whole list on failure would clobber concurrent successful
+    // clears that completed while this one was in flight.
+    const rowToRestore = rowsRef.current.find((r) => r.id === rowId);
+    if (!rowToRestore) return;
+
+    setRows((prev) => prev.filter((r) => r.id !== rowId));
+    const { error } = await clearNotification(rowId);
+    if (error) {
+      logger.error("Failed to clear notification", { error });
+      setRows((prev) => {
+        if (prev.some((r) => r.id === rowId)) return prev;
+        return [...prev, rowToRestore].sort((a, b) =>
+          b.created_at.localeCompare(a.created_at),
+        );
+      });
+    }
+  }, []);
 
   const handleRowClick = useCallback(
     (row: InboxRow) => {
