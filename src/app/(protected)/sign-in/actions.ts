@@ -126,7 +126,10 @@ export async function setWorkingLocation(
     }
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -187,7 +190,10 @@ export async function clearWorkingLocation(
     }
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -240,7 +246,10 @@ export async function confirmArrival(): Promise<{ success: boolean; error: strin
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -329,7 +338,10 @@ export async function saveWeeklyPattern(
     return { success: false, error: "Failed to save weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -358,7 +370,10 @@ export async function clearWeeklyPattern(
     return { success: false, error: "Failed to clear weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -448,7 +463,10 @@ export async function applyPatternsToWeek(
     return { success: false, applied: 0, error: "Failed to apply weekly patterns. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, applied: entries.length, error: null };
 }
 
@@ -614,12 +632,12 @@ const computeDailyBannerState = cache(async () => {
     .eq("date", today);
 
   if (!data || data.length === 0) {
-    // No schedule set — check if it's before 2pm UK time
-    const ukHour = getUKHour();
-    if (ukHour < 14) {
-      return { type: "no_schedule" as string | null };
-    }
-    return { type: null as string | null };
+    // No schedule set today — surface the prompt all day. The original
+    // 2pm cutoff was carried over from the loud DailyBanner; the bell
+    // and /notifications row are passive, so daylong visibility is
+    // fine. If the user resolves the state at 4pm by setting a
+    // location, the row vanishes immediately.
+    return { type: "no_schedule" as string | null };
   }
 
   // Check if any entry is for an office location and not confirmed
@@ -668,7 +686,10 @@ export async function confirmRemoteArrival() {
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  revalidatePath("/sign-in");
+  // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
   return { success: true, error: null };
 }
 
@@ -684,17 +705,6 @@ export async function quickSetTodayLocation(location: WorkLocation) {
 // =============================================
 // UK TIME HELPERS (robust Intl.DateTimeFormat)
 // =============================================
-
-/** Get the current hour (0-23) in the Europe/London timezone. */
-function getUKHour(): number {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
-    hour: "numeric",
-    hour12: false,
-  }).formatToParts(new Date());
-  const hourPart = parts.find((p) => p.type === "hour");
-  return parseInt(hourPart?.value ?? "0", 10);
-}
 
 /** Get the current hours and minutes in the Europe/London timezone. */
 function getUKTime(): { hours: number; minutes: number } {
@@ -872,7 +882,10 @@ export async function triggerCalendarSync() {
       calendarSyncToken: profile.calendar_sync_token,
     });
 
-    revalidatePath("/sign-in");
+    // Layout-level invalidation: the bell (header), /notifications, and
+  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
+  // location state. Keep them in sync after a mutation.
+  revalidatePath("/", "layout");
 
     return {
       success: true,

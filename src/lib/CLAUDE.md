@@ -18,6 +18,8 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **`--mcr-pink` changed from `#FF82B2` to `#DA417C`.** Dark-mode icon tokens use the old bright `#FF82B2` intentionally because `#DA417C` is too dark on dark backgrounds.
 
+**Tailwind utility ordering matters — later wins through `tailwind-merge`.** Putting `p-0` AFTER `px-1` in the same className string (or letting a child className with `p-0` follow a base className with `px-1`) collapses horizontal padding to zero. `tailwind-merge` (used by `cn()` and inside Shadcn's primitive className merging) deduplicates conflicting padding/margin/inset utilities, keeping the last one. Watch for shorthand utilities (`p-*`, `m-*`, `inset-*`, `space-*`) appearing after specific-axis ones (`px-*`, `mx-*`, `top-*`) in the same string — the shorthand will override. PR #294 hit this on the bell badge: `px-1 ... p-0` rendered with no horizontal padding and "9+" looked cramped against the edges. Fix is `py-0` instead of `p-0` if the intent was vertical-only.
+
 ## Table Patterns (TanStack + Shadcn)
 
 **Use TanStack Table + Shadcn primitives for data tables.** `@tanstack/react-table` for headless data management, Shadcn `<Table>` for styling. Extract row actions into separate `<RowActions>` components.

@@ -152,6 +152,86 @@ export const EMPTY_INBOX_COPY = [
   "Inbox at zero. Mind how you go.",
 ] as const;
 
+/**
+ * Empty-state copy for the Saved tab on /notifications. Three variants
+ * — Saved is visited less than Inbox so rotation buys less. Tone leans
+ * Slack-like "save for later" intent (handy retrieval), not archival.
+ */
+export const EMPTY_SAVED_COPY = [
+  "Nothing saved yet. The pin in a notification's menu will keep it here.",
+  "Saved is empty. Hit save on anything worth a second look.",
+  "Nothing pinned. Use the menu on a notification to keep it handy.",
+] as const;
+
+/**
+ * Empty-state copy for the Cleared tab on /notifications. Three variants.
+ * Acknowledges 30-day retention without overexplaining.
+ */
+export const EMPTY_CLEARED_COPY = [
+  "Nothing cleared. Yet.",
+  "Cleared is empty. Anything you dismiss lands here for 30 days.",
+  "Nothing here. Cleared notifications hang around for 30 days, then go.",
+] as const;
+
+/**
+ * Module groupings for /notifications filter pills. Each module maps
+ * to the source_kinds that belong to it.
+ *
+ * Sign-In is its own module with `working_location` as its only
+ * source_kind (state-only — never an event row). The pill auto-hides
+ * on Saved + Cleared tabs where state rows can't appear.
+ *
+ * Onboarding was considered as a 6th pill but `onboarding_step` only
+ * fires for new_user accounts in induction — those users don't
+ * navigate to /notifications anyway, so onboarding_step is folded
+ * under HR rather than getting a pill of its own.
+ *
+ * Six pills total in the UI: All / HR / Learning / News / Mentions
+ * / Sign-In. `All` doesn't appear in this map — it's the default
+ * filter, no kinds to map.
+ */
+export type NotificationModule = "hr" | "learning" | "news" | "mentions" | "signin";
+
+export const SOURCE_KIND_MODULE: Record<NotificationSourceKind, NotificationModule> = {
+  leave_request: "hr",
+  flexible_working_request: "hr",
+  fwr_appeal: "hr",
+  rtw_form: "hr",
+  staff_leaving_form: "hr",
+  course_assignment: "learning",
+  course_completion: "learning",
+  compliance_assignment: "hr",
+  post_mention: "mentions",
+  comment_mention: "mentions",
+  post_comment: "news",
+  comment_reply: "news",
+  weekly_roundup: "news",
+  onboarding_step: "hr",
+  working_location: "signin",
+};
+
+/**
+ * Module pill labels in the order they appear on /notifications.
+ * `All` always renders first; the rest follow in declaration order.
+ * Sign-In currently only ever has the working_location state row
+ * (state-only kind), so the pill auto-hides on Saved + Cleared tabs
+ * where it always has zero rows.
+ */
+export const MODULE_LABELS: Record<NotificationModule, string> = {
+  hr: "HR",
+  learning: "Learning",
+  news: "News",
+  mentions: "Mentions",
+  signin: "Sign-In",
+};
+export const MODULE_ORDER: NotificationModule[] = [
+  "hr",
+  "learning",
+  "news",
+  "mentions",
+  "signin",
+];
+
 interface CreateNotificationParams {
   userId: string;
   type: string;

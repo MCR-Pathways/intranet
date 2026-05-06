@@ -248,6 +248,10 @@ These are universal rules that apply to every task regardless of which module yo
 
 **Never interpolate user input into PostgREST `.or()` filter strings.** Commas, periods, and parentheses are PostgREST operators. A user searching for `x,is_published.eq.false` can inject extra filter conditions and bypass visibility rules. Strip `,%_\\.()\"'` from any value interpolated into `.or()` template literals, or use parameterised methods (`.eq()`, `.ilike()`, `.contains()`) instead.
 
+**Optimistic-rollback should capture only the failed item, not the whole list.** Pattern in PR #294's `handleClear`: storing `previous = rows` then `setRows(previous)` on failure clobbers other concurrent successful clears that completed while this one was in flight. Capture `rowToRestore = rows.find(...)` first, optimistically remove it, and on failure re-insert via `setRows((prev) => prev.some((r) => r.id === id) ? prev : [...prev, rowToRestore].sort(...))`. The `.some` guard makes the restore idempotent if React replays the updater in strict mode.
+
+**Server actions called multiple times in a single request render: extract inner compute as `cache(async () => {...})` and have the server action delegate.** `"use server"` server actions can't be wrapped in `cache()` directly, but you can hold the cached version as a private const inside the same module and have the exported server action just call it. Same-request server callers (e.g. ProtectedLayout + a downstream action that re-uses the same data) hit the memoized result instead of re-running the query. PR #294 used this for `getDailyBannerState`, called from both the layout and `getInboxStream` → `getOfficeArrivalConfirmation`.
+
 ### React & Radix UI
 
 **Use `onSelect` not `onClick` for Radix UI `DropdownMenuItem`.** Radix primitives have specific event handler contracts.
@@ -275,6 +279,14 @@ These are universal rules that apply to every task regardless of which module yo
 **Add `group` class to parent when using `group-data-[...]` on children.** Tailwind's `group-data-*` targets the nearest ancestor with `class="group"`.
 
 **Use `href={url ?? undefined}` for anchors with optionally-missing URLs, not `href={url || "#"}`.** A `"#"` fallback turns clicks into a page-jump-to-top side effect when the URL is unresolved. Setting `href={undefined}` keeps the anchor inert — no navigation, no jump. Came up on PR #280 from a Gemini review of the news-feed document download anchor, where `doc.file_url` is conditionally null.
+
+**Custom interactive children inside Radix DropdownMenu need `stopPropagation` on pointerdown + click + keydown.** Radix Menu primitives manage focus via roving-tabindex and dismiss the menu on certain interior events. Plain `<button>` / `<input>` children that aren't `DropdownMenuItem` cause Radix to close the popover on click, and Radix's keyboard handler intercepts Tab/Esc/Arrow/Enter for menu nav. Wrap the interactive container with `onPointerDown={(e) => e.stopPropagation()}` + `onClick={(e) => e.stopPropagation()}`, and on any `<input>` inside, swallow keydown via `onKeyDown={(e) => e.stopPropagation(); ...}` before your own preventDefault for Enter/Escape. PR #294 hit this on the working-location inline picker where the Other → text-input flow only worked once these three were stopped at the picker container. Same pattern needs to repeat any time a complex interaction lives inside a Radix Menu.
+
+**Conditional `onCloseAutoFocus` for Radix popovers/menus when click-outside leaves a stuck focus-visible ring.** Track close source with two refs-set-by-callback: `onPointerDownOutside` flips a `wasMouseCloseRef` to `true`, `onEscapeKeyDown` clears it. Then `onCloseAutoFocus={(e) => { if (wasMouseCloseRef.current) { e.preventDefault(); wasMouseCloseRef.current = false; } }}`. Mouse close stops the focus return (no leftover ring); keyboard close (Esc) lets focus return naturally so keyboard users keep their position. Unconditional `preventDefault` is the trap — it breaks keyboard a11y. PR #294 used this on the bell trigger.
+
+**Mirror state into a ref when a memoised callback otherwise depends on the state value.** A `useCallback` with `[rows]` in deps changes identity on every state update; if the callback is passed as a prop to many children, every state mutation re-renders all of them. Pattern: `const rowsRef = useRef(rows); useEffect(() => { rowsRef.current = rows; });` then `useCallback(async (id) => { const item = rowsRef.current.find(...); ... }, [])`. Empty deps, stable identity, no child churn. PR #294 used this on `handleClear` for the inbox bell rows.
+
+**Lucide `MapPin` filled with `currentColor` collapses to a balloon shape.** The pin's inner circle (the "hole") fills along with the teardrop, losing the iconic shape. For map-pin recognisability, drop the `fill` attribute and rely on stroke-only colour (e.g. `text-red-500` on the icon className). PR #294 came up on the working-location row icon — filled looked wrong, outline read as a pin.
 
 ### CSS & Styling
 

@@ -68,10 +68,14 @@ export async function GET(request: Request) {
       Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
 
+    // Saved rows survive the sweep indefinitely — `is_saved=true` means
+    // the user pinned this notification. Filter them out of the delete.
+    // (W3-rev.3, migration 00094.)
     const { count, error: deleteErr } = await supabase
       .from("notifications")
       .delete({ count: "exact" })
       .eq("is_cleared", true)
+      .eq("is_saved", false)
       .lt("cleared_at", cutoff);
 
     if (deleteErr) throw deleteErr;
