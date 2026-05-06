@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Inbox, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,18 +69,23 @@ export function NotificationsPage({
   const [isLoading, setIsLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [, startTransition] = useTransition();
-  // Pick an empty-state line per page-load. Saved + Cleared have only
-  // 3 variants because those tabs are visited far less than Inbox.
-  const emptyLine = useMemo(() => {
+  // Empty-state line is re-rolled client-side after mount. Initial
+  // value is the first variant of the active tab's pool — same on
+  // server and client, so no hydration mismatch — and immediately
+  // replaced by a random pick once useEffect runs. Saved + Cleared
+  // have only 3 variants because those tabs are visited less.
+  const [emptyLine, setEmptyLine] = useState<string>(EMPTY_INBOX_COPY[0]);
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot random pick post-hydration */
+  useEffect(() => {
     const pool =
       tab === "inbox"
         ? EMPTY_INBOX_COPY
         : tab === "saved"
           ? EMPTY_SAVED_COPY
           : EMPTY_CLEARED_COPY;
-    /* eslint-disable-next-line react-hooks/purity -- intentional one-shot pick per tab */
-    return pool[Math.floor(Math.random() * pool.length)];
+    setEmptyLine(pool[Math.floor(Math.random() * pool.length)]);
   }, [tab]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTab = async (nextTab: NotificationTab) => {
     setIsLoading(true);
