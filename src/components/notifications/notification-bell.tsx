@@ -29,7 +29,7 @@ import { createElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { timeAgo } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import {
   EMPTY_INBOX_COPY,
@@ -277,10 +277,17 @@ function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProp
     <div className="group/row relative flex items-start gap-2.5 px-3 py-2.5 hover:bg-accent rounded-sm">
       {/* Icon block — leads the row so a manager scanning sees the
           category before reading the title. Hidden for grandfathered
-          rows without a source_kind. */}
+          rows without a source_kind. Working-location rows use a
+          filled red pin to read like a real map marker; other rows
+          stay neutral muted-foreground. */}
       {Icon && (
         <span
-          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+          className={cn(
+            "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+            sourceKind === "working_location"
+              ? "bg-red-50 text-red-500"
+              : "bg-muted text-muted-foreground",
+          )}
           aria-label={row.reason || undefined}
         >
           {createElement(Icon, { className: "h-3.5 w-3.5" })}
