@@ -9,8 +9,12 @@ import {
 import {
   quickSetTodayLocation,
   confirmRemoteArrival,
+  setWorkingLocation,
 } from "@/app/(protected)/sign-in/actions";
+import { getUKToday } from "@/lib/sign-in";
+import type { WorkLocation, TimeSlot } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -356,7 +360,11 @@ interface WorkingLocationPickerProps {
 
 function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerProps) {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  // mode flips to "other-input" when the user picks Other — replaces the
+  // 4-button row with a text input + Save / Cancel so they can name the
+  // location without leaving the bell.
+  const [mode, setMode] = useState<"picker" | "other-input">("picker");
+  const [otherText, setOtherText] = useState("");
 
   const handleSet = (
     location: "home" | "glasgow_office" | "stevenage_office",
@@ -385,10 +393,42 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
     });
   };
 
+  const handleOtherSave = () => {
+    const text = otherText.trim();
+    if (!text) return;
+    startTransition(async () => {
+      const result = await setWorkingLocation(
+        getUKToday(),
+        "full_day" as TimeSlot,
+        "other" as WorkLocation,
+        text,
+      );
+      if (result.success) {
+        toast.success(`Location set: ${text}`);
+        setOtherText("");
+        setMode("picker");
+        onAfterAction();
+      } else {
+        toast.error(result.error ?? "Failed to set location");
+      }
+    });
+  };
+
+  const handleOtherCancel = () => {
+    setMode("picker");
+    setOtherText("");
+  };
+
   if (type === "office_arrival_unconfirmed") {
     return (
       <div
         className="mt-1.5 flex flex-wrap items-center gap-1.5"
+        // Radix DropdownMenu treats certain interior pointer events as
+        // close triggers via its focus/roving-tabindex management.
+        // Stopping pointerdown + click at the picker container keeps
+        // the popover open while the user works through the inline
+        // location picker (especially the Other → text-input flow).
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         <PickerButton onClick={handleConfirm} disabled={isPending}>
@@ -405,6 +445,54 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
   }
 
   // type === "no_location_set"
+
+  if (mode === "other-input") {
+    return (
+      <div
+        className="mt-1.5 flex items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Input
+          autoFocus
+          value={otherText}
+          onChange={(e) => setOtherText(e.target.value)}
+          onKeyDown={(e) => {
+            // Stop bubbling so Radix DropdownMenu doesn't intercept
+            // Enter/Escape/Tab/Arrow keys for menu navigation.
+            e.stopPropagation();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleOtherSave();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              handleOtherCancel();
+            }
+          }}
+          placeholder="Where today?"
+          aria-label="Other location"
+          maxLength={200}
+          className="h-7 flex-1 bg-card px-2 text-xs"
+        />
+        <button
+          type="button"
+          onClick={handleOtherSave}
+          disabled={!otherText.trim() || isPending}
+          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={handleOtherCancel}
+          disabled={isPending}
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className="mt-1.5 flex flex-wrap items-center gap-1.5"
@@ -428,7 +516,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
       >
         Stevenage
       </PickerButton>
-      <PickerButton onClick={() => router.push("/sign-in")} disabled={isPending}>
+      <PickerButton onClick={() => setMode("other-input")} disabled={isPending}>
         Other
       </PickerButton>
     </div>
@@ -444,12 +532,17 @@ function PickerButton({
   onClick: () => void;
   disabled?: boolean;
 }) {
+  // Hover treatment: filled primary fill (navy bg, white text). Reads
+  // distinctly against both the row's default `bg-card` and the row's
+  // `hover:bg-accent` light-blue — earlier `hover:bg-accent` on the
+  // pill itself merged into the row hover and the button visually
+  // disappeared. Filled hover is also a stronger "tap me" affordance.
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
+      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors disabled:opacity-50 disabled:pointer-events-none"
     >
       {children}
     </button>
