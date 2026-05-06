@@ -24,18 +24,18 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-import type { NotificationData } from "@/types/notification";
+import type { InboxRow } from "@/types/notification";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 
 interface HeaderProps {
   user: SupabaseUser;
   profile: Profile | null;
-  initialNotifications?: NotificationData[];
+  initialInboxRows?: InboxRow[];
   onMenuToggle?: () => void;
   onSidebarToggle?: () => void;
 }
 
-export function Header({ user, profile, initialNotifications, onMenuToggle, onSidebarToggle }: HeaderProps) {
+export function Header({ user, profile, initialInboxRows, onMenuToggle, onSidebarToggle }: HeaderProps) {
   const isInternalStaff = profile?.user_type === "staff" && !profile?.is_external;
 
   const handleSignOut = async () => {
@@ -103,7 +103,7 @@ export function Header({ user, profile, initialNotifications, onMenuToggle, onSi
 
           {/* Notifications */}
           <div className="relative">
-            <NotificationBell initialNotifications={initialNotifications} />
+            <NotificationBell initialRows={initialInboxRows} />
           </div>
 
           {/* User menu */}

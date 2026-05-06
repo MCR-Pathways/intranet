@@ -1,6 +1,23 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/types/database.types";
+import {
+  AtSign,
+  BookOpen,
+  Briefcase,
+  CalendarDays,
+  ClipboardCheck,
+  CornerUpLeft,
+  DoorOpen,
+  GraduationCap,
+  MapPin,
+  MessageSquare,
+  Newspaper,
+  Scale,
+  ShieldCheck,
+  UserPlus,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * The set of source_kind values used across the platform's notification
@@ -66,6 +83,74 @@ export const SOURCE_KIND_REASON_LABEL: Record<NotificationSourceKind, string> = 
   onboarding_step: "Onboarding",
   working_location: "Working location",
 };
+
+/**
+ * Lucide icon per source kind. Used by the bell popover and
+ * /notifications page to render an icon-only category indicator
+ * instead of spelling out the source kind in text.
+ */
+export const SOURCE_KIND_ICON: Record<NotificationSourceKind, LucideIcon> = {
+  leave_request: CalendarDays,
+  flexible_working_request: Briefcase,
+  fwr_appeal: Scale,
+  rtw_form: ClipboardCheck,
+  staff_leaving_form: DoorOpen,
+  course_assignment: BookOpen,
+  course_completion: GraduationCap,
+  compliance_assignment: ShieldCheck,
+  post_mention: AtSign,
+  comment_mention: AtSign,
+  post_comment: MessageSquare,
+  comment_reply: CornerUpLeft,
+  weekly_roundup: Newspaper,
+  onboarding_step: UserPlus,
+  working_location: MapPin,
+};
+
+/**
+ * Quick-action verb per source kind. Rendered as a small inline button
+ * on each row so the user can take the next step without reading the
+ * full message. Locked in `memory/intranet-design-feedback.md`:
+ * "INLINE QUICK ACTIONS per row (Approve, Continue, Set location,
+ * Read, etc — verb depends on source_kind)".
+ */
+export const SOURCE_KIND_ACTION_VERB: Record<NotificationSourceKind, string> = {
+  leave_request: "Review",
+  flexible_working_request: "Review",
+  fwr_appeal: "Review",
+  rtw_form: "Review",
+  staff_leaving_form: "Review",
+  course_assignment: "Continue",
+  course_completion: "View",
+  compliance_assignment: "Update",
+  post_mention: "View",
+  comment_mention: "View",
+  post_comment: "Read",
+  comment_reply: "Read",
+  weekly_roundup: "Read",
+  onboarding_step: "Continue",
+  working_location: "Set location",
+};
+
+/**
+ * Empty-state copy for the bell popover. One picked at random every
+ * time the popover opens (re-rolled in `onOpenChange`) so the same
+ * user sees a different line if they refresh — or just open the bell
+ * twice in a row.
+ *
+ * Locked in `memory/intranet-design-feedback.md` after the W3-rev
+ * scope review — these aren't generic SaaS empty states, they're
+ * British-leaning, dryly worded, and assume the reader is busy.
+ */
+export const EMPTY_INBOX_COPY = [
+  "All caught up. Carry on.",
+  "Inbox empty. Time for a brew.",
+  "Nothing to action right now.",
+  "All clear. Have a good one.",
+  "All caught up. The kettle awaits.",
+  "Empty. As it should be.",
+  "Inbox at zero. Mind how you go.",
+] as const;
 
 interface CreateNotificationParams {
   userId: string;

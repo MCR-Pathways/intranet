@@ -16,11 +16,8 @@ const NOTIFICATIONS_RETURN_LIMIT = 20; // shown in popover after dedup
 type Client = SupabaseClient<Database>;
 
 /**
- * Internal: fetch + dedup uncleared notifications for a known user. Used
- * by both getNotifications (public action that calls getCurrentUser) and
- * getInboxStream (which already has the user in hand and runs this in
- * parallel with persistent-attention to avoid double auth + sequential
- * waits).
+ * Internal: fetch + dedup uncleared notifications for a known user.
+ * Called from getInboxStream in parallel with persistent-attention.
  */
 async function fetchUnclearedNotifications(supabase: Client, userId: string) {
   const { data, error } = await supabase
@@ -62,24 +59,6 @@ async function fetchUnclearedNotifications(supabase: Client, userId: string) {
 }
 
 /**
- * Fetch the current user's uncleared notifications, deduplicated by
- * (source_kind, source_id) — one row per source record, showing the
- * most recent state.
- *
- * Notifications without a source_id (grandfathered or system-wide) are
- * NOT deduplicated — each stays as its own row.
- */
-export async function getNotifications() {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return { notifications: [], error: "Not authenticated" };
-  }
-
-  return fetchUnclearedNotifications(supabase, user.id);
-}
-
-/**
  * Merged inbox stream: DB notifications (deduped, uncleared) + virtual
  * rows computed from underlying state (overdue compliance, pending
  * approvals, etc.). Sorted by created_at descending.
@@ -118,9 +97,12 @@ export async function getInboxStream(): Promise<{
     link: n.link,
     created_at: n.created_at ?? new Date().toISOString(),
     is_cleared: n.is_cleared ?? false,
+    // Empty reason → row renders without a pill. We deliberately do NOT
+    // fall back to a generic "Notification" label: a pill that says
+    // "Notification" on a notification row is noise, not signal.
     reason: n.source_kind
-      ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "Notification")
-      : "Notification",
+      ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "")
+      : "",
   }));
 
   // Merge + sort by created_at desc. State items typically use either an
@@ -192,65 +174,6 @@ export async function clearAllNotifications(): Promise<{
       success: false,
       error:
         "Failed to clear notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { success: true, error: null };
-}
-
-// ─── Legacy is_read actions (kept for the existing popover until W3-rev.2b ships) ───
-
-export async function markNotificationRead(
-  notificationId: string,
-): Promise<{ success: boolean; error: string | null }> {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return { success: false, error: "Not authenticated" };
-  }
-
-  const { error } = await supabase
-    .from("notifications")
-    .update({ is_read: true, read_at: new Date().toISOString() })
-    .eq("id", notificationId)
-    .eq("user_id", user.id);
-
-  if (error) {
-    logger.error("Failed to mark notification as read", { error });
-    return {
-      success: false,
-      error:
-        "Failed to update notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { success: true, error: null };
-}
-
-export async function markAllNotificationsRead(): Promise<{
-  success: boolean;
-  error: string | null;
-}> {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return { success: false, error: "Not authenticated" };
-  }
-
-  const { error } = await supabase
-    .from("notifications")
-    .update({ is_read: true, read_at: new Date().toISOString() })
-    .eq("user_id", user.id)
-    .eq("is_read", false);
-
-  if (error) {
-    logger.error("Failed to mark all notifications as read", { error });
-    return {
-      success: false,
-      error:
-        "Failed to update notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
     };
   }
 
