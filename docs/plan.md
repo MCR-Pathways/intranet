@@ -106,7 +106,6 @@ Multi-PR initiative responding to design feedback (April 2026). Full research an
 - [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only).
 
 **Adjacent workstreams surfaced during W3-rev planning (not yet sequenced):**
-- [ ] **`/hr` → `/admin` route rename.** The page is already labelled "Admin dashboard" and contains non-HR sections (Onboarding, Compliance, Key Dates, User Management). URL is the only place still saying `/hr` — feels wrong for L&D-only admins or systems admins. Needs URL move + permanent redirect from `/hr/*` to `/admin/*` for backwards compat (deep links, bookmarks, email links from notification system).
 - [ ] **Digest summary email for pile-up notifications.** Pronto-on-event is already covered by existing Resend triggers. Pile-up scenario (user away for two weeks comes back to N items) needs a separate digest email cadence — single email summarising accumulated items rather than N individual emails. New cron + template work.
 
 ### HR Phase 3
