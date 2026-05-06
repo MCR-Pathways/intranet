@@ -399,6 +399,20 @@ export async function getNotificationsByTab(tab: NotificationTab): Promise<{
     };
   }
 
+  // Count queries are independent; log per-query errors so a silent
+  // null doesn't show "Inbox 0" next to a populated row list. We don't
+  // bail the whole render on a count failure — degraded counts beat a
+  // blank page.
+  if (inboxCountRes.error) {
+    logger.warn("Inbox count query failed", { error: inboxCountRes.error });
+  }
+  if (savedCountRes.error) {
+    logger.warn("Saved count query failed", { error: savedCountRes.error });
+  }
+  if (clearedCountRes.error) {
+    logger.warn("Cleared count query failed", { error: clearedCountRes.error });
+  }
+
   const data = dataRes.data ?? [];
 
   // Same dedup as the bell — composite (source_kind, source_id) so

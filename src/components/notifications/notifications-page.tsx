@@ -315,7 +315,7 @@ export function NotificationsPage({
             </div>
             {truncated && (
               <p className="px-4 py-3 text-xs text-muted-foreground border-t border-border text-center">
-                Showing the most recent 500 notifications.
+                Showing the most recent notifications.
               </p>
             )}
           </>
