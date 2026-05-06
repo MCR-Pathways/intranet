@@ -29,7 +29,7 @@ import { createElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { cn, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import {
   EMPTY_INBOX_COPY,
@@ -154,13 +154,13 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
           size="icon"
           className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:bg-accent motion-safe:hover:scale-105"
         >
-          {/* Red outline bell when there's something to act on, plain
-              outline when clear. Strokes only — a solid red fill
-              over-pushes the trigger when paired with the red badge.
-              The colour shift on the strokes is enough to read at a
-              glance from peripheral vision. */}
+          {/* Filled bell when there's something to act on, outline
+              when clear. Same foreground colour either way — the red
+              badge carries the attention signal; the bell fill just
+              reinforces "there's something here". */}
           <Bell
-            className={cn("h-5 w-5", count > 0 && "text-red-500")}
+            className="h-5 w-5"
+            {...(count > 0 ? { fill: "currentColor" } : {})}
           />
           {count > 0 && (
             <Badge
