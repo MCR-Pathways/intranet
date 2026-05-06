@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
-import { PageHeader } from "@/components/layout/page-header";
+import { Greeting } from "@/components/greeting";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
 import { WeeklyRoundupBanner } from "@/components/news-feed/weekly-roundup-banner";
 import { fetchPostsWithClient, fetchActiveRoundupWithClient, getActiveProfilesForMentions } from "./actions";
 import type { PostAuthor } from "@/types/database.types";
+
+// Force-dynamic so the time-bucket greeting is computed per visit
+// (otherwise Next.js could cache "Good morning" past noon).
+export const dynamic = "force-dynamic";
 
 // Server Actions invoked from this page inherit this timeout. Sized for the
 // uploadPostAttachment worst case (4 MB upload + Sharp processing + Drive).
@@ -53,10 +57,10 @@ export default async function IntranetPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="News Feed"
-        subtitle="Stay updated with the latest news and announcements"
-      />
+      {/* Greeting replaces the "News Feed" H1. The greeting itself is
+          the page heading — no second title underneath. Quiet
+          typographic moment per W3-rev.4. */}
+      <Greeting />
 
       {/* Post composer — all active users (staff + pathways coordinators) */}
       {canPost && <PostComposer userProfile={currentUserProfile} mentionUsers={mentionUsers} />}

@@ -3,7 +3,6 @@ import { logger } from "@/lib/logger";
 import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { getInboxStream } from "@/app/(protected)/notifications/actions";
-import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Profile } from "@/types/database.types";
 import type { InboxRow } from "@/types/notification";
@@ -19,16 +18,13 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // Fetch inbox stream + daily banner state in parallel.
+  // Fetch the inbox stream for the bell's initial render. The DailyBanner
+  // retired in W3-rev.4; working-location prompts now live in the bell as
+  // state rows via getInboxStream → getOfficeArrivalConfirmation.
   let initialInboxRows: InboxRow[] | undefined;
-  let bannerState: string | null = null;
   try {
-    const [inboxResult, bannerResult] = await Promise.all([
-      getInboxStream(),
-      getDailyBannerState(),
-    ]);
+    const inboxResult = await getInboxStream();
     initialInboxRows = inboxResult.rows;
-    bannerState = bannerResult.type;
   } catch (e) {
     logger.error("Failed to fetch layout data", { error: e });
   }
@@ -39,7 +35,6 @@ export default async function ProtectedLayout({
         user={user}
         profile={profile as unknown as Profile}
         initialInboxRows={initialInboxRows}
-        dailyBannerType={bannerState}
       >
         {children}
       </AppLayout>

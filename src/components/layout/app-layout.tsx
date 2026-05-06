@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
-import { DailyBanner } from "@/components/sign-in/daily-banner";
 import { cn } from "@/lib/utils";
 import { getCentreColumnCSS } from "@/lib/layout";
 import type { User } from "@supabase/supabase-js";
@@ -65,16 +64,14 @@ interface AppLayoutProps {
   user: User;
   profile: Profile | null;
   initialInboxRows?: InboxRow[];
-  dailyBannerType?: string | null;
 }
 
-export function AppLayout({ children, user, profile, initialInboxRows, dailyBannerType }: AppLayoutProps) {
+export function AppLayout({ children, user, profile, initialInboxRows }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
-  // Centre-column width for the current route. When set, AppLayout exposes
-  // it via the `--centre-column` CSS variable on <main> so the DailyBanner
-  // (rendered above page content) and the page wrapper below share the same
+  // Centre-column width for the current route. Exposed via the
+  // `--centre-column` CSS variable so page content can match a
   // constrained width. Source of truth: src/lib/layout.ts.
   const pathname = usePathname();
   const centreColumnCSS = getCentreColumnCSS(pathname);
@@ -138,11 +135,6 @@ export function AppLayout({ children, user, profile, initialInboxRows, dailyBann
           style={mainStyle}
         >
           <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-            {dailyBannerType && (
-              <div className="mx-auto max-w-[var(--centre-column,100%)]">
-                <DailyBanner type={dailyBannerType as "office_not_confirmed" | "no_schedule"} />
-              </div>
-            )}
             <div className="mx-auto max-w-[var(--centre-column,100%)]">
               {children}
             </div>
