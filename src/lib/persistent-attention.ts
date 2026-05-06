@@ -86,32 +86,19 @@ export async function getPendingLeaveApprovals(
   userId: string,
 ): Promise<InboxRow[]> {
   try {
-    const { data: managed, error: managedError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("line_manager_id", userId);
-
-    if (managedError) {
-      logger.warn("getPendingLeaveApprovals managed-profiles query failed", {
-        userId,
-        error: managedError.message,
-      });
-      return [];
-    }
-    const managedIds = (managed ?? []).map((p) => p.id);
-    if (managedIds.length === 0) return [];
-
-    const { data: leaves, error: leavesError } = await supabase
+    // One query: filter leave_requests by joined profile's line_manager_id.
+    // Cuts a round trip vs the older managed-profiles → leave-requests pair.
+    const { data: leaves, error } = await supabase
       .from("leave_requests")
-      .select("id, created_at")
-      .in("profile_id", managedIds)
+      .select("id, created_at, profiles!leave_requests_profile_id_fkey!inner(line_manager_id)")
+      .eq("profiles.line_manager_id", userId)
       .eq("status", "pending")
       .order("created_at", { ascending: true });
 
-    if (leavesError) {
-      logger.warn("getPendingLeaveApprovals leave_requests query failed", {
+    if (error) {
+      logger.warn("getPendingLeaveApprovals query failed", {
         userId,
-        error: leavesError.message,
+        error: error.message,
       });
       return [];
     }
@@ -152,21 +139,6 @@ export async function getPendingRTWSignoffs(
   userId: string,
 ): Promise<InboxRow[]> {
   try {
-    const { data: managed, error: managedError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("line_manager_id", userId);
-
-    if (managedError) {
-      logger.warn("getPendingRTWSignoffs managed-profiles query failed", {
-        userId,
-        error: managedError.message,
-      });
-      return [];
-    }
-    const managedIds = (managed ?? []).map((p) => p.id);
-    if (managedIds.length === 0) return [];
-
     // Bound the historical sweep to the last 6 months. RTW forms should
     // be filed within weeks of the absence ending; anything older is
     // either filed or has aged out of practical reach.
@@ -174,46 +146,35 @@ export async function getPendingRTWSignoffs(
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const sixMonthsAgoIso = sixMonthsAgo.toISOString().split("T")[0];
 
-    const { data: absences, error: absencesError } = await supabase
+    // One query: filter sick absences ≥ 3 days for users this manager owns,
+    // and embed the related RTW forms so we can do the locked-vs-not check
+    // in JS. Cuts two round trips vs the older managed-profiles → absences
+    // → RTW chain.
+    const { data: absences, error } = await supabase
       .from("absence_records")
-      .select("id, end_date, total_days")
-      .in("profile_id", managedIds)
+      .select(
+        "id, end_date, total_days, profiles!absence_records_profile_id_fkey!inner(line_manager_id), return_to_work_forms(status)",
+      )
+      .eq("profiles.line_manager_id", userId)
       .eq("absence_type", "sick")
       .gte("total_days", 3)
       .gte("end_date", sixMonthsAgoIso);
 
-    if (absencesError) {
-      logger.warn("getPendingRTWSignoffs absence_records query failed", {
+    if (error) {
+      logger.warn("getPendingRTWSignoffs query failed", {
         userId,
-        error: absencesError.message,
-      });
-      return [];
-    }
-    const triggers = absences ?? [];
-    if (triggers.length === 0) return [];
-
-    const triggerIds = triggers.map((a) => a.id);
-    const { data: rtws, error: rtwsError } = await supabase
-      .from("return_to_work_forms")
-      .select("absence_record_id, status")
-      .in("absence_record_id", triggerIds);
-
-    if (rtwsError) {
-      // Without the locked-rtw set, every trigger absence would falsely
-      // appear as outstanding — better to surface zero than over-report.
-      logger.warn("getPendingRTWSignoffs return_to_work_forms query failed", {
-        userId,
-        error: rtwsError.message,
+        error: error.message,
       });
       return [];
     }
 
-    const lockedAbsences = new Set(
-      (rtws ?? [])
-        .filter((r) => r.status === "locked")
-        .map((r) => r.absence_record_id),
+    // Supabase infers return_to_work_forms as a singular object (1:1 via
+    // the unique-constrained absence_record_id FK). An absence is
+    // "outstanding" when there's no RTW form yet, OR when one exists but
+    // hasn't been locked.
+    const pending = (absences ?? []).filter(
+      (a) => a.return_to_work_forms?.status !== "locked",
     );
-    const pending = triggers.filter((a) => !lockedAbsences.has(a.id));
     if (pending.length === 0) return [];
 
     const oldestEndDate = pending
