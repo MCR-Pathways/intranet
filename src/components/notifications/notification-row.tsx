@@ -97,12 +97,20 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
           {/* Title and timestamp inline — title text, then timestamp as
               a quiet sibling span. No flex-1 pushing the timestamp to
               the row edge; it sits right after the title like GitHub
-              and Slack do (sender · timestamp). */}
+              and Slack do (sender · timestamp).
+
+              Working-location state rows skip the timestamp: their
+              `created_at` is computed at render time (always "now"),
+              so it reads "just now" regardless of when the day's
+              prompt actually started. A meaningless time stamp is
+              worse than no time stamp. */}
           <p className="text-sm leading-tight">
             <span className="font-medium">{row.title}</span>
-            <span className="ml-2 text-xs font-normal text-muted-foreground/70 tabular-nums whitespace-nowrap">
-              {timeAgo(tabTimestamp)}
-            </span>
+            {!isWorkingLocationState && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground/70 tabular-nums whitespace-nowrap">
+                {timeAgo(tabTimestamp)}
+              </span>
+            )}
           </p>
           {row.message && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">

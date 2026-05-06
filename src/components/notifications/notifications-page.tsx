@@ -353,7 +353,7 @@ function EmptyState({ line, showHomeCta }: { line: string; showHomeCta: boolean 
           href="/intranet"
           className="mt-2 text-xs font-medium text-primary hover:underline"
         >
-          Head back to the feed →
+          ← Head back to the feed
         </Link>
       )}
     </div>
