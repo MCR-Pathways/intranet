@@ -167,12 +167,20 @@ export async function getPendingRTWSignoffs(
     const managedIds = (managed ?? []).map((p) => p.id);
     if (managedIds.length === 0) return [];
 
+    // Bound the historical sweep to the last 6 months. RTW forms should
+    // be filed within weeks of the absence ending; anything older is
+    // either filed or has aged out of practical reach.
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoIso = sixMonthsAgo.toISOString().split("T")[0];
+
     const { data: absences, error: absencesError } = await supabase
       .from("absence_records")
       .select("id, end_date, total_days")
       .in("profile_id", managedIds)
       .eq("absence_type", "sick")
-      .gte("total_days", 3);
+      .gte("total_days", 3)
+      .gte("end_date", sixMonthsAgoIso);
 
     if (absencesError) {
       logger.warn("getPendingRTWSignoffs absence_records query failed", {
@@ -185,10 +193,20 @@ export async function getPendingRTWSignoffs(
     if (triggers.length === 0) return [];
 
     const triggerIds = triggers.map((a) => a.id);
-    const { data: rtws } = await supabase
+    const { data: rtws, error: rtwsError } = await supabase
       .from("return_to_work_forms")
       .select("absence_record_id, status")
       .in("absence_record_id", triggerIds);
+
+    if (rtwsError) {
+      // Without the locked-rtw set, every trigger absence would falsely
+      // appear as outstanding — better to surface zero than over-report.
+      logger.warn("getPendingRTWSignoffs return_to_work_forms query failed", {
+        userId,
+        error: rtwsError.message,
+      });
+      return [];
+    }
 
     const lockedAbsences = new Set(
       (rtws ?? [])

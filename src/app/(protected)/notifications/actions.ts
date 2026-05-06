@@ -7,30 +7,28 @@ import { getAllPersistentAttention } from "@/lib/persistent-attention";
 import { SOURCE_KIND_REASON_LABEL } from "@/lib/notifications";
 import type { NotificationSourceKind } from "@/lib/notifications";
 import type { InboxRow } from "@/types/notification";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
 
 const NOTIFICATIONS_FETCH_LIMIT = 50; // overfetch to allow JS dedup
 const NOTIFICATIONS_RETURN_LIMIT = 20; // shown in popover after dedup
 
+type Client = SupabaseClient<Database>;
+
 /**
- * Fetch the current user's uncleared notifications, deduplicated by
- * source_id (one row per source record, showing the most recent state).
- *
- * Notifications without a source_id (grandfathered or system-wide) are
- * NOT deduplicated — each stays as its own row.
+ * Internal: fetch + dedup uncleared notifications for a known user. Used
+ * by both getNotifications (public action that calls getCurrentUser) and
+ * getInboxStream (which already has the user in hand and runs this in
+ * parallel with persistent-attention to avoid double auth + sequential
+ * waits).
  */
-export async function getNotifications() {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return { notifications: [], error: "Not authenticated" };
-  }
-
+async function fetchUnclearedNotifications(supabase: Client, userId: string) {
   const { data, error } = await supabase
     .from("notifications")
     .select(
       "id, user_id, type, title, message, link, is_read, read_at, created_at, source_kind, source_id, is_cleared, cleared_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("is_cleared", false)
     .order("created_at", { ascending: false })
     .limit(NOTIFICATIONS_FETCH_LIMIT);
@@ -44,17 +42,41 @@ export async function getNotifications() {
     };
   }
 
-  // Dedup: one row per source_id (most recent first); rows without
-  // source_id pass through untouched.
+  // Dedup by composite (source_kind, source_id) so legacy serial ids
+  // from different tables can't collide. Rows without source_id pass
+  // through untouched (their own keyspace).
   const seen = new Set<string>();
   const deduped = (data ?? []).filter((row) => {
-    const key = row.source_id ?? `_no_source_${row.id}`;
+    const key = row.source_id
+      ? `${row.source_kind}:${row.source_id}`
+      : `_no_source_${row.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  return { notifications: deduped.slice(0, NOTIFICATIONS_RETURN_LIMIT), error: null };
+  return {
+    notifications: deduped.slice(0, NOTIFICATIONS_RETURN_LIMIT),
+    error: null,
+  };
+}
+
+/**
+ * Fetch the current user's uncleared notifications, deduplicated by
+ * (source_kind, source_id) — one row per source record, showing the
+ * most recent state.
+ *
+ * Notifications without a source_id (grandfathered or system-wide) are
+ * NOT deduplicated — each stays as its own row.
+ */
+export async function getNotifications() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { notifications: [], error: "Not authenticated" };
+  }
+
+  return fetchUnclearedNotifications(supabase, user.id);
 }
 
 /**
@@ -62,8 +84,9 @@ export async function getNotifications() {
  * rows computed from underlying state (overdue compliance, pending
  * approvals, etc.). Sorted by created_at descending.
  *
- * Consumed by W3-rev.2's bell popover. Existing code that calls
- * getNotifications continues to work unchanged.
+ * Runs the notifications fetch + persistent-attention compute in
+ * parallel — the bell is a critical path; sequential waits cost
+ * ~50-150ms per render.
  */
 export async function getInboxStream(): Promise<{
   rows: InboxRow[];
@@ -75,12 +98,16 @@ export async function getInboxStream(): Promise<{
     return { rows: [], error: "Not authenticated" };
   }
 
-  const { notifications, error: notifError } = await getNotifications();
-  if (notifError) {
-    return { rows: [], error: notifError };
+  const [notifResult, stateRows] = await Promise.all([
+    fetchUnclearedNotifications(supabase, user.id),
+    getAllPersistentAttention(supabase, user.id),
+  ]);
+
+  if (notifResult.error) {
+    return { rows: [], error: notifResult.error };
   }
 
-  const eventRows: InboxRow[] = (notifications ?? []).map((n) => ({
+  const eventRows: InboxRow[] = notifResult.notifications.map((n) => ({
     id: n.id,
     kind: "event" as const,
     source_kind: n.source_kind,
@@ -95,8 +122,6 @@ export async function getInboxStream(): Promise<{
       ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "Notification")
       : "Notification",
   }));
-
-  const stateRows = await getAllPersistentAttention(supabase, user.id);
 
   // Merge + sort by created_at desc. State items typically use either an
   // underlying event timestamp (oldest pending request) or "now" — both

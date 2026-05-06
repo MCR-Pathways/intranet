@@ -387,6 +387,12 @@ describe("Notification Actions", () => {
       expect(mockEq).toHaveBeenCalledWith("id", "n1");
     });
 
+    it("calls revalidatePath to refresh layout cache after marking read", async () => {
+      await markNotificationRead("n1");
+
+      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    });
+
     it("returns error on DB failure", async () => {
       const mockEq2 = vi
         .fn()
