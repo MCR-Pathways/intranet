@@ -61,10 +61,7 @@ export async function getOverdueCompliance(
           docs.length > 1
             ? `${docs.length} compliance documents need attention`
             : "1 compliance document needs attention",
-        message:
-          docs.length > 1
-            ? "Documents have expired or are missing — please upload renewals."
-            : "A document has expired or is missing — please upload a renewal.",
+        message: "",
         link: "/hr/compliance",
         created_at: oldest ?? new Date().toISOString(),
         is_cleared: false,
@@ -117,7 +114,7 @@ export async function getPendingLeaveApprovals(
           pending.length > 1
             ? `${pending.length} leave requests waiting for your approval`
             : "1 leave request waiting for your approval",
-        message: "Review and approve or decline.",
+        message: "",
         link: "/hr/leave",
         created_at: pending[0]?.created_at ?? new Date().toISOString(),
         is_cleared: false,
@@ -193,7 +190,7 @@ export async function getPendingRTWSignoffs(
           pending.length > 1
             ? `${pending.length} return-to-work forms outstanding`
             : "1 return-to-work form outstanding",
-        message: "Sickness ≥ 3 days needs an RTW form completed.",
+        message: "",
         link: "/hr/absence",
         created_at: oldestEndDate ?? new Date().toISOString(),
         is_cleared: false,
@@ -243,7 +240,7 @@ export async function getOfficeArrivalConfirmation(
           source_id: userId,
           type: "no_location_set",
           title: "Where are you working today?",
-          message: "Let your team know your location.",
+          message: "",
           link: "/sign-in",
           created_at: new Date().toISOString(),
           is_cleared: false,
@@ -261,7 +258,7 @@ export async function getOfficeArrivalConfirmation(
           source_id: userId,
           type: "office_arrival_unconfirmed",
           title: "Confirm your office arrival",
-          message: "Sign in once you're on site so colleagues can find you.",
+          message: "",
           link: "/sign-in",
           created_at: new Date().toISOString(),
           is_cleared: false,

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import {
   getInboxStream,
   clearNotification,
   clearAllNotifications,
 } from "@/app/(protected)/notifications/actions";
+import {
+  quickSetTodayLocation,
+  confirmRemoteArrival,
+} from "@/app/(protected)/sign-in/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +24,7 @@ import { Bell, ChevronRight, Inbox, X } from "lucide-react";
 import { createElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import {
@@ -168,19 +173,18 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         align="end"
         forceMount
       >
-        <div className="flex flex-none items-center justify-between px-3 py-1.5">
+        <div className="flex flex-none items-center justify-between px-3 py-1">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
             Inbox
           </DropdownMenuLabel>
           {count > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
+            <button
+              type="button"
               onClick={handleClearAll}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Clear all
-            </Button>
+            </button>
           )}
         </div>
         <DropdownMenuSeparator className="m-0" />
@@ -200,6 +204,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
                   row={row}
                   onClick={() => handleRowClick(row)}
                   onClear={() => handleClear(row.id)}
+                  onAfterAction={fetchRows}
                 />
               ))}
             </div>
@@ -242,13 +247,19 @@ interface InboxRowItemProps {
   row: InboxRow;
   onClick: () => void;
   onClear: () => void;
+  onAfterAction: () => void;
 }
 
-function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
+function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProps) {
   const isStateRow = row.kind === "state";
   const sourceKind = row.source_kind as NotificationSourceKind | null;
   const Icon = sourceKind ? SOURCE_KIND_ICON[sourceKind] : null;
   const actionVerb = sourceKind ? SOURCE_KIND_ACTION_VERB[sourceKind] : null;
+  // Working-location state rows render an inline location picker
+  // instead of the generic verb button — quick action without leaving
+  // the bell. All other rows (event or state) use the verb-button form.
+  const isWorkingLocationState =
+    isStateRow && sourceKind === "working_location";
 
   return (
     <div className="group/row relative flex items-start gap-2.5 px-3 py-2.5 hover:bg-accent rounded-sm">
@@ -273,16 +284,30 @@ function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
           <p className="font-medium text-sm leading-tight line-clamp-1">
             {row.title}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-            {row.message}
-          </p>
+          {/* Message only renders when it carries content. State rows
+              set message to "" because the title says it all; event
+              rows keep their detail text (e.g. "John approved your
+              leave for 3-5 March"). */}
+          {row.message && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              {row.message}
+            </p>
+          )}
         </button>
 
-        {/* Quick action verb — explicit affordance for the next step.
-            "Set location", "Review", "Continue" etc. depending on
-            source_kind. Click does the same as the title click — both
-            paths go through `onClick` so behaviour stays consistent. */}
-        {actionVerb && (
+        {/* Working-location → inline picker (Home / Glasgow / Stevenage
+            / Other). Lets the user log location directly from the bell
+            without bouncing to /sign-in. */}
+        {isWorkingLocationState && (
+          <WorkingLocationPicker
+            type={row.type as "no_location_set" | "office_arrival_unconfirmed"}
+            onAfterAction={onAfterAction}
+          />
+        )}
+
+        {/* Default verb button for everything else. Click does the same
+            as the title click — both paths go through `onClick`. */}
+        {!isWorkingLocationState && actionVerb && (
           <button
             type="button"
             onClick={(e) => {
@@ -319,5 +344,114 @@ function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
         </button>
       )}
     </div>
+  );
+}
+
+// ─── Working-location inline picker ──────────────────────────────────
+
+interface WorkingLocationPickerProps {
+  type: "no_location_set" | "office_arrival_unconfirmed";
+  onAfterAction: () => void;
+}
+
+function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerProps) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleSet = (
+    location: "home" | "glasgow_office" | "stevenage_office",
+    label: string,
+  ) => {
+    startTransition(async () => {
+      const result = await quickSetTodayLocation(location);
+      if (result.success) {
+        toast.success(`Location set: ${label}`);
+        onAfterAction();
+      } else {
+        toast.error(result.error ?? "Failed to set location");
+      }
+    });
+  };
+
+  const handleConfirm = () => {
+    startTransition(async () => {
+      const result = await confirmRemoteArrival();
+      if (result.success) {
+        toast.success("Arrival confirmed");
+        onAfterAction();
+      } else {
+        toast.error(result.error ?? "Failed to confirm");
+      }
+    });
+  };
+
+  if (type === "office_arrival_unconfirmed") {
+    return (
+      <div
+        className="mt-1.5 flex flex-wrap items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <PickerButton onClick={handleConfirm} disabled={isPending}>
+          I&apos;m here
+        </PickerButton>
+        <PickerButton
+          onClick={() => handleSet("home", "Home")}
+          disabled={isPending}
+        >
+          Home
+        </PickerButton>
+      </div>
+    );
+  }
+
+  // type === "no_location_set"
+  return (
+    <div
+      className="mt-1.5 flex flex-wrap items-center gap-1.5"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <PickerButton
+        onClick={() => handleSet("home", "Home")}
+        disabled={isPending}
+      >
+        Home
+      </PickerButton>
+      <PickerButton
+        onClick={() => handleSet("glasgow_office", "Glasgow")}
+        disabled={isPending}
+      >
+        Glasgow
+      </PickerButton>
+      <PickerButton
+        onClick={() => handleSet("stevenage_office", "Stevenage")}
+        disabled={isPending}
+      >
+        Stevenage
+      </PickerButton>
+      <PickerButton onClick={() => router.push("/sign-in")} disabled={isPending}>
+        Other
+      </PickerButton>
+    </div>
+  );
+}
+
+function PickerButton({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
+    >
+      {children}
+    </button>
   );
 }
