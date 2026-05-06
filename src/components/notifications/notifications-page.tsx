@@ -43,7 +43,7 @@ import { toast } from "sonner";
 interface NotificationsPageProps {
   initialTab: NotificationTab;
   initialRows: InboxRow[];
-  initialCounts: { inbox: number; saved: number; cleared: number };
+  initialCounts: { inbox: number; saved: number; cleared: number; inboxClearable: number };
   initialTruncated: boolean;
 }
 
@@ -114,7 +114,9 @@ export function NotificationsPage({
     startTransition(async () => {
       const result = await clearAllNotifications();
       if (result.success) {
-        toast.success(`Cleared ${counts.inbox} notification${counts.inbox === 1 ? "" : "s"}`);
+        toast.success(
+          `Cleared ${counts.inboxClearable} notification${counts.inboxClearable === 1 ? "" : "s"}`,
+        );
         setConfirmOpen(false);
         refresh();
       } else {
@@ -162,7 +164,7 @@ export function NotificationsPage({
           one. */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Notifications</h1>
-        {tab === "inbox" && counts.inbox > 0 && (
+        {tab === "inbox" && counts.inboxClearable > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -286,7 +288,7 @@ export function NotificationsPage({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Clear all {counts.inbox} notification{counts.inbox === 1 ? "" : "s"} in Inbox?
+              Clear all {counts.inboxClearable} notification{counts.inboxClearable === 1 ? "" : "s"} in Inbox?
             </AlertDialogTitle>
             <AlertDialogDescription>
               You can find them in Cleared for 30 days.

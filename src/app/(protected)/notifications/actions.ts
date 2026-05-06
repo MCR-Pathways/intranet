@@ -295,7 +295,13 @@ export type NotificationTab = "inbox" | "saved" | "cleared";
  */
 export async function getNotificationsByTab(tab: NotificationTab): Promise<{
   rows: InboxRow[];
-  counts: { inbox: number; saved: number; cleared: number };
+  counts: {
+    inbox: number;
+    saved: number;
+    cleared: number;
+    /** DB-only Inbox count (no state rows). Drives "Clear all" — state rows can't be cleared. */
+    inboxClearable: number;
+  };
   truncated: boolean;
   error: string | null;
 }> {
@@ -304,7 +310,7 @@ export async function getNotificationsByTab(tab: NotificationTab): Promise<{
   if (!user) {
     return {
       rows: [],
-      counts: { inbox: 0, saved: 0, cleared: 0 },
+      counts: { inbox: 0, saved: 0, cleared: 0, inboxClearable: 0 },
       truncated: false,
       error: "Not authenticated",
     };
@@ -362,13 +368,13 @@ export async function getNotificationsByTab(tab: NotificationTab): Promise<{
       .limit(NOTIFICATIONS_PAGE_LIMIT);
   })();
 
-  // Inbox is the only tab that includes state rows; Saved and Cleared
-  // skip the persistent-attention call entirely (state rows have no DB
-  // row to pin or clear, so they can't appear in those tabs by design).
-  const persistentQ =
-    tab === "inbox"
-      ? getAllPersistentAttention(supabase, user.id)
-      : Promise.resolve([] as InboxRow[]);
+  // State rows compute from underlying tables (working_location,
+  // leave_requests, compliance_documents, absence_records). Always
+  // computed — Inbox tab merges them into the row list AND the Inbox
+  // tab count includes them, regardless of which tab the user is on.
+  // Without this, "Inbox (0)" can show next to a tab that visibly
+  // contains a state row, which confuses everyone.
+  const persistentQ = getAllPersistentAttention(supabase, user.id);
 
   const [inboxCountRes, savedCountRes, clearedCountRes, dataRes, stateRows] =
     await Promise.all([
@@ -386,7 +392,7 @@ export async function getNotificationsByTab(tab: NotificationTab): Promise<{
     });
     return {
       rows: [],
-      counts: { inbox: 0, saved: 0, cleared: 0 },
+      counts: { inbox: 0, saved: 0, cleared: 0, inboxClearable: 0 },
       truncated: false,
       error:
         "Failed to fetch notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
@@ -440,9 +446,15 @@ export async function getNotificationsByTab(tab: NotificationTab): Promise<{
   return {
     rows,
     counts: {
-      inbox: inboxCountRes.count ?? 0,
+      // State rows live in Inbox only (Path A), so add them to the
+      // inbox count for consistency with the rendered row list.
+      inbox: (inboxCountRes.count ?? 0) + stateRows.length,
       saved: savedCountRes.count ?? 0,
       cleared: clearedCountRes.count ?? 0,
+      // Clear-all only flips DB rows; state rows have no DB id.
+      // The dialog count and the kebab visibility both key off this
+      // so we never advertise clearing what we can't clear.
+      inboxClearable: inboxCountRes.count ?? 0,
     },
     truncated: data.length >= NOTIFICATIONS_PAGE_LIMIT,
     error: null,
