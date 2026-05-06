@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { getCentreColumnCSS } from "@/lib/layout";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
-import type { NotificationData } from "@/types/notification";
+import type { InboxRow } from "@/types/notification";
 
 const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
 const SIDEBAR_TOGGLE_EVENT = "mcr-sidebar-toggle";
@@ -64,11 +64,11 @@ interface AppLayoutProps {
   children: React.ReactNode;
   user: User;
   profile: Profile | null;
-  initialNotifications?: NotificationData[];
+  initialInboxRows?: InboxRow[];
   dailyBannerType?: string | null;
 }
 
-export function AppLayout({ children, user, profile, initialNotifications, dailyBannerType }: AppLayoutProps) {
+export function AppLayout({ children, user, profile, initialInboxRows, dailyBannerType }: AppLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
@@ -101,7 +101,7 @@ export function AppLayout({ children, user, profile, initialNotifications, daily
       <Header
         user={user}
         profile={profile}
-        initialNotifications={initialNotifications}
+        initialInboxRows={initialInboxRows}
         onMenuToggle={toggleMobileMenu}
         onSidebarToggle={toggleSidebar}
       />

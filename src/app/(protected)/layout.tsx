@@ -2,10 +2,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { redirect } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
-import { getNotifications } from "@/app/(protected)/notifications/actions";
+import { getInboxStream } from "@/app/(protected)/notifications/actions";
 import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Profile } from "@/types/database.types";
+import type { InboxRow } from "@/types/notification";
 
 export default async function ProtectedLayout({
   children,
@@ -18,15 +19,15 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // Fetch notifications + daily banner state in parallel
-  let initialNotifications;
+  // Fetch inbox stream + daily banner state in parallel.
+  let initialInboxRows: InboxRow[] | undefined;
   let bannerState: string | null = null;
   try {
-    const [notifResult, bannerResult] = await Promise.all([
-      getNotifications(),
+    const [inboxResult, bannerResult] = await Promise.all([
+      getInboxStream(),
       getDailyBannerState(),
     ]);
-    initialNotifications = notifResult.notifications;
+    initialInboxRows = inboxResult.rows;
     bannerState = bannerResult.type;
   } catch (e) {
     logger.error("Failed to fetch layout data", { error: e });
@@ -37,7 +38,7 @@ export default async function ProtectedLayout({
       <AppLayout
         user={user}
         profile={profile as unknown as Profile}
-        initialNotifications={initialNotifications}
+        initialInboxRows={initialInboxRows}
         dailyBannerType={bannerState}
       >
         {children}

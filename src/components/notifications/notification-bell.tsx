@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
+  getInboxStream,
+  clearNotification,
+  clearAllNotifications,
 } from "@/app/(protected)/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,192 +16,259 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, CheckCheck, ExternalLink, Shield } from "lucide-react";
+import { Bell, Inbox, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-import type { NotificationData } from "@/types/notification";
+import {
+  EMPTY_INBOX_COPY,
+  INFORMATIONAL_SOURCE_KINDS,
+  type NotificationSourceKind,
+} from "@/lib/notifications";
+import type { InboxRow } from "@/types/notification";
 
 interface NotificationBellProps {
-  initialNotifications?: NotificationData[];
+  initialRows?: InboxRow[];
 }
 
-export function NotificationBell({ initialNotifications }: NotificationBellProps) {
+export function NotificationBell({ initialRows }: NotificationBellProps) {
   const router = useRouter();
-  const hasInitialData = initialNotifications !== undefined;
-  const [notifications, setNotifications] = useState<NotificationData[]>(
-    initialNotifications ?? []
-  );
-  const [unreadCount, setUnreadCount] = useState(
-    initialNotifications?.filter((n) => !n.is_read).length ?? 0
-  );
+  const hasInitialData = initialRows !== undefined;
+  const [rows, setRows] = useState<InboxRow[]>(initialRows ?? []);
   const [isLoading, setIsLoading] = useState(!hasInitialData);
 
-  const fetchNotifications = useCallback(async () => {
-    const { notifications: data, error } = await getNotifications();
+  // One empty-state line per page-load — re-renders within the session
+  // keep the same line, refresh picks a new one. react-hooks/purity is
+  // conservative about Math.random, but we genuinely want a one-shot
+  // random pick that's stable for the component's lifetime (memoised via
+  // empty deps).
+  /* eslint-disable react-hooks/purity -- intentional one-shot random pick */
+  const emptyLine = useMemo(
+    () => EMPTY_INBOX_COPY[Math.floor(Math.random() * EMPTY_INBOX_COPY.length)],
+    [],
+  );
+  /* eslint-enable react-hooks/purity */
 
+  const fetchRows = useCallback(async () => {
+    const { rows: data, error } = await getInboxStream();
     if (error) {
-      logger.error("Error fetching notifications", { error });
+      logger.error("Error fetching inbox stream", { error });
       setIsLoading(false);
       return;
     }
-
-    setNotifications((data as NotificationData[]) || []);
-    setUnreadCount(
-      (data as NotificationData[])?.filter((n) => !n.is_read).length || 0
-    );
+    setRows(data);
     setIsLoading(false);
   }, []);
 
-  // Sync state when server-provided notifications change (e.g. after revalidatePath)
-  /* eslint-disable react-hooks/set-state-in-effect -- syncing server props to client state */
   useEffect(() => {
-    if (initialNotifications === undefined) return;
-    setNotifications(initialNotifications);
-    setUnreadCount(initialNotifications.filter((n) => !n.is_read).length);
+    if (initialRows === undefined) return;
+    setRows(initialRows);
     setIsLoading(false);
-  }, [initialNotifications]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [initialRows]);
 
-  // Only fetch client-side if no server data was provided
-  /* eslint-disable react-hooks/set-state-in-effect -- legitimate data-fetching-on-mount pattern */
   useEffect(() => {
     if (hasInitialData) return;
-    fetchNotifications();
-  }, [fetchNotifications, hasInitialData]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    fetchRows();
+  }, [fetchRows, hasInitialData]);
 
-  const handleMarkAllRead = async () => {
-    if (unreadCount === 0) return;
-
-    try {
-      await markAllNotificationsRead();
-
-      setNotifications((prev) =>
-        prev.map((n) => ({
-          ...n,
-          is_read: true,
-          read_at: new Date().toISOString(),
-        }))
-      );
-      setUnreadCount(0);
-    } catch (error) {
-      logger.error("Error marking notifications as read", { error });
+  const handleClearAll = async () => {
+    if (rows.length === 0) return;
+    const previous = rows;
+    setRows([]); // optimistic
+    const { error } = await clearAllNotifications();
+    if (error) {
+      logger.error("Failed to clear all notifications", { error });
+      setRows(previous);
     }
   };
 
-  const handleNotificationClick = async (notification: NotificationData) => {
-    // Mark as read if unread
-    if (!notification.is_read) {
-      try {
-        await markNotificationRead(notification.id);
+  const handleClear = useCallback(
+    async (rowId: string) => {
+      // Synthetic state-row ids start with `state:` and aren't valid DB
+      // notification ids — clearing them server-side is a no-op the API
+      // would reject. State rows resolve naturally when underlying state
+      // changes; the X icon is hidden on them anyway.
+      if (rowId.startsWith("state:")) return;
 
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notification.id
-              ? { ...n, is_read: true, read_at: new Date().toISOString() }
-              : n
-          )
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      } catch (error) {
-        logger.error("Error marking notification as read", { error });
+      const previous = rows;
+      setRows((prev) => prev.filter((r) => r.id !== rowId));
+      const { error } = await clearNotification(rowId);
+      if (error) {
+        logger.error("Failed to clear notification", { error });
+        setRows(previous);
       }
-    }
+    },
+    [rows],
+  );
 
-    // Navigate if there's a link
-    if (notification.link) {
-      router.push(notification.link);
-    }
-  };
+  const handleRowClick = useCallback(
+    (row: InboxRow) => {
+      // Always navigate (if there's a destination)
+      if (row.link) {
+        router.push(row.link);
+      }
+
+      // Informational kinds clear on click (engaging with the info IS
+      // the intentional act). Actionable kinds navigate only — the user
+      // does the underlying work and auto-Clear fires from there.
+      if (
+        row.kind === "event" &&
+        row.source_kind &&
+        INFORMATIONAL_SOURCE_KINDS.has(
+          row.source_kind as NotificationSourceKind,
+        )
+      ) {
+        void handleClear(row.id);
+      }
+    },
+    [router, handleClear],
+  );
+
+  const count = rows.length;
+  const badgeText = count > 9 ? "9+" : String(count);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {count > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center p-0 text-[10px] font-semibold"
             >
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {badgeText}
             </Badge>
           )}
           <span className="sr-only">Notifications</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end" forceMount>
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
-          {unreadCount > 0 && (
+      <DropdownMenuContent
+        className="w-96 flex flex-col p-0"
+        align="end"
+        forceMount
+      >
+        <div className="flex flex-none items-center justify-between px-3 py-2">
+          <DropdownMenuLabel className="p-0 text-sm font-semibold">
+            Inbox
+          </DropdownMenuLabel>
+          {count > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-foreground"
-              onClick={handleMarkAllRead}
+              onClick={handleClearAll}
             >
-              <CheckCheck />
-              Mark all read
+              Clear all
             </Button>
           )}
         </div>
-        <DropdownMenuSeparator />
-        <ScrollArea className="max-h-[400px]">
-          {isLoading ? (
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              Loading...
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              No notifications
-            </div>
-          ) : (
+        <DropdownMenuSeparator className="m-0" />
+
+        {isLoading ? (
+          <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+            Loading...
+          </div>
+        ) : count === 0 ? (
+          <EmptyState line={emptyLine} />
+        ) : (
+          <ScrollArea className="flex-1 max-h-[580px]">
             <div className="py-1">
-              {notifications.map((notification) => (
-                <button
-                  key={notification.id}
-                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent rounded-sm ${
-                    !notification.is_read ? "bg-accent/50" : ""
-                  } ${notification.type === "mandatory_course" && !notification.is_read ? "border-l-2 border-destructive" : ""}`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-2">
-                    {!notification.is_read && notification.type === "mandatory_course" ? (
-                      <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" />
-                    ) : !notification.is_read ? (
-                      <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
-                    ) : null}
-                    <div className={`flex-1 ${notification.is_read ? "pl-4" : ""}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium leading-tight">
-                            {notification.title}
-                          </p>
-                          {notification.type === "mandatory_course" && !notification.is_read && (
-                            <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
-                              Required
-                            </span>
-                          )}
-                        </div>
-                        {notification.link && (
-                          <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {notification.created_at ? timeAgo(notification.created_at) : ""}
-                      </p>
-                    </div>
-                  </div>
-                </button>
+              {rows.map((row) => (
+                <InboxRowItem
+                  key={row.id}
+                  row={row}
+                  onClick={() => handleRowClick(row)}
+                  onClear={() => handleClear(row.id)}
+                />
               ))}
             </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+        )}
+
+        {count > 0 && (
+          <>
+            <DropdownMenuSeparator className="m-0" />
+            <Link
+              href="/notifications"
+              className="flex flex-none justify-center px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-b-md"
+            >
+              View all
+            </Link>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// ─── Empty state ────────────────────────────────────────────────────
+
+function EmptyState({ line }: { line: string }) {
+  return (
+    <div className="px-3 py-12 flex flex-col items-center justify-center gap-3 text-center">
+      <Inbox
+        className="h-8 w-8 text-muted-foreground/40"
+        strokeWidth={1.5}
+      />
+      <p className="text-sm text-muted-foreground">{line}</p>
+    </div>
+  );
+}
+
+// ─── Row component ──────────────────────────────────────────────────
+
+interface InboxRowItemProps {
+  row: InboxRow;
+  onClick: () => void;
+  onClear: () => void;
+}
+
+function InboxRowItem({ row, onClick, onClear }: InboxRowItemProps) {
+  const isStateRow = row.kind === "state";
+
+  return (
+    <div className="group/row relative flex items-start gap-2 px-3 py-2.5 hover:bg-accent rounded-sm">
+      {/* Reason pill — leads the row so a manager scanning sees the
+          category before reading the title. */}
+      <span className="mt-0.5 inline-flex shrink-0 items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        {row.reason}
+      </span>
+
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 min-w-0 text-left"
+      >
+        <p className="font-medium text-sm leading-tight line-clamp-1">
+          {row.title}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+          {row.message}
+        </p>
+        {!isStateRow && (
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            {timeAgo(row.created_at)}
+          </p>
+        )}
+      </button>
+
+      {/* Per-row clear (X). Hidden until row hover/focus. State rows
+          have no DB id to clear and resolve naturally — no X. */}
+      {!isStateRow && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClear();
+          }}
+          className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 p-1 rounded hover:bg-muted-foreground/10"
+          aria-label={`Clear ${row.title}`}
+        >
+          <X className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+      )}
+    </div>
   );
 }

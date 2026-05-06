@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * Mock strategy: Mock getCurrentUser() from @/lib/auth instead of
- * the low-level Supabase client. This matches the CLAUDE.md pattern.
+ * Mock strategy: mock getCurrentUser() from @/lib/auth instead of the
+ * low-level Supabase client. Persistent-attention is mocked at module
+ * boundary so getInboxStream tests are isolated from the underlying
+ * state-compute helpers.
  *
- * Chain shape for getNotifications:
+ * Chain shape for the read path (inside getInboxStream):
  *   from().select().eq("user_id").eq("is_cleared").order().limit()
  *
- * Chain shape for update actions:
+ * Chain shape for clear actions:
  *   from().update().eq().eq()
  */
 
@@ -34,19 +36,14 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-// Mock persistent-attention so getInboxStream tests are isolated from the
-// underlying state-compute helpers.
 vi.mock("@/lib/persistent-attention", () => ({
   getAllPersistentAttention: vi.fn().mockResolvedValue([]),
 }));
 
 import {
-  getNotifications,
   getInboxStream,
   clearNotification,
   clearAllNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
 } from "@/app/(protected)/notifications/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllPersistentAttention } from "@/lib/persistent-attention";
@@ -100,7 +97,6 @@ describe("Notification Actions", () => {
     // Select chain: from().select().eq("user_id").eq("is_cleared").order().limit()
     mockLimit.mockResolvedValue({ data: mockNotifications, error: null });
     mockOrder.mockReturnValue({ limit: mockLimit });
-    // mockEq returns an object exposing both eq (for chained .eq) and order (terminal)
     mockEq.mockReturnValue({ eq: mockEq, order: mockOrder });
     mockSelect.mockReturnValue({ eq: mockEq });
 
@@ -108,84 +104,6 @@ describe("Notification Actions", () => {
     mockUpdate.mockReturnValue({ eq: mockEq });
 
     mockFrom.mockReturnValue({ select: mockSelect, update: mockUpdate });
-  });
-
-  // ===========================================
-  // getNotifications
-  // ===========================================
-
-  describe("getNotifications", () => {
-    it("returns error when not authenticated", async () => {
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as never,
-        user: null,
-        profile: null,
-      });
-
-      const result = await getNotifications();
-
-      expect(result).toEqual({ notifications: [], error: "Not authenticated" });
-    });
-
-    it("queries with is_cleared = false filter and overfetches for dedup", async () => {
-      const result = await getNotifications();
-
-      expect(result.error).toBeNull();
-      expect(result.notifications).toEqual(mockNotifications);
-      expect(mockFrom).toHaveBeenCalledWith("notifications");
-      expect(mockSelect).toHaveBeenCalledWith(
-        "id, user_id, type, title, message, link, is_read, read_at, created_at, source_kind, source_id, is_cleared, cleared_at",
-      );
-      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
-      expect(mockEq).toHaveBeenCalledWith("is_cleared", false);
-      expect(mockOrder).toHaveBeenCalledWith("created_at", { ascending: false });
-      expect(mockLimit).toHaveBeenCalledWith(50);
-    });
-
-    it("dedupes by source_id (one row per source, most recent kept)", async () => {
-      const dupes = [
-        { ...mockNotifications[0], id: "newer", source_kind: "leave_request", source_id: "lr-1", created_at: "2026-01-20T10:00:00Z" },
-        { ...mockNotifications[0], id: "older", source_kind: "leave_request", source_id: "lr-1", created_at: "2026-01-19T10:00:00Z" },
-        { ...mockNotifications[0], id: "different", source_kind: "leave_request", source_id: "lr-2", created_at: "2026-01-18T10:00:00Z" },
-      ];
-      mockLimit.mockResolvedValue({ data: dupes, error: null });
-
-      const result = await getNotifications();
-
-      expect(result.notifications.map((n) => n.id)).toEqual(["newer", "different"]);
-    });
-
-    it("does not dedupe rows without source_id", async () => {
-      const noSource = [
-        { ...mockNotifications[0], id: "a", source_id: null },
-        { ...mockNotifications[0], id: "b", source_id: null },
-      ];
-      mockLimit.mockResolvedValue({ data: noSource, error: null });
-
-      const result = await getNotifications();
-
-      expect(result.notifications.map((n) => n.id)).toEqual(["a", "b"]);
-    });
-
-    it("returns empty array with error on DB failure", async () => {
-      mockLimit.mockResolvedValue({
-        data: null,
-        error: { message: "Database connection error" },
-      });
-
-      const result = await getNotifications();
-
-      expect(result.notifications).toEqual([]);
-      expect(result.error).toContain("Failed to fetch notifications");
-    });
-
-    it("returns empty array when data is null", async () => {
-      mockLimit.mockResolvedValue({ data: null, error: null });
-
-      const result = await getNotifications();
-
-      expect(result).toEqual({ notifications: [], error: null });
-    });
   });
 
   // ===========================================
@@ -201,8 +119,20 @@ describe("Notification Actions", () => {
       });
 
       const result = await getInboxStream();
-
       expect(result).toEqual({ rows: [], error: "Not authenticated" });
+    });
+
+    it("queries notifications with the is_cleared filter and overfetch limit", async () => {
+      await getInboxStream();
+
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(mockSelect).toHaveBeenCalledWith(
+        "id, user_id, type, title, message, link, is_read, read_at, created_at, source_kind, source_id, is_cleared, cleared_at",
+      );
+      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(mockEq).toHaveBeenCalledWith("is_cleared", false);
+      expect(mockOrder).toHaveBeenCalledWith("created_at", { ascending: false });
+      expect(mockLimit).toHaveBeenCalledWith(50);
     });
 
     it("returns event-kind rows from DB notifications", async () => {
@@ -211,6 +141,41 @@ describe("Notification Actions", () => {
       expect(result.error).toBeNull();
       expect(result.rows).toHaveLength(2);
       expect(result.rows.every((r) => r.kind === "event")).toBe(true);
+    });
+
+    it("dedupes by composite source_kind:source_id (newer wins)", async () => {
+      const dupes = [
+        { ...mockNotifications[0], id: "newer", source_kind: "leave_request", source_id: "lr-1", created_at: "2026-01-20T10:00:00Z" },
+        { ...mockNotifications[0], id: "older", source_kind: "leave_request", source_id: "lr-1", created_at: "2026-01-19T10:00:00Z" },
+        { ...mockNotifications[0], id: "different", source_kind: "leave_request", source_id: "lr-2", created_at: "2026-01-18T10:00:00Z" },
+      ];
+      mockLimit.mockResolvedValue({ data: dupes, error: null });
+
+      const result = await getInboxStream();
+
+      expect(result.rows.map((r) => r.id)).toEqual(["newer", "different"]);
+    });
+
+    it("does not dedupe rows without source_id", async () => {
+      const noSource = [
+        { ...mockNotifications[0], id: "a", source_id: null },
+        { ...mockNotifications[0], id: "b", source_id: null },
+      ];
+      mockLimit.mockResolvedValue({ data: noSource, error: null });
+
+      const result = await getInboxStream();
+      expect(result.rows.map((r) => r.id)).toEqual(["a", "b"]);
+    });
+
+    it("returns empty rows with error on DB failure", async () => {
+      mockLimit.mockResolvedValue({
+        data: null,
+        error: { message: "Database connection error" },
+      });
+
+      const result = await getInboxStream();
+      expect(result.rows).toEqual([]);
+      expect(result.error).toContain("Failed to fetch notifications");
     });
 
     it("merges DB rows and persistent-state rows, sorted by created_at desc", async () => {
@@ -234,11 +199,8 @@ describe("Notification Actions", () => {
       const result = await getInboxStream();
 
       expect(result.rows).toHaveLength(3);
-      // State row should be first (newest)
       expect(result.rows[0].kind).toBe("state");
-      // Then n1 (2026-01-15)
       expect(result.rows[1].id).toBe("n1");
-      // Then n2 (2026-01-14)
       expect(result.rows[2].id).toBe("n2");
     });
 
@@ -251,8 +213,12 @@ describe("Notification Actions", () => {
       });
 
       const result = await getInboxStream();
-
       expect(result.rows[0].reason).toBe("Leave request");
+    });
+
+    it("falls back to 'Notification' when source_kind is missing", async () => {
+      const result = await getInboxStream();
+      expect(result.rows[0].reason).toBe("Notification");
     });
   });
 
@@ -327,6 +293,7 @@ describe("Notification Actions", () => {
         }),
       );
       expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
     });
 
     it("returns error when not authenticated", async () => {
@@ -347,112 +314,6 @@ describe("Notification Actions", () => {
       const result = await clearAllNotifications();
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to clear notifications");
-    });
-  });
-
-  // ===========================================
-  // markNotificationRead (legacy)
-  // ===========================================
-
-  describe("markNotificationRead", () => {
-    beforeEach(() => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ update: mockUpdate });
-    });
-
-    it("returns error when not authenticated", async () => {
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as never,
-        user: null,
-        profile: null,
-      });
-
-      const result = await markNotificationRead("n1");
-
-      expect(result).toEqual({ success: false, error: "Not authenticated" });
-    });
-
-    it("updates notification with is_read and read_at", async () => {
-      const result = await markNotificationRead("n1");
-
-      expect(result).toEqual({ success: true, error: null });
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          is_read: true,
-          read_at: expect.any(String),
-        }),
-      );
-      expect(mockEq).toHaveBeenCalledWith("id", "n1");
-    });
-
-    it("calls revalidatePath to refresh layout cache after marking read", async () => {
-      await markNotificationRead("n1");
-
-      expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
-    });
-
-    it("returns error on DB failure", async () => {
-      const mockEq2 = vi
-        .fn()
-        .mockResolvedValue({ error: { message: "Update failed" } });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-
-      const result = await markNotificationRead("n1");
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Failed to update notification");
-    });
-  });
-
-  // ===========================================
-  // markAllNotificationsRead (legacy)
-  // ===========================================
-
-  describe("markAllNotificationsRead", () => {
-    beforeEach(() => {
-      const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-      mockUpdate.mockReturnValue({ eq: mockEq });
-      mockFrom.mockReturnValue({ update: mockUpdate });
-    });
-
-    it("returns error when not authenticated", async () => {
-      vi.mocked(getCurrentUser).mockResolvedValue({
-        supabase: mockSupabase as never,
-        user: null,
-        profile: null,
-      });
-
-      const result = await markAllNotificationsRead();
-
-      expect(result).toEqual({ success: false, error: "Not authenticated" });
-    });
-
-    it("updates all unread notifications for the user", async () => {
-      const result = await markAllNotificationsRead();
-
-      expect(result).toEqual({ success: true, error: null });
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          is_read: true,
-          read_at: expect.any(String),
-        }),
-      );
-      expect(mockEq).toHaveBeenCalledWith("user_id", "user-1");
-    });
-
-    it("returns error on DB failure", async () => {
-      const mockEq2 = vi
-        .fn()
-        .mockResolvedValue({ error: { message: "Bulk update failed" } });
-      mockEq.mockReturnValue({ eq: mockEq2 });
-
-      const result = await markAllNotificationsRead();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Failed to update notifications");
     });
   });
 });

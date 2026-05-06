@@ -67,6 +67,25 @@ export const SOURCE_KIND_REASON_LABEL: Record<NotificationSourceKind, string> = 
   working_location: "Working location",
 };
 
+/**
+ * Empty-state copy for the bell popover. One picked at random per
+ * page-load (via `Math.floor(Math.random() * EMPTY_INBOX_COPY.length)`)
+ * so the same user sees a different line if they refresh.
+ *
+ * Locked in `memory/intranet-design-feedback.md` after the W3-rev
+ * scope review — these aren't generic SaaS empty states, they're
+ * British-leaning, dryly worded, and assume the reader is busy.
+ */
+export const EMPTY_INBOX_COPY = [
+  "All caught up. Carry on.",
+  "Inbox empty. Time for a brew.",
+  "Nothing to action right now.",
+  "All clear. Have a good one.",
+  "All caught up. The kettle awaits.",
+  "Empty. As it should be.",
+  "Inbox at zero. Mind how you go.",
+] as const;
+
 interface CreateNotificationParams {
   userId: string;
   type: string;
