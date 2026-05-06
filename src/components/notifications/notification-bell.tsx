@@ -199,7 +199,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
           />
           {count > 0 && (
             <Badge
-              className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 flex items-center justify-center p-0 text-[10px] font-bold bg-red-500 text-white border-0 hover:bg-red-500 shadow-sm"
+              className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 py-0 flex items-center justify-center text-[10px] font-bold bg-red-500 text-white border-0 hover:bg-red-500 shadow-sm"
             >
               {badgeText}
             </Badge>
