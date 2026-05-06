@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/service", () => ({
 
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 
-import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "./notifications";
+import { autoClearSource, createNotification, createNotifications, markSourceCleared, NOTIFICATION_SOURCE_KINDS } from "./notifications";
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -168,6 +168,97 @@ describe("Notification Helpers", () => {
 
       expect(result.error).toBeDefined();
       expect(result.error?.message).toBe("Batch insert failed");
+    });
+  });
+
+  // =============================================
+  // markSourceCleared
+  // =============================================
+
+  describe("markSourceCleared", () => {
+    function setupClearChain(opts?: { error?: { message: string } }) {
+      const eqIsCleared = vi.fn().mockResolvedValue({ error: opts?.error ?? null });
+      const eqSourceId = vi.fn().mockReturnValue({ eq: eqIsCleared });
+      const eqSourceKind = vi.fn().mockReturnValue({ eq: eqSourceId });
+      const update = vi.fn().mockReturnValue({ eq: eqSourceKind });
+      mockFrom.mockReturnValue({ update });
+      return { update, eqSourceKind, eqSourceId, eqIsCleared };
+    }
+
+    it("flips matching rows to is_cleared = true and stamps cleared_at", async () => {
+      const chain = setupClearChain();
+
+      const result = await markSourceCleared(
+        NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST,
+        "leave-1",
+      );
+
+      expect(result.error).toBeNull();
+      expect(mockFrom).toHaveBeenCalledWith("notifications");
+      expect(chain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_cleared: true,
+          cleared_at: expect.any(String),
+        }),
+      );
+      expect(chain.eqSourceKind).toHaveBeenCalledWith("source_kind", "leave_request");
+      expect(chain.eqSourceId).toHaveBeenCalledWith("source_id", "leave-1");
+      expect(chain.eqIsCleared).toHaveBeenCalledWith("is_cleared", false);
+    });
+
+    it("returns error on DB failure", async () => {
+      setupClearChain({ error: { message: "Update failed" } });
+
+      const result = await markSourceCleared(
+        NOTIFICATION_SOURCE_KINDS.RTW_FORM,
+        "rtw-1",
+      );
+
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe("Update failed");
+    });
+  });
+
+  // =============================================
+  // autoClearSource
+  // =============================================
+
+  describe("autoClearSource", () => {
+    function setupClearChain(opts?: { error?: { message: string } }) {
+      const eqIsCleared = vi.fn().mockResolvedValue({ error: opts?.error ?? null });
+      const eqSourceId = vi.fn().mockReturnValue({ eq: eqIsCleared });
+      const eqSourceKind = vi.fn().mockReturnValue({ eq: eqSourceId });
+      const update = vi.fn().mockReturnValue({ eq: eqSourceKind });
+      mockFrom.mockReturnValue({ update });
+    }
+
+    it("returns void on success", async () => {
+      setupClearChain();
+
+      const result = await autoClearSource(
+        NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST,
+        "fwr-1",
+      );
+
+      expect(result).toBeUndefined();
+    });
+
+    it("swallows returned errors and never throws", async () => {
+      setupClearChain({ error: { message: "DB error" } });
+
+      await expect(
+        autoClearSource(NOTIFICATION_SOURCE_KINDS.RTW_FORM, "rtw-1"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("swallows thrown exceptions and never throws", async () => {
+      mockFrom.mockImplementation(() => {
+        throw new Error("Service client misconfigured");
+      });
+
+      await expect(
+        autoClearSource(NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST, "lr-1"),
+      ).resolves.toBeUndefined();
     });
   });
 });

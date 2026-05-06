@@ -16,7 +16,7 @@ import type { AbsenceType } from "@/types/hr";
 import { isValidUUID } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import { createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
+import { autoClearSource, createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -866,6 +866,8 @@ export async function confirmRTWForm(
   if (error) {
     return { success: false, error: "Could not confirm form. It may have already been processed." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.RTW_FORM, formId);
 
   revalidateAbsencePaths(form.employee_id as string);
   return { success: true, error: null };

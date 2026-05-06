@@ -16,7 +16,7 @@ import type {
 import type { Database } from "@/types/database.types";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
+import { autoClearSource, createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -473,6 +473,8 @@ export async function withdrawFlexibleWorkingRequest(
     return { success: false, error: "Could not withdraw request. It may have already been actioned." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
+
   revalidateFWRPaths(user.id);
   return { success: true, error: null };
 }
@@ -667,6 +669,8 @@ export async function approveFlexibleWorkingRequest(
     return { success: false, error: "Could not approve request. It may have already been actioned." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
+
   // Step 2: If not a trial, update the employee's profile work_pattern
   if (!isTrial) {
     const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
@@ -822,6 +826,8 @@ export async function rejectFlexibleWorkingRequest(
     return { success: false, error: "Could not reject request. It may have already been actioned." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
+
   const profileId = request.profile_id;
 
   // Notify employee (non-blocking — failure should not break the rejection)
@@ -924,6 +930,8 @@ export async function recordTrialOutcome(
     logger.error("Failed to record trial outcome", { requestId, error: updateError.message });
     return { success: false, error: "Could not record trial outcome." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Step 2: If confirmed, update the employee's profile work_pattern
   if (data.outcome === "confirmed") {
@@ -1205,6 +1213,9 @@ export async function decideFWRAppeal(
     logger.error("Failed to update request status during appeal decision", { requestId, error: updateError.message });
     return { success: false, error: "Could not update request status." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FWR_APPEAL, requestId);
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Step 3: If appeal overturned (i.e. approved), update profile + employment history
   if (data.outcome === "overturned") {
