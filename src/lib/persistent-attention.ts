@@ -18,6 +18,7 @@ import type { Database } from "@/types/database.types";
 import type { InboxRow } from "@/types/notification";
 import { NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
+import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
 
 type Client = SupabaseClient<Database>;
 
@@ -207,53 +208,69 @@ export async function getPendingRTWSignoffs(
 }
 
 /**
- * Today's working location is set to an office but not yet confirmed —
- * surfaces a "confirm arrival" prompt. Date is computed in Europe/London
- * timezone to match the rest of the sign-in flow.
+ * Working-location prompts. Two cases, both surface as state-rows in
+ * the inbox:
+ *
+ *   - "Where are you working today?" — user has no working_location row
+ *     for today (and it's before 2pm UK; getDailyBannerState gates this).
+ *   - "Confirm office arrival" — user is scheduled for an office but
+ *     hasn't confirmed they're on site (after 9:30am UK).
+ *
+ * Defers all the time-of-day and state-detection logic to
+ * getDailyBannerState in sign-in/actions — same source of truth as the
+ * DailyBanner so the bell and the banner can never disagree.
  */
 export async function getOfficeArrivalConfirmation(
-  supabase: Client,
+  // supabase is unused but kept in the signature so the helper composes
+  // with getAllPersistentAttention's parallel-fetch shape unchanged.
+  _supabase: Client,
   userId: string,
 ): Promise<InboxRow[]> {
   try {
+    const { type } = await getDailyBannerState();
+    if (!type) return [];
+
     const today = new Date().toLocaleDateString("en-CA", {
       timeZone: "Europe/London",
-    }); // YYYY-MM-DD
+    });
 
-    const { data, error } = await supabase
-      .from("working_locations")
-      .select("id, location, confirmed, time_slot")
-      .eq("user_id", userId)
-      .eq("date", today)
-      .in("location", ["glasgow_office", "stevenage_office"])
-      .eq("confirmed", false)
-      .limit(1);
-
-    if (error) {
-      logger.warn("getOfficeArrivalConfirmation query failed", { userId, error: error.message });
-      return [];
+    if (type === "no_schedule") {
+      return [
+        {
+          id: `state:no_location:${userId}:${today}`,
+          kind: "state",
+          source_kind: NOTIFICATION_SOURCE_KINDS.WORKING_LOCATION,
+          source_id: userId,
+          type: "no_location_set",
+          title: "Where are you working today?",
+          message: "Let your team know your location.",
+          link: "/sign-in",
+          created_at: new Date().toISOString(),
+          is_cleared: false,
+          reason: "Working location",
+        },
+      ];
     }
-    const row = (data ?? [])[0];
-    if (!row) return [];
 
-    const officeName =
-      row.location === "glasgow_office" ? "Glasgow office" : "Stevenage office";
+    if (type === "office_not_confirmed") {
+      return [
+        {
+          id: `state:office_arrival:${userId}:${today}`,
+          kind: "state",
+          source_kind: NOTIFICATION_SOURCE_KINDS.WORKING_LOCATION,
+          source_id: userId,
+          type: "office_arrival_unconfirmed",
+          title: "Confirm your office arrival",
+          message: "Sign in once you're on site so colleagues can find you.",
+          link: "/sign-in",
+          created_at: new Date().toISOString(),
+          is_cleared: false,
+          reason: "Working location",
+        },
+      ];
+    }
 
-    return [
-      {
-        id: `state:office_arrival:${userId}:${today}`,
-        kind: "state",
-        source_kind: NOTIFICATION_SOURCE_KINDS.WORKING_LOCATION,
-        source_id: userId,
-        type: "office_arrival_unconfirmed",
-        title: `Confirm arrival at the ${officeName}`,
-        message: "Sign in once you're on site so colleagues can find you.",
-        link: "/sign-in",
-        created_at: new Date().toISOString(),
-        is_cleared: false,
-        reason: "Working location",
-      },
-    ];
+    return [];
   } catch (err) {
     logger.warn("getOfficeArrivalConfirmation threw", { userId, error: err });
     return [];

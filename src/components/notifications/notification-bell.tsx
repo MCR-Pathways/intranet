@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   getInboxStream,
   clearNotification,
@@ -38,17 +38,19 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
   const [rows, setRows] = useState<InboxRow[]>(initialRows ?? []);
   const [isLoading, setIsLoading] = useState(!hasInitialData);
 
-  // One empty-state line per page-load — re-renders within the session
-  // keep the same line, refresh picks a new one. react-hooks/purity is
-  // conservative about Math.random, but we genuinely want a one-shot
-  // random pick that's stable for the component's lifetime (memoised via
-  // empty deps).
-  /* eslint-disable react-hooks/purity -- intentional one-shot random pick */
-  const emptyLine = useMemo(
-    () => EMPTY_INBOX_COPY[Math.floor(Math.random() * EMPTY_INBOX_COPY.length)],
-    [],
-  );
-  /* eslint-enable react-hooks/purity */
+  // Empty-state line is re-rolled every time the popover opens. Initial
+  // value is the first variant — it's never visible because the popover
+  // is closed at mount, and onOpenChange fires before the first render
+  // of the popover content.
+  const [emptyLine, setEmptyLine] = useState<string>(EMPTY_INBOX_COPY[0]);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      setEmptyLine(
+        EMPTY_INBOX_COPY[Math.floor(Math.random() * EMPTY_INBOX_COPY.length)],
+      );
+    }
+  }, []);
 
   const fetchRows = useCallback(async () => {
     const { rows: data, error } = await getInboxStream();
@@ -61,16 +63,20 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
     setIsLoading(false);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- syncing server props to client state */
   useEffect(() => {
     if (initialRows === undefined) return;
     setRows(initialRows);
     setIsLoading(false);
   }, [initialRows]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- legitimate data-fetching-on-mount when no SSR data */
   useEffect(() => {
     if (hasInitialData) return;
     fetchRows();
   }, [fetchRows, hasInitialData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleClearAll = async () => {
     if (rows.length === 0) return;
@@ -129,9 +135,13 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
   const badgeText = count > 9 ? "9+" : String(count);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:bg-accent"
+        >
           {/* Filled bell when there's something to act on. Outline when
               clear. The fill is the most reliable cross-state signal —
               it pre-loads the badge's "look at me" before the eye even
@@ -155,7 +165,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         align="end"
         forceMount
       >
-        <div className="flex flex-none items-center justify-between px-3 py-2">
+        <div className="flex flex-none items-center justify-between px-3 py-1.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
             Inbox
           </DropdownMenuLabel>
