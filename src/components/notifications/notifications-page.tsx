@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Inbox, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,10 @@ interface NotificationsPageProps {
   initialRows: InboxRow[];
   initialCounts: { inbox: number; saved: number; cleared: number; inboxClearable: number };
   initialTruncated: boolean;
+  /** Server-picked empty-state line for the initial Inbox tab. Passed as
+   *  a prop so server and client agree at hydration time — pure
+   *  client-side Math.random in useMemo/useEffect causes a mismatch. */
+  initialEmptyLine: string;
 }
 
 const TABS: { id: NotificationTab; label: string }[] = [
@@ -60,6 +64,7 @@ export function NotificationsPage({
   initialRows,
   initialCounts,
   initialTruncated,
+  initialEmptyLine,
 }: NotificationsPageProps) {
   const [tab, setTab] = useState<NotificationTab>(initialTab);
   const [filter, setFilter] = useState<ModuleFilter>("all");
@@ -68,15 +73,25 @@ export function NotificationsPage({
   const [truncated, setTruncated] = useState(initialTruncated);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [, startTransition] = useTransition();
-  // Empty-state line is re-rolled client-side after mount. Initial
-  // value is the first variant of the active tab's pool — same on
-  // server and client, so no hydration mismatch — and immediately
-  // replaced by a random pick once useEffect runs. Saved + Cleared
-  // have only 3 variants because those tabs are visited less.
-  const [emptyLine, setEmptyLine] = useState<string>(EMPTY_INBOX_COPY[0]);
-  /* eslint-disable react-hooks/set-state-in-effect -- one-shot random pick post-hydration */
+  const [isPending, startTransition] = useTransition();
+  // Race-condition guard: rapid tab switches can produce out-of-order
+  // settles where a slower fetch overwrites a faster one. Each call
+  // bumps the ref; only the latest call writes back to state.
+  const lastRequestRef = useRef(0);
+  // Track first render so we don't blow away the server-picked
+  // initialEmptyLine with a re-roll on mount. Only re-roll on actual
+  // tab switches.
+  const isFirstRenderRef = useRef(true);
+  // Initial value comes from the server (prop) so SSR and hydration
+  // agree on the same line — no flash of pool[0]. Re-roll after a
+  // real tab switch (client-side; no hydration concern post-mount).
+  const [emptyLine, setEmptyLine] = useState<string>(initialEmptyLine);
+  /* eslint-disable react-hooks/set-state-in-effect -- random pick after tab switch */
   useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
     const pool =
       tab === "inbox"
         ? EMPTY_INBOX_COPY
@@ -87,10 +102,21 @@ export function NotificationsPage({
   }, [tab]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const fetchTab = async (nextTab: NotificationTab) => {
-    setIsLoading(true);
+  // `showLoading` defaults to true — set false for "silent" refetches
+  // after row actions so the list doesn't flash to the loading state
+  // every time a user saves/clears one row.
+  const fetchTab = async (
+    nextTab: NotificationTab,
+    options: { showLoading?: boolean } = {},
+  ) => {
+    const showLoading = options.showLoading ?? true;
+    const requestId = ++lastRequestRef.current;
+    if (showLoading) setIsLoading(true);
     const result = await getNotificationsByTab(nextTab);
-    setIsLoading(false);
+    // Discard out-of-order settles: a previous-tab fetch resolving
+    // after a newer tab switch would overwrite the current state.
+    if (requestId !== lastRequestRef.current) return;
+    if (showLoading) setIsLoading(false);
     if (result.error) {
       toast.error(result.error);
       return;
@@ -110,9 +136,10 @@ export function NotificationsPage({
   };
 
   // Refetch the current tab after any row-level action (save / clear /
-  // restore / unsave). Keeps tab counts and the row list in sync.
+  // restore / unsave). `showLoading: false` so the user doesn't see
+  // a "Loading…" flash for a single row's worth of state churn.
   const refresh = () => {
-    void fetchTab(tab);
+    void fetchTab(tab, { showLoading: false });
   };
 
   const handleClearAll = () => {
@@ -300,10 +327,12 @@ export function NotificationsPage({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearAll}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isPending}
+              aria-busy={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all"
             >
               Clear
             </AlertDialogAction>
