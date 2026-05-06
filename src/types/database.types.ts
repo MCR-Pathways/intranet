@@ -1899,10 +1899,12 @@ export type Database = {
           id: string
           is_cleared: boolean
           is_read: boolean | null
+          is_saved: boolean
           link: string | null
           message: string
           metadata: Json | null
           read_at: string | null
+          saved_at: string | null
           source_id: string | null
           source_kind: string | null
           title: string
@@ -1915,10 +1917,12 @@ export type Database = {
           id?: string
           is_cleared?: boolean
           is_read?: boolean | null
+          is_saved?: boolean
           link?: string | null
           message: string
           metadata?: Json | null
           read_at?: string | null
+          saved_at?: string | null
           source_id?: string | null
           source_kind?: string | null
           title: string
@@ -1931,10 +1935,12 @@ export type Database = {
           id?: string
           is_cleared?: boolean
           is_read?: boolean | null
+          is_saved?: boolean
           link?: string | null
           message?: string
           metadata?: Json | null
           read_at?: string | null
+          saved_at?: string | null
           source_id?: string | null
           source_kind?: string | null
           title?: string

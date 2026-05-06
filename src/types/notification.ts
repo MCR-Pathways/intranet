@@ -33,6 +33,12 @@ export interface InboxRow {
   created_at: string;
   /** Always false for state items (they're computed live, no clear). */
   is_cleared: boolean;
+  /** Optional clear timestamp for event rows (Cleared tab sort key). State rows always undefined. */
+  cleared_at?: string | null;
+  /** Whether the user pinned this row (W3-rev.3). Always false for state rows. */
+  is_saved?: boolean;
+  /** Pin timestamp (Saved tab sort key). Aligned with `is_saved` via DB CHECK. */
+  saved_at?: string | null;
   /** Reason-pill label for the row (e.g. "Leave request", "Compliance overdue"). */
   reason: string;
   /** Optional count for state items: "3 leave requests waiting" → count = 3. */

@@ -180,3 +180,271 @@ export async function clearAllNotifications(): Promise<{
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
+
+// ─── /notifications page ─────────────────────────────────────────────
+
+const NOTIFICATIONS_PAGE_LIMIT = 500; // hard cap; UI shows a footer if hit.
+
+/**
+ * Save (pin) a notification. Sets `is_saved=true` + `saved_at=now()`.
+ * Idempotent — re-saving a saved row is a no-op (CHECK constraint
+ * keeps `saved_at` aligned).
+ */
+export async function saveNotification(
+  notificationId: string,
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_saved: true, saved_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    logger.error("Failed to save notification", { error });
+    return {
+      success: false,
+      error:
+        "Failed to save notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
+
+  revalidatePath("/notifications", "layout");
+  return { success: true, error: null };
+}
+
+/**
+ * Unsave (un-pin) a notification. Clears both flags so the CHECK
+ * constraint stays satisfied.
+ */
+export async function unsaveNotification(
+  notificationId: string,
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_saved: false, saved_at: null })
+    .eq("id", notificationId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    logger.error("Failed to unsave notification", { error });
+    return {
+      success: false,
+      error:
+        "Failed to unsave notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
+
+  revalidatePath("/notifications", "layout");
+  return { success: true, error: null };
+}
+
+/**
+ * Restore a cleared notification back to Inbox. Used on the Cleared
+ * tab's per-row Restore action. is_saved is left untouched.
+ */
+export async function restoreNotification(
+  notificationId: string,
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_cleared: false, cleared_at: null })
+    .eq("id", notificationId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    logger.error("Failed to restore notification", { error });
+    return {
+      success: false,
+      error:
+        "Failed to restore notification. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
+
+  revalidatePath("/notifications", "layout");
+  return { success: true, error: null };
+}
+
+export type NotificationTab = "inbox" | "saved" | "cleared";
+
+/**
+ * Fetch rows for one tab on /notifications, plus the row counts for the
+ * other two tabs (so the tab strip can render `Inbox (5) / Saved (12)
+ * / Cleared (47)` without a per-tab roundtrip).
+ *
+ * Inbox merges DB events with persistent-state rows (mirroring
+ * getInboxStream). Saved and Cleared are event-rows only — state rows
+ * have no DB id to pin or clear.
+ */
+export async function getNotificationsByTab(tab: NotificationTab): Promise<{
+  rows: InboxRow[];
+  counts: { inbox: number; saved: number; cleared: number };
+  truncated: boolean;
+  error: string | null;
+}> {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return {
+      rows: [],
+      counts: { inbox: 0, saved: 0, cleared: 0 },
+      truncated: false,
+      error: "Not authenticated",
+    };
+  }
+
+  // Counts are cheap server-side and let the tab strip render correctly
+  // on the first paint. Run them in parallel with the data fetch.
+  const countSelect = "id";
+
+  const inboxCountQ = supabase
+    .from("notifications")
+    .select(countSelect, { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_cleared", false);
+  const savedCountQ = supabase
+    .from("notifications")
+    .select(countSelect, { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_saved", true);
+  const clearedCountQ = supabase
+    .from("notifications")
+    .select(countSelect, { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_cleared", true);
+
+  const dataQ = (() => {
+    const baseSelect =
+      "id, user_id, type, title, message, link, is_read, read_at, created_at, source_kind, source_id, is_cleared, cleared_at, is_saved, saved_at";
+
+    if (tab === "inbox") {
+      return supabase
+        .from("notifications")
+        .select(baseSelect)
+        .eq("user_id", user.id)
+        .eq("is_cleared", false)
+        .order("created_at", { ascending: false })
+        .limit(NOTIFICATIONS_PAGE_LIMIT);
+    }
+    if (tab === "saved") {
+      return supabase
+        .from("notifications")
+        .select(baseSelect)
+        .eq("user_id", user.id)
+        .eq("is_saved", true)
+        .order("saved_at", { ascending: false })
+        .limit(NOTIFICATIONS_PAGE_LIMIT);
+    }
+    // tab === "cleared"
+    return supabase
+      .from("notifications")
+      .select(baseSelect)
+      .eq("user_id", user.id)
+      .eq("is_cleared", true)
+      .order("cleared_at", { ascending: false })
+      .limit(NOTIFICATIONS_PAGE_LIMIT);
+  })();
+
+  // Inbox is the only tab that includes state rows; Saved and Cleared
+  // skip the persistent-attention call entirely (state rows have no DB
+  // row to pin or clear, so they can't appear in those tabs by design).
+  const persistentQ =
+    tab === "inbox"
+      ? getAllPersistentAttention(supabase, user.id)
+      : Promise.resolve([] as InboxRow[]);
+
+  const [inboxCountRes, savedCountRes, clearedCountRes, dataRes, stateRows] =
+    await Promise.all([
+      inboxCountQ,
+      savedCountQ,
+      clearedCountQ,
+      dataQ,
+      persistentQ,
+    ]);
+
+  if (dataRes.error) {
+    logger.error("Failed to fetch /notifications data", {
+      tab,
+      error: dataRes.error,
+    });
+    return {
+      rows: [],
+      counts: { inbox: 0, saved: 0, cleared: 0 },
+      truncated: false,
+      error:
+        "Failed to fetch notifications. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists.",
+    };
+  }
+
+  const data = dataRes.data ?? [];
+
+  // Same dedup as the bell — composite (source_kind, source_id) so
+  // older serial ids from different tables can't collide.
+  const seen = new Set<string>();
+  const deduped = data.filter((row) => {
+    const key = row.source_id
+      ? `${row.source_kind}:${row.source_id}`
+      : `_no_source_${row.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const eventRows: InboxRow[] = deduped.map((n) => ({
+    id: n.id,
+    kind: "event" as const,
+    source_kind: n.source_kind,
+    source_id: n.source_id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    link: n.link,
+    created_at: n.created_at ?? new Date().toISOString(),
+    is_cleared: n.is_cleared ?? false,
+    is_saved: n.is_saved ?? false,
+    saved_at: n.saved_at,
+    cleared_at: n.cleared_at,
+    reason: n.source_kind
+      ? (SOURCE_KIND_REASON_LABEL[n.source_kind as NotificationSourceKind] ?? "")
+      : "",
+  }));
+
+  // Merge state rows on Inbox only; sort by the tab's primary timestamp.
+  let rows: InboxRow[];
+  if (tab === "inbox") {
+    rows = [...eventRows, ...stateRows].sort((a, b) =>
+      b.created_at.localeCompare(a.created_at),
+    );
+  } else {
+    // Already sorted by saved_at / cleared_at via the query.
+    rows = eventRows;
+  }
+
+  return {
+    rows,
+    counts: {
+      inbox: inboxCountRes.count ?? 0,
+      saved: savedCountRes.count ?? 0,
+      cleared: clearedCountRes.count ?? 0,
+    },
+    truncated: data.length >= NOTIFICATIONS_PAGE_LIMIT,
+    error: null,
+  };
+}
