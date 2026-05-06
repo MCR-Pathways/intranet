@@ -68,16 +68,15 @@ export async function GET(request: Request) {
       Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const { data: deleted, error: deleteErr } = await supabase
+    const { count, error: deleteErr } = await supabase
       .from("notifications")
-      .delete()
+      .delete({ count: "exact" })
       .eq("is_cleared", true)
-      .lt("cleared_at", cutoff)
-      .select("id");
+      .lt("cleared_at", cutoff);
 
     if (deleteErr) throw deleteErr;
 
-    const deletedCount = deleted?.length ?? 0;
+    const deletedCount = count ?? 0;
     const runtimeMs = Date.now() - startTime;
 
     if (runId) {

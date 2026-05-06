@@ -669,8 +669,6 @@ export async function approveFlexibleWorkingRequest(
     return { success: false, error: "Could not approve request. It may have already been actioned." };
   }
 
-  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
-
   // Step 2: If not a trial, update the employee's profile work_pattern
   if (!isTrial) {
     const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
@@ -708,6 +706,12 @@ export async function approveFlexibleWorkingRequest(
       });
     }
   }
+
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // (work_pattern update, employment history insert) have committed. Placed
+  // here so a profile-update rollback doesn't leave notifications cleared
+  // for a request that just reverted to its prior status.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Notify employee (non-blocking — failure should not break the approval)
   try {
@@ -931,8 +935,6 @@ export async function recordTrialOutcome(
     return { success: false, error: "Could not record trial outcome." };
   }
 
-  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
-
   // Step 2: If confirmed, update the employee's profile work_pattern
   if (data.outcome === "confirmed") {
     const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
@@ -970,6 +972,10 @@ export async function recordTrialOutcome(
       });
     }
   }
+
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // have committed.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Notify employee (non-blocking — failure should not break the trial outcome)
   try {
@@ -1214,9 +1220,6 @@ export async function decideFWRAppeal(
     return { success: false, error: "Could not update request status." };
   }
 
-  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FWR_APPEAL, requestId);
-  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
-
   // Step 3: If appeal overturned (i.e. approved), update profile + employment history
   if (data.outcome === "overturned") {
     const newWorkPattern = mapRequestTypeToWorkPattern(request.request_type);
@@ -1257,6 +1260,13 @@ export async function decideFWRAppeal(
       });
     }
   }
+
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // (profile update, employment history insert) have committed. Both source
+  // kinds resolve at the same moment — the appeal record AND the underlying
+  // request both reach a terminal state.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FWR_APPEAL, requestId);
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Notify employee (non-blocking — failure should not break the appeal decision)
   try {
