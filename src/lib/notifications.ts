@@ -184,7 +184,7 @@ export const EMPTY_CLEARED_COPY = [
  * Five pills total in the UI: All / HR / Learning / News / Mentions.
  * `All` doesn't appear here — it's the default, no kinds to map.
  */
-export type NotificationModule = "hr" | "learning" | "news" | "mentions";
+export type NotificationModule = "hr" | "learning" | "news" | "mentions" | "signin";
 
 export const SOURCE_KIND_MODULE: Record<NotificationSourceKind, NotificationModule> = {
   leave_request: "hr",
@@ -201,25 +201,29 @@ export const SOURCE_KIND_MODULE: Record<NotificationSourceKind, NotificationModu
   comment_reply: "news",
   weekly_roundup: "news",
   onboarding_step: "hr",
-  working_location: "hr",
+  working_location: "signin",
 };
 
 /**
  * Module pill labels in the order they appear on /notifications.
- * `All` always renders first; the rest follow in declaration order
- * (HR / Learning / News / Mentions).
+ * `All` always renders first; the rest follow in declaration order.
+ * Sign-In currently only ever has the working_location state row
+ * (state-only kind), so the pill auto-hides on Saved + Cleared tabs
+ * where it always has zero rows.
  */
 export const MODULE_LABELS: Record<NotificationModule, string> = {
   hr: "HR",
   learning: "Learning",
   news: "News",
   mentions: "Mentions",
+  signin: "Sign-In",
 };
 export const MODULE_ORDER: NotificationModule[] = [
   "hr",
   "learning",
   "news",
   "mentions",
+  "signin",
 ];
 
 interface CreateNotificationParams {

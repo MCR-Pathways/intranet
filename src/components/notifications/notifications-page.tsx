@@ -139,6 +139,7 @@ export function NotificationsPage({
       learning: 0,
       news: 0,
       mentions: 0,
+      signin: 0,
     };
     for (const row of rows) {
       if (!row.source_kind) continue;
@@ -153,18 +154,23 @@ export function NotificationsPage({
   const isInboxEmpty = tab === "inbox" && rows.length === 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-4xl mx-auto px-6 py-6">
       {/* Page header — bare H1 + page-level kebab. Kebab is Inbox-only
           and only when there's something to clear. No subtitle: the
           page is self-evident; every inbox we looked at (GitHub,
           Linear, Slack, Notion, Asana, Teams, BambooHR) ships without
           one. */}
-      <div className="flex items-start justify-between gap-4 mb-2">
-        <h1 className="text-3xl font-bold">Notifications</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Notifications</h1>
         {tab === "inbox" && counts.inbox > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Inbox actions">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Inbox actions"
+                className="data-[state=open]:bg-accent"
+              >
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -187,8 +193,8 @@ export function NotificationsPage({
           label IS the navigation; count is a quiet companion, not a
           competing visual element. Always rendered (even when 0) so
           the row stays even and counts feel like part of the label. */}
-      <div className="border-b border-border mt-6">
-        <div className="flex items-center gap-6">
+      <div className="border-b border-border mt-4">
+        <div className="flex items-center gap-5">
           {TABS.map((t) => {
             const count = counts[t.id];
             const active = t.id === tab;
@@ -198,7 +204,7 @@ export function NotificationsPage({
                 type="button"
                 onClick={() => handleTabSwitch(t.id)}
                 className={cn(
-                  "relative pb-3 text-sm font-medium transition-colors",
+                  "relative pb-2 text-sm font-medium transition-colors",
                   active
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -229,7 +235,7 @@ export function NotificationsPage({
           accent fill — softer than the tab's underline indicator so
           the visual hierarchy reads tabs > pills. */}
       {rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 mt-4">
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
           <FilterPill label="All" active={filter === "all"} onClick={() => setFilter("all")} />
           {visibleModules.map((m) => (
             <FilterPill
@@ -244,7 +250,7 @@ export function NotificationsPage({
       )}
 
       {/* Row list / loading / empty state */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip mt-4">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip mt-3">
         {isLoading ? (
           <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             Loading…

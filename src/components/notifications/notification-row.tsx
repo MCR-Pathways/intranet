@@ -73,18 +73,18 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
   };
 
   return (
-    <div className="group/row relative flex items-start gap-2.5 px-4 py-3 hover:bg-accent rounded-sm">
+    <div className="group/row relative flex items-start gap-2.5 px-4 py-2.5 hover:bg-accent rounded-sm">
       {Icon && (
         <span
           className={cn(
-            "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+            "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
             sourceKind === "working_location"
               ? "bg-red-50 text-red-500"
               : "bg-muted text-muted-foreground",
           )}
           aria-label={row.reason || undefined}
         >
-          {createElement(Icon, { className: "h-4 w-4" })}
+          {createElement(Icon, { className: "h-3.5 w-3.5" })}
         </span>
       )}
 
@@ -94,7 +94,16 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
           onClick={handleOpen}
           className="text-left w-full"
         >
-          <p className="font-medium text-sm leading-tight">{row.title}</p>
+          {/* Title and timestamp inline — title text, then timestamp as
+              a quiet sibling span. No flex-1 pushing the timestamp to
+              the row edge; it sits right after the title like GitHub
+              and Slack do (sender · timestamp). */}
+          <p className="text-sm leading-tight">
+            <span className="font-medium">{row.title}</span>
+            <span className="ml-2 text-xs font-normal text-muted-foreground/70 tabular-nums whitespace-nowrap">
+              {timeAgo(tabTimestamp)}
+            </span>
+          </p>
           {row.message && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
               {row.message}
@@ -108,10 +117,6 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
             onAfterAction={onAfterAction}
           />
         )}
-
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          {timeAgo(tabTimestamp)}
-        </p>
       </div>
 
       {/* Kebab — event rows only. State rows have no DB id to save/clear. */}
@@ -121,7 +126,7 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 transition-opacity flex-shrink-0"
+              className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-accent transition-opacity flex-shrink-0"
               aria-label={`Actions for ${row.title}`}
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -244,7 +249,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
 
   if (type === "office_arrival_unconfirmed") {
     return (
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         <PickerButton onClick={handleConfirm} disabled={isPending}>
           I&apos;m here
         </PickerButton>
@@ -257,7 +262,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
 
   if (mode === "other-input") {
     return (
-      <div className="mt-2 flex items-center gap-1.5">
+      <div className="mt-1.5 flex items-center gap-1.5">
         <Input
           autoFocus
           value={otherText}
@@ -275,14 +280,14 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           placeholder="Where today?"
           aria-label="Other location"
           maxLength={200}
-          className="h-8 flex-1 bg-card px-2 text-xs"
+          className="h-7 flex-1 bg-card px-2 text-xs"
         />
         <button
           type="button"
           onClick={handleOtherSave}
           disabled={!otherText.trim() || isPending}
           aria-busy={isPending}
-          className="rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 disabled:pointer-events-none"
+          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 disabled:pointer-events-none"
         >
           Save
         </button>
@@ -294,7 +299,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           }}
           disabled={isPending}
           aria-busy={isPending}
-          className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
         >
           Cancel
         </button>
@@ -335,7 +340,7 @@ function PickerButton({
       onClick={onClick}
       disabled={disabled}
       aria-busy={disabled}
-      className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all disabled:opacity-50 disabled:pointer-events-none"
+      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all disabled:opacity-50 disabled:pointer-events-none"
     >
       {children}
     </button>
