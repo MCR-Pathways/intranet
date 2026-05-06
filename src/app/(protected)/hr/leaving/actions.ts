@@ -10,7 +10,7 @@ import {
 import type { LeavingReason } from "@/lib/hr";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
+import { autoClearSource, createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -526,6 +526,8 @@ export async function completeLeavingForm(
     return { success: false, error: "Failed to update profile status. Please try again." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.STAFF_LEAVING_FORM, formId);
+
   // Step 4: Notify the initiator (non-blocking — don't rollback for notification failures)
   const initiatedBy = form.initiated_by as string | null;
   if (initiatedBy && initiatedBy !== user.id) {
@@ -606,6 +608,8 @@ export async function cancelLeavingForm(
     logger.error("Failed to cancel leaving form", { error: updateError.message });
     return { success: false, error: "Failed to cancel form. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.STAFF_LEAVING_FORM, formId);
 
   revalidateLeavingPaths(form.profile_id as string);
   return { success: true, error: null };

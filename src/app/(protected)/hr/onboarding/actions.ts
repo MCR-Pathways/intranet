@@ -17,7 +17,7 @@ import type {
   OnboardingChecklistWithProgress,
   OnboardingChecklistItem,
 } from "@/types/hr";
-import { createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
+import { autoClearSource, createNotification, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_SHORT_TEXT_LENGTH, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
@@ -700,6 +700,8 @@ export async function completeOnboardingChecklist(
     return { success: false, error: "Could not complete checklist. It may have already been completed." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP, checklistId);
+
   const profileId = checklist.profile_id as string;
 
   // Notify employee (non-critical)
@@ -763,6 +765,8 @@ export async function cancelOnboardingChecklist(
   if (error) {
     return { success: false, error: "Could not cancel checklist. It may have already been cancelled." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP, checklistId);
 
   revalidateOnboardingPaths(checklist.profile_id as string);
   return { success: true, error: null };

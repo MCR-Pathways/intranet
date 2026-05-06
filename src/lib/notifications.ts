@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { logger } from "@/lib/logger";
 import type { Json } from "@/types/database.types";
 
 /**
@@ -57,6 +58,67 @@ export async function createNotification(params: CreateNotificationParams) {
   });
 
   return { error };
+}
+
+/**
+ * Mark all notifications with the given (source_kind, source_id) as cleared.
+ * Called from state-resolution actions: when a manager approves a leave
+ * request, all notifications about that request flip to is_cleared = true
+ * across every recipient. Idempotent — re-running does no work because the
+ * .eq("is_cleared", false) filter excludes already-cleared rows.
+ *
+ * Service-role client because the recipients of the notifications won't
+ * always overlap with the actor (e.g. an HR admin approving on behalf of a
+ * manager), so user-RLS would block the cross-user UPDATE.
+ *
+ * Returns the error if you need to make decisions on it. Prefer
+ * `autoClearSource` for fire-and-forget callers (the common case).
+ */
+export async function markSourceCleared(
+  sourceKind: NotificationSourceKind,
+  sourceId: string,
+) {
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({
+      is_cleared: true,
+      cleared_at: new Date().toISOString(),
+    })
+    .eq("source_kind", sourceKind)
+    .eq("source_id", sourceId)
+    .eq("is_cleared", false);
+
+  return { error };
+}
+
+/**
+ * Fire-and-forget auto-clear: catches both returned errors and thrown
+ * exceptions, logs at warn level, never throws or returns. Use this from
+ * state-resolution actions where the action's success doesn't depend on
+ * the clear succeeding (cron retention sweep would catch any drift).
+ */
+export async function autoClearSource(
+  sourceKind: NotificationSourceKind,
+  sourceId: string,
+): Promise<void> {
+  try {
+    const { error } = await markSourceCleared(sourceKind, sourceId);
+    if (error) {
+      logger.warn("Failed to auto-clear notifications", {
+        sourceKind,
+        sourceId,
+        error: error.message,
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to auto-clear notifications", {
+      sourceKind,
+      sourceId,
+      error: err,
+    });
+  }
 }
 
 /**

@@ -16,7 +16,7 @@ import type {
 import type { Database } from "@/types/database.types";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
-import { createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
+import { autoClearSource, createNotification, createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { validateTextLength, MAX_LONG_TEXT_LENGTH } from "@/lib/validation";
 
 // =============================================
@@ -473,6 +473,8 @@ export async function withdrawFlexibleWorkingRequest(
     return { success: false, error: "Could not withdraw request. It may have already been actioned." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
+
   revalidateFWRPaths(user.id);
   return { success: true, error: null };
 }
@@ -705,6 +707,12 @@ export async function approveFlexibleWorkingRequest(
     }
   }
 
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // (work_pattern update, employment history insert) have committed. Placed
+  // here so a profile-update rollback doesn't leave notifications cleared
+  // for a request that just reverted to its prior status.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
+
   // Notify employee (non-blocking — failure should not break the approval)
   try {
     const { error: notifError } = await createNotification({
@@ -821,6 +829,8 @@ export async function rejectFlexibleWorkingRequest(
     logger.error("Failed to reject flexible working request", { requestId, error: updateError.message });
     return { success: false, error: "Could not reject request. It may have already been actioned." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   const profileId = request.profile_id;
 
@@ -962,6 +972,10 @@ export async function recordTrialOutcome(
       });
     }
   }
+
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // have committed.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Notify employee (non-blocking — failure should not break the trial outcome)
   try {
@@ -1246,6 +1260,13 @@ export async function decideFWRAppeal(
       });
     }
   }
+
+  // Auto-clear waiting notifications now that all rollback-bearing steps
+  // (profile update, employment history insert) have committed. Both source
+  // kinds resolve at the same moment — the appeal record AND the underlying
+  // request both reach a terminal state.
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FWR_APPEAL, requestId);
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.FLEXIBLE_WORKING_REQUEST, requestId);
 
   // Notify employee (non-blocking — failure should not break the appeal decision)
   try {

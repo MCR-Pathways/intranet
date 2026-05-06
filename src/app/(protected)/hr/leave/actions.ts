@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { validateTextLength, MAX_MEDIUM_TEXT_LENGTH } from "@/lib/validation";
 import { sendAndLogEmail } from "@/lib/email-queue";
+import { autoClearSource, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import type { Database } from "@/types/database.types";
 import { baseTemplate, escapeHtml } from "@/lib/email";
 import { formatDate } from "@/lib/utils";
@@ -163,6 +164,8 @@ export async function withdrawLeave(requestId: string) {
     return { success: false, error: "Could not withdraw request. It may have already been decided." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST, requestId);
+
   revalidatePath("/hr/leave");
   revalidatePath("/hr/calendar");
   revalidatePath("/hr");
@@ -257,6 +260,8 @@ export async function approveLeave(requestId: string, notes?: string) {
     logger.error("Failed to approve leave", { error });
     return { success: false, error: "Failed to approve leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST, requestId);
 
   // Create "on_leave" working location entries + OOO Calendar event (non-blocking)
   try {
@@ -375,6 +380,8 @@ export async function rejectLeave(requestId: string, reason: string) {
     return { success: false, error: "Failed to reject leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST, requestId);
+
   // Queue leave rejection email (non-blocking)
   try {
     const { data: requester } = await supabase
@@ -456,6 +463,8 @@ export async function cancelLeave(requestId: string) {
     logger.error("Failed to cancel leave", { error });
     return { success: false, error: "Failed to cancel leave request. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
+
+  await autoClearSource(NOTIFICATION_SOURCE_KINDS.LEAVE_REQUEST, requestId);
 
   // Delete "on_leave" working location entries + OOO Calendar event (non-blocking)
   try {
