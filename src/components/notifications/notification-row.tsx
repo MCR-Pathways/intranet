@@ -62,12 +62,19 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
 
   const wrap = (action: () => Promise<{ success: boolean; error: string | null }>, successCopy: string) => {
     startTransition(async () => {
-      const result = await action();
-      if (result.success) {
-        toast.success(successCopy);
-        onAfterAction();
-      } else {
-        toast.error(result.error ?? "Action failed");
+      try {
+        const result = await action();
+        if (result.success) {
+          toast.success(successCopy);
+          onAfterAction();
+        } else {
+          toast.error(result.error ?? "Action failed");
+        }
+      } catch {
+        // Network failure or unhandled throw inside the server action.
+        // Server actions typically return {error}, but the fetch
+        // itself can still fail (offline, dropped connection).
+        toast.error("Something went wrong. Please try again.");
       }
     });
   };
@@ -143,12 +150,26 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
           <DropdownMenuContent align="end" className="w-40">
             {tab === "inbox" && (
               <>
-                <DropdownMenuItem
-                  onSelect={() => wrap(() => saveNotification(row.id), "Saved")}
-                  disabled={isPending}
-                >
-                  Save
-                </DropdownMenuItem>
+                {/* Toggle Save / Unsave by current flag — saved + inbox
+                    flags are independent, so a saved row can still
+                    appear in Inbox. Showing "Save" again would just
+                    overwrite saved_at with now() and lie about the
+                    original pin time. */}
+                {row.is_saved ? (
+                  <DropdownMenuItem
+                    onSelect={() => wrap(() => unsaveNotification(row.id), "Unsaved")}
+                    disabled={isPending}
+                  >
+                    Unsave
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onSelect={() => wrap(() => saveNotification(row.id), "Saved")}
+                    disabled={isPending}
+                  >
+                    Save
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onSelect={() => wrap(() => clearNotification(row.id), "Cleared")}
                   disabled={isPending}

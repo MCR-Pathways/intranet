@@ -175,14 +175,20 @@ export const EMPTY_CLEARED_COPY = [
 
 /**
  * Module groupings for /notifications filter pills. Each module maps
- * to the source_kinds that belong to it. Sign-In was considered as a
- * standalone pill but `working_location` is state-only (no event rows
- * ever), so it folds under HR. Onboarding was considered too but
- * `onboarding_step` only fires for new_user accounts in induction —
- * those users don't navigate to /notifications anyway.
+ * to the source_kinds that belong to it.
  *
- * Five pills total in the UI: All / HR / Learning / News / Mentions.
- * `All` doesn't appear here — it's the default, no kinds to map.
+ * Sign-In is its own module with `working_location` as its only
+ * source_kind (state-only — never an event row). The pill auto-hides
+ * on Saved + Cleared tabs where state rows can't appear.
+ *
+ * Onboarding was considered as a 6th pill but `onboarding_step` only
+ * fires for new_user accounts in induction — those users don't
+ * navigate to /notifications anyway, so onboarding_step is folded
+ * under HR rather than getting a pill of its own.
+ *
+ * Six pills total in the UI: All / HR / Learning / News / Mentions
+ * / Sign-In. `All` doesn't appear in this map — it's the default
+ * filter, no kinds to map.
  */
 export type NotificationModule = "hr" | "learning" | "news" | "mentions" | "signin";
 

@@ -144,15 +144,22 @@ export function NotificationsPage({
 
   const handleClearAll = () => {
     startTransition(async () => {
-      const result = await clearAllNotifications();
-      if (result.success) {
-        toast.success(
-          `Cleared ${counts.inboxClearable} notification${counts.inboxClearable === 1 ? "" : "s"}`,
-        );
-        setConfirmOpen(false);
-        refresh();
-      } else {
-        toast.error(result.error ?? "Failed to clear notifications");
+      try {
+        const result = await clearAllNotifications();
+        if (result.success) {
+          toast.success(
+            `Cleared ${counts.inboxClearable} notification${counts.inboxClearable === 1 ? "" : "s"}`,
+          );
+          setConfirmOpen(false);
+          refresh();
+        } else {
+          toast.error(result.error ?? "Failed to clear notifications");
+        }
+      } catch {
+        // Network failure or unhandled throw mid-transition. Same
+        // shape as the row-level wrap() — server actions usually
+        // return {error}, but the fetch can still drop.
+        toast.error("Something went wrong. Please try again.");
       }
     });
   };
