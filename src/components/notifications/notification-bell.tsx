@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useTransition } from "react";
+import { useEffect, useState, useCallback, useRef, useTransition } from "react";
 import {
   getInboxStream,
   clearNotification,
@@ -49,6 +49,16 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
   const hasInitialData = initialRows !== undefined;
   const [rows, setRows] = useState<InboxRow[]>(initialRows ?? []);
   const [isLoading, setIsLoading] = useState(!hasInitialData);
+  // Controlled open state so we can close the popover on navigation —
+  // ProtectedLayout's header stays mounted across route changes, so
+  // without this an internal navigation (View all, row link) leaves
+  // the popover floating on the destination page.
+  const [open, setOpen] = useState(false);
+  // Tracks how the popover was closed so onCloseAutoFocus can decide
+  // whether to suppress the focus-visible ring on the trigger. Mouse-
+  // driven close (click outside) → suppress; keyboard close (Esc) →
+  // return focus normally so keyboard users keep their position.
+  const wasMouseCloseRef = useRef(false);
 
   // Empty-state line is re-rolled every time the popover opens. Initial
   // value is the first variant — it's never visible because the popover
@@ -109,12 +119,26 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
       // changes; the X icon is hidden on them anyway.
       if (rowId.startsWith("state:")) return;
 
-      const previous = rows;
+      // Capture only the failed row, not the whole list. Restoring the
+      // whole list on failure would clobber concurrent successful
+      // clears that completed while this one was in flight.
+      const rowToRestore = rows.find((r) => r.id === rowId);
+      if (!rowToRestore) return;
+
       setRows((prev) => prev.filter((r) => r.id !== rowId));
       const { error } = await clearNotification(rowId);
       if (error) {
         logger.error("Failed to clear notification", { error });
-        setRows(previous);
+        setRows((prev) => {
+          if (prev.some((r) => r.id === rowId)) return prev;
+          return [...prev, rowToRestore].sort((a, b) =>
+            a.created_at < b.created_at
+              ? 1
+              : a.created_at > b.created_at
+              ? -1
+              : 0,
+          );
+        });
       }
     },
     [rows],
@@ -122,8 +146,11 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
 
   const handleRowClick = useCallback(
     (row: InboxRow) => {
-      // Always navigate (if there's a destination)
+      // Always navigate (if there's a destination). Close the popover
+      // on the way so it doesn't dangle on the destination page — the
+      // header stays mounted across route changes.
       if (row.link) {
+        setOpen(false);
         router.push(row.link);
       }
 
@@ -147,7 +174,13 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
   const badgeText = count > 9 ? "9+" : String(count);
 
   return (
-    <DropdownMenu onOpenChange={handleOpenChange}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        handleOpenChange(o);
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -176,14 +209,24 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
         className="w-80 flex flex-col p-0"
         align="end"
         forceMount
-        // Prevent Radix from returning focus to the bell trigger on
-        // close. When the user clicks outside to dismiss, Chromium
-        // treats the returned focus as keyboard-driven and renders the
-        // focus-visible ring — the bell ends up looking "stuck" in an
-        // active state with no popover attached. preventDefault stops
-        // the focus return, so the bell goes back to its resting
-        // appearance after close.
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        // Conditional focus return:
+        //   - Mouse close (click outside): suppress focus return so
+        //     the bell doesn't end up in a "stuck" focus-visible
+        //     state with no popover attached.
+        //   - Keyboard close (Esc): allow focus to return to the
+        //     trigger so keyboard users keep their position.
+        onPointerDownOutside={() => {
+          wasMouseCloseRef.current = true;
+        }}
+        onEscapeKeyDown={() => {
+          wasMouseCloseRef.current = false;
+        }}
+        onCloseAutoFocus={(e) => {
+          if (wasMouseCloseRef.current) {
+            e.preventDefault();
+            wasMouseCloseRef.current = false;
+          }
+        }}
       >
         <div className="flex flex-none items-center justify-between px-3 py-1">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
@@ -228,6 +271,7 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
             <DropdownMenuSeparator className="m-0" />
             <Link
               href="/notifications"
+              onClick={() => setOpen(false)}
               className="flex flex-none justify-center px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-b-md"
             >
               View all
@@ -492,7 +536,8 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           type="button"
           onClick={handleOtherSave}
           disabled={!otherText.trim() || isPending}
-          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          aria-busy={isPending}
+          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 disabled:pointer-events-none"
         >
           Save
         </button>
@@ -500,7 +545,8 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           type="button"
           onClick={handleOtherCancel}
           disabled={isPending}
-          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-busy={isPending}
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
         >
           Cancel
         </button>
@@ -557,7 +603,8 @@ function PickerButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors disabled:opacity-50 disabled:pointer-events-none"
+      aria-busy={disabled}
+      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all disabled:opacity-50 disabled:pointer-events-none"
     >
       {children}
     </button>

@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { Database, WorkLocation, TimeSlot } from "@/types/database.types";
@@ -592,7 +593,13 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
  * - 'no_schedule': User has no working location entry for today
  * - null: No banner needed
  */
-export async function getDailyBannerState() {
+// Memoised inner that the exported server action delegates to.
+// React.cache dedupes calls within the same request render — the
+// banner state is read by ProtectedLayout (for the DailyBanner) AND
+// by persistent-attention.ts → getInboxStream (for the bell's
+// working-location row). Without this they'd run the same query
+// twice on every protected page load.
+const computeDailyBannerState = cache(async () => {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) return { type: null as string | null };
@@ -629,6 +636,10 @@ export async function getDailyBannerState() {
   }
 
   return { type: null as string | null };
+});
+
+export async function getDailyBannerState() {
+  return computeDailyBannerState();
 }
 
 /**
