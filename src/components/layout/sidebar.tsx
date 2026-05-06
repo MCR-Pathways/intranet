@@ -19,7 +19,6 @@ import {
   ClipboardList,
   ShieldCheck,
   BookOpen,
-  Bell,
 } from "lucide-react";
 import { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective, isContentEditorEffective } from "@/lib/auth-helpers";
 import type { Profile, UserType } from "@/types/database.types";
@@ -70,16 +69,6 @@ function getNavigation(
       module: "intranet",
     },
   ];
-
-  // Notifications — all users. High-frequency triage destination,
-  // companion to the bell in the header (Linear/Slack/Notion pattern:
-  // Inbox is the second sidebar item).
-  mainNav.push({
-    name: "Notifications",
-    href: "/notifications",
-    icon: Bell,
-    module: "intranet",
-  });
 
   // Resources — all users (top-level knowledge base)
   mainNav.push({
