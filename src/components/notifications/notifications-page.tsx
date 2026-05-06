@@ -154,15 +154,13 @@ export function NotificationsPage({
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
-      {/* Page header — H1 + page-level kebab. Kebab is Inbox-only and
-          only when there's something to clear. */}
+      {/* Page header — bare H1 + page-level kebab. Kebab is Inbox-only
+          and only when there's something to clear. No subtitle: the
+          page is self-evident; every inbox we looked at (GitHub,
+          Linear, Slack, Notion, Asana, Teams, BambooHR) ships without
+          one. */}
       <div className="flex items-start justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Triage what needs you. Clear when done. Pin what matters.
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold">Notifications</h1>
         {tab === "inbox" && counts.inbox > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -185,7 +183,10 @@ export function NotificationsPage({
         )}
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — counts are inline muted numbers, not chips. The tab
+          label IS the navigation; count is a quiet companion, not a
+          competing visual element. Always rendered (even when 0) so
+          the row stays even and counts feel like part of the label. */}
       <div className="border-b border-border mt-6">
         <div className="flex items-center gap-6">
           {TABS.map((t) => {
@@ -203,19 +204,15 @@ export function NotificationsPage({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span>{t.label}</span>
-                {count > 0 && (
-                  <span
-                    className={cn(
-                      "ml-2 rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
-                      active
-                        ? "bg-foreground/10 text-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
+                {t.label}
+                <span
+                  className={cn(
+                    "ml-1.5 text-xs font-normal tabular-nums",
+                    active ? "text-muted-foreground" : "text-muted-foreground/70",
+                  )}
+                >
+                  {count}
+                </span>
                 {active && (
                   <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-foreground" />
                 )}
@@ -226,15 +223,14 @@ export function NotificationsPage({
       </div>
 
       {/* Filter pills — source-only, hide pills with zero matches.
-          "All" is always visible. */}
+          "All" is always visible but has no count (would duplicate the
+          tab count two pixels away). Module pills carry an inline
+          muted count after the label. Active state is a subtle
+          accent fill — softer than the tab's underline indicator so
+          the visual hierarchy reads tabs > pills. */}
       {rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mt-4">
-          <FilterPill
-            label="All"
-            count={rows.length}
-            active={filter === "all"}
-            onClick={() => setFilter("all")}
-          />
+        <div className="flex flex-wrap items-center gap-1.5 mt-4">
+          <FilterPill label="All" active={filter === "all"} onClick={() => setFilter("all")} />
           {visibleModules.map((m) => (
             <FilterPill
               key={m}
@@ -307,7 +303,7 @@ export function NotificationsPage({
 
 interface FilterPillProps {
   label: string;
-  count: number;
+  count?: number;
   active: boolean;
   onClick: () => void;
 }
@@ -318,16 +314,23 @@ function FilterPill({ label, count, active, onClick }: FilterPillProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "h-7 rounded-full px-2.5 text-xs font-medium transition-colors",
         active
-          ? "border-foreground bg-foreground text-background"
-          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/40",
+          ? "bg-accent text-foreground border border-foreground/20"
+          : "bg-muted text-muted-foreground border border-transparent hover:text-foreground",
       )}
     >
       {label}
-      <span className={cn("ml-1.5 text-[11px]", active ? "opacity-80" : "opacity-60")}>
-        {count}
-      </span>
+      {count !== undefined && (
+        <span
+          className={cn(
+            "ml-1.5 tabular-nums text-[11px] font-normal",
+            active ? "text-muted-foreground" : "text-muted-foreground/70",
+          )}
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
 }
