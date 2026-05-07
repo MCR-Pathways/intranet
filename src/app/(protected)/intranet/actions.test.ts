@@ -90,6 +90,20 @@ vi.mock("@/lib/image-pipeline", () => ({
   })),
 }));
 
+// Notification fan-out — mock the batch helper so kudos tests don't
+// need to set up a service-client mock alongside the user supabase mock.
+const mockCreateNotifications = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/notifications", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/notifications")>(
+      "@/lib/notifications",
+    );
+  return {
+    ...actual,
+    createNotifications: mockCreateNotifications,
+  };
+});
+
 // ─── Imports (after mocks) ───────────────────────────────────────────
 
 import {
@@ -101,6 +115,8 @@ import {
   editComment,
   togglePinPost,
   fetchLinkPreview,
+  createKudosPost,
+  addKudosRecipients,
 } from "@/app/(protected)/intranet/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -144,6 +160,9 @@ describe("Intranet Post Actions", () => {
 
     // DNS mock default: resolve to public IP
     vi.mocked(dns.lookup).mockResolvedValue({ address: "93.184.216.34", family: 4 } as never);
+
+    // Default: notification fan-out succeeds
+    mockCreateNotifications.mockResolvedValue({ error: null });
   });
 
   // ===========================================
@@ -1418,6 +1437,342 @@ describe("Intranet Post Actions", () => {
 
       expect(result.success).toBe(true);
       expect(result.description).toHaveLength(500);
+    });
+  });
+
+  // ===========================================
+  // createKudosPost
+  // ===========================================
+
+  describe("createKudosPost", () => {
+    /**
+     * Two-step DB flow for a successful kudos:
+     *   1. posts.insert(...).select("id").single() → { id: 'post-1' }
+     *   2. post_kudos_recipients.insert(rows)      → { error: null }
+     *
+     * The default beforeEach wires #1 via the existing mockSingle. We add
+     * a second mockFrom call for post_kudos_recipients via mockImplementation.
+     */
+    function wireKudosInserts(recipientInsertResult: { error: unknown } = { error: null }) {
+      let callCount = 0;
+      const mockRecipientInsert = vi.fn().mockResolvedValue(recipientInsertResult);
+      mockFrom.mockImplementation((table: string) => {
+        callCount++;
+        if (table === "posts") return { insert: mockInsert, delete: mockDelete };
+        if (table === "post_kudos_recipients")
+          return { insert: mockRecipientInsert };
+        return {
+          insert: mockInsert,
+          select: mockSelect,
+          update: mockUpdate,
+          delete: mockDelete,
+        };
+      });
+      // Quiet unused-var lint when callCount isn't asserted on.
+      void callCount;
+      return { mockRecipientInsert };
+    }
+
+    it("creates a kudos post with valid input", async () => {
+      const { mockRecipientInsert } = wireKudosInserts();
+
+      const result = await createKudosPost({
+        message: "Massive thanks for staying late on the launch.",
+        category: "Going the extra mile",
+        recipientIds: ["user-2", "user-3"],
+      });
+
+      expect(result).toEqual({
+        success: true,
+        error: null,
+        postId: "post-1",
+      });
+      expect(mockInsert).toHaveBeenCalledWith({
+        author_id: "user-1",
+        content: "Massive thanks for staying late on the launch.",
+        post_type: "kudos",
+        kudos_category: "Going the extra mile",
+      });
+      expect(mockRecipientInsert).toHaveBeenCalledWith([
+        { post_id: "post-1", recipient_id: "user-2" },
+        { post_id: "post-1", recipient_id: "user-3" },
+      ]);
+      expect(mockCreateNotifications).toHaveBeenCalledTimes(1);
+      const notifRows = mockCreateNotifications.mock.calls[0][0];
+      expect(notifRows).toHaveLength(2);
+      expect(notifRows[0]).toMatchObject({
+        userId: "user-2",
+        type: "kudos",
+        sourceKind: "kudos",
+        sourceId: "post-1",
+        link: "/intranet/post/post-1",
+      });
+    });
+
+    it("rejects empty messages", async () => {
+      const result = await createKudosPost({
+        message: "   ",
+        category: "Team player",
+        recipientIds: ["user-2"],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/message/i);
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects messages over the 500-character cap", async () => {
+      const result = await createKudosPost({
+        message: "x".repeat(501),
+        category: "Team player",
+        recipientIds: ["user-2"],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/500/);
+    });
+
+    it("rejects unknown categories", async () => {
+      const result = await createKudosPost({
+        message: "Nice work",
+        // @ts-expect-error — testing runtime validation against bad input
+        category: "Awesome sauce",
+        recipientIds: ["user-2"],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/category/i);
+    });
+
+    it("drops self from recipients", async () => {
+      const { mockRecipientInsert } = wireKudosInserts();
+
+      const result = await createKudosPost({
+        message: "Thanks!",
+        category: "Thank you",
+        recipientIds: ["user-1", "user-2"], // user-1 is the sender
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockRecipientInsert).toHaveBeenCalledWith([
+        { post_id: "post-1", recipient_id: "user-2" },
+      ]);
+    });
+
+    it("dedupes duplicate recipient ids", async () => {
+      const { mockRecipientInsert } = wireKudosInserts();
+
+      await createKudosPost({
+        message: "Great teamwork",
+        category: "Team player",
+        recipientIds: ["user-2", "user-2", "user-3", "user-3"],
+      });
+
+      expect(mockRecipientInsert).toHaveBeenCalledWith([
+        { post_id: "post-1", recipient_id: "user-2" },
+        { post_id: "post-1", recipient_id: "user-3" },
+      ]);
+    });
+
+    it("rejects when recipient list is empty after dedup + drop-self", async () => {
+      const result = await createKudosPost({
+        message: "Wait who is this for",
+        category: "Thank you",
+        recipientIds: ["user-1"], // sender only
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/at least one/i);
+    });
+
+    it("rejects more than 10 recipients", async () => {
+      const recipientIds = Array.from({ length: 11 }, (_, i) => `user-${i + 2}`);
+      const result = await createKudosPost({
+        message: "Big thanks to everyone",
+        category: "Going the extra mile",
+        recipientIds,
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/up to 10/);
+    });
+
+    it("rolls back the post if recipient insert fails", async () => {
+      const { mockRecipientInsert } = wireKudosInserts({
+        error: { message: "Recipient insert failed" },
+      });
+      // The rollback runs `posts.delete().eq("id", postId)`. We assert
+      // through mockDelete being called for the posts table.
+
+      const result = await createKudosPost({
+        message: "Nice work",
+        category: "Bright idea",
+        recipientIds: ["user-2"],
+      });
+
+      expect(result.success).toBe(false);
+      expect(mockRecipientInsert).toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalled();
+      // No notifications fan out on failure.
+      expect(mockCreateNotifications).not.toHaveBeenCalled();
+    });
+
+    it("returns auth error when not signed in", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: null,
+        profile: null,
+      } as never);
+
+      const result = await createKudosPost({
+        message: "Anonymous kudos",
+        category: "Thank you",
+        recipientIds: ["user-2"],
+      });
+      expect(result).toEqual({ success: false, error: "Not authenticated" });
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
+  // addKudosRecipients (post-publish add-only)
+  // ===========================================
+
+  describe("addKudosRecipients", () => {
+    /**
+     * addKudosRecipients runs three reads + one write:
+     *   1. posts.select(...).eq("id", postId).single()    → post row
+     *   2. post_kudos_recipients.select.eq               → existing recipients
+     *   3. posts.select("kudos_category").eq.single      → category for fan-out
+     *   4. post_kudos_recipients.insert(newRows)         → write
+     */
+    function wireAddRecipientFlow(opts: {
+      postType?: string;
+      authorId?: string;
+      existing?: string[];
+      kudosCategory?: string | null;
+      insertResult?: { error: unknown };
+    } = {}) {
+      const {
+        postType = "kudos",
+        authorId = "user-1",
+        existing = [],
+        kudosCategory = "Team player",
+        insertResult = { error: null },
+      } = opts;
+
+      const mockPostSingle = vi
+        .fn()
+        // First call: posts.select("id, author_id, post_type, content").eq.single
+        .mockResolvedValueOnce({
+          data: {
+            id: "post-1",
+            author_id: authorId,
+            post_type: postType,
+            content: "kudos message",
+          },
+          error: null,
+        })
+        // Second call: posts.select("kudos_category").eq.single
+        .mockResolvedValueOnce({
+          data: { kudos_category: kudosCategory },
+          error: null,
+        });
+
+      const mockExistingEq = vi.fn().mockResolvedValue({
+        data: existing.map((id) => ({ recipient_id: id })),
+        error: null,
+      });
+
+      const mockRecipientInsert = vi.fn().mockResolvedValue(insertResult);
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "posts") {
+          return {
+            select: () => ({
+              eq: () => ({ single: mockPostSingle }),
+            }),
+          };
+        }
+        if (table === "post_kudos_recipients") {
+          return {
+            select: () => ({ eq: mockExistingEq }),
+            insert: mockRecipientInsert,
+          };
+        }
+        return {
+          insert: mockInsert,
+          select: mockSelect,
+          update: mockUpdate,
+          delete: mockDelete,
+        };
+      });
+
+      return { mockRecipientInsert, mockExistingEq, mockPostSingle };
+    }
+
+    it("adds new recipients and notifies only the new ones", async () => {
+      const { mockRecipientInsert } = wireAddRecipientFlow({
+        existing: ["user-2"],
+      });
+
+      const result = await addKudosRecipients({
+        postId: "post-1",
+        recipientIds: ["user-2", "user-3", "user-4"], // user-2 already there
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockRecipientInsert).toHaveBeenCalledWith([
+        { post_id: "post-1", recipient_id: "user-3" },
+        { post_id: "post-1", recipient_id: "user-4" },
+      ]);
+      // Fan-out only includes the genuinely-new recipients.
+      const notifRows = mockCreateNotifications.mock.calls[0][0];
+      expect(notifRows.map((r: { userId: string }) => r.userId)).toEqual([
+        "user-3",
+        "user-4",
+      ]);
+    });
+
+    it("rejects non-author callers", async () => {
+      wireAddRecipientFlow({ authorId: "someone-else" });
+
+      const result = await addKudosRecipients({
+        postId: "post-1",
+        recipientIds: ["user-3"],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/author/i);
+      expect(mockCreateNotifications).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-kudos posts", async () => {
+      wireAddRecipientFlow({ postType: "news" });
+
+      const result = await addKudosRecipients({
+        postId: "post-1",
+        recipientIds: ["user-3"],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/kudos/i);
+    });
+
+    it("returns error when no genuinely new recipients", async () => {
+      wireAddRecipientFlow({ existing: ["user-2", "user-3"] });
+
+      const result = await addKudosRecipients({
+        postId: "post-1",
+        recipientIds: ["user-2", "user-3"], // all already there
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/new recipients/i);
+    });
+
+    it("rejects total going over the 10 cap", async () => {
+      const eightExisting = Array.from({ length: 8 }, (_, i) => `user-${i + 100}`);
+      wireAddRecipientFlow({ existing: eightExisting });
+
+      const result = await addKudosRecipients({
+        postId: "post-1",
+        recipientIds: ["user-2", "user-3", "user-4"], // 8 + 3 = 11
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/up to 10/);
     });
   });
 });
