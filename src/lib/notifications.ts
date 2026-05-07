@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import type { Json } from "@/types/database.types";
 import {
   AtSign,
+  Award,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -40,6 +41,7 @@ export const NOTIFICATION_SOURCE_KINDS = {
   WEEKLY_ROUNDUP: "weekly_roundup",
   ONBOARDING_STEP: "onboarding_step",
   WORKING_LOCATION: "working_location",
+  KUDOS: "kudos",
 } as const;
 
 export type NotificationSourceKind =
@@ -59,6 +61,7 @@ export const INFORMATIONAL_SOURCE_KINDS = new Set<NotificationSourceKind>([
   NOTIFICATION_SOURCE_KINDS.COURSE_COMPLETION,
   NOTIFICATION_SOURCE_KINDS.WEEKLY_ROUNDUP,
   NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
+  NOTIFICATION_SOURCE_KINDS.KUDOS,
 ]);
 
 /**
@@ -82,6 +85,7 @@ export const SOURCE_KIND_REASON_LABEL: Record<NotificationSourceKind, string> = 
   weekly_roundup: "Weekly roundup",
   onboarding_step: "Onboarding",
   working_location: "Working location",
+  kudos: "Kudos",
 };
 
 /**
@@ -105,6 +109,7 @@ export const SOURCE_KIND_ICON: Record<NotificationSourceKind, LucideIcon> = {
   weekly_roundup: Newspaper,
   onboarding_step: UserPlus,
   working_location: MapPin,
+  kudos: Award,
 };
 
 /**
@@ -130,6 +135,7 @@ export const SOURCE_KIND_ACTION_VERB: Record<NotificationSourceKind, string> = {
   weekly_roundup: "Read",
   onboarding_step: "Continue",
   working_location: "Set location",
+  kudos: "View",
 };
 
 /**
@@ -208,6 +214,10 @@ export const SOURCE_KIND_MODULE: Record<NotificationSourceKind, NotificationModu
   weekly_roundup: "news",
   onboarding_step: "hr",
   working_location: "signin",
+  // Kudos goes under Mentions — same conceptual category as @-mentions
+  // (someone calling you out personally). Avoids spawning a one-row
+  // "Kudos" pill at the current scale.
+  kudos: "mentions",
 };
 
 /**

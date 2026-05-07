@@ -2569,9 +2569,11 @@ export type Database = {
           id: string
           is_pinned: boolean
           is_weekly_roundup: boolean
+          kudos_category: string | null
           poll_allow_multiple: boolean
           poll_closes_at: string | null
           poll_question: string | null
+          post_type: string
           updated_at: string
           weekly_roundup_id: string | null
         }
@@ -2583,9 +2585,11 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_weekly_roundup?: boolean
+          kudos_category?: string | null
           poll_allow_multiple?: boolean
           poll_closes_at?: string | null
           poll_question?: string | null
+          post_type?: string
           updated_at?: string
           weekly_roundup_id?: string | null
         }
@@ -2597,9 +2601,11 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_weekly_roundup?: boolean
+          kudos_category?: string | null
           poll_allow_multiple?: boolean
           poll_closes_at?: string | null
           poll_question?: string | null
+          post_type?: string
           updated_at?: string
           weekly_roundup_id?: string | null
         }
@@ -2614,6 +2620,39 @@ export type Database = {
           {
             foreignKeyName: "posts_author_id_fkey"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_kudos_recipients: {
+        Row: {
+          created_at: string
+          post_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_kudos_recipients_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_kudos_recipients_recipient_id_fkey"
+            columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

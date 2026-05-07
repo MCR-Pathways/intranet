@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -220,12 +221,10 @@ export function PostCard({
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{displayName}</p>
-                    {post.is_pinned && (
-                      <Badge variant="secondary" className="text-xs gap-1 py-0">
-                        <Pin className="h-3 w-3" />
-                        Pinned
-                      </Badge>
-                    )}
+                    {/* Pinned status moved to a corner Pin icon (top-right
+                        of card, next to the kebab) per W4 design — frees
+                        the inline-badge slot for content-type semantics
+                        like Round Up. */}
                     {post.is_weekly_roundup && (
                       <Badge variant="default" className="text-xs gap-1 py-0">
                         <Sparkles className="h-3 w-3" />
@@ -247,6 +246,24 @@ export function PostCard({
                 </div>
               </div>
 
+              <div className="flex items-center gap-1">
+                {/* Corner Pin icon — top-right next to the kebab. Decorative;
+                    the unpin action lives in the kebab menu below. Pattern
+                    matches LinkedIn / Reddit / Teams / Instagram corner-pin
+                    convention; tooltip carries "Pinned" for screen readers. */}
+                {post.is_pinned && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="inline-flex h-9 w-9 items-center justify-center text-primary"
+                        aria-label="Pinned"
+                      >
+                        <Pin className="h-4 w-4" fill="currentColor" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Pinned</TooltipContent>
+                  </Tooltip>
+                )}
               {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -319,6 +336,7 @@ export function PostCard({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              </div>
             </div>
 
             {/* Content */}
