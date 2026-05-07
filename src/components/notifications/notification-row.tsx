@@ -57,6 +57,19 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
   })();
 
   const handleOpen = () => {
+    // Fire-and-forget clear: clicking a notification row clears it
+    // from the bell as it routes to the link, matching Slack /
+    // Linear / GitHub. The Cleared tab still keeps the history.
+    // State rows (working-location prompts) don't have a DB id —
+    // they resolve when the user actually sets/confirms location,
+    // not on click — so skip the clear for them.
+    if (!isStateRow && tab === "inbox" && row.id) {
+      void clearNotification(row.id).catch(() => {
+        // Best-effort: a network blip shouldn't block the user from
+        // reaching the linked page. The kebab Clear action is still
+        // there for explicit retry.
+      });
+    }
     if (row.link) router.push(row.link);
   };
 
