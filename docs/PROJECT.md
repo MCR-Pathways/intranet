@@ -221,7 +221,7 @@ The largest module. Provides employee self-service and HR admin functionality.
 | Org Chart | `/resources/article/org-chart` | Visual tree (react-d3-tree), relocated to Resources as component page. 308 redirect from `/hr/org-chart`. |
 | My Team | `/hr/team` | Line manager team view |
 
-**Server Actions:** 12 action files
+**Server Actions:** 27 action files
 **Components:** 68 files in `src/components/hr/`
 **Shared config:** `src/lib/hr.ts` (938 lines — leave types, statuses, formatters, constants)
 
@@ -450,7 +450,7 @@ All use `auth.uid()` for identity (never trust user-supplied IDs) and `SET searc
 - **Framework:** Vitest 4 + React Testing Library + jsdom
 - **Config:** `vitest.config.ts`, `vitest.setup.ts`
 - **Files:** 70 test files, co-located with source files (`.test.ts` / `.test.tsx`)
-- **Coverage:** 1,518 tests
+- **Coverage:** 1,546 tests
 
 ### Test Categories
 

@@ -2,7 +2,18 @@
 
 **Last reviewed:** 2026-05-04
 **Owner:** Abdulmuiz Adaranijo
-**Status:** Research complete. Recommendations below. No code work until Colin signs off per workstream.
+**Status:** Research complete. Recommendations below.
+
+> **W3-rev supersedes parts of this document.** Sections describing the
+> attention/greeting banner approach (W3 in the original numbering)
+> were the input that drove the W3-rev pivot — that pivot replaced
+> banners with the unified notification centre (bell + popover +
+> `/notifications`) and a quiet greeting on `/intranet`. References
+> to `DailyBanner`, `getDailyBannerState`, and "attention block"
+> below are historical input for the decision; the actual shipped
+> shape is in `memory/intranet-design-feedback.md` (locked W3-rev
+> scope) and `docs/PROJECT.md` (notifications section). Other
+> workstreams (W1, W4–W8) in this doc are still the active plan.
 
 This document consolidates research carried out 2026-05-04 in response to design feedback (combined home feed redesign — see `memory/intranet-design-feedback.md`). It covers five workstreams: internal action audit, quick-actions externals, attention/greeting banner patterns, feed type-differentiation, and 3-column home layout. The anti-bland design playbook lives separately in `docs/frontend-design-playbook.md`.
 

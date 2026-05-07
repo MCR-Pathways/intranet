@@ -78,7 +78,7 @@
 ### Infrastructure- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,432 tests across 61 files (Vitest + RTL + jsdom)
+- 1,546 tests across 71 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
