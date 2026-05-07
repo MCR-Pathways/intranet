@@ -109,7 +109,7 @@ Multi-PR initiative responding to design feedback (April 2026). Full research an
 
 These now apply to all future intranet work:
 
-- **No coloured banners above the page H1 for routine actions.** Polaris rule documented in `docs/ui-ux-principles.md` §11. Attention items route through bell + `source_kind` + `/notifications`.
+- **No coloured banners above the page H1 for routine actions.** Polaris's banner rule ("not the primary entry point to information or actions merchants need on a regular basis") is the cleanest external anchor — see `docs/ui-ux-principles.md` §11 for the full reasoning and supporting design-system citations. Attention items route through bell + `source_kind` + `/notifications`.
 - **The bell is the single attention surface.** Splitting attention between bell and an in-page panel is an anti-pattern.
 - **`SOURCE_KIND_MODULE` in `src/lib/notifications.ts` is canonical.** Adding a new notification source kind requires adding it to the module map (HR / Learning / News / Mentions / Sign-In).
 - **Saved notifications bypass the 30-day Cleared retention sweep.** Any background job touching the `notifications` table must respect `is_saved=true`.
