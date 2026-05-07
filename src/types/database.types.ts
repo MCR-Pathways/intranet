@@ -4396,6 +4396,8 @@ export interface PostWithRelations extends Post {
   comment_count: number;
   /** Poll data (null for non-poll posts) */
   poll?: PostPoll | null;
+  /** Kudos recipients (populated only for kudos posts; empty for everything else). */
+  kudos_recipients?: PostAuthor[];
 }
 
 // Resource / Knowledge Base types

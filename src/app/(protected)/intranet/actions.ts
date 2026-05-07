@@ -366,29 +366,60 @@ async function enrichPosts(
 
   if (postIds.length === 0) return [];
 
-  const [attachmentsResult, reactionsResult, commentsResult] =
-    await Promise.all([
-      supabase
-        .from("post_attachments")
-        .select(ATTACHMENT_SELECT)
-        .in("post_id", postIds)
-        .order("sort_order"),
-      supabase
-        .from("post_reactions")
-        .select(REACTION_SELECT)
-        .in("post_id", postIds),
-      supabase
-        .from("post_comments")
-        .select(
-          `${COMMENT_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
-        )
-        .in("post_id", postIds)
-        .order("created_at", { ascending: true }),
-    ]);
+  // Only fetch kudos recipients for posts that are actually kudos —
+  // saves the join-table read on the common-case news-feed render.
+  const kudosPostIds = postRows
+    .filter(
+      (p) => (p as { post_type?: string }).post_type === POST_TYPES.KUDOS,
+    )
+    .map((p) => (p as { id: string }).id);
+
+  const [
+    attachmentsResult,
+    reactionsResult,
+    commentsResult,
+    kudosRecipientsResult,
+  ] = await Promise.all([
+    supabase
+      .from("post_attachments")
+      .select(ATTACHMENT_SELECT)
+      .in("post_id", postIds)
+      .order("sort_order"),
+    supabase
+      .from("post_reactions")
+      .select(REACTION_SELECT)
+      .in("post_id", postIds),
+    supabase
+      .from("post_comments")
+      .select(
+        `${COMMENT_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`,
+      )
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true }),
+    kudosPostIds.length > 0
+      ? supabase
+          .from("post_kudos_recipients")
+          .select(
+            `post_id, recipient_id, created_at, recipient:profiles!recipient_id(${AUTHOR_SELECT})`,
+          )
+          .in("post_id", kudosPostIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as Array<{ post_id: string; recipient: PostAuthor }>, error: null }),
+  ]);
 
   const attachments = attachmentsResult.data ?? [];
   const reactions = reactionsResult.data ?? [];
   const comments = commentsResult.data ?? [];
+  const kudosRecipientRows = (kudosRecipientsResult.data ?? []) as unknown as Array<{
+    post_id: string;
+    recipient: PostAuthor;
+  }>;
+  const kudosRecipientsByPost = new Map<string, PostAuthor[]>();
+  for (const row of kudosRecipientRows) {
+    const existing = kudosRecipientsByPost.get(row.post_id) ?? [];
+    existing.push(row.recipient);
+    kudosRecipientsByPost.set(row.post_id, existing);
+  }
 
   const attachmentsByPost = new Map<string, typeof attachments>();
   for (const a of attachments) {
@@ -489,6 +520,7 @@ async function enrichPosts(
       updated_at: p.updated_at,
       author: p.author as unknown as PostAuthor,
       attachments: attachmentsByPost.get(p.id) ?? [],
+      kudos_recipients: kudosRecipientsByPost.get(p.id) ?? [],
       reactions: postReactions,
       comments: threadedCommentsByPost.get(p.id) ?? [],
       reaction_counts: buildReactionCounts(postReactions),
