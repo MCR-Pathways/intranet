@@ -18,7 +18,7 @@ import type { Database } from "@/types/database.types";
 import type { InboxRow } from "@/types/notification";
 import { NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
-import { getDailyBannerState } from "@/app/(protected)/sign-in/actions";
+import { getWorkingLocationState } from "@/app/(protected)/sign-in/actions";
 
 type Client = SupabaseClient<Database>;
 
@@ -209,13 +209,12 @@ export async function getPendingRTWSignoffs(
  * the inbox:
  *
  *   - "Where are you working today?" — user has no working_location row
- *     for today (and it's before 2pm UK; getDailyBannerState gates this).
+ *     for today.
  *   - "Confirm office arrival" — user is scheduled for an office but
  *     hasn't confirmed they're on site (after 9:30am UK).
  *
  * Defers all the time-of-day and state-detection logic to
- * getDailyBannerState in sign-in/actions — same source of truth as the
- * DailyBanner so the bell and the banner can never disagree.
+ * getWorkingLocationState in sign-in/actions.
  */
 export async function getOfficeArrivalConfirmation(
   // supabase is unused but kept in the signature so the helper composes
@@ -224,7 +223,7 @@ export async function getOfficeArrivalConfirmation(
   userId: string,
 ): Promise<InboxRow[]> {
   try {
-    const { type } = await getDailyBannerState();
+    const { type } = await getWorkingLocationState();
     if (!type) return [];
 
     const today = new Date().toLocaleDateString("en-CA", {

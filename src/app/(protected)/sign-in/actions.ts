@@ -126,9 +126,10 @@ export async function setWorkingLocation(
     }
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -190,9 +191,10 @@ export async function clearWorkingLocation(
     }
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -246,9 +248,10 @@ export async function confirmArrival(): Promise<{ success: boolean; error: strin
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -338,9 +341,10 @@ export async function saveWeeklyPattern(
     return { success: false, error: "Failed to save weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -370,9 +374,10 @@ export async function clearWeeklyPattern(
     return { success: false, error: "Failed to clear weekly pattern. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -463,9 +468,10 @@ export async function applyPatternsToWeek(
     return { success: false, applied: 0, error: "Failed to apply weekly patterns. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, applied: entries.length, error: null };
 }
@@ -603,21 +609,25 @@ export async function getOfficeHeadcount(startDate: string, endDate: string) {
 // =============================================
 
 /**
- * Get the daily banner state for the current user.
- * Determines which reconciliation banner to show (if any).
+ * Get today's working-location state for the current user.
+ * Drives the bell's working_location notification row via
+ * persistent-attention.ts → getInboxStream.
  *
  * Returns:
  * - 'office_not_confirmed': User is scheduled for office but hasn't confirmed
  * - 'no_schedule': User has no working location entry for today
- * - null: No banner needed
+ * - null: No prompt needed
+ *
+ * Naming: was `getDailyBannerState` when the DailyBanner UI existed.
+ * That UI retired in W3-rev.4; the function stays — the bell's state
+ * row is the new home for these prompts.
  */
 // Memoised inner that the exported server action delegates to.
 // React.cache dedupes calls within the same request render — the
-// banner state is read by ProtectedLayout (for the DailyBanner) AND
-// by persistent-attention.ts → getInboxStream (for the bell's
-// working-location row). Without this they'd run the same query
-// twice on every protected page load.
-const computeDailyBannerState = cache(async () => {
+// state is read by persistent-attention.ts → getInboxStream (for the
+// bell's working-location row), and could be read by other surfaces
+// in the same render in future.
+const computeWorkingLocationState = cache(async () => {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) return { type: null as string | null };
@@ -632,11 +642,10 @@ const computeDailyBannerState = cache(async () => {
     .eq("date", today);
 
   if (!data || data.length === 0) {
-    // No schedule set today — surface the prompt all day. The original
-    // 2pm cutoff was carried over from the loud DailyBanner; the bell
-    // and /notifications row are passive, so daylong visibility is
-    // fine. If the user resolves the state at 4pm by setting a
-    // location, the row vanishes immediately.
+    // No schedule set today — surface the prompt all day. The bell
+    // and /notifications row are passive surfaces, so daylong
+    // visibility is fine. If the user resolves the state at 4pm by
+    // setting a location, the row vanishes immediately.
     return { type: "no_schedule" as string | null };
   }
 
@@ -656,8 +665,8 @@ const computeDailyBannerState = cache(async () => {
   return { type: null as string | null };
 });
 
-export async function getDailyBannerState() {
-  return computeDailyBannerState();
+export async function getWorkingLocationState() {
+  return computeWorkingLocationState();
 }
 
 /**
@@ -686,9 +695,10 @@ export async function confirmRemoteArrival() {
     return { success: false, error: "Failed to confirm arrival. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
 
-  // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+  // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
   return { success: true, error: null };
 }
@@ -882,9 +892,10 @@ export async function triggerCalendarSync() {
       calendarSyncToken: profile.calendar_sync_token,
     });
 
-    // Layout-level invalidation: the bell (header), /notifications, and
-  // /intranet (DailyBanner until W3-rev.4 retires it) all read working
-  // location state. Keep them in sync after a mutation.
+    // Layout-level invalidation: the bell (header) and /notifications
+  // both read working-location state. Keep them in sync after a
+  // mutation. (The DailyBanner that previously read this state retired
+  // in W3-rev.4.)
   revalidatePath("/", "layout");
 
     return {

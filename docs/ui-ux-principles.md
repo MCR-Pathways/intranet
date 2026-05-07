@@ -717,7 +717,7 @@ Translated for future Claude work: **don't build attention banners on the home d
 
 The Notion Calendar pattern: "Good afternoon, Colin." as a quiet typographic moment above the feed. Time-of-day buckets (morning < 12, afternoon 12–18, evening 18+) Europe/London. Server-rendered. No animation, no decoration.
 
-The MCR W3-rev locked scope places this on `/intranet` and `/admin`, suppressed for users with `induction_completed_at IS NULL` (per `memory/intranet-design-feedback.md`).
+The MCR W3-rev locked scope places this on `/intranet` only, suppressed for users with `induction_completed_at IS NULL` (per `memory/intranet-design-feedback.md`). The original plan included `/admin` but admin pages are tool surfaces; greeting is a home concept and stays on home.
 
 ### Anti-patterns
 
