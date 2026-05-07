@@ -78,7 +78,7 @@
 ### Infrastructure- Security hardening (HSTS, CSP enforcing, auth redirect validation, timing-safe tokens, SECURITY DEFINER search_path)
 - Proxy JWT optimisation (zero DB queries per authenticated request)
 - React Compiler enabled, Turbopack FS caching
-- 1,432 tests across 61 files (Vitest + RTL + jsdom)
+- 1,546 tests across 71 files (Vitest + RTL + jsdom)
 - E2E setup (Playwright + local Supabase Docker, 18 tests)
 - Structured logger ready for Sentry/Datadog swap
 
@@ -97,16 +97,32 @@
 Multi-PR initiative responding to design feedback (April 2026). Full research and per-workstream PR proposals in [docs/intranet-redesign-research.md](./intranet-redesign-research.md). Anti-bland frontend playbook (referenced before any UI work) in [docs/frontend-design-playbook.md](./frontend-design-playbook.md).
 
 - [x] **W1** — Width sweep + DailyBanner alignment with centre column on `/intranet`. New `src/lib/layout.ts`, `--centre-column` CSS variable, AppLayout wrapper. PR #284.
-- [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Visible at xl (≥1280px); hidden at lg/md/sm with a tab fallback inside the feed page at md.
-- [ ] **W3** — Greeting banner (permanent) + attention banner (conditional, capped at 3, per-item dismiss). Replaces / supplements DailyBanner.
-- [ ] **W4** — Type-pill differentiation on feed cards (tonal Badge in header line; `default`/`success`/`warning` variants matching existing Tool Shed accents). No filter tabs at our scale.
-- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts).
-- [ ] **W6** — Quick-actions rail (role-aware, state-aware; lives in W2's right rail). Audit shortlist in research doc §1.
-- [ ] **W7** — Composer redesign (3-step modal: type picker → form → preview & send).
-- [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only).
+- [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Visible at xl (≥1280px); hidden at lg/md/sm with a tab fallback inside the feed page at md. **Right-rail content depends on W6's rescoping — see W6 note.**
+- [x] **W3** — original "greeting + attention banner" plan. Pivoted to **W3-rev** (notification centre overhaul + quiet greeting + DailyBanner retirement). See `memory/intranet-design-feedback.md` for the locked scope. Shipped across PRs #289 (.1a), #292 (.1b), #293 (.2a), #294 (.2b), #295 (.3), #296 (.4).
+- [ ] **W4** — Type-pill differentiation on feed cards (tonal Badge in header line; `default`/`success`/`warning` variants matching existing Tool Shed accents). No filter tabs at our scale. **Independent of W3-rev — unblocked.**
+- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts). **Independent of W3-rev — unblocked.**
+- [ ] **W6** — Quick-actions rail. **Needs rescoping after W3-rev.** Original audit (in research doc §1) had ~half its candidates absorbed by the bell: working_location, office arrival confirmation, resume next compliance course, open weekly roundup, approve pending leave — all now state rows in the bell with inline actions. The remaining quick-action candidates are pure navigation shortcuts (Book leave, Submit absence, Find a colleague, etc.) — that's a smaller surface, may fold into W2's right rail rather than warranting its own workstream. Re-audit before scoping.
+- [ ] **W7** — Composer redesign (3-step modal: type picker → form → preview & send). Independent.
+- [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only). Independent.
+
+### Design constraints from W3-rev
+
+These now apply to all future intranet work:
+
+- **No coloured banners above the page H1 for routine actions.** Polaris's banner rule ("not the primary entry point to information or actions merchants need on a regular basis") is the cleanest external anchor — see `docs/ui-ux-principles.md` §11 for the full reasoning and supporting design-system citations. Attention items route through bell + `source_kind` + `/notifications`.
+- **The bell is the single attention surface.** Splitting attention between bell and an in-page panel is an anti-pattern.
+- **`SOURCE_KIND_MODULE` in `src/lib/notifications.ts` is canonical.** Adding a new notification source kind requires adding it to the module map (HR / Learning / News / Mentions / Sign-In).
+- **Saved notifications bypass the 30-day Cleared retention sweep.** Any background job touching the `notifications` table must respect `is_saved=true`.
+- **`/admin` rename DROPPED.** A pure rename only fixes half the admin surface (HR/Systems → `/hr`, L&D-only → `/learning/admin/courses`); a unified `/admin` index would be a separate workstream worth doing only if/when admin sub-pages multiply or users complain. No active TODO.
 
 **Adjacent workstreams surfaced during W3-rev planning (not yet sequenced):**
 - [ ] **Digest summary email for pile-up notifications.** Pronto-on-event is already covered by existing Resend triggers. Pile-up scenario (user away for two weeks comes back to N items) needs a separate digest email cadence — single email summarising accumulated items rather than N individual emails. New cron + template work.
+
+### Recommended next pickup order
+
+W4 → W5 → W6 re-audit → W2 → W7/W8.
+
+W4 + W5 are unblocked, small, and both touch the feed; doing them before any layout change avoids re-styling the same cards twice. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 then lands with a clear right-rail purpose.
 
 ### HR Phase 3
 - [ ] Surveys & pulse checks

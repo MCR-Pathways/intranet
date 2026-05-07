@@ -713,6 +713,8 @@ The W3-rev redirect (per `memory/intranet-design-feedback.md`) is the most impor
 
 Translated for future Claude work: **don't build attention banners on the home dashboard.** If a feature wants to surface "you have X to do", route it through `notifications` with a `source_kind` and let the bell handle it. The dashboard's job is the persistent stuff.
 
+The cleanest external anchor for this rule is Shopify Polaris's banner guidance: *"Banners should not be the primary entry point to information or actions merchants need on a regular basis."* (verified at [polaris-react.shopify.com/components/feedback-indicators/banner](https://polaris-react.shopify.com/components/feedback-indicators/banner)). Daily working-location selection is exactly the "regular basis" case Polaris carves out — that's the rule the retired DailyBanner violated. Material Design 2 ships banners only for one-off important messages; Carbon hasn't shipped a banner component because IBM thinks the pattern needs more research; NICE caps action banners at one per page. Multiple design systems converge on "banners are for respond-now-then-dismiss, not for actions you take every day."
+
 ### Hero / greeting
 
 The Notion Calendar pattern: "Good afternoon, Colin." as a quiet typographic moment above the feed. Time-of-day buckets (morning < 12, afternoon 12–18, evening 18+) Europe/London. Server-rendered. No animation, no decoration.
