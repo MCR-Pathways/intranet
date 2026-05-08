@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Award, Loader2, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import {
   KUDOS_CATEGORY_ORDER,
   KUDOS_MAX_RECIPIENTS,
@@ -172,7 +173,8 @@ export function KudosCreateDialog({
               "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
           );
         }
-      } catch {
+      } catch (err) {
+        logger.error("Failed to create kudos post", { error: err });
         toast.error(
           "Something went wrong. Please try again, or contact the HelpDesk at helpdesk@mcrpathways.org if the issue continues.",
         );

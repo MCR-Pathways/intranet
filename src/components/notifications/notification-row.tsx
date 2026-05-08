@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn, timeAgo } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import type { InboxRow } from "@/types/notification";
 import type { NotificationTab } from "@/app/(protected)/notifications/actions";
 
@@ -64,10 +65,16 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
     // they resolve when the user actually sets/confirms location,
     // not on click — so skip the clear for them.
     if (!isStateRow && tab === "inbox" && row.id) {
-      void clearNotification(row.id).catch(() => {
+      const notificationId = row.id;
+      void clearNotification(notificationId).catch((err) => {
         // Best-effort: a network blip shouldn't block the user from
         // reaching the linked page. The kebab Clear action is still
-        // there for explicit retry.
+        // there for explicit retry. Log at warn so a recurring pattern
+        // is visible without alerting on single transient failures.
+        logger.warn("Failed to auto-clear notification on row click", {
+          notificationId,
+          error: err,
+        });
       });
     }
     if (row.link) router.push(row.link);
