@@ -8,7 +8,13 @@ import {
   DOCUMENT_MAX_SIZE_BYTES,
   ALLOWED_FILE_TYPES,
   isImageType,
+  isKudosCategory,
+  KUDOS_MAX_RECIPIENTS,
+  KUDOS_MESSAGE_MAX_LENGTH,
+  POST_TYPES,
+  type KudosCategory,
 } from "@/lib/intranet";
+import { createNotifications, NOTIFICATION_SOURCE_KINDS } from "@/lib/notifications";
 import {
   uploadFileToDrive,
   deleteFileFromDrive,
@@ -91,7 +97,7 @@ async function sendMentionEmails(
 }
 
 const POST_SELECT =
-  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
+  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, post_type, kudos_category, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
   "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, page_count, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
@@ -360,29 +366,60 @@ async function enrichPosts(
 
   if (postIds.length === 0) return [];
 
-  const [attachmentsResult, reactionsResult, commentsResult] =
-    await Promise.all([
-      supabase
-        .from("post_attachments")
-        .select(ATTACHMENT_SELECT)
-        .in("post_id", postIds)
-        .order("sort_order"),
-      supabase
-        .from("post_reactions")
-        .select(REACTION_SELECT)
-        .in("post_id", postIds),
-      supabase
-        .from("post_comments")
-        .select(
-          `${COMMENT_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`
-        )
-        .in("post_id", postIds)
-        .order("created_at", { ascending: true }),
-    ]);
+  // Only fetch kudos recipients for posts that are actually kudos —
+  // saves the join-table read on the common-case news-feed render.
+  const kudosPostIds = postRows
+    .filter(
+      (p) => (p as { post_type?: string }).post_type === POST_TYPES.KUDOS,
+    )
+    .map((p) => (p as { id: string }).id);
+
+  const [
+    attachmentsResult,
+    reactionsResult,
+    commentsResult,
+    kudosRecipientsResult,
+  ] = await Promise.all([
+    supabase
+      .from("post_attachments")
+      .select(ATTACHMENT_SELECT)
+      .in("post_id", postIds)
+      .order("sort_order"),
+    supabase
+      .from("post_reactions")
+      .select(REACTION_SELECT)
+      .in("post_id", postIds),
+    supabase
+      .from("post_comments")
+      .select(
+        `${COMMENT_SELECT}, author:profiles!author_id(${AUTHOR_SELECT})`,
+      )
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true }),
+    kudosPostIds.length > 0
+      ? supabase
+          .from("post_kudos_recipients")
+          .select(
+            `post_id, recipient_id, created_at, recipient:profiles!recipient_id(${AUTHOR_SELECT})`,
+          )
+          .in("post_id", kudosPostIds)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as Array<{ post_id: string; recipient: PostAuthor }>, error: null }),
+  ]);
 
   const attachments = attachmentsResult.data ?? [];
   const reactions = reactionsResult.data ?? [];
   const comments = commentsResult.data ?? [];
+  const kudosRecipientRows = (kudosRecipientsResult.data ?? []) as unknown as Array<{
+    post_id: string;
+    recipient: PostAuthor;
+  }>;
+  const kudosRecipientsByPost = new Map<string, PostAuthor[]>();
+  for (const row of kudosRecipientRows) {
+    const existing = kudosRecipientsByPost.get(row.post_id) ?? [];
+    existing.push(row.recipient);
+    kudosRecipientsByPost.set(row.post_id, existing);
+  }
 
   const attachmentsByPost = new Map<string, typeof attachments>();
   for (const a of attachments) {
@@ -461,7 +498,7 @@ async function enrichPosts(
   }
 
   return postRows.map((post) => {
-    const p = post as { id: string; author_id: string; content: string; content_json: Json | null; is_pinned: boolean; is_weekly_roundup: boolean; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
+    const p = post as { id: string; author_id: string; content: string; content_json: Json | null; is_pinned: boolean; is_weekly_roundup: boolean; post_type: string; kudos_category: string | null; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
@@ -473,6 +510,8 @@ async function enrichPosts(
       content_json: p.content_json ?? null,
       is_pinned: p.is_pinned,
       is_weekly_roundup: p.is_weekly_roundup,
+      post_type: p.post_type,
+      kudos_category: p.kudos_category,
       weekly_roundup_id: p.weekly_roundup_id,
       poll_question: p.poll_question,
       poll_closes_at: p.poll_closes_at,
@@ -481,6 +520,7 @@ async function enrichPosts(
       updated_at: p.updated_at,
       author: p.author as unknown as PostAuthor,
       attachments: attachmentsByPost.get(p.id) ?? [],
+      kudos_recipients: kudosRecipientsByPost.get(p.id) ?? [],
       reactions: postReactions,
       comments: threadedCommentsByPost.get(p.id) ?? [],
       reaction_counts: buildReactionCounts(postReactions),
@@ -1128,6 +1168,276 @@ export async function deletePost(
 
   revalidatePath("/intranet", "layout");
   return { success: true, error: null };
+}
+
+// ─── Kudos (W4) ──────────────────────────────────────────────────────
+
+interface CreateKudosPostInput {
+  message: string;
+  category: KudosCategory;
+  recipientIds: string[];
+}
+
+interface CreateKudosPostResult {
+  success: boolean;
+  error: string | null;
+  postId?: string;
+}
+
+/**
+ * Create a kudos post. Validates recipient set, message, and category;
+ * inserts the post + recipient join rows + per-recipient notifications
+ * in a single round-trip flow.
+ *
+ * Multi-recipient is intentional — kudos can credit a team. Cap is 10
+ * (W4 spec). Sender is excluded from recipients (self-kudos is meaningless).
+ *
+ * Notifications fan out via createNotifications (batch insert) so a
+ * 10-recipient kudos is one DB statement, not ten.
+ */
+export async function createKudosPost(
+  data: CreateKudosPostInput,
+): Promise<CreateKudosPostResult> {
+  const { supabase, user, profile } = await getCurrentUser();
+  if (!user || !profile) return { success: false, error: "Not authenticated" };
+
+  // ─── Validate ────────────────────────────────────────────────
+  const message = data.message?.trim();
+  if (!message) {
+    return { success: false, error: "Add a message to your kudos." };
+  }
+  if (message.length > KUDOS_MESSAGE_MAX_LENGTH) {
+    return {
+      success: false,
+      error: `Kudos message can be at most ${KUDOS_MESSAGE_MAX_LENGTH} characters.`,
+    };
+  }
+  if (!isKudosCategory(data.category)) {
+    return { success: false, error: "Pick a category for your kudos." };
+  }
+  // De-dupe + drop self + verify non-empty
+  const recipientIds = Array.from(new Set(data.recipientIds)).filter(
+    (id) => id && id !== user.id,
+  );
+  if (recipientIds.length === 0) {
+    return {
+      success: false,
+      error: "Pick at least one colleague to recognise.",
+    };
+  }
+  if (recipientIds.length > KUDOS_MAX_RECIPIENTS) {
+    return {
+      success: false,
+      error: `Kudos can include up to ${KUDOS_MAX_RECIPIENTS} colleagues — for larger groups, post an announcement.`,
+    };
+  }
+
+  // ─── Insert post ────────────────────────────────────────────
+  const postInsert: Database["public"]["Tables"]["posts"]["Insert"] = {
+    author_id: user.id,
+    content: message,
+    post_type: POST_TYPES.KUDOS,
+    kudos_category: data.category,
+  };
+  const { data: post, error: postError } = await supabase
+    .from("posts")
+    .insert(postInsert)
+    .select("id")
+    .single();
+  if (postError || !post) {
+    logger.error("Failed to insert kudos post", { error: postError });
+    return { success: false, error: "Failed to create kudos." };
+  }
+
+  // ─── Insert recipients (batch) ──────────────────────────────
+  // Wrapped in try/catch because the rollback below is load-bearing.
+  // The Supabase client returns `{ error }` for normal DB failures,
+  // but a network-layer throw (DNS drop, connection reset) bypasses
+  // that channel and the await rejects. Without the try/catch, the
+  // post stays in the table with no recipients — exactly the
+  // orphan-state the rollback exists to prevent.
+  const recipientRows = recipientIds.map((recipient_id) => ({
+    post_id: post.id,
+    recipient_id,
+  }));
+  let recipientInsertFailed = false;
+  let recipientFailureDetail: unknown = null;
+  try {
+    const { error: recipientError } = await supabase
+      .from("post_kudos_recipients")
+      .insert(recipientRows);
+    if (recipientError) {
+      recipientInsertFailed = true;
+      recipientFailureDetail = recipientError;
+    }
+  } catch (thrown) {
+    recipientInsertFailed = true;
+    recipientFailureDetail = thrown;
+  }
+  if (recipientInsertFailed) {
+    logger.error("Failed to insert kudos recipients", {
+      error: recipientFailureDetail,
+    });
+    // Best-effort rollback. If the delete itself throws or fails, log
+    // and surface a generic error — there's nothing more we can do
+    // from server-side at this point. The orphan, if any, can be
+    // cleaned up manually via the kudos post's id (returned in the
+    // log).
+    try {
+      await supabase.from("posts").delete().eq("id", post.id);
+    } catch (rollbackError) {
+      logger.error("Failed to roll back orphaned kudos post", {
+        postId: post.id,
+        error: rollbackError,
+      });
+    }
+    return { success: false, error: "Failed to create kudos." };
+  }
+
+  // ─── Notify recipients ──────────────────────────────────────
+  await fanOutKudosNotifications({
+    postId: post.id,
+    senderName: profile.full_name ?? "A colleague",
+    message,
+    category: data.category,
+    recipientIds,
+  });
+
+  revalidatePath("/intranet", "layout");
+  return { success: true, error: null, postId: post.id };
+}
+
+interface AddKudosRecipientsInput {
+  postId: string;
+  recipientIds: string[];
+}
+
+/**
+ * Add recipients to an existing kudos post. Add-only — recipients
+ * cannot be removed once published (W4 design call: removing
+ * retroactively rewrites who got recognised, which feels wrong).
+ *
+ * Only the post author can add. Existing recipients are NOT
+ * re-notified (notification only fires for personally-relevant
+ * changes — Slack-thread pattern).
+ */
+export async function addKudosRecipients(
+  data: AddKudosRecipientsInput,
+): Promise<{ success: boolean; error: string | null }> {
+  const { supabase, user, profile } = await getCurrentUser();
+  if (!user || !profile) return { success: false, error: "Not authenticated" };
+
+  // ─── Authorise + verify post is kudos ────────────────────────
+  // Pull `kudos_category` in the same select so the fan-out below
+  // doesn't need a second round-trip for the same row.
+  const { data: post, error: postFetchError } = await supabase
+    .from("posts")
+    .select("id, author_id, post_type, content, kudos_category")
+    .eq("id", data.postId)
+    .single();
+  if (postFetchError || !post) {
+    return { success: false, error: "Kudos post not found." };
+  }
+  if (post.author_id !== user.id) {
+    return { success: false, error: "Only the author can edit a kudos." };
+  }
+  if (post.post_type !== POST_TYPES.KUDOS) {
+    return { success: false, error: "This isn't a kudos post." };
+  }
+
+  // ─── Pull existing recipients to compute the delta ──────────
+  const { data: existing, error: existingError } = await supabase
+    .from("post_kudos_recipients")
+    .select("recipient_id")
+    .eq("post_id", post.id);
+  if (existingError) {
+    logger.error("Failed to fetch existing kudos recipients", {
+      error: existingError,
+    });
+    return { success: false, error: "Failed to add recipients." };
+  }
+
+  const existingIds = new Set(existing?.map((r) => r.recipient_id) ?? []);
+  const newIds = Array.from(new Set(data.recipientIds))
+    .filter((id) => id && id !== user.id && !existingIds.has(id));
+  if (newIds.length === 0) {
+    return { success: false, error: "No new recipients to add." };
+  }
+  // Cap check — total (existing + new) ≤ 10
+  if (existingIds.size + newIds.length > KUDOS_MAX_RECIPIENTS) {
+    return {
+      success: false,
+      error: `Kudos can include up to ${KUDOS_MAX_RECIPIENTS} colleagues in total.`,
+    };
+  }
+
+  // Category was fetched alongside the post above. The CHECK constraint
+  // on posts guarantees `kudos_category` is set for kudos posts, but
+  // fall back to "Thank you" defensively if a future migration ever
+  // relaxes that.
+  const category = (post.kudos_category as string | null) ?? "Thank you";
+
+  // ─── Insert new join rows + fan out notifications ───────────
+  const recipientRows = newIds.map((recipient_id) => ({
+    post_id: post.id,
+    recipient_id,
+  }));
+  const { error: recipientError } = await supabase
+    .from("post_kudos_recipients")
+    .insert(recipientRows);
+  if (recipientError) {
+    logger.error("Failed to add kudos recipients", { error: recipientError });
+    return { success: false, error: "Failed to add recipients." };
+  }
+
+  await fanOutKudosNotifications({
+    postId: post.id,
+    senderName: profile.full_name ?? "A colleague",
+    message: post.content ?? "",
+    category: isKudosCategory(category) ? category : ("Thank you" as KudosCategory),
+    recipientIds: newIds,
+  });
+
+  revalidatePath("/intranet", "layout");
+  return { success: true, error: null };
+}
+
+/**
+ * Internal: fan-out kudos notifications via the batch helper. Each
+ * recipient gets a row in `notifications` with the kudos source_kind,
+ * the post id as source_id (so dedupe keys work), and metadata
+ * carrying the category for renderer use.
+ */
+async function fanOutKudosNotifications(args: {
+  postId: string;
+  senderName: string;
+  message: string;
+  category: KudosCategory;
+  recipientIds: string[];
+}) {
+  const { postId, senderName, message, category, recipientIds } = args;
+
+  const rows = recipientIds.map((userId) => ({
+    userId,
+    type: "kudos" as const,
+    title: `${senderName} sent you kudos for ${category}`,
+    // Trim message to a single-line preview; the bell row line-clamps
+    // anyway, but a leaner stored body is kinder to other surfaces.
+    message: message.length > 200 ? `${message.slice(0, 199)}…` : message,
+    link: `/intranet/post/${postId}`,
+    metadata: { category, post_id: postId },
+    sourceKind: NOTIFICATION_SOURCE_KINDS.KUDOS,
+    sourceId: postId,
+  }));
+
+  const { error } = await createNotifications(rows);
+  if (error) {
+    logger.warn("Failed to fan out kudos notifications", {
+      postId,
+      recipientCount: recipientIds.length,
+      error: error.message,
+    });
+  }
 }
 
 // ─── Post Fetching ───────────────────────────────────────────────────

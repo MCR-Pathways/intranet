@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock, Download } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock, Download, Award } from "lucide-react";
+import { POST_TYPES } from "@/lib/intranet";
 import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
 import { cn, timeAgo, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
@@ -200,13 +202,37 @@ export function PostCard({
   const displayName =
     post.author.preferred_name || post.author.full_name || "User";
 
+  const isKudos = post.post_type === POST_TYPES.KUDOS;
+  const kudosRecipients = post.kudos_recipients ?? [];
+
   return (
     <>
-      <Card id={`post-${post.id}`} className={post.is_weekly_roundup ? "border-primary/30 bg-primary/5" : undefined}>
+      <Card
+        id={`post-${post.id}`}
+        className={cn(
+          post.is_weekly_roundup && "border-primary/30 bg-primary/5",
+          // Kudos cards lead with a yellow strip (top border) — single
+          // signature accent, sized to read but not to dominate. Per
+          // W4 design: restraint over flair; the strip says "this is
+          // celebration" without a colour-coded category-per-card
+          // explosion.
+          isKudos && "border-t-4 border-t-mcr-yellow",
+        )}
+      >
         <CardContent className="pt-6">
           <div className="space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between">
+              {isKudos ? (
+                <KudosHeader
+                  senderName={displayName}
+                  senderAvatarUrl={post.author.avatar_url}
+                  recipients={kudosRecipients}
+                  category={post.kudos_category}
+                  createdAt={post.created_at}
+                  edited={post.updated_at !== post.created_at}
+                />
+              ) : (
               <div className="flex gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
@@ -220,12 +246,10 @@ export function PostCard({
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{displayName}</p>
-                    {post.is_pinned && (
-                      <Badge variant="secondary" className="text-xs gap-1 py-0">
-                        <Pin className="h-3 w-3" />
-                        Pinned
-                      </Badge>
-                    )}
+                    {/* Pinned status moved to a corner Pin icon (top-right
+                        of card, next to the kebab) per W4 design — frees
+                        the inline-badge slot for content-type semantics
+                        like Round Up. */}
                     {post.is_weekly_roundup && (
                       <Badge variant="default" className="text-xs gap-1 py-0">
                         <Sparkles className="h-3 w-3" />
@@ -246,7 +270,26 @@ export function PostCard({
                   </p>
                 </div>
               </div>
+              )}
 
+              <div className="flex items-center gap-1">
+                {/* Corner Pin icon — top-right next to the kebab. Decorative;
+                    the unpin action lives in the kebab menu below. Pattern
+                    matches LinkedIn / Reddit / Teams / Instagram corner-pin
+                    convention; tooltip carries "Pinned" for screen readers. */}
+                {post.is_pinned && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="inline-flex h-9 w-9 items-center justify-center text-primary"
+                        aria-label="Pinned"
+                      >
+                        <Pin className="h-4 w-4" fill="currentColor" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">Pinned</TooltipContent>
+                  </Tooltip>
+                )}
               {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -319,6 +362,7 @@ export function PostCard({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              </div>
             </div>
 
             {/* Content */}
@@ -391,5 +435,159 @@ export function PostCard({
         />
       )}
     </>
+  );
+}
+
+// ─── Kudos header ────────────────────────────────────────────────────
+// Replaces the standard avatar/name/timestamp header for kudos posts.
+// Reads "[Sender] sent kudos to [Recipients] for [Category]" — sender
+// avatar leads, recipient names are the focus (recipients are the
+// reason the post exists; the sender is incidental). Avatar stack on
+// the recipient side at >=3 to keep names from sprawling.
+
+interface KudosHeaderProps {
+  senderName: string;
+  senderAvatarUrl: string | null;
+  recipients: PostAuthor[];
+  category: string | null;
+  createdAt: string;
+  edited: boolean;
+}
+
+function KudosHeader({
+  senderName,
+  senderAvatarUrl,
+  recipients,
+  category,
+  createdAt,
+  edited,
+}: KudosHeaderProps) {
+  // Recipient list copy. 1-2: full names. 3+: first 2 + "and N others".
+  // Tooltip on the "others" string reveals the rest. Avatar stack
+  // shows up to 3 face circles; "+N" overflow when more.
+  const recipientNames = recipients.map(
+    (r) => r.preferred_name || r.full_name || "Someone",
+  );
+  const visibleAvatars = recipients.slice(0, 3);
+  const overflowAvatarCount = Math.max(0, recipients.length - 3);
+
+  let recipientLine: React.ReactNode;
+  if (recipientNames.length === 0) {
+    recipientLine = <span className="text-muted-foreground">no one</span>;
+  } else if (recipientNames.length === 1) {
+    recipientLine = (
+      <strong className="text-foreground">{recipientNames[0]}</strong>
+    );
+  } else if (recipientNames.length === 2) {
+    recipientLine = (
+      <>
+        <strong className="text-foreground">{recipientNames[0]}</strong> and{" "}
+        <strong className="text-foreground">{recipientNames[1]}</strong>
+      </>
+    );
+  } else {
+    const extra = recipientNames.length - 2;
+    const extraLabel = extra === 1 ? "1 other" : `${extra} others`;
+    recipientLine = (
+      <>
+        <strong className="text-foreground">{recipientNames[0]}</strong>,{" "}
+        <strong className="text-foreground">{recipientNames[1]}</strong> and{" "}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="text-foreground font-semibold underline decoration-dotted underline-offset-2 hover:decoration-solid"
+            >
+              {extraLabel}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{recipientNames.slice(2).join(", ")}</TooltipContent>
+        </Tooltip>
+      </>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-3 flex-1 min-w-0">
+      {/* Award icon block — yellow accent matching the top strip,
+          says "kudos" at a glance before the eye reaches the words. */}
+      <span
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-mcr-yellow/20 text-foreground"
+        aria-hidden="true"
+      >
+        <Award className="h-5 w-5" strokeWidth={2} />
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm leading-snug text-muted-foreground">
+          <strong className="text-foreground">{senderName}</strong> sent kudos to{" "}
+          {recipientLine}
+          {category && (
+            <>
+              {" "}
+              for <strong className="text-foreground">{category}</strong>
+            </>
+          )}
+        </p>
+
+        {/* Avatar stack — three max visible, plus +N overflow. Recipient
+            avatars (not sender's) because recipients are the reason
+            the post exists. Sender's name is in the line above. */}
+        {recipients.length > 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex -space-x-2">
+              {visibleAvatars.map((r) => {
+                const name = r.preferred_name || r.full_name || "Someone";
+                return (
+                  <Avatar
+                    key={r.id}
+                    className="h-7 w-7 border-2 border-card"
+                  >
+                    <AvatarImage
+                      src={filterAvatarUrl(r.avatar_url)}
+                      alt={name}
+                    />
+                    <AvatarFallback
+                      className={cn(
+                        getAvatarColour(name).bg,
+                        getAvatarColour(name).fg,
+                        "text-[10px]",
+                      )}
+                    >
+                      {getInitials(name)}
+                    </AvatarFallback>
+                  </Avatar>
+                );
+              })}
+              {overflowAvatarCount > 0 && (
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground">
+                  +{overflowAvatarCount}
+                </span>
+              )}
+            </div>
+            <Avatar className="h-6 w-6 ml-auto opacity-60">
+              <AvatarImage
+                src={filterAvatarUrl(senderAvatarUrl)}
+                alt={senderName}
+              />
+              <AvatarFallback
+                className={cn(
+                  getAvatarColour(senderName).bg,
+                  getAvatarColour(senderName).fg,
+                  "text-[9px]",
+                )}
+              >
+                {getInitials(senderName)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground/70 mt-1.5">
+          {timeAgo(createdAt)}
+          {edited && <span className="ml-1">(edited)</span>}
+        </p>
+      </div>
+    </div>
   );
 }

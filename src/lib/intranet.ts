@@ -67,3 +67,74 @@ export function isImageType(mimeType: string): boolean {
     mimeType as (typeof ALLOWED_IMAGE_TYPES)[number]
   );
 }
+
+// ─── Post types (W4) ─────────────────────────────────────────────────
+
+/**
+ * Post-type discriminator. Stored as text on `posts.post_type` with a
+ * CHECK constraint enforcing this whitelist (migration 00095). Default
+ * is "news"; only structurally distinct types appear elsewhere.
+ *
+ * Tool Shed types are pre-reserved here so W5 (Tool Shed merge into
+ * the home feed) is pure rendering work — no schema PR needed.
+ */
+export const POST_TYPES = {
+  NEWS: "news",
+  KUDOS: "kudos",
+  ANNOUNCEMENT: "announcement",
+  TOOL_SHED_POSTCARD: "tool_shed_postcard",
+  TOOL_SHED_THREE_TWO_ONE: "tool_shed_three_two_one",
+  TOOL_SHED_TAKEOVER: "tool_shed_takeover",
+} as const;
+
+export type PostType = (typeof POST_TYPES)[keyof typeof POST_TYPES];
+
+// ─── Kudos categories (W4) ───────────────────────────────────────────
+
+/**
+ * Kudos categories. Six total — sized below Hick's-law fall-off (~7)
+ * to keep the picker fast. Names humanizer-vetted: no metaphors that
+ * require decoding ("steady hand"), no promotional vocab ("champion").
+ *
+ * Names should read well as a standalone label and in notification
+ * copy ("Sarah sent you kudos for [Category]").
+ */
+export const KUDOS_CATEGORIES = {
+  EXTRA_MILE: "Going the extra mile",
+  TEAM_PLAYER: "Team player",
+  BRIGHT_IDEA: "Bright idea",
+  CAME_THROUGH: "Came through",
+  ALWAYS_THERE: "Always there",
+  THANK_YOU: "Thank you",
+} as const;
+
+export type KudosCategory =
+  (typeof KUDOS_CATEGORIES)[keyof typeof KUDOS_CATEGORIES];
+
+export const KUDOS_CATEGORY_VALUES: readonly KudosCategory[] = Object.values(
+  KUDOS_CATEGORIES,
+);
+
+/** Display order for the category picker. */
+export const KUDOS_CATEGORY_ORDER: KudosCategory[] = [
+  KUDOS_CATEGORIES.EXTRA_MILE,
+  KUDOS_CATEGORIES.TEAM_PLAYER,
+  KUDOS_CATEGORIES.BRIGHT_IDEA,
+  KUDOS_CATEGORIES.CAME_THROUGH,
+  KUDOS_CATEGORIES.ALWAYS_THERE,
+  KUDOS_CATEGORIES.THANK_YOU,
+];
+
+/** Server-side validation. Server actions check this before writing. */
+export function isKudosCategory(value: unknown): value is KudosCategory {
+  return (
+    typeof value === "string" &&
+    KUDOS_CATEGORY_VALUES.includes(value as KudosCategory)
+  );
+}
+
+/** Cap on recipients per kudos. Past 10, it's a bulk announcement, not recognition. */
+export const KUDOS_MAX_RECIPIENTS = 10;
+
+/** Cap on the kudos message body. Short forces specificity. */
+export const KUDOS_MESSAGE_MAX_LENGTH = 500;

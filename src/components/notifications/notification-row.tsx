@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn, timeAgo } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import type { InboxRow } from "@/types/notification";
 import type { NotificationTab } from "@/app/(protected)/notifications/actions";
 
@@ -57,6 +58,25 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
   })();
 
   const handleOpen = () => {
+    // Fire-and-forget clear: clicking a notification row clears it
+    // from the bell as it routes to the link, matching Slack /
+    // Linear / GitHub. The Cleared tab still keeps the history.
+    // State rows (working-location prompts) don't have a DB id —
+    // they resolve when the user actually sets/confirms location,
+    // not on click — so skip the clear for them.
+    if (!isStateRow && tab === "inbox" && row.id) {
+      const notificationId = row.id;
+      void clearNotification(notificationId).catch((err) => {
+        // Best-effort: a network blip shouldn't block the user from
+        // reaching the linked page. The kebab Clear action is still
+        // there for explicit retry. Log at warn so a recurring pattern
+        // is visible without alerting on single transient failures.
+        logger.warn("Failed to auto-clear notification on row click", {
+          notificationId,
+          error: err,
+        });
+      });
+    }
     if (row.link) router.push(row.link);
   };
 

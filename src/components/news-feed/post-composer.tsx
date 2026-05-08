@@ -12,6 +12,7 @@ import type { PendingAttachment } from "./attachment-editor";
 import { PollData, computePollClosesAt } from "./poll-composer";
 import { ComposerActionBar } from "./composer-action-bar";
 import { PostCreateDialog, type PendingAction } from "./post-create-dialog";
+import { KudosCreateDialog } from "./kudos-create-dialog";
 import type { MentionUser } from "./mention-list";
 import type { PostAuthor } from "@/types/database.types";
 
@@ -21,6 +22,7 @@ interface PostComposerProps {
 }
 
 export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
+  const [kudosDialogOpen, setKudosDialogOpen] = useState(false);
   const [contentJson, setContentJson] = useState<TiptapDocument | null>(null);
   const [plainText, setPlainText] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -196,12 +198,24 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
               onPhotoClick={() => openDialog("photo")}
               onDocumentClick={() => openDialog("document")}
               onPollClick={() => openDialog("poll")}
+              onKudosClick={() => setKudosDialogOpen(true)}
               pollActive={false}
               disabled={false}
             />
           </div>
         </CardContent>
       </Card>
+
+      {/* Kudos dialog — separate compose surface from regular posts.
+          Kudos has its own structured fields (category, recipients,
+          message) so it doesn't share the rich-text editor + attachments
+          + poll machinery the main create dialog runs. */}
+      <KudosCreateDialog
+        open={kudosDialogOpen}
+        onOpenChange={setKudosDialogOpen}
+        staff={mentionUsers}
+        currentUserId={userProfile.id}
+      />
 
       {/* Create post dialog */}
       <PostCreateDialog
