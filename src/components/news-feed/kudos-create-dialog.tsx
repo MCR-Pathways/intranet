@@ -93,22 +93,15 @@ export function KudosCreateDialog({
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Hydrate from editTarget on each open transition. Re-running on
-  // every false→true open means a save → revalidation → reopen cycle
-  // picks up the fresh server-side data, even though the editTarget
-  // object's postId hasn't changed. The wasOpenRef gate prevents
-  // re-hydration on parent re-renders that don't change `open`,
-  // which would otherwise stomp the user's in-progress edits.
   const wasOpenRef = useRef(open);
-  /* eslint-disable react-hooks/set-state-in-effect -- Intentional
-     state hydration on the open false→true transition. The setX calls
-     are gated by `transitionedOpen` so they fire once per opening,
-     not on every parent re-render. */
-  useEffect(() => {
-    const transitionedOpen = open && !wasOpenRef.current;
-    wasOpenRef.current = open;
-    if (!transitionedOpen) return;
+
+  // Hydrate from editTarget — used by both the open-transition effect
+  // and the post-discard reset path. Setting it up before either
+  // caller so React's rules-of-hooks ordering stays linear.
+  const reset = useCallback(() => {
     if (editTarget) {
+      // Re-hydrate from the original target — same state the dialog
+      // started with — so re-opening lands clean rather than blank.
       const existingIds = editTarget.existingRecipients.map((r) => r.id);
       setCategory(editTarget.category);
       setRecipientIds(existingIds);
@@ -124,8 +117,21 @@ export function KudosCreateDialog({
     }
     setSearchQuery("");
     setSearchOpen(false);
-  }, [open, editTarget]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [editTarget]);
+
+  // Hydrate on each open false→true transition. Re-running on every
+  // open means a save → revalidation → reopen cycle picks up the
+  // fresh server-side data, even though the editTarget object's
+  // postId hasn't changed. The wasOpenRef gate prevents re-hydration
+  // on parent re-renders that don't change `open`, which would
+  // otherwise stomp the user's in-progress edits.
+  useEffect(() => {
+    const transitionedOpen = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!transitionedOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset() sets multiple state values intentionally on the open false→true transition; the wasOpenRef gate prevents re-firing on parent re-renders.
+    reset();
+  }, [open, reset]);
 
   // Eligible staff = active mention list minus the sender. The sender
   // is also dropped server-side; client-side filter just keeps them
@@ -216,27 +222,6 @@ export function KudosCreateDialog({
       recipientIds.length === 0 ||
       !message.trim() ||
       charsOver;
-
-  const reset = useCallback(() => {
-    if (editTarget) {
-      // Re-hydrate from the original target — same state the dialog
-      // started with — so re-opening lands clean rather than blank.
-      const existingIds = editTarget.existingRecipients.map((r) => r.id);
-      setCategory(editTarget.category);
-      setRecipientIds(existingIds);
-      setLockedRecipientIds(existingIds);
-      setOriginalMessage(editTarget.message);
-      setMessage(editTarget.message);
-    } else {
-      setCategory(null);
-      setRecipientIds([]);
-      setLockedRecipientIds([]);
-      setOriginalMessage("");
-      setMessage("");
-    }
-    setSearchQuery("");
-    setSearchOpen(false);
-  }, [editTarget]);
 
   const handleClose = useCallback(() => {
     if (hasContent && !isPending) {
