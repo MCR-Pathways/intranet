@@ -291,32 +291,37 @@ export function KudosCreateDialog({
       // handled DB failures.
       try {
         if (isEditMode && editTarget) {
-          // Edit mode: dispatch message edit + recipient adds in
-          // parallel since they target different tables and don't
-          // depend on each other. Either or both may be a no-op
-          // depending on what the user changed.
-          const tasks: Promise<{ success: boolean; error: string | null }>[] = [];
+          // Edit mode: dispatch message edit BEFORE recipient adds.
+          // They look independent (different tables) but addKudosRecipients
+          // reads `posts.content` server-side to populate the notification
+          // body for the new recipients. Running in parallel races the
+          // UPDATE against the SELECT — if the SELECT wins, new recipients
+          // get a notification with the OLD message text and the post
+          // shows the new one. Sequential ordering closes the gap.
           if (messageChanged) {
-            tasks.push(
-              editPost(editTarget.postId, { content: message.trim() }),
-            );
+            const result = await editPost(editTarget.postId, {
+              content: message.trim(),
+            });
+            if (!result.success) {
+              toast.error(
+                result.error ??
+                  "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+              );
+              return;
+            }
           }
           if (hasNewRecipients) {
-            tasks.push(
-              addKudosRecipients({
-                postId: editTarget.postId,
-                recipientIds: newRecipientIds,
-              }),
-            );
-          }
-          const results = await Promise.all(tasks);
-          const failed = results.find((r) => !r.success);
-          if (failed) {
-            toast.error(
-              failed.error ??
-                "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
-            );
-            return;
+            const result = await addKudosRecipients({
+              postId: editTarget.postId,
+              recipientIds: newRecipientIds,
+            });
+            if (!result.success) {
+              toast.error(
+                result.error ??
+                  "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+              );
+              return;
+            }
           }
           toast.success("Kudos updated");
           onOpenChange(false);
