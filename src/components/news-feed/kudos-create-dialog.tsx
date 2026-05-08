@@ -151,19 +151,30 @@ export function KudosCreateDialog({
   const handleSubmit = useCallback(() => {
     if (isSubmitDisabled || !category) return;
     startTransition(async () => {
-      const result = await createKudosPost({
-        message: message.trim(),
-        category,
-        recipientIds,
-      });
-      if (result.success) {
-        toast.success("Kudos sent");
-        reset();
-        onOpenChange(false);
-      } else {
+      // Wrap the server-action call so a network-layer throw (the
+      // underlying fetch failing rather than the action returning an
+      // error object) doesn't leave the dialog stuck in "Sending…"
+      // with no toast. createKudosPost itself still returns
+      // {success, error} for handled DB failures.
+      try {
+        const result = await createKudosPost({
+          message: message.trim(),
+          category,
+          recipientIds,
+        });
+        if (result.success) {
+          toast.success("Kudos sent");
+          reset();
+          onOpenChange(false);
+        } else {
+          toast.error(
+            result.error ??
+              "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+          );
+        }
+      } catch {
         toast.error(
-          result.error ??
-            "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+          "Something went wrong. Please try again, or contact the HelpDesk at helpdesk@mcrpathways.org if the issue continues.",
         );
       }
     });
@@ -414,6 +425,7 @@ export function KudosCreateDialog({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitDisabled}
+              aria-busy={isPending}
             >
               {isPending ? (
                 <>

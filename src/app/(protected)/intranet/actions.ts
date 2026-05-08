@@ -1250,19 +1250,47 @@ export async function createKudosPost(
   }
 
   // ─── Insert recipients (batch) ──────────────────────────────
+  // Wrapped in try/catch because the rollback below is load-bearing.
+  // The Supabase client returns `{ error }` for normal DB failures,
+  // but a network-layer throw (DNS drop, connection reset) bypasses
+  // that channel and the await rejects. Without the try/catch, the
+  // post stays in the table with no recipients — exactly the
+  // orphan-state the rollback exists to prevent.
   const recipientRows = recipientIds.map((recipient_id) => ({
     post_id: post.id,
     recipient_id,
   }));
-  const { error: recipientError } = await supabase
-    .from("post_kudos_recipients")
-    .insert(recipientRows);
-  if (recipientError) {
-    // Roll back the post — the recipient list is the load-bearing
-    // structure of a kudos. A kudos with no recipients is a draft, not a
-    // post we want lingering.
-    logger.error("Failed to insert kudos recipients", { error: recipientError });
-    await supabase.from("posts").delete().eq("id", post.id);
+  let recipientInsertFailed = false;
+  let recipientFailureDetail: unknown = null;
+  try {
+    const { error: recipientError } = await supabase
+      .from("post_kudos_recipients")
+      .insert(recipientRows);
+    if (recipientError) {
+      recipientInsertFailed = true;
+      recipientFailureDetail = recipientError;
+    }
+  } catch (thrown) {
+    recipientInsertFailed = true;
+    recipientFailureDetail = thrown;
+  }
+  if (recipientInsertFailed) {
+    logger.error("Failed to insert kudos recipients", {
+      error: recipientFailureDetail,
+    });
+    // Best-effort rollback. If the delete itself throws or fails, log
+    // and surface a generic error — there's nothing more we can do
+    // from server-side at this point. The orphan, if any, can be
+    // cleaned up manually via the kudos post's id (returned in the
+    // log).
+    try {
+      await supabase.from("posts").delete().eq("id", post.id);
+    } catch (rollbackError) {
+      logger.error("Failed to roll back orphaned kudos post", {
+        postId: post.id,
+        error: rollbackError,
+      });
+    }
     return { success: false, error: "Failed to create kudos." };
   }
 
@@ -1300,9 +1328,11 @@ export async function addKudosRecipients(
   if (!user || !profile) return { success: false, error: "Not authenticated" };
 
   // ─── Authorise + verify post is kudos ────────────────────────
+  // Pull `kudos_category` in the same select so the fan-out below
+  // doesn't need a second round-trip for the same row.
   const { data: post, error: postFetchError } = await supabase
     .from("posts")
-    .select("id, author_id, post_type, content")
+    .select("id, author_id, post_type, content, kudos_category")
     .eq("id", data.postId)
     .single();
   if (postFetchError || !post) {
@@ -1341,15 +1371,11 @@ export async function addKudosRecipients(
     };
   }
 
-  // Pull category from the post itself (stored in posts.kudos_category
-  // — the CHECK constraint guarantees it's set for kudos posts).
-  const { data: kudosPost } = await supabase
-    .from("posts")
-    .select("kudos_category")
-    .eq("id", post.id)
-    .single();
-  const category =
-    (kudosPost?.kudos_category as string | null) ?? "Thank you";
+  // Category was fetched alongside the post above. The CHECK constraint
+  // on posts guarantees `kudos_category` is set for kudos posts, but
+  // fall back to "Thank you" defensively if a future migration ever
+  // relaxes that.
+  const category = (post.kudos_category as string | null) ?? "Thank you";
 
   // ─── Insert new join rows + fan out notifications ───────────
   const recipientRows = newIds.map((recipient_id) => ({

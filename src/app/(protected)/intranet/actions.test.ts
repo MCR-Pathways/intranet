@@ -1635,11 +1635,11 @@ describe("Intranet Post Actions", () => {
 
   describe("addKudosRecipients", () => {
     /**
-     * addKudosRecipients runs three reads + one write:
+     * addKudosRecipients runs two reads + one write:
      *   1. posts.select(...).eq("id", postId).single()    → post row
-     *   2. post_kudos_recipients.select.eq               → existing recipients
-     *   3. posts.select("kudos_category").eq.single      → category for fan-out
-     *   4. post_kudos_recipients.insert(newRows)         → write
+     *      (now includes kudos_category — single round-trip)
+     *   2. post_kudos_recipients.select.eq                → existing recipients
+     *   3. post_kudos_recipients.insert(newRows)          → write
      */
     function wireAddRecipientFlow(opts: {
       postType?: string;
@@ -1656,23 +1656,16 @@ describe("Intranet Post Actions", () => {
         insertResult = { error: null },
       } = opts;
 
-      const mockPostSingle = vi
-        .fn()
-        // First call: posts.select("id, author_id, post_type, content").eq.single
-        .mockResolvedValueOnce({
-          data: {
-            id: "post-1",
-            author_id: authorId,
-            post_type: postType,
-            content: "kudos message",
-          },
-          error: null,
-        })
-        // Second call: posts.select("kudos_category").eq.single
-        .mockResolvedValueOnce({
-          data: { kudos_category: kudosCategory },
-          error: null,
-        });
+      const mockPostSingle = vi.fn().mockResolvedValue({
+        data: {
+          id: "post-1",
+          author_id: authorId,
+          post_type: postType,
+          content: "kudos message",
+          kudos_category: kudosCategory,
+        },
+        error: null,
+      });
 
       const mockExistingEq = vi.fn().mockResolvedValue({
         data: existing.map((id) => ({ recipient_id: id })),
