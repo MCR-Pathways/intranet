@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Award, Loader2, X, Search } from "lucide-react";
+import { Award, Loader2, X, Search, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -28,8 +35,31 @@ import {
   KUDOS_MESSAGE_MAX_LENGTH,
   type KudosCategory,
 } from "@/lib/intranet";
-import { createKudosPost } from "@/app/(protected)/intranet/actions";
+import {
+  createKudosPost,
+  editPost,
+  addKudosRecipients,
+} from "@/app/(protected)/intranet/actions";
 import type { MentionUser } from "./mention-list";
+
+/**
+ * In edit mode, the dialog opens populated with these fields. Category
+ * and existing recipients are immutable (W4 design call: kudos is
+ * recognition, rewriting it after publish would change who got
+ * recognised and for what). Message is editable; new recipients can
+ * be added up to the cap.
+ *
+ * `existingRecipients` carries the full locked-row data rather than
+ * just ids — so a recipient who's since been deactivated still
+ * renders correctly in the locked chip (their name + avatar are on
+ * the kudos record, not on the live staff list).
+ */
+export interface KudosEditTarget {
+  postId: string;
+  message: string;
+  category: KudosCategory;
+  existingRecipients: MentionUser[];
+}
 
 interface KudosCreateDialogProps {
   open: boolean;
@@ -37,6 +67,8 @@ interface KudosCreateDialogProps {
   /** Roster of staff the sender can recognise. Sender is filtered out by id. */
   staff: MentionUser[];
   currentUserId: string;
+  /** When provided, the dialog opens in edit mode for this kudos post. */
+  editTarget?: KudosEditTarget;
 }
 
 export function KudosCreateDialog({
@@ -44,15 +76,62 @@ export function KudosCreateDialog({
   onOpenChange,
   staff,
   currentUserId,
+  editTarget,
 }: KudosCreateDialogProps) {
+  const isEditMode = !!editTarget;
+
   const [category, setCategory] = useState<KudosCategory | null>(null);
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
+  // Immutable in edit mode — drives the "no remove button on this chip"
+  // visual. Empty in create mode (every recipient is removable).
+  const [lockedRecipientIds, setLockedRecipientIds] = useState<string[]>([]);
+  const [originalMessage, setOriginalMessage] = useState("");
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showDiscardAlert, setShowDiscardAlert] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const wasOpenRef = useRef(open);
+
+  // Hydrate from editTarget — used by both the open-transition effect
+  // and the post-discard reset path. Setting it up before either
+  // caller so React's rules-of-hooks ordering stays linear.
+  const reset = useCallback(() => {
+    if (editTarget) {
+      // Re-hydrate from the original target — same state the dialog
+      // started with — so re-opening lands clean rather than blank.
+      const existingIds = editTarget.existingRecipients.map((r) => r.id);
+      setCategory(editTarget.category);
+      setRecipientIds(existingIds);
+      setLockedRecipientIds(existingIds);
+      setOriginalMessage(editTarget.message);
+      setMessage(editTarget.message);
+    } else {
+      setCategory(null);
+      setRecipientIds([]);
+      setLockedRecipientIds([]);
+      setOriginalMessage("");
+      setMessage("");
+    }
+    setSearchQuery("");
+    setSearchOpen(false);
+  }, [editTarget]);
+
+  // Hydrate on each open false→true transition. Re-running on every
+  // open means a save → revalidation → reopen cycle picks up the
+  // fresh server-side data, even though the editTarget object's
+  // postId hasn't changed. The wasOpenRef gate prevents re-hydration
+  // on parent re-renders that don't change `open`, which would
+  // otherwise stomp the user's in-progress edits.
+  useEffect(() => {
+    const transitionedOpen = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!transitionedOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset() sets multiple state values intentionally on the open false→true transition; the wasOpenRef gate prevents re-firing on parent re-renders.
+    reset();
+  }, [open, reset]);
 
   // Eligible staff = active mention list minus the sender. The sender
   // is also dropped server-side; client-side filter just keeps them
@@ -62,11 +141,19 @@ export function KudosCreateDialog({
     [staff, currentUserId],
   );
 
+  // Lookup union: live staff first (most up-to-date), then locked
+  // recipients carried by editTarget (covers deactivated colleagues
+  // who are no longer in the mention list but still on the kudos).
+  // Live data wins on conflict so a recipient who's still active
+  // gets their current avatar / job title.
   const recipientById = useMemo(() => {
     const map = new Map<string, MentionUser>();
+    if (editTarget) {
+      for (const r of editTarget.existingRecipients) map.set(r.id, r);
+    }
     for (const u of eligibleStaff) map.set(u.id, u);
     return map;
-  }, [eligibleStaff]);
+  }, [eligibleStaff, editTarget]);
 
   const selectedRecipients = useMemo(
     () =>
@@ -87,32 +174,54 @@ export function KudosCreateDialog({
       .slice(0, 50);
   }, [eligibleStaff, recipientIds, searchQuery]);
 
-  const hasContent = useMemo(
-    () =>
+  // New recipients = anyone in the picker not in the locked set. In
+  // create mode lockedRecipientIds is empty so this equals recipientIds.
+  const newRecipientIds = useMemo(() => {
+    if (!isEditMode) return recipientIds;
+    const locked = new Set(lockedRecipientIds);
+    return recipientIds.filter((id) => !locked.has(id));
+  }, [isEditMode, recipientIds, lockedRecipientIds]);
+
+  const messageChanged = isEditMode && message.trim() !== originalMessage.trim();
+  const hasNewRecipients = newRecipientIds.length > 0;
+
+  const hasContent = useMemo(() => {
+    if (isEditMode) {
+      // In edit mode "has content" means "user has made changes worth
+      // confirming before discard". Just opening on an existing kudos
+      // doesn't count.
+      return messageChanged || hasNewRecipients;
+    }
+    return (
       category !== null ||
       recipientIds.length > 0 ||
-      message.trim().length > 0,
-    [category, recipientIds, message],
-  );
+      message.trim().length > 0
+    );
+  }, [
+    isEditMode,
+    messageChanged,
+    hasNewRecipients,
+    category,
+    recipientIds,
+    message,
+  ]);
 
   const remainingSlots = KUDOS_MAX_RECIPIENTS - recipientIds.length;
   const charCount = message.length;
   const charsOver = charCount > KUDOS_MESSAGE_MAX_LENGTH;
 
-  const isSubmitDisabled =
-    isPending ||
-    !category ||
-    recipientIds.length === 0 ||
-    !message.trim() ||
-    charsOver;
-
-  const reset = useCallback(() => {
-    setCategory(null);
-    setRecipientIds([]);
-    setMessage("");
-    setSearchQuery("");
-    setSearchOpen(false);
-  }, []);
+  const isSubmitDisabled = isEditMode
+    ? // Edit mode: disable when no actionable change OR validation fails
+      isPending ||
+      !message.trim() ||
+      charsOver ||
+      (!messageChanged && !hasNewRecipients)
+    : // Create mode: every field is required
+      isPending ||
+      !category ||
+      recipientIds.length === 0 ||
+      !message.trim() ||
+      charsOver;
 
   const handleClose = useCallback(() => {
     if (hasContent && !isPending) {
@@ -145,36 +254,87 @@ export function KudosCreateDialog({
     [],
   );
 
-  const removeRecipient = useCallback((id: string) => {
-    setRecipientIds((prev) => prev.filter((rid) => rid !== id));
-  }, []);
+  const removeRecipient = useCallback(
+    (id: string) => {
+      // Locked recipients are the people who got the original kudos —
+      // removing them would rewrite who got recognised. Defensive
+      // check; the chip's × button doesn't render for locked rows
+      // anyway, but a future caller might wire this directly.
+      if (lockedRecipientIds.includes(id)) return;
+      setRecipientIds((prev) => prev.filter((rid) => rid !== id));
+    },
+    [lockedRecipientIds],
+  );
 
   const handleSubmit = useCallback(() => {
     if (isSubmitDisabled || !category) return;
     startTransition(async () => {
       // Wrap the server-action call so a network-layer throw (the
       // underlying fetch failing rather than the action returning an
-      // error object) doesn't leave the dialog stuck in "Sending…"
-      // with no toast. createKudosPost itself still returns
-      // {success, error} for handled DB failures.
+      // error object) doesn't leave the dialog stuck with no toast.
+      // The actions themselves still return {success, error} for
+      // handled DB failures.
       try {
-        const result = await createKudosPost({
-          message: message.trim(),
-          category,
-          recipientIds,
-        });
-        if (result.success) {
-          toast.success("Kudos sent");
-          reset();
+        if (isEditMode && editTarget) {
+          // Edit mode: dispatch message edit BEFORE recipient adds.
+          // They look independent (different tables) but addKudosRecipients
+          // reads `posts.content` server-side to populate the notification
+          // body for the new recipients. Running in parallel races the
+          // UPDATE against the SELECT — if the SELECT wins, new recipients
+          // get a notification with the OLD message text and the post
+          // shows the new one. Sequential ordering closes the gap.
+          if (messageChanged) {
+            const result = await editPost(editTarget.postId, {
+              content: message.trim(),
+            });
+            if (!result.success) {
+              toast.error(
+                result.error ??
+                  "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+              );
+              return;
+            }
+          }
+          if (hasNewRecipients) {
+            const result = await addKudosRecipients({
+              postId: editTarget.postId,
+              recipientIds: newRecipientIds,
+            });
+            if (!result.success) {
+              toast.error(
+                result.error ??
+                  "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+              );
+              return;
+            }
+          }
+          toast.success("Kudos updated");
           onOpenChange(false);
+          // Don't reset — the dialog will rehydrate from the (now
+          // stale) editTarget if reopened. Parent should pass a fresh
+          // target after revalidation.
         } else {
-          toast.error(
-            result.error ??
-              "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
-          );
+          const result = await createKudosPost({
+            message: message.trim(),
+            category,
+            recipientIds,
+          });
+          if (result.success) {
+            toast.success("Kudos sent");
+            reset();
+            onOpenChange(false);
+          } else {
+            toast.error(
+              result.error ??
+                "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+            );
+          }
         }
       } catch (err) {
-        logger.error("Failed to create kudos post", { error: err });
+        logger.error(
+          isEditMode ? "Failed to edit kudos post" : "Failed to create kudos post",
+          { error: err },
+        );
         toast.error(
           "Something went wrong. Please try again, or contact the HelpDesk at helpdesk@mcrpathways.org if the issue continues.",
         );
@@ -182,6 +342,11 @@ export function KudosCreateDialog({
     });
   }, [
     isSubmitDisabled,
+    isEditMode,
+    editTarget,
+    messageChanged,
+    hasNewRecipients,
+    newRecipientIds,
     category,
     message,
     recipientIds,
@@ -222,84 +387,122 @@ export function KudosCreateDialog({
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-mcr-yellow/20">
                 <Award className="h-5 w-5" />
               </span>
-              Send kudos
+              {isEditMode ? "Edit kudos" : "Send kudos"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Category picker — single-select chips. Required. */}
+            {/* Category — picker in create mode; static locked chip in
+                edit mode (recognition category is part of the original
+                kudos and rewriting it would change what was recognised). */}
             <div className="space-y-2">
               <p className="text-sm font-medium">For…</p>
-              <div className="flex flex-wrap gap-2">
-                {KUDOS_CATEGORY_ORDER.map((c) => {
-                  const selected = category === c;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setCategory(c)}
-                      disabled={isPending}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                        "motion-safe:active:scale-95",
-                        selected
-                          ? "border-mcr-yellow bg-mcr-yellow/15 text-foreground font-medium"
-                          : "border-border bg-card text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      {c}
-                    </button>
-                  );
-                })}
-              </div>
+              {isEditMode ? (
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border border-mcr-yellow bg-mcr-yellow/15 px-3 py-1.5 text-sm font-medium text-foreground"
+                    aria-label={`Category: ${category} (locked)`}
+                  >
+                    {category}
+                    <Lock
+                      className="h-3 w-3 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {KUDOS_CATEGORY_ORDER.map((c) => {
+                    const selected = category === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategory(c)}
+                        disabled={isPending}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                          "motion-safe:active:scale-95",
+                          selected
+                            ? "border-mcr-yellow bg-mcr-yellow/15 text-foreground font-medium"
+                            : "border-border bg-card text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Recipient picker — selected chips + search input. */}
+            {/* Recipient picker — selected chips + search input. In
+                edit mode existing recipients are locked (no × button)
+                — kudos is add-only post-publish. */}
             <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-medium">To…</p>
                 <p className="text-xs text-muted-foreground">
-                  {recipientIds.length === 0
-                    ? `Up to ${KUDOS_MAX_RECIPIENTS} colleagues`
-                    : `${recipientIds.length} of ${KUDOS_MAX_RECIPIENTS} selected`}
+                  {isEditMode
+                    ? hasNewRecipients
+                      ? `${recipientIds.length} of ${KUDOS_MAX_RECIPIENTS} (${newRecipientIds.length} new)`
+                      : `${recipientIds.length} of ${KUDOS_MAX_RECIPIENTS}`
+                    : recipientIds.length === 0
+                      ? `Up to ${KUDOS_MAX_RECIPIENTS} colleagues`
+                      : `${recipientIds.length} of ${KUDOS_MAX_RECIPIENTS} selected`}
                 </p>
               </div>
 
               {/* Selected chips */}
               {selectedRecipients.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedRecipients.map((u) => (
-                    <span
-                      key={u.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-mcr-yellow/15 border border-mcr-yellow/40 py-0.5 pl-1 pr-2 text-sm"
-                    >
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage
-                          src={filterAvatarUrl(u.avatar_url)}
-                          alt={u.label}
-                        />
-                        <AvatarFallback
-                          className={cn(
-                            getAvatarColour(u.label).bg,
-                            getAvatarColour(u.label).fg,
-                            "text-[9px]",
-                          )}
-                        >
-                          {getInitials(u.label)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{u.label}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeRecipient(u.id)}
-                        disabled={isPending}
-                        aria-label={`Remove ${u.label}`}
-                        className="rounded-full p-0.5 hover:bg-mcr-yellow/30"
+                  {selectedRecipients.map((u) => {
+                    const locked = lockedRecipientIds.includes(u.id);
+                    return (
+                      <span
+                        key={u.id}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-1 pr-2 text-sm",
+                          locked
+                            ? "border-border bg-muted text-muted-foreground"
+                            : "border-mcr-yellow/40 bg-mcr-yellow/15",
+                        )}
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage
+                            src={filterAvatarUrl(u.avatar_url)}
+                            alt={u.label}
+                          />
+                          <AvatarFallback
+                            className={cn(
+                              getAvatarColour(u.label).bg,
+                              getAvatarColour(u.label).fg,
+                              "text-[9px]",
+                            )}
+                          >
+                            {getInitials(u.label)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{u.label}</span>
+                        {locked ? (
+                          <Lock
+                            className="h-3 w-3 opacity-60"
+                            aria-label="Already received this kudos"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => removeRecipient(u.id)}
+                            disabled={isPending}
+                            aria-label={`Remove ${u.label}`}
+                            className="rounded-full p-0.5 hover:bg-mcr-yellow/30"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
@@ -432,12 +635,12 @@ export function KudosCreateDialog({
               {isPending ? (
                 <>
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Sending…
+                  {isEditMode ? "Saving…" : "Sending…"}
                 </>
               ) : (
                 <>
                   <Award className="mr-1.5 h-4 w-4" />
-                  Send kudos
+                  {isEditMode ? "Save changes" : "Send kudos"}
                 </>
               )}
             </Button>
@@ -448,9 +651,13 @@ export function KudosCreateDialog({
       <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard kudos?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isEditMode ? "Discard changes?" : "Discard kudos?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved kudos content. Are you sure you want to discard?
+              {isEditMode
+                ? "You have unsaved changes. Are you sure you want to discard them?"
+                : "You have unsaved kudos content. Are you sure you want to discard?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
