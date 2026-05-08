@@ -27,6 +27,11 @@ import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
 import { ClosePollDialog } from "./close-poll-dialog";
 import { ExportPollDialog } from "./export-poll-dialog";
+import {
+  KudosCreateDialog,
+  type KudosEditTarget,
+} from "./kudos-create-dialog";
+import { isKudosCategory } from "@/lib/intranet";
 import type { MentionUser } from "./mention-list";
 import type {
   PostWithRelations,
@@ -59,6 +64,7 @@ export function PostCard({
   onDeleted,
 }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showKudosEditDialog, setShowKudosEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showClosePollDialog, setShowClosePollDialog] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(initialCommentsExpanded);
@@ -305,10 +311,14 @@ export function PostCard({
                   <DropdownMenuContent align="end">
                     {isAuthor && (
                       <DropdownMenuItem
-                        onSelect={() => setShowEditDialog(true)}
+                        onSelect={() =>
+                          isKudos
+                            ? setShowKudosEditDialog(true)
+                            : setShowEditDialog(true)
+                        }
                       >
                         <Pencil className="h-4 w-4" />
-                        Edit Post
+                        {isKudos ? "Edit Kudos" : "Edit Post"}
                       </DropdownMenuItem>
                     )}
                     {isHRAdmin && (
@@ -404,6 +414,36 @@ export function PostCard({
       </Card>
 
       {/* Dialogs */}
+      {/* Kudos posts swap the rich-text edit dialog for the kudos
+          dialog in edit mode — same compose surface as create, with
+          category and existing recipients locked. Mounted only for
+          kudos posts so the create-mode hydration cost doesn't run on
+          every news post. */}
+      {isKudos && isAuthor && isKudosCategory(post.kudos_category) && (
+        <KudosCreateDialog
+          open={showKudosEditDialog}
+          onOpenChange={setShowKudosEditDialog}
+          staff={mentionUsers ?? []}
+          currentUserId={currentUserId}
+          editTarget={
+            {
+              postId: post.id,
+              message: post.content,
+              category: post.kudos_category,
+              // Map PostAuthor (full_name/preferred_name) → MentionUser
+              // (label) so the dialog's chip renderer reads the same
+              // shape whether the recipient came from the live mention
+              // list or the locked kudos record.
+              existingRecipients: kudosRecipients.map((r) => ({
+                id: r.id,
+                label: r.preferred_name || r.full_name || "Someone",
+                avatar_url: r.avatar_url,
+                job_title: r.job_title,
+              })),
+            } as KudosEditTarget
+          }
+        />
+      )}
       <PostEditDialog
         postId={post.id}
         initialContent={post.content}
