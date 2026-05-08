@@ -209,7 +209,45 @@ export function PostCard({
     post.author.preferred_name || post.author.full_name || "User";
 
   const isKudos = post.post_type === POST_TYPES.KUDOS;
-  const kudosRecipients = post.kudos_recipients ?? [];
+  // Stable reference for the recipients array so downstream useMemo
+  // deps don't churn — `post.kudos_recipients ?? []` would otherwise
+  // hand back a fresh empty literal on every render.
+  const kudosRecipients = useMemo(
+    () => post.kudos_recipients ?? [],
+    [post.kudos_recipients],
+  );
+
+  // Memoise the edit-mode target so the dialog's recipientById /
+  // useEffect deps don't churn on every PostCard re-render. Recreates
+  // when the underlying post fields actually change (post-save the
+  // revalidatePath delivers a fresh post prop with a new content
+  // and/or recipient list — those changes flow through here).
+  const kudosEditTarget = useMemo<KudosEditTarget | undefined>(() => {
+    if (!isKudos || !isAuthor || !isKudosCategory(post.kudos_category)) {
+      return undefined;
+    }
+    return {
+      postId: post.id,
+      message: post.content,
+      category: post.kudos_category,
+      // Map PostAuthor → MentionUser so the dialog's chip renderer
+      // reads the same shape whether the recipient came from the live
+      // mention list or this locked-from-the-record fallback.
+      existingRecipients: kudosRecipients.map((r) => ({
+        id: r.id,
+        label: r.preferred_name || r.full_name || "Someone",
+        avatar_url: r.avatar_url,
+        job_title: r.job_title,
+      })),
+    };
+  }, [
+    isKudos,
+    isAuthor,
+    post.id,
+    post.content,
+    post.kudos_category,
+    kudosRecipients,
+  ]);
 
   return (
     <>
@@ -317,7 +355,7 @@ export function PostCard({
                             : setShowEditDialog(true)
                         }
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil />
                         {isKudos ? "Edit Kudos" : "Edit Post"}
                       </DropdownMenuItem>
                     )}
@@ -336,11 +374,11 @@ export function PostCard({
                         disabled={isPinPending}
                       >
                         {isPinPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="animate-spin" />
                         ) : post.is_pinned ? (
-                          <PinOff className="h-4 w-4" />
+                          <PinOff />
                         ) : (
-                          <Pin className="h-4 w-4" />
+                          <Pin />
                         )}
                         {post.is_pinned ? "Unpin Post" : "Pin Post"}
                       </DropdownMenuItem>
@@ -349,7 +387,7 @@ export function PostCard({
                       <DropdownMenuItem
                         onSelect={() => setShowClosePollDialog(true)}
                       >
-                        <Lock className="h-4 w-4" />
+                        <Lock />
                         Close Poll
                       </DropdownMenuItem>
                     )}
@@ -357,7 +395,7 @@ export function PostCard({
                       <DropdownMenuItem
                         onSelect={() => setShowExportDialog(true)}
                       >
-                        <Download className="h-4 w-4" />
+                        <Download />
                         Export Results
                       </DropdownMenuItem>
                     )}
@@ -419,29 +457,13 @@ export function PostCard({
           category and existing recipients locked. Mounted only for
           kudos posts so the create-mode hydration cost doesn't run on
           every news post. */}
-      {isKudos && isAuthor && isKudosCategory(post.kudos_category) && (
+      {kudosEditTarget && (
         <KudosCreateDialog
           open={showKudosEditDialog}
           onOpenChange={setShowKudosEditDialog}
           staff={mentionUsers ?? []}
           currentUserId={currentUserId}
-          editTarget={
-            {
-              postId: post.id,
-              message: post.content,
-              category: post.kudos_category,
-              // Map PostAuthor (full_name/preferred_name) → MentionUser
-              // (label) so the dialog's chip renderer reads the same
-              // shape whether the recipient came from the live mention
-              // list or the locked kudos record.
-              existingRecipients: kudosRecipients.map((r) => ({
-                id: r.id,
-                label: r.preferred_name || r.full_name || "Someone",
-                avatar_url: r.avatar_url,
-                job_title: r.job_title,
-              })),
-            } as KudosEditTarget
-          }
+          editTarget={kudosEditTarget}
         />
       )}
       <PostEditDialog
