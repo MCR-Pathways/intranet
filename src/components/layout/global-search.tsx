@@ -16,7 +16,6 @@ import {
   Search,
   FileText,
   GraduationCap,
-  Send,
   Clock,
   X,
 } from "lucide-react";
@@ -24,12 +23,10 @@ import {
   getSearchClient,
   RESOURCES_INDEX,
   COURSES_INDEX,
-  TOOL_SHED_INDEX,
 } from "@/lib/algolia";
 import type {
   AlgoliaResourceRecord,
   AlgoliaCourseRecord,
-  AlgoliaToolShedRecord,
 } from "@/lib/algolia";
 import type { Hit } from "@algolia/client-search";
 import { cn, formatDuration } from "@/lib/utils";
@@ -44,13 +41,11 @@ const MAX_RECENT = 5;
 interface SearchResults {
   resources: Hit<AlgoliaResourceRecord>[];
   courses: Hit<AlgoliaCourseRecord>[];
-  toolShed: Hit<AlgoliaToolShedRecord>[];
 }
 
 const EMPTY_RESULTS: SearchResults = {
   resources: [],
   courses: [],
-  toolShed: [],
 };
 
 // ─── localStorage helpers for recent searches ────────────────────────────────
@@ -161,21 +156,16 @@ function GlobalSearchInner() {
         const client = getSearchClient();
         // Query each index individually — if one index doesn't exist yet
         // (e.g. no courses published), it shouldn't break the others.
-        const [resourcesResult, coursesResult, toolShedResult] =
-          await Promise.allSettled([
-            client.searchSingleIndex<AlgoliaResourceRecord>({
-              indexName: RESOURCES_INDEX,
-              searchParams: { query, hitsPerPage: 5 },
-            }),
-            client.searchSingleIndex<AlgoliaCourseRecord>({
-              indexName: COURSES_INDEX,
-              searchParams: { query, hitsPerPage: 5 },
-            }),
-            client.searchSingleIndex<AlgoliaToolShedRecord>({
-              indexName: TOOL_SHED_INDEX,
-              searchParams: { query, hitsPerPage: 5 },
-            }),
-          ]);
+        const [resourcesResult, coursesResult] = await Promise.allSettled([
+          client.searchSingleIndex<AlgoliaResourceRecord>({
+            indexName: RESOURCES_INDEX,
+            searchParams: { query, hitsPerPage: 5 },
+          }),
+          client.searchSingleIndex<AlgoliaCourseRecord>({
+            indexName: COURSES_INDEX,
+            searchParams: { query, hitsPerPage: 5 },
+          }),
+        ]);
         setResults({
           resources:
             resourcesResult.status === "fulfilled"
@@ -184,10 +174,6 @@ function GlobalSearchInner() {
           courses:
             coursesResult.status === "fulfilled"
               ? coursesResult.value.hits
-              : [],
-          toolShed:
-            toolShedResult.status === "fulfilled"
-              ? toolShedResult.value.hits
               : [],
         });
       } catch {
@@ -244,8 +230,7 @@ function GlobalSearchInner() {
     }
   }, []);
 
-  const totalResults =
-    results.resources.length + results.courses.length + results.toolShed.length;
+  const totalResults = results.resources.length + results.courses.length;
   const hasQuery = query.length >= 2;
 
   // Shared item styles
@@ -491,48 +476,6 @@ function GlobalSearchInner() {
                 </CommandPrimitive.Group>
               )}
 
-              {/* ─── Tool Shed ─── */}
-              {results.toolShed.length > 0 && (
-                <CommandPrimitive.Group
-                  heading="Tool Shed"
-                  className={groupClassName}
-                >
-                  {results.toolShed.map((hit) => (
-                    <CommandPrimitive.Item
-                      key={hit.objectID}
-                      value={hit.objectID}
-                      onSelect={() => handleSelect(`/learning/tool-shed#${hit.entryId}`)}
-                      className={itemClassName}
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-600">
-                        <Send className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{hit.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {hit.authorName}
-                          {hit.eventName && ` · ${hit.eventName}`}
-                        </p>
-                        {(hit._snippetResult?.content as { value?: string } | undefined)
-                          ?.value && (
-                          <p
-                            className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
-                            dangerouslySetInnerHTML={{
-                              __html: (hit._snippetResult!.content as { value: string }).value,
-                            }}
-                          />
-                        )}
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] shrink-0"
-                      >
-                        {hit.formatLabel}
-                      </Badge>
-                    </CommandPrimitive.Item>
-                  ))}
-                </CommandPrimitive.Group>
-              )}
             </CommandPrimitive.List>
 
             {/* Footer */}

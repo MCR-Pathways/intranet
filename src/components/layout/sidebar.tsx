@@ -108,7 +108,6 @@ function getNavigation(
         { name: "Catalogue", href: "/learning/courses" },
         { name: "Compliance", href: "/learning/courses?category=compliance" },
         { name: "Upskilling", href: "/learning/courses?category=upskilling" },
-        { name: "Tool Shed", href: "/learning/tool-shed" },
       ],
     },
   ];

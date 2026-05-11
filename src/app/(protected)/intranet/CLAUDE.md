@@ -109,7 +109,7 @@ Adding extraction for other types (DOCX page count via JSZip + parsing, etc.) is
 
 ## Post-Type Discriminator (W4)
 
-`posts.post_type` is a `text` column with a CHECK whitelist: `news / kudos / announcement / tool_shed_postcard / tool_shed_three_two_one / tool_shed_takeover`. Default is `'news'`. The three Tool Shed slots are pre-reserved so the W5 merge can be pure rendering (no schema PR). `'announcement'` is reserved but unused — W4b was attempted and scratched; see `memory/announcement-deferred.md`.
+`posts.post_type` is a `text` column with a CHECK whitelist: `news / kudos / announcement / tool_shed_postcard / tool_shed_three_two_one / tool_shed_takeover`. Default is `'news'`. The three Tool Shed slots are reserved and will be populated by W7's composer + feed-layout audit (W5 retired the standalone Tool Shed module in 00096 with zero real data to migrate; W7 builds the composer / renderer / notification path end-to-end). `'announcement'` is reserved but unused — W4b was attempted and scratched; see `memory/announcement-deferred.md`.
 
 Type-specific data hangs off the `posts` row via additional optional columns:
 - Kudos: `posts.kudos_category` (text, with a consistency CHECK — required when post_type='kudos', forbidden otherwise) + `post_kudos_recipients` join table for multi-recipient.

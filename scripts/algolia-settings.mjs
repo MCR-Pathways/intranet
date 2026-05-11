@@ -31,11 +31,6 @@ const INDICES = {
     searchableAttributes: ["title", "description", "categoryLabel"],
     attributesToHighlight: ["title", "description"],
   },
-  tool_shed_entries: {
-    searchableAttributes: ["title", "eventName", "tags", "content"],
-    attributesToSnippet: ["content:20"],
-    attributesToHighlight: ["title", "eventName", "content"],
-  },
 };
 
 for (const [indexName, settings] of Object.entries(INDICES)) {

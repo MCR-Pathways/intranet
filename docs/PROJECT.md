@@ -231,7 +231,7 @@ For the detailed HR roadmap, see `docs/hr-plan.md`.
 
 Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based courses with section quizzes, learner UI, certificate auto-issue, completion notifications, 4 lesson types (text, video, slides, rich_text), and `auth.uid()` RPC enforcement. See `docs/learning-overhaul.md` for comprehensive handover document.
 
-**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178), Tool Shed creation flow (PR #181). Migrations 00060-00070 applied. Email notifications active.
+**Status:** All phases complete and merged. Course overhaul (PR #167-168), UX phases A-E (PRs #172-176), Algolia search (PRs #177-178). Migrations 00060-00070 applied. Email notifications active. The Tool Shed module (Postcards / 3-2-1 / Takeover) was retired in W5 (2026-05-11) — its three `post_type` slots stay reserved in 00095's CHECK whitelist for W7 to repopulate alongside the broader composer + feed-layout audit.
 
 **Routes:** 9 pages under `/learning`
 
@@ -243,7 +243,6 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 | Lesson View | `/learning/courses/[id]/lessons/[lessonId]` |
 | Section Quiz | `/learning/courses/[id]/sections/[sectionId]/quiz` |
 | My Learning | `/learning` |
-| Tool Shed | `/learning/tool-shed` |
 | Admin: Courses | `/learning/admin/courses` |
 | Admin: Course Detail | `/learning/admin/courses/[id]` |
 | Admin: Reports | `/learning/admin/reports` |
@@ -253,9 +252,9 @@ Replacing LearnDash (WordPress LMS) with a custom-built LMS. Section-based cours
 
 **Key components (Phase 3):** `section-accordion.tsx` (expandable sections in course detail), `section-quiz-player.tsx` (quiz UI with `submit_section_quiz_attempt` RPC), `lesson-renderer.tsx` (renders text/video/slides/rich_text lessons), rewritten `lesson-sidebar.tsx` (section-grouped, LinkedIn-style checkmarks).
 
-**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), Tool Shed social learning feed, individual assignment, course duplication, manager compliance views, Algolia search (course + Tool Shed indices), global Cmd+K search. Email notifications active.
+**Key changes in overhaul:** Course→Sections→Lessons hierarchy, section quizzes (gate progression), 4 lesson types (text, video, slides, rich_text), PDF certificates (auto-issued via DB trigger on course completion), completion notifications (DB trigger), `auth.uid()` enforcement on all RPCs, admin content builder (Tiptap, DnD, auto-save, preview), individual assignment, course duplication, manager compliance views, Algolia search (course index), global Cmd+K search. Email notifications active.
 
-**New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `tool_shed_entries`, `email_notifications`. Migrations 00060-00068.
+**New DB tables:** `course_sections`, `section_quizzes`, `section_quiz_questions`, `section_quiz_options`, `section_quiz_attempts`, `certificates`, `course_feedback`, `email_notifications`. Migrations 00060-00068. (`tool_shed_entries` was dropped in W5.)
 
 **Migrations 00065-00068:** `00065` reconciliation (clean up old quiz tables, add slides/rich_text to lesson_type CHECK), `00066` delete empty courses, `00067` certificate auto-issue trigger (`generate_certificate_on_completion`), `00068` completion notification trigger.
 
@@ -339,7 +338,7 @@ PostgreSQL on Supabase with Row Level Security (RLS) on all tables.
 | `weekly_roundups` | Auto-generated roundups |
 | `resource_categories`, `resource_articles` | Resources section |
 
-Plus HR tables (leave_requests, absence_records, return_to_work_forms, assets, asset_types, compliance_types, compliance_documents, key_dates, staff_leaving_forms, flexible_working_requests, fwr_appeals, onboarding_templates, onboarding_template_items, onboarding_checklists, onboarding_checklist_items, departments, employment_history, emergency_contacts), L&D overhaul tables (course_sections, section_quizzes, section_quiz_questions, section_quiz_options, section_quiz_attempts, certificates, course_feedback, tool_shed_entries), email tables (email_notifications, email_preferences), and mention tables (post_mentions, comment_mentions).
+Plus HR tables (leave_requests, absence_records, return_to_work_forms, assets, asset_types, compliance_types, compliance_documents, key_dates, staff_leaving_forms, flexible_working_requests, fwr_appeals, onboarding_templates, onboarding_template_items, onboarding_checklists, onboarding_checklist_items, departments, employment_history, emergency_contacts), L&D overhaul tables (course_sections, section_quizzes, section_quiz_questions, section_quiz_options, section_quiz_attempts, certificates, course_feedback), email tables (email_notifications, email_preferences), and mention tables (post_mentions, comment_mentions).
 
 ### Database Functions (RPCs)
 
