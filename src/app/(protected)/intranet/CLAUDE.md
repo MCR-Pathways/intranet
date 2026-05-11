@@ -120,7 +120,7 @@ When adding a new post type:
 2. Decide whether type-specific data goes inline (extra column with consistency CHECK) or in a separate table (join). Kudos uses both — `kudos_category` inline, recipients in a join.
 3. Add the type to `POST_TYPES` in `src/lib/intranet.ts` and a type-guard (`isKudosCategory`-style) if there's an enum-shaped sub-value.
 4. Branch the renderer in `PostCard` on the `post_type`. Single-signature visual accent (top strip + header badge) per the W4 design — avoid full-card chrome.
-5. Add the new source kind to all five maps in `src/lib/notifications.ts` (`NOTIFICATION_SOURCE_KINDS`, `INFORMATIONAL_SOURCE_KINDS`, `SOURCE_KIND_REASON_LABEL`, `SOURCE_KIND_ICON`, `SOURCE_KIND_ACTION_VERB`, `SOURCE_KIND_MODULE`).
+5. Add the new source kind to all six maps in `src/lib/notifications.ts` (`NOTIFICATION_SOURCE_KINDS`, `INFORMATIONAL_SOURCE_KINDS`, `SOURCE_KIND_REASON_LABEL`, `SOURCE_KIND_ICON`, `SOURCE_KIND_ACTION_VERB`, `SOURCE_KIND_MODULE`).
 
 ## Dialog Reuse Pattern for Post-Type Variants
 
