@@ -7,6 +7,8 @@
 > **Status:** Phase 1 + Phase 2 + Phase 3 complete. PR #167 merged to main. PR #168 pending (wire components into pages + slides/rich_text admin support).
 > **Branch:** `feature/learning-overhaul-migrations` (merged to main via PR #167)
 > **Migrations:** 00060-00068, all applied to production Supabase
+>
+> **2026-05-11 update:** The Tool Shed module (referenced throughout this document as `tool_shed_entries`, `/learning/tool-shed`, the six components under `src/components/tool-shed/`, the `share-insight-dialog`, etc.) was retired in W5 cleanup (migration 00096). All five entries were test fixtures — no real social-learning content. The three Tool Shed `post_type` slots in 00095's CHECK whitelist stay reserved for W7 to repopulate as part of the broader composer + feed-layout audit (see `docs/plan.md` W5/W7 bullets). Everything below that mentions Tool Shed is historical record from the original overhaul.
 
 ---
 

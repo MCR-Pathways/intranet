@@ -2,7 +2,7 @@
 
 > **Living document** — updated as features are completed and priorities shift.
 > For HR-specific roadmap, see [docs/hr-plan.md](./hr-plan.md).
-> Last updated: 2026-04-22
+> Last updated: 2026-05-11
 
 ---
 
@@ -101,9 +101,9 @@ Multi-PR initiative responding to design feedback (April 2026). Full research an
 - [x] **W3** — original "greeting + attention banner" plan. Pivoted to **W3-rev** (notification centre overhaul + quiet greeting + DailyBanner retirement). See `memory/intranet-design-feedback.md` for the locked scope. Shipped across PRs #289 (.1a), #292 (.1b), #293 (.2a), #294 (.2b), #295 (.3), #296 (.4).
 - [x] **W4** — Originally scoped as "type-pill differentiation on feed cards"; expanded into a full post-type taxonomy + Kudos compose + post-publish kudos editor. Shipped across PRs #298 (backend + render + compose + Pin-to-corner-icon + notification click-to-clear) and #299 (post-publish editor reuse). Six humanizer-vetted Kudos categories, multi-recipient cap of 10, yellow strip + KudosHeader as the type signal (matches the "single signature accent" pattern from the Viva Engage 2023 "less decoration" research). Post-type discriminator + reserved slots for Tool Shed types (W5) and Announcement (W4b — see below). See `memory/kudos-feature.md`.
 - [~] **W4b** — Announcement post type. Attempted 2026-05-11 (PR #300, branch `feature/w4b`); scratched at Colin's direction before merge. Research + design decisions preserved in `memory/announcement-deferred.md` for revival. The schema slot is reserved in 00095's CHECK whitelist so a future revisit doesn't need a new migration to register the type. Triggers for revival documented in the memory file.
-- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts). **Independent of W3-rev — unblocked.** The three Tool Shed types are pre-reserved in `posts.post_type` so the merge can be pure rendering work — no schema PR needed.
+- [ ] **W5** — Tool Shed cleanup pass. Rescoped 2026-05-11 after row-count check found 5 entries, all test fixtures. With zero real data, "merge into feed" has nothing to merge — the substantive composer + schema + renderer + notification work moves into W7 (see below). W5 ships as cleanup-only: drop `tool_shed_entries` table, retire `/learning/tool-shed` page + actions + components, remove sidebar nav link, remove Cmd+K integration, drop `TOOL_SHED_INDEX` Algolia constant + the production index. Reserved `post_type` slots in 00095's CHECK whitelist stay (harmless to leave dormant; W7 will populate them).
 - [ ] **W6** — Quick-actions rail. **Needs rescoping after W3-rev.** Original audit (in research doc §1) had ~half its candidates absorbed by the bell: working_location, office arrival confirmation, resume next compliance course, open weekly roundup, approve pending leave — all now state rows in the bell with inline actions. The remaining quick-action candidates are pure navigation shortcuts (Book leave, Submit absence, Find a colleague, etc.) — that's a smaller surface, may fold into W2's right rail rather than warranting its own workstream. Re-audit before scoping.
-- [ ] **W7** — Composer redesign (3-step modal: type picker → form → preview & send). Independent.
+- [ ] **W7** — Composer + feed-layout audit. Originally scoped as "3-step modal: type picker → form → preview & send". Expanded 2026-05-11 to a full review of whether the composer and feed-layout primitives are fit-for-purpose for every post type the system should support (News / Kudos / Postcard / 3-2-1 / Takeover / any future types). Now also absorbs the substantive Tool Shed work originally scoped for W5: `tool_shed_meta` schema column + consistency CHECK, render branches in `post-card.tsx`, `tool_shed` notification source kind + default-on preference, fan-out. Needs its own research phase before scoping (peer-platform review of LinkedIn / Workplace / Viva / Slack / Notion / Polaris, decisions on entry-point shape and per-type form structure) — same shape as W3-rev and W4 planning.
 - [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only). Independent.
 
 ### Design constraints from W3-rev
@@ -119,11 +119,16 @@ These now apply to all future intranet work:
 **Adjacent workstreams surfaced during W3-rev planning (not yet sequenced):**
 - [ ] **Digest summary email for pile-up notifications.** Pronto-on-event is already covered by existing Resend triggers. Pile-up scenario (user away for two weeks comes back to N items) needs a separate digest email cadence — single email summarising accumulated items rather than N individual emails. New cron + template work.
 
+**Adjacent workstreams surfaced during W5 planning (not yet sequenced):**
+- [ ] **Unified `intranet_feed` Algolia index** that indexes news posts alongside Tool Shed-type posts. Today Cmd+K covers `resources_articles`, `learning_courses`, `tool_shed_entries` — news posts are not indexed. After W5 retires the Tool Shed index, Cmd+K loses Tool Shed coverage; a unified `intranet_feed` index would restore it AND extend search to all news posts. Scope: new Algolia index + indexing/removal hooks in the intranet actions file + deep-link routing from Cmd+K results. Reversible — easy to add later. Deferred from W5 to keep that PR focused.
+
+  **Triggers for picking this up:** (1) any user reports they can't find a Tool Shed Postcard / 3-2-1 / Takeover via Cmd+K after W5 ships; (2) W7 lands and the composer puts more mixed content in the feed, increasing the surface area Cmd+K should cover; (3) periodic sync after first month of post-launch usage shows search coverage gap matters; (4) we add a third post type that warrants global findability. Until at least one trigger fires, leave Cmd+K covering only resources + courses.
+
 ### Recommended next pickup order
 
-W5 → W6 re-audit → W2 → W7/W8.
+W5 → W6 re-audit → W2 → W7 → W8.
 
-W4 is shipped; W4b is deferred. W5 (Tool Shed merge into the feed) is the next unblocked feed-touching workstream and the post_type slots are already reserved for it. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 then lands with a clear right-rail purpose.
+W4 is shipped; W4b is deferred. W5 is now a small cleanup-only PR (table drop + module retirement) that ships quickly once test-fixture entries are accepted-loss. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 lands with a clear right-rail purpose. W7 then does the substantive composer + layout audit that the original sequencing had as a small modal redesign — now the proper "every post type is first-class" workstream that pulls in the Tool Shed runway (schema column, renderer, notifications) since none of that should pre-commit shape before W7's research phase.
 
 ### HR Phase 3
 - [ ] Surveys & pulse checks

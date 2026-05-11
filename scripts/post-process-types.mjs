@@ -116,9 +116,6 @@ const UNIONS = {
   audit_log: {
     action: '"INSERT" | "UPDATE" | "DELETE"',
   },
-  tool_shed_entries: {
-    format: '"postcard" | "three_two_one" | "takeover"',
-  },
   email_notifications: {
     status: '"pending" | "processing" | "sent" | "failed"',
   },

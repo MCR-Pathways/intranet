@@ -1,8 +1,8 @@
 /**
  * Shared learning utilities used across server and client components.
  *
- * Covers: category config, section-aware progress logic,
- * Tool Shed format config, and certificate utilities.
+ * Covers: category config, section-aware progress logic, and certificate
+ * utilities.
  */
 
 import {
@@ -16,9 +16,6 @@ import {
   CheckCircle2,
   Lock,
   Circle,
-  Send,
-  Layers,
-  Megaphone,
 } from "lucide-react";
 import type { CourseCategory } from "@/types/database.types";
 import type { BadgeProps } from "@/components/ui/badge";
@@ -142,141 +139,6 @@ export function calculateSectionProgress(
   const completed = completedLessonCount + passedQuizCount;
   return Math.round((completed / total) * 100);
 }
-
-// ─── Tool Shed Format Config ────────────────────────────────────────────────
-
-export type ToolShedFormat = "postcard" | "three_two_one" | "takeover";
-
-export interface ToolShedFormatConfig {
-  label: string;
-  shortLabel: string;
-  icon: typeof Send;
-  description: string;
-  badgeVariant: NonNullable<BadgeProps["variant"]>;
-  /** Tailwind classes for format-specific accent colouring */
-  accent: {
-    border: string;
-    bg: string;
-    text: string;
-    iconBg: string;
-    sectionBg: string;
-    number: string;
-    ring: string;
-  };
-  /** Short structural summary for format picker */
-  structure: string;
-}
-
-export const toolShedFormatConfig: Record<ToolShedFormat, ToolShedFormatConfig> =
-  {
-    postcard: {
-      label: "Digital Postcard",
-      shortLabel: "Postcard",
-      icon: Send,
-      description:
-        "A brief 4-part reflection covering what you learned, your key insight, the impact, and a recommendation.",
-      badgeVariant: "default",
-      accent: {
-        border: "border-l-blue-500",
-        bg: "bg-blue-50",
-        text: "text-blue-700",
-        iconBg: "bg-blue-100",
-        sectionBg: "bg-blue-50/50",
-        number: "bg-blue-100 text-blue-700",
-        ring: "ring-blue-400",
-      },
-      structure: "4 reflective sections",
-    },
-    three_two_one: {
-      label: "3-2-1 Model",
-      shortLabel: "3-2-1",
-      icon: Layers,
-      description:
-        "A structured reflection: 3 things learned, 2 changes you'll make, and 1 question for the team.",
-      badgeVariant: "success",
-      accent: {
-        border: "border-l-emerald-500",
-        bg: "bg-emerald-50",
-        text: "text-emerald-700",
-        iconBg: "bg-emerald-100",
-        sectionBg: "bg-emerald-50/50",
-        number: "bg-emerald-100 text-emerald-700",
-        ring: "ring-emerald-400",
-      },
-      structure: "3 + 2 + 1 items",
-    },
-    takeover: {
-      label: "10-Minute Takeover",
-      shortLabel: "Takeover",
-      icon: Megaphone,
-      description:
-        "The 3 most useful takeaways, ready to share in your next team meeting.",
-      badgeVariant: "warning",
-      accent: {
-        border: "border-l-amber-500",
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        iconBg: "bg-amber-100",
-        sectionBg: "bg-amber-50/50",
-        number: "bg-amber-100 text-amber-700",
-        ring: "ring-amber-400",
-      },
-      structure: "3 key takeaways",
-    },
-  };
-
-// ─── Tool Shed Content Types ────────────────────────────────────────────────
-
-export interface PostcardContent {
-  elevator_pitch: string;
-  lightbulb_moment: string;
-  programme_impact: string;
-  golden_nugget: string;
-}
-
-export interface ThreeTwoOneContent {
-  three_learned: string[];
-  two_changes: string[];
-  one_question: string;
-}
-
-export interface TakeoverContent {
-  useful_things: string[];
-}
-
-export type ToolShedContent =
-  | PostcardContent
-  | ThreeTwoOneContent
-  | TakeoverContent;
-
-// ─── Tool Shed Postcard Field Config ────────────────────────────────────────
-
-export const postcardFields = [
-  {
-    key: "elevator_pitch" as const,
-    label: "Elevator Pitch",
-    emoji: "🗣️",
-    hint: "In two sentences, what was the training about?",
-  },
-  {
-    key: "lightbulb_moment" as const,
-    label: "The Lightbulb Moment",
-    emoji: "💡",
-    hint: "What was the one thing that made you go 'Aha!'?",
-  },
-  {
-    key: "programme_impact" as const,
-    label: "Impact on Our Programme",
-    emoji: "🎯",
-    hint: "How does this help us support young people, mentors, or colleagues better?",
-  },
-  {
-    key: "golden_nugget" as const,
-    label: "The Golden Nugget",
-    emoji: "🏆",
-    hint: "One resource, website, or technique we should all try.",
-  },
-] as const;
 
 // ─── Certificate Utilities ──────────────────────────────────────────────────
 

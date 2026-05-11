@@ -3805,62 +3805,6 @@ export type Database = {
           },
         ]
       }
-      tool_shed_entries: {
-        Row: {
-          content: Json
-          created_at: string
-          event_date: string | null
-          event_name: string | null
-          external_course_id: string | null
-          format: "postcard" | "three_two_one" | "takeover"
-          id: string
-          is_published: boolean
-          search_text: string
-          tags: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content: Json
-          created_at?: string
-          event_date?: string | null
-          event_name?: string | null
-          external_course_id?: string | null
-          format: "postcard" | "three_two_one" | "takeover"
-          id?: string
-          is_published?: boolean
-          search_text?: string
-          tags?: string[]
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: Json
-          created_at?: string
-          event_date?: string | null
-          event_name?: string | null
-          external_course_id?: string | null
-          format?: "postcard" | "three_two_one" | "takeover"
-          id?: string
-          is_published?: boolean
-          search_text?: string
-          tags?: string[]
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tool_shed_entries_external_course_id_fkey"
-            columns: ["external_course_id"]
-            isOneToOne: false
-            referencedRelation: "external_courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       weekly_patterns: {
         Row: {
           created_at: string | null
