@@ -2562,6 +2562,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          announcement_expires_at: string | null
           author_id: string
           content: string
           content_json: Json | null
@@ -2578,6 +2579,7 @@ export type Database = {
           weekly_roundup_id: string | null
         }
         Insert: {
+          announcement_expires_at?: string | null
           author_id: string
           content: string
           content_json?: Json | null
@@ -2594,6 +2596,7 @@ export type Database = {
           weekly_roundup_id?: string | null
         }
         Update: {
+          announcement_expires_at?: string | null
           author_id?: string
           content?: string
           content_json?: Json | null
@@ -2717,6 +2720,7 @@ export type Database = {
           fte: number | null
           full_name: string
           google_calendar_connected: boolean | null
+          can_post_announcements: boolean
           google_refresh_token: string | null
           id: string
           induction_completed_at: string | null
@@ -2751,6 +2755,7 @@ export type Database = {
           email: string
           fte?: number | null
           full_name: string
+          can_post_announcements?: boolean
           google_calendar_connected?: boolean | null
           google_refresh_token?: string | null
           id: string
@@ -2779,6 +2784,7 @@ export type Database = {
           avatar_url?: string | null
           calendar_last_synced_at?: string | null
           calendar_sync_token?: string | null
+          can_post_announcements?: boolean
           contract_end_date?: string | null
           contract_type?: "permanent" | "fixed_term" | "casual" | "secondment" | null
           created_at?: string | null

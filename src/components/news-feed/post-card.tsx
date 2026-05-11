@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock, Download, Award } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Pin, PinOff, Sparkles, Loader2, Lock, Download, Award, Megaphone } from "lucide-react";
 import { POST_TYPES } from "@/lib/intranet";
 import { togglePinPost } from "@/app/(protected)/intranet/actions";
 import { toast } from "sonner";
@@ -209,6 +209,15 @@ export function PostCard({
     post.author.preferred_name || post.author.full_name || "User";
 
   const isKudos = post.post_type === POST_TYPES.KUDOS;
+  // Active-announcement check (W4b). Chrome (top-strip + header badge +
+  // pin-display) drops at expiry — compute-on-read, no cron. The post
+  // itself stays in the feed as regular news after this flips to false.
+  const isAnnouncement = post.post_type === POST_TYPES.ANNOUNCEMENT;
+  const isActiveAnnouncement =
+    isAnnouncement &&
+    !!post.announcement_expires_at &&
+    new Date(post.announcement_expires_at).getTime() > Date.now();
+
   // Stable reference for the recipients array so downstream useMemo
   // deps don't churn — `post.kudos_recipients ?? []` would otherwise
   // hand back a fresh empty literal on every render.
@@ -261,6 +270,12 @@ export function PostCard({
           // celebration" without a colour-coded category-per-card
           // explosion.
           isKudos && "border-t-4 border-t-mcr-yellow",
+          // Active announcements lead with a light-blue strip — mirrors
+          // the Kudos pattern with a different brand accent (blue is the
+          // industry convention for informational/authoritative chrome
+          // per GOV.UK / Polaris / Atlassian; W4b research). Drops at
+          // expiry — the post stays in the feed as regular news.
+          isActiveAnnouncement && "border-t-4 border-t-mcr-light-blue",
         )}
       >
         <CardContent className="pt-6">
@@ -293,11 +308,20 @@ export function PostCard({
                     {/* Pinned status moved to a corner Pin icon (top-right
                         of card, next to the kebab) per W4 design — frees
                         the inline-badge slot for content-type semantics
-                        like Round Up. */}
+                        like Round Up + Announcement. */}
                     {post.is_weekly_roundup && (
                       <Badge variant="default" className="text-xs gap-1 py-0">
                         <Sparkles className="h-3 w-3" />
                         Round Up
+                      </Badge>
+                    )}
+                    {isActiveAnnouncement && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs gap-1 py-0 border-mcr-light-blue text-mcr-dark-blue bg-mcr-light-blue/10"
+                      >
+                        <Megaphone className="h-3 w-3" />
+                        Announcement
                       </Badge>
                     )}
                   </div>
@@ -320,20 +344,24 @@ export function PostCard({
                 {/* Corner Pin icon — top-right next to the kebab. Decorative;
                     the unpin action lives in the kebab menu below. Pattern
                     matches LinkedIn / Reddit / Teams / Instagram corner-pin
-                    convention; tooltip carries "Pinned" for screen readers. */}
-                {post.is_pinned && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className="inline-flex h-9 w-9 items-center justify-center text-primary"
-                        aria-label="Pinned"
-                      >
-                        <Pin className="h-4 w-4" fill="currentColor" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">Pinned</TooltipContent>
-                  </Tooltip>
-                )}
+                    convention; tooltip carries "Pinned" for screen readers.
+                    Computed-on-read for announcements: an expired
+                    announcement's is_pinned stays true in the DB but the
+                    chrome drops here. No cron, no drift. */}
+                {post.is_pinned &&
+                  (!isAnnouncement || isActiveAnnouncement) && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className="inline-flex h-9 w-9 items-center justify-center text-primary"
+                          aria-label="Pinned"
+                        >
+                          <Pin className="h-4 w-4" fill="currentColor" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">Pinned</TooltipContent>
+                    </Tooltip>
+                  )}
               {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

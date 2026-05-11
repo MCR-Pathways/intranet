@@ -42,6 +42,8 @@ const PERMISSION_WARNINGS: Record<string, string> = {
     "Granting Systems Admin access will allow this person to manage company assets, user accounts, and system configuration.",
   is_content_editor:
     "Granting Content Editor access will allow this person to create, edit, and delete resource articles and categories.",
+  can_post_announcements:
+    "Granting Announcement Author will allow this person to post Announcement-typed posts that pin to the top of the feed and notify every active staff member. Intended for senior leadership / internal comms.",
 };
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -49,6 +51,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   is_ld_admin: "L&D Admin",
   is_systems_admin: "Systems Admin",
   is_content_editor: "Content Editor",
+  can_post_announcements: "Announcement Author",
 };
 
 // =============================================
@@ -106,13 +109,14 @@ interface PermissionsEditDialogProps {
   currentUserId?: string;
   /** Whether the current user is an HR admin (only HR admins can grant HR Admin) */
   isCurrentUserHRAdmin?: boolean;
-  /** Whether the current user is a systems admin (can grant L&D Admin, Systems Admin) */
+  /** Whether the current user is a systems admin (can grant L&D Admin, Systems Admin, Announcement Author) */
   isCurrentUserSystemsAdmin?: boolean;
   isHRAdmin: boolean;
   isLDAdmin: boolean;
   isSystemsAdmin: boolean;
   isContentEditor: boolean;
   isLineManager: boolean;
+  canPostAnnouncements: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -128,6 +132,7 @@ export function PermissionsEditDialog({
   isSystemsAdmin: initialSystemsAdmin,
   isContentEditor: initialContentEditor,
   isLineManager: initialLineManager,
+  canPostAnnouncements: initialCanPostAnnouncements,
   open,
   onOpenChange,
 }: PermissionsEditDialogProps) {
@@ -141,6 +146,9 @@ export function PermissionsEditDialog({
   const [isSystemsAdmin, setIsSystemsAdmin] = useState(initialSystemsAdmin);
   const [isContentEditor, setIsContentEditor] = useState(initialContentEditor);
   const [isLineManager, setIsLineManager] = useState(initialLineManager);
+  const [canPostAnnouncements, setCanPostAnnouncements] = useState(
+    initialCanPostAnnouncements,
+  );
 
   // Permission confirmation dialog state
   const [pendingPermission, setPendingPermission] = useState<{
@@ -153,9 +161,10 @@ export function PermissionsEditDialog({
       field === "is_hr_admin" ? isHRAdmin :
       field === "is_ld_admin" ? isLDAdmin :
       field === "is_systems_admin" ? isSystemsAdmin :
-      isContentEditor;
+      field === "is_content_editor" ? isContentEditor :
+      canPostAnnouncements;
     setPendingPermission({ field, newValue: !currentValue });
-  }, [isHRAdmin, isLDAdmin, isSystemsAdmin, isContentEditor]);
+  }, [isHRAdmin, isLDAdmin, isSystemsAdmin, isContentEditor, canPostAnnouncements]);
 
   const confirmPermission = useCallback(() => {
     if (!pendingPermission) return;
@@ -164,8 +173,9 @@ export function PermissionsEditDialog({
     else if (field === "is_ld_admin") setIsLDAdmin(newValue);
     else if (field === "is_systems_admin") setIsSystemsAdmin(newValue);
     else if (field === "is_content_editor") setIsContentEditor(newValue);
+    else if (field === "can_post_announcements") setCanPostAnnouncements(newValue);
     setPendingPermission(null);
-  }, [pendingPermission, setIsHRAdmin, setIsLDAdmin, setIsSystemsAdmin, setIsContentEditor]);
+  }, [pendingPermission]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +188,7 @@ export function PermissionsEditDialog({
         is_systems_admin: isSystemsAdmin,
         is_content_editor: isContentEditor,
         is_line_manager: isLineManager,
+        can_post_announcements: canPostAnnouncements,
       });
 
       if (result.success) {
@@ -248,6 +259,25 @@ export function PermissionsEditDialog({
                 onCheckedChange={() => handlePermissionToggle("is_content_editor")}
                 disabled={isSelf || (!isCurrentUserHRAdmin && !isCurrentUserSystemsAdmin)}
                 disabledTooltip={isSelf ? "Ask another admin to change your permissions" : "Only HR admins or systems admins can change this"}
+              />
+
+              {/* Announcement Author — systems-admin-only per W4b design.
+                  Decoupled from is_hr_admin: comms authority is separate
+                  from HR data access. An HR admin who isn't a systems
+                  admin can see the toggle but can't move it. */}
+              <PermissionRow
+                id="perm_can_post_announcements"
+                label="Announcement Author"
+                checked={canPostAnnouncements}
+                onCheckedChange={() =>
+                  handlePermissionToggle("can_post_announcements")
+                }
+                disabled={isSelf || !isCurrentUserSystemsAdmin}
+                disabledTooltip={
+                  isSelf
+                    ? "Ask another admin to change your permissions"
+                    : "Only systems admins can change this"
+                }
               />
 
               <div className="flex items-center justify-between">

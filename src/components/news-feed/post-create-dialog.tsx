@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +17,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, X, Megaphone } from "lucide-react";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
-import { POST_MAX_LENGTH } from "@/lib/intranet";
+import {
+  POST_MAX_LENGTH,
+  ANNOUNCEMENT_MAX_DURATION_DAYS,
+  ANNOUNCEMENT_MIN_DURATION_MINUTES,
+} from "@/lib/intranet";
 import type { TiptapDocument } from "@/lib/tiptap";
 import type { AutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { AttachmentEditor, type PendingAttachment, type AttachmentEditorHandle } from "./attachment-editor";
@@ -51,11 +57,20 @@ interface PostCreateDialogProps {
   attachments: PendingAttachment[];
   pollData: PollData | null;
   autoLinkPreview: AutoLinkPreview | null;
-  isFetchingPreview: boolean;
   error: string | null;
+  isFetchingPreview: boolean;
   isPending: boolean;
   isSubmitDisabled: boolean;
   resetKey: number;
+  // Announcement (W4b) — optional; only wired when the author has the
+  // can_post_announcements flag.
+  canPostAnnouncements?: boolean;
+  isAnnouncement?: boolean;
+  announcementExpiresAt?: string;
+  announcementSendEmail?: boolean;
+  onAnnouncementToggle?: () => void;
+  onAnnouncementExpiresChange?: (value: string) => void;
+  onAnnouncementSendEmailChange?: (value: boolean) => void;
   // Handlers from parent
   onEditorChange: (json: TiptapDocument, text: string) => void;
   onAttachmentsChange: (attachments: PendingAttachment[]) => void;
@@ -82,6 +97,13 @@ export function PostCreateDialog({
   isPending,
   isSubmitDisabled,
   resetKey,
+  canPostAnnouncements = false,
+  isAnnouncement = false,
+  announcementExpiresAt = "",
+  announcementSendEmail = false,
+  onAnnouncementToggle,
+  onAnnouncementExpiresChange,
+  onAnnouncementSendEmailChange,
   onEditorChange,
   onAttachmentsChange,
   onPollChange,
@@ -98,7 +120,30 @@ export function PostCreateDialog({
   const hasContent =
     plainText.trim().length > 0 ||
     attachments.length > 0 ||
-    pollData !== null;
+    pollData !== null ||
+    isAnnouncement;
+
+  // Min / max bounds for the datetime-local picker.
+  // - Min: now + ANNOUNCEMENT_MIN_DURATION_MINUTES (matches server validation)
+  // - Max: now + ANNOUNCEMENT_MAX_DURATION_DAYS  (matches server validation)
+  // The picker still validates server-side; these bounds just stop
+  // obvious mistakes (past dates, year-2099) at the input layer.
+  const announcementBounds = useMemo(() => {
+    const now = new Date();
+    const min = new Date(
+      now.getTime() + ANNOUNCEMENT_MIN_DURATION_MINUTES * 60 * 1000,
+    );
+    const max = new Date(
+      now.getTime() + ANNOUNCEMENT_MAX_DURATION_DAYS * 24 * 60 * 60 * 1000,
+    );
+    return {
+      min: toDatetimeLocalString(min),
+      max: toDatetimeLocalString(max),
+    };
+    // Bounds depend only on render time; re-computing them every render
+    // is cheap and keeps the picker in sync with "now" if the dialog
+    // sits open for a long time.
+  }, []);
 
   // Handle pending action (e.g. user clicked Photo in collapsed card)
   useEffect(() => {
@@ -203,7 +248,17 @@ export function PostCreateDialog({
             </div>
           )}
           <DialogHeader>
-            <DialogTitle>Create post</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {isAnnouncement && (
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-mcr-light-blue/20"
+                  aria-hidden="true"
+                >
+                  <Megaphone className="h-5 w-5 text-mcr-dark-blue" />
+                </span>
+              )}
+              {isAnnouncement ? "Post announcement" : "Create post"}
+            </DialogTitle>
           </DialogHeader>
 
           {/* Author row */}
@@ -219,6 +274,74 @@ export function PostCreateDialog({
             </Avatar>
             <p className="font-medium text-sm">{displayName}</p>
           </div>
+
+          {/* Announcement metadata panel — only when the megaphone toggle
+              is on. The duration picker is required (no default — the
+              author has to pick a moment, per W4b design); the email
+              tickbox is the Viva-pattern opt-in escalation. */}
+          {isAnnouncement && (
+            <div className="rounded-lg border border-mcr-light-blue/40 bg-mcr-light-blue/5 p-3 mb-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-mcr-dark-blue">
+                  Announcement settings
+                </p>
+                <button
+                  type="button"
+                  onClick={onAnnouncementToggle}
+                  disabled={isPending}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Cancel announcement
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="announcement-expires-at"
+                  className="text-xs font-medium block"
+                >
+                  Show as pinned until…
+                </label>
+                <Input
+                  id="announcement-expires-at"
+                  type="datetime-local"
+                  value={announcementExpiresAt}
+                  onChange={(e) =>
+                    onAnnouncementExpiresChange?.(e.target.value)
+                  }
+                  min={announcementBounds.min}
+                  max={announcementBounds.max}
+                  disabled={isPending}
+                  required
+                  className="h-9 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  At least {ANNOUNCEMENT_MIN_DURATION_MINUTES} minutes,
+                  up to {ANNOUNCEMENT_MAX_DURATION_DAYS} days from now.
+                </p>
+              </div>
+              <label
+                htmlFor="announcement-send-email"
+                className="flex items-start gap-2 text-sm cursor-pointer"
+              >
+                <Checkbox
+                  id="announcement-send-email"
+                  checked={announcementSendEmail}
+                  onCheckedChange={(value) =>
+                    onAnnouncementSendEmailChange?.(value === true)
+                  }
+                  disabled={isPending}
+                  className="mt-0.5"
+                />
+                <span>
+                  Also send by email.{" "}
+                  <span className="text-muted-foreground">
+                    Off by default — every recipient already gets a
+                    bell notification.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
 
           {/* Editor area */}
           <div className="space-y-3">
@@ -309,6 +432,12 @@ export function PostCreateDialog({
               onPollClick={() =>
                 onPollChange({ question: "", options: ["", ""], duration: "3d", customCloseDate: undefined, allowMultiple: false })
               }
+              onAnnouncementClick={
+                canPostAnnouncements && onAnnouncementToggle
+                  ? onAnnouncementToggle
+                  : undefined
+              }
+              announcementActive={isAnnouncement}
               pollActive={pollData !== null}
               disabled={isPending}
               actionButton={
@@ -317,11 +446,17 @@ export function PostCreateDialog({
                   onClick={onSubmit}
                   disabled={isSubmitDisabled}
                   size="sm"
+                  aria-busy={isPending}
                 >
                   {isPending ? (
                     <>
                       <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                      Posting...
+                      {isAnnouncement ? "Posting…" : "Posting..."}
+                    </>
+                  ) : isAnnouncement ? (
+                    <>
+                      <Megaphone className="mr-1.5 h-4 w-4" />
+                      Post announcement
                     </>
                   ) : (
                     "Post"
@@ -337,7 +472,9 @@ export function PostCreateDialog({
       <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard post?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isAnnouncement ? "Discard announcement?" : "Discard post?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               You have unsaved content. Are you sure you want to discard it?
             </AlertDialogDescription>
@@ -357,4 +494,15 @@ export function PostCreateDialog({
       </AlertDialog>
     </>
   );
+}
+
+/**
+ * Format a Date as the local-time string `<input type="datetime-local">`
+ * expects (YYYY-MM-DDTHH:mm), in the user's browser timezone. The
+ * native picker shows + reads back local-time, so the server-side
+ * `new Date(value)` parses it correctly without us doing tz conversion.
+ */
+function toDatetimeLocalString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

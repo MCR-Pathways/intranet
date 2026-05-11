@@ -104,6 +104,17 @@ vi.mock("@/lib/notifications", async () => {
   };
 });
 
+// Service client for the announcement fan-out path (W4b). Used to
+// fetch recipients (cross-row read bypasses RLS) and to insert
+// email_notifications rows in batch. The hoisted helpers let each
+// test wire its own per-call shape; the default returns an empty
+// recipient list so non-announcement tests don't accidentally fan out.
+const mockServiceFrom = vi.hoisted(() => vi.fn());
+const mockServiceClient = vi.hoisted(() => ({ from: mockServiceFrom }));
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => mockServiceClient,
+}));
+
 // ─── Imports (after mocks) ───────────────────────────────────────────
 
 import {
@@ -163,6 +174,17 @@ describe("Intranet Post Actions", () => {
 
     // Default: notification fan-out succeeds
     mockCreateNotifications.mockResolvedValue({ error: null });
+
+    // Default service client: empty recipients, email insert succeeds.
+    // Announcement tests override this with `wireServiceClientForAnnouncement`.
+    mockServiceFrom.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          neq: () => Promise.resolve({ data: [], error: null }),
+        }),
+      }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    });
   });
 
   // ===========================================
@@ -1766,6 +1788,237 @@ describe("Intranet Post Actions", () => {
       });
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/up to 10/);
+    });
+  });
+
+  // ===========================================
+  // createPost — Announcement mode (W4b)
+  // ===========================================
+
+  describe("createPost (announcement mode)", () => {
+    /**
+     * Wire the service client to return a fixed recipient list +
+     * capture the email insert call. Returns the email-insert spy so
+     * tests can assert what was queued.
+     */
+    function wireServiceClientForAnnouncement(opts: {
+      recipients?: Array<{ id: string; email: string | null }>;
+      emailInsertResult?: { error: unknown };
+    } = {}) {
+      const {
+        recipients = [
+          { id: "user-2", email: "alice@mcrpathways.org" },
+          { id: "user-3", email: "bob@mcrpathways.org" },
+        ],
+        emailInsertResult = { error: null },
+      } = opts;
+      const mockEmailInsert = vi.fn().mockResolvedValue(emailInsertResult);
+      mockServiceFrom.mockImplementation((table: string) => {
+        if (table === "profiles") {
+          return {
+            select: () => ({
+              eq: () => ({
+                neq: () => Promise.resolve({ data: recipients, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === "email_notifications") {
+          return { insert: mockEmailInsert };
+        }
+        return { insert: vi.fn().mockResolvedValue({ error: null }) };
+      });
+      return { mockEmailInsert };
+    }
+
+    function futureIsoString(minutesFromNow: number): string {
+      return new Date(Date.now() + minutesFromNow * 60 * 1000).toISOString();
+    }
+
+    it("creates an announcement when author has the flag", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+      wireServiceClientForAnnouncement();
+
+      const result = await createPost({
+        content: "Office closed Friday for maintenance.",
+        announcement: {
+          expiresAt: futureIsoString(60), // 1 hour from now
+          sendEmail: false,
+        },
+      });
+
+      expect(result).toEqual({
+        success: true,
+        error: null,
+        postId: "post-1",
+      });
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          author_id: "user-1",
+          content: "Office closed Friday for maintenance.",
+          post_type: "announcement",
+          is_pinned: true,
+          announcement_expires_at: expect.any(String),
+        }),
+      );
+      // Bell fan-out fired
+      expect(mockCreateNotifications).toHaveBeenCalledTimes(1);
+      const notifRows = mockCreateNotifications.mock.calls[0][0];
+      expect(notifRows).toHaveLength(2);
+      expect(notifRows[0]).toMatchObject({
+        type: "announcement",
+        sourceKind: "announcement",
+        sourceId: "post-1",
+      });
+    });
+
+    it("rejects when author lacks can_post_announcements", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: false },
+      } as never);
+
+      const result = await createPost({
+        content: "Trying to broadcast.",
+        announcement: {
+          expiresAt: futureIsoString(60),
+          sendEmail: false,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Not authorised/i);
+      expect(mockInsert).not.toHaveBeenCalled();
+      expect(mockCreateNotifications).not.toHaveBeenCalled();
+    });
+
+    it("rejects expiry too soon (under the minimum)", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+
+      const result = await createPost({
+        content: "Lasts 5 minutes",
+        announcement: {
+          expiresAt: futureIsoString(5), // under the 30-min minimum
+          sendEmail: false,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/at least/i);
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects expiry too far in the future (over max duration)", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+
+      const result = await createPost({
+        content: "Pinned forever",
+        announcement: {
+          expiresAt: futureIsoString(60 * 24 * 365), // 1 year — over the 90-day cap
+          sendEmail: false,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/at most/i);
+    });
+
+    it("rejects unparseable expiry strings", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+
+      const result = await createPost({
+        content: "Bad expiry",
+        announcement: {
+          expiresAt: "not-a-date",
+          sendEmail: false,
+        },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/valid/i);
+    });
+
+    it("enqueues emails when sendEmail is true", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+      const { mockEmailInsert } = wireServiceClientForAnnouncement();
+
+      await createPost({
+        content: "Important update from leadership.",
+        announcement: {
+          expiresAt: futureIsoString(60),
+          sendEmail: true,
+        },
+      });
+
+      expect(mockEmailInsert).toHaveBeenCalledTimes(1);
+      const emailRows = mockEmailInsert.mock.calls[0][0];
+      expect(emailRows).toHaveLength(2);
+      expect(emailRows[0]).toMatchObject({
+        user_id: "user-2",
+        email_type: "announcement",
+        entity_id: "post-1",
+      });
+    });
+
+    it("does NOT enqueue emails when sendEmail is false", async () => {
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+      const { mockEmailInsert } = wireServiceClientForAnnouncement();
+
+      await createPost({
+        content: "Bell-only broadcast",
+        announcement: {
+          expiresAt: futureIsoString(60),
+          sendEmail: false,
+        },
+      });
+
+      // Bell still fires, but email_notifications insert doesn't.
+      expect(mockCreateNotifications).toHaveBeenCalled();
+      expect(mockEmailInsert).not.toHaveBeenCalled();
+    });
+
+    it("regular posts (no announcement) don't fan out", async () => {
+      // Default mockProfile has can_post_announcements undefined (falsy).
+      // Even with the flag set, a plain createPost call should not fan out.
+      vi.mocked(getCurrentUser).mockResolvedValue({
+        supabase: mockSupabase,
+        user: mockUser,
+        profile: { ...mockProfile, can_post_announcements: true },
+      } as never);
+
+      await createPost({ content: "Regular news post" });
+
+      expect(mockCreateNotifications).not.toHaveBeenCalled();
+      // No post_type/announcement_expires_at on the insert payload.
+      expect(mockInsert).toHaveBeenCalledWith({
+        author_id: "user-1",
+        content: "Regular news post",
+      });
     });
   });
 });

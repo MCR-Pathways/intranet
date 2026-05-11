@@ -38,3 +38,13 @@ export function isContentEditorEffective(profile: Pick<Profile, "is_content_edit
   if (!profile || profile.status !== "active") return false;
   return profile.is_content_editor === true;
 }
+
+/** Check if a profile can post announcements (W4b). Capability flag,
+ * orthogonal to is_hr_admin — comms authority is decoupled from
+ * HR-data access. Granting the flag is gated to systems admins. */
+export function canPostAnnouncementsEffective(
+  profile: Pick<Profile, "can_post_announcements" | "status"> | null,
+): boolean {
+  if (!profile || profile.status !== "active") return false;
+  return profile.can_post_announcements === true;
+}

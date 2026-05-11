@@ -41,6 +41,7 @@ export interface ProfileSummary {
   is_ld_admin: boolean;
   is_systems_admin: boolean;
   is_content_editor: boolean;
+  can_post_announcements: boolean;
   is_external: boolean;
 }
 

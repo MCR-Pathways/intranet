@@ -30,6 +30,7 @@ const defaultProps = {
   isSystemsAdmin: false,
   isContentEditor: false,
   isLineManager: false,
+  canPostAnnouncements: false,
   open: true,
   onOpenChange: vi.fn(),
 };
@@ -76,13 +77,17 @@ describe("PermissionsEditDialog", () => {
       isLineManager: true,
     });
 
-    // Check that switches reflect the current state
+    // Check that switches reflect the current state — six toggles
+    // since W4b added Announcement Author alongside the existing five.
     const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(5);
+    expect(switches).toHaveLength(6);
     expect(screen.getByRole("switch", { name: "HR Admin" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "L&D Admin" })).not.toBeChecked();
     expect(screen.getByRole("switch", { name: "Systems Admin" })).toBeChecked();
     expect(screen.getByRole("switch", { name: "Content Editor" })).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Announcement Author" }),
+    ).not.toBeChecked();
     expect(screen.getByRole("switch", { name: "Line Manager" })).toBeChecked();
   });
 

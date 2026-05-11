@@ -400,6 +400,7 @@ export function EmployeeDetailContent({
         isSystemsAdmin={profile.is_systems_admin}
         isContentEditor={profile.is_content_editor}
         isLineManager={profile.is_line_manager}
+        canPostAnnouncements={profile.can_post_announcements ?? false}
         open={permissionsDialogOpen}
         onOpenChange={setPermissionsDialogOpen}
       />

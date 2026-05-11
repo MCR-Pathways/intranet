@@ -23,6 +23,7 @@ const MANDATORY_EMAIL_TYPES = new Set([
   "leave_decision",
   "stale_leave_reminder",
   "welcome",
+  "announcement",
 ]);
 
 /** All valid email types for the platform. */
@@ -40,6 +41,7 @@ export const EMAIL_TYPES = {
   stale_leave_reminder: { label: "Stale leave request reminders", module: "HR", mandatory: true },
   // Intranet
   mention: { label: "Mentions in posts and comments", module: "Intranet", mandatory: false },
+  announcement: { label: "Announcements", module: "Intranet", mandatory: true },
   // System
   welcome: { label: "Welcome email", module: "System", mandatory: true },
 } as const;

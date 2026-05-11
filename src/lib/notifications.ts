@@ -12,6 +12,7 @@ import {
   DoorOpen,
   GraduationCap,
   MapPin,
+  Megaphone,
   MessageSquare,
   Newspaper,
   Scale,
@@ -42,6 +43,7 @@ export const NOTIFICATION_SOURCE_KINDS = {
   ONBOARDING_STEP: "onboarding_step",
   WORKING_LOCATION: "working_location",
   KUDOS: "kudos",
+  ANNOUNCEMENT: "announcement",
 } as const;
 
 export type NotificationSourceKind =
@@ -62,6 +64,7 @@ export const INFORMATIONAL_SOURCE_KINDS = new Set<NotificationSourceKind>([
   NOTIFICATION_SOURCE_KINDS.WEEKLY_ROUNDUP,
   NOTIFICATION_SOURCE_KINDS.ONBOARDING_STEP,
   NOTIFICATION_SOURCE_KINDS.KUDOS,
+  NOTIFICATION_SOURCE_KINDS.ANNOUNCEMENT,
 ]);
 
 /**
@@ -86,6 +89,7 @@ export const SOURCE_KIND_REASON_LABEL: Record<NotificationSourceKind, string> = 
   onboarding_step: "Onboarding",
   working_location: "Working location",
   kudos: "Kudos",
+  announcement: "Announcement",
 };
 
 /**
@@ -110,6 +114,7 @@ export const SOURCE_KIND_ICON: Record<NotificationSourceKind, LucideIcon> = {
   onboarding_step: UserPlus,
   working_location: MapPin,
   kudos: Award,
+  announcement: Megaphone,
 };
 
 /**
@@ -136,6 +141,7 @@ export const SOURCE_KIND_ACTION_VERB: Record<NotificationSourceKind, string> = {
   onboarding_step: "Continue",
   working_location: "Set location",
   kudos: "View",
+  announcement: "Read",
 };
 
 /**
@@ -218,6 +224,11 @@ export const SOURCE_KIND_MODULE: Record<NotificationSourceKind, NotificationModu
   // (someone calling you out personally). Avoids spawning a one-row
   // "Kudos" pill at the current scale.
   kudos: "mentions",
+  // Announcements are platform-wide news from leadership — News pill.
+  // They share the bell with regular comments/roundups in the same
+  // module category; the post-type chrome + bell icon already
+  // discriminate them visually.
+  announcement: "news",
 };
 
 /**

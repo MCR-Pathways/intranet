@@ -138,3 +138,21 @@ export const KUDOS_MAX_RECIPIENTS = 10;
 
 /** Cap on the kudos message body. Short forces specificity. */
 export const KUDOS_MESSAGE_MAX_LENGTH = 500;
+
+// ─── Announcements (W4b) ─────────────────────────────────────────────
+
+/**
+ * Hard cap on how far in the future an announcement can expire.
+ * Stops a careless picker click landing on "indefinite-ish" and
+ * defeating the scarcity-preserves-signal argument. 90 days lets
+ * a long-running campaign run a full quarter without trickery,
+ * which is plenty for an 80-staff org.
+ */
+export const ANNOUNCEMENT_MAX_DURATION_DAYS = 90;
+
+/**
+ * Minimum lead-time between "now" and "expiry". An announcement
+ * expiring 30 seconds after publish is almost certainly a typo or
+ * timezone mistake — reject and force the author to confirm.
+ */
+export const ANNOUNCEMENT_MIN_DURATION_MINUTES = 30;

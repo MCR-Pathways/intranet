@@ -3,7 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { timingSafeEqual } from "crypto";
 
 // Re-export client-safe helpers so server components can import everything from @/lib/auth
-export { isHRAdminEffective, isLDAdminEffective, isSystemsAdminEffective, isContentEditorEffective } from "@/lib/auth-helpers";
+export {
+  isHRAdminEffective,
+  isLDAdminEffective,
+  isSystemsAdminEffective,
+  isContentEditorEffective,
+  canPostAnnouncementsEffective,
+} from "@/lib/auth-helpers";
 
 /** Timing-safe string comparison to prevent timing attacks on token validation. */
 export function timingSafeTokenCompare(a: string, b: string): boolean {
@@ -13,14 +19,14 @@ export function timingSafeTokenCompare(a: string, b: string): boolean {
 
 /** Fields selected for profile — excludes sensitive data like google_refresh_token */
 const PROFILE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, job_title, induction_completed_at, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
+  "id, full_name, preferred_name, email, avatar_url, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, can_post_announcements, job_title, induction_completed_at, fte, contract_type, department, region, is_external, work_pattern, start_date, line_manager_id";
 
 /**
  * Extended profile select for HR admin views — includes employment details
  * but still excludes google_refresh_token and other auth-sensitive fields.
  */
 export const HR_EMPLOYEE_SELECT =
-  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, created_at";
+  "id, full_name, preferred_name, email, avatar_url, phone, user_type, status, is_hr_admin, is_ld_admin, is_line_manager, is_systems_admin, is_content_editor, can_post_announcements, job_title, start_date, fte, contract_type, department, region, is_external, probation_end_date, contract_end_date, work_pattern, line_manager_id, team_id, induction_completed_at, created_at";
 
 // =============================================
 // SERVER-SIDE AUTH FUNCTIONS
@@ -156,6 +162,38 @@ export async function requireContentEditor() {
 
   if (!isHR && !isEditor) {
     throw new Error("Unauthorised: Content editor or HR admin access required");
+  }
+
+  return { supabase, user };
+}
+
+/**
+ * Require the current user to be an authenticated announcement author.
+ * Checks the `can_post_announcements` flag on profiles — a capability
+ * flag orthogonal to is_hr_admin (W4b design: comms authority is
+ * decoupled from HR data access). Granting the flag is gated to
+ * is_systems_admin separately at the action layer.
+ */
+export async function requireAnnouncementAuthor() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("can_post_announcements")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.can_post_announcements) {
+    throw new Error(
+      "Unauthorised: announcement-author permission required",
+    );
   }
 
   return { supabase, user };

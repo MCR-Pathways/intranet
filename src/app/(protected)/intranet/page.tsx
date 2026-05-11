@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isHRAdminEffective, isSystemsAdminEffective } from "@/lib/auth";
+import {
+  getCurrentUser,
+  isHRAdminEffective,
+  isSystemsAdminEffective,
+  canPostAnnouncementsEffective,
+} from "@/lib/auth";
 import { Greeting } from "@/components/greeting";
 import { PostComposer } from "@/components/news-feed/post-composer";
 import { PostFeed } from "@/components/news-feed/post-feed";
@@ -38,6 +43,7 @@ export default async function IntranetPage({
   const canPost = profile.user_type === "staff";
   const isHRAdmin = isHRAdminEffective(profile);
   const isSystemsAdmin = isSystemsAdminEffective(profile);
+  const canPostAnnouncements = canPostAnnouncementsEffective(profile);
 
   const currentUserProfile: PostAuthor = {
     id: profile.id,
@@ -63,7 +69,13 @@ export default async function IntranetPage({
       <Greeting />
 
       {/* Post composer — all active users (staff + pathways coordinators) */}
-      {canPost && <PostComposer userProfile={currentUserProfile} mentionUsers={mentionUsers} />}
+      {canPost && (
+        <PostComposer
+          userProfile={currentUserProfile}
+          mentionUsers={mentionUsers}
+          canPostAnnouncements={canPostAnnouncements}
+        />
+      )}
 
       {/* Weekly roundup banner */}
       {roundupResult.roundup && (

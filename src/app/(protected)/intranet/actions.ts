@@ -1,12 +1,15 @@
 "use server";
 
 import { getCurrentUser, isSystemsAdminEffective } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   POST_MAX_LENGTH,
   ATTACHMENT_MAX_COUNT,
   IMAGE_MAX_SIZE_BYTES,
   DOCUMENT_MAX_SIZE_BYTES,
   ALLOWED_FILE_TYPES,
+  ANNOUNCEMENT_MAX_DURATION_DAYS,
+  ANNOUNCEMENT_MIN_DURATION_MINUTES,
   isImageType,
   isKudosCategory,
   KUDOS_MAX_RECIPIENTS,
@@ -97,7 +100,7 @@ async function sendMentionEmails(
 }
 
 const POST_SELECT =
-  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, post_type, kudos_category, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
+  "id, author_id, content, content_json, is_pinned, is_weekly_roundup, post_type, kudos_category, announcement_expires_at, weekly_roundup_id, poll_question, poll_closes_at, poll_allow_multiple, created_at, updated_at";
 const ATTACHMENT_SELECT =
   "id, post_id, attachment_type, file_url, drive_file_id, file_name, file_size, mime_type, image_width, image_height, page_count, link_url, link_title, link_description, link_image_url, sort_order, created_at";
 const REACTION_SELECT = "id, post_id, user_id, reaction_type, created_at";
@@ -498,7 +501,7 @@ async function enrichPosts(
   }
 
   return postRows.map((post) => {
-    const p = post as { id: string; author_id: string; content: string; content_json: Json | null; is_pinned: boolean; is_weekly_roundup: boolean; post_type: string; kudos_category: string | null; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
+    const p = post as { id: string; author_id: string; content: string; content_json: Json | null; is_pinned: boolean; is_weekly_roundup: boolean; post_type: string; kudos_category: string | null; announcement_expires_at: string | null; weekly_roundup_id: string | null; poll_question: string | null; poll_closes_at: string | null; poll_allow_multiple: boolean; created_at: string; updated_at: string; author: unknown };
     const postReactions = reactionsByPost.get(p.id) ?? [];
     const postComments = commentsByPost.get(p.id) ?? [];
     const userReaction = postReactions.find((r) => r.user_id === userId);
@@ -512,6 +515,7 @@ async function enrichPosts(
       is_weekly_roundup: p.is_weekly_roundup,
       post_type: p.post_type,
       kudos_category: p.kudos_category,
+      announcement_expires_at: p.announcement_expires_at,
       weekly_roundup_id: p.weekly_roundup_id,
       poll_question: p.poll_question,
       poll_closes_at: p.poll_closes_at,
@@ -747,6 +751,18 @@ export async function createPost(data: {
     closes_at?: string | null;
     allow_multiple?: boolean;
   };
+  /**
+   * Announcement metadata (W4b). When present, this is an Announcement
+   * post rather than regular news. Requires `can_post_announcements`
+   * on the author's profile (orthogonal to is_hr_admin per W4b design
+   * — comms authority is decoupled from HR data access).
+   */
+  announcement?: {
+    /** ISO timestamp. Author picks at compose; must be future + within max duration. */
+    expiresAt: string;
+    /** Author-chosen escalation: also email every recipient. Default off in UI. */
+    sendEmail: boolean;
+  };
 }): Promise<{ success: boolean; error: string | null; postId?: string; warning?: string }> {
   const { supabase, user, profile } = await getCurrentUser();
 
@@ -762,6 +778,43 @@ export async function createPost(data: {
     };
   }
 
+  // ─── Announcement gate + validation (W4b) ──────────────────────
+  // Validated UP FRONT — before any DB writes — so a bad expiresAt
+  // doesn't land a half-state announcement that's missing the pin
+  // logic or the required column.
+  let announcementExpiresAt: Date | null = null;
+  if (data.announcement) {
+    if (!profile.can_post_announcements) {
+      return {
+        success: false,
+        error: "Not authorised to post announcements.",
+      };
+    }
+    announcementExpiresAt = new Date(data.announcement.expiresAt);
+    if (Number.isNaN(announcementExpiresAt.getTime())) {
+      return {
+        success: false,
+        error: "Pick a valid expiry date and time for the announcement.",
+      };
+    }
+    const nowMs = Date.now();
+    const minFutureMs = nowMs + ANNOUNCEMENT_MIN_DURATION_MINUTES * 60 * 1000;
+    const maxFutureMs =
+      nowMs + ANNOUNCEMENT_MAX_DURATION_DAYS * 24 * 60 * 60 * 1000;
+    if (announcementExpiresAt.getTime() < minFutureMs) {
+      return {
+        success: false,
+        error: `Announcement must expire at least ${ANNOUNCEMENT_MIN_DURATION_MINUTES} minutes from now.`,
+      };
+    }
+    if (announcementExpiresAt.getTime() > maxFutureMs) {
+      return {
+        success: false,
+        error: `Announcement can run for at most ${ANNOUNCEMENT_MAX_DURATION_DAYS} days.`,
+      };
+    }
+  }
+
   // Build insert payload — include content_json if provided (Tiptap rich text)
   const postInsert: Database["public"]["Tables"]["posts"]["Insert"] = {
     author_id: user.id,
@@ -772,6 +825,17 @@ export async function createPost(data: {
       poll_allow_multiple: data.poll.allow_multiple ?? false,
       ...(data.poll.closes_at ? { poll_closes_at: data.poll.closes_at } : {}),
     } : {}),
+    // W4b: announcement metadata lands inline so the CHECK constraint
+    // (post_type='announcement' iff announcement_expires_at IS NOT NULL)
+    // is satisfied in a single insert — no two-step state where the
+    // post exists as regular news momentarily.
+    ...(announcementExpiresAt
+      ? {
+          post_type: POST_TYPES.ANNOUNCEMENT,
+          announcement_expires_at: announcementExpiresAt.toISOString(),
+          is_pinned: true,
+        }
+      : {}),
   };
 
   const { data: post, error: postError } = await supabase
@@ -900,8 +964,122 @@ export async function createPost(data: {
     }
   }
 
+  // ─── Announcement broadcast fan-out (W4b) ──────────────────────
+  // Runs LAST so attachments / poll / link preview are all in place
+  // before recipients see the bell row pointing at the post.
+  // Failures here log + degrade gracefully — the post itself is
+  // already saved, and a missed broadcast is preferable to losing
+  // the user's content.
+  if (announcementExpiresAt) {
+    await fanOutAnnouncement({
+      postId: post.id,
+      senderId: user.id,
+      senderName: profile.full_name ?? "A colleague",
+      content,
+      sendEmail: data.announcement?.sendEmail ?? false,
+    });
+  }
+
   revalidatePath("/intranet", "layout");
   return { success: true, error: null, postId: post.id };
+}
+
+/**
+ * Fan out an Announcement post to every active staff member:
+ *   - bell rows via createNotifications (batch insert, one statement)
+ *   - optional emails via batch insert into email_notifications
+ *
+ * Sender is excluded from both — they wrote it.
+ *
+ * Best-effort: failures log but don't throw. Bell rows are critical
+ * (the comm doesn't reach anyone otherwise), so we log at error.
+ * Emails are an opt-in escalation; failure logs at warn.
+ */
+async function fanOutAnnouncement(args: {
+  postId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  sendEmail: boolean;
+}) {
+  const { postId, senderId, senderName, content, sendEmail } = args;
+  const service = createServiceClient();
+
+  // Recipients: every active staff member except the sender. Use
+  // the service client so this isn't bound by RLS — broadcast IS
+  // intentionally cross-row access.
+  const { data: recipients, error: recipientsError } = await service
+    .from("profiles")
+    .select("id, email")
+    .eq("status", "active")
+    .neq("id", senderId);
+  if (recipientsError || !recipients?.length) {
+    logger.error("Announcement fan-out: failed to fetch recipients", {
+      postId,
+      error: recipientsError?.message,
+    });
+    return;
+  }
+
+  // Trim the content for the bell + email preview. The bell row
+  // line-clamps anyway; keeping the stored body lean is kinder
+  // to other surfaces (notifications page, future digest).
+  const preview =
+    content.length > 200 ? `${content.slice(0, 199)}…` : content;
+  const link = `/intranet/post/${postId}`;
+
+  // ─── Bell rows (critical) ───
+  const notifRows = recipients.map((r) => ({
+    userId: r.id,
+    type: "announcement" as const,
+    title: `${senderName} posted an announcement`,
+    message: preview,
+    link,
+    sourceKind: NOTIFICATION_SOURCE_KINDS.ANNOUNCEMENT,
+    sourceId: postId,
+  }));
+  const { error: notifError } = await createNotifications(notifRows);
+  if (notifError) {
+    logger.error("Announcement fan-out: failed to insert bell rows", {
+      postId,
+      recipientCount: recipients.length,
+      error: notifError.message,
+    });
+  }
+
+  // ─── Emails (opt-in escalation) ───
+  if (!sendEmail) return;
+
+  const subject = `Announcement from MCR — ${preview.slice(0, 60)}`;
+  // Plain text body for now — the email pipeline already handles
+  // body_html as the canonical column. Wrapping the content in a
+  // minimal <div> keeps Resend happy while staying out of the way
+  // of the existing email styling.
+  const bodyHtml = `<div><p>${escapeHtml(senderName)} posted an announcement on the MCR intranet:</p><p>${escapeHtml(preview)}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL?.trim() ?? ""}${link}">View the announcement</a></p></div>`;
+
+  const emailRows = recipients
+    .filter((r) => !!r.email)
+    .map((r) => ({
+      user_id: r.id,
+      email_type: "announcement",
+      subject,
+      body_html: bodyHtml,
+      entity_id: postId,
+      entity_type: "post",
+      metadata: { recipient_email: r.email },
+      status: "pending",
+    }));
+  if (emailRows.length === 0) return;
+  const { error: emailError } = await service
+    .from("email_notifications")
+    .insert(emailRows);
+  if (emailError) {
+    logger.warn("Announcement fan-out: failed to enqueue emails", {
+      postId,
+      recipientCount: emailRows.length,
+      error: emailError.message,
+    });
+  }
 }
 
 // ─── Edit Post ──────────────────────────────────────────────────────

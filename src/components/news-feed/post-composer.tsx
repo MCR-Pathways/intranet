@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import type { TiptapDocument } from "@/lib/tiptap";
 import { useAutoLinkPreview } from "@/hooks/use-auto-link-preview";
 import { createPost } from "@/app/(protected)/intranet/actions";
@@ -19,9 +20,17 @@ import type { PostAuthor } from "@/types/database.types";
 interface PostComposerProps {
   userProfile: PostAuthor;
   mentionUsers: MentionUser[];
+  /** Whether the current user can post Announcement-typed posts.
+   * Drives whether the Megaphone chip + announcement-mode UI render.
+   * Defaults false so a non-author never sees the affordance. */
+  canPostAnnouncements?: boolean;
 }
 
-export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
+export function PostComposer({
+  userProfile,
+  mentionUsers,
+  canPostAnnouncements = false,
+}: PostComposerProps) {
   const [kudosDialogOpen, setKudosDialogOpen] = useState(false);
   const [contentJson, setContentJson] = useState<TiptapDocument | null>(null);
   const [plainText, setPlainText] = useState("");
@@ -32,6 +41,11 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
   const [pollData, setPollData] = useState<PollData | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  // Announcement state (W4b) — co-located with the rest of the
+  // composer state so it follows the same reset lifecycle.
+  const [isAnnouncement, setIsAnnouncement] = useState(false);
+  const [announcementExpiresAt, setAnnouncementExpiresAt] = useState("");
+  const [announcementSendEmail, setAnnouncementSendEmail] = useState(false);
 
   const { autoLinkPreview, isFetchingPreview, dismissPreview, resetPreview } =
     useAutoLinkPreview({ content: plainText, enabled: dialogOpen });
@@ -41,7 +55,11 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
 
   // Warn before navigating away with unsaved content
   useEffect(() => {
-    const hasContent = plainText.trim().length > 0 || attachments.length > 0 || pollData !== null;
+    const hasContent =
+      plainText.trim().length > 0 ||
+      attachments.length > 0 ||
+      pollData !== null ||
+      isAnnouncement;
     if (!hasContent) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -50,7 +68,7 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [plainText, attachments, pollData]);
+  }, [plainText, attachments, pollData, isAnnouncement]);
 
   const handleEditorChange = useCallback(
     (json: TiptapDocument, text: string) => {
@@ -91,48 +109,98 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
       }
     }
 
+    // Validate announcement if mode is on. Server enforces the same
+    // constraints; this catches the empty-picker case before a round trip.
+    if (isAnnouncement) {
+      if (!announcementExpiresAt) {
+        setError("Pick when the announcement should stop being pinned.");
+        return;
+      }
+      const expiry = new Date(announcementExpiresAt);
+      if (Number.isNaN(expiry.getTime()) || expiry.getTime() <= Date.now()) {
+        setError("Announcement expiry must be in the future.");
+        return;
+      }
+    }
+
     setError(null);
     startTransition(async () => {
-      const result = await createPost({
-        content: text,
-        content_json: contentJson,
-        attachments: attachments.map((a) => ({
-          attachment_type: a.type,
-          file_url: a.file_url,
-          drive_file_id: a.drive_file_id,
-          file_name: a.file_name,
-          file_size: a.file_size,
-          mime_type: a.mime_type,
-          image_width: a.image_width,
-          image_height: a.image_height,
-          page_count: a.page_count,
-        })),
-        ...(pollData
-          ? {
-              poll: {
-                question: pollData.question,
-                options: pollData.options.filter((o) => o.trim().length > 0),
-                closes_at: computePollClosesAt(pollData.duration, pollData.customCloseDate),
-                allow_multiple: pollData.allowMultiple,
-              },
-            }
-          : {}),
-      });
+      try {
+        const result = await createPost({
+          content: text,
+          content_json: contentJson,
+          attachments: attachments.map((a) => ({
+            attachment_type: a.type,
+            file_url: a.file_url,
+            drive_file_id: a.drive_file_id,
+            file_name: a.file_name,
+            file_size: a.file_size,
+            mime_type: a.mime_type,
+            image_width: a.image_width,
+            image_height: a.image_height,
+            page_count: a.page_count,
+          })),
+          ...(pollData
+            ? {
+                poll: {
+                  question: pollData.question,
+                  options: pollData.options.filter((o) => o.trim().length > 0),
+                  closes_at: computePollClosesAt(pollData.duration, pollData.customCloseDate),
+                  allow_multiple: pollData.allowMultiple,
+                },
+              }
+            : {}),
+          ...(isAnnouncement
+            ? {
+                announcement: {
+                  // Convert the local-time picker value to an ISO
+                  // string. `new Date(value)` interprets the
+                  // datetime-local string in local tz; .toISOString()
+                  // serialises in UTC. The server stores UTC and the
+                  // renderer compares against now() in UTC.
+                  expiresAt: new Date(announcementExpiresAt).toISOString(),
+                  sendEmail: announcementSendEmail,
+                },
+              }
+            : {}),
+        });
 
-      if (result.success) {
-        // Close dialog — handleDialogOpenChange resets all state
-        setDialogOpen(false);
-        if (result.warning) {
-          setError(result.warning);
+        if (result.success) {
+          // Close dialog — handleDialogOpenChange resets all state
+          setDialogOpen(false);
+          if (result.warning) {
+            setError(result.warning);
+          } else {
+            toast.success(
+              isAnnouncement ? "Announcement posted" : "Post published",
+            );
+          }
         } else {
-          toast.success("Post published");
+          setError(result.error);
+          toast.error(
+            result.error ||
+              "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org",
+          );
         }
-      } else {
-        setError(result.error);
-        toast.error(result.error || "Something went wrong. Please contact the HelpDesk at helpdesk@mcrpathways.org");
+      } catch (err) {
+        // Network-layer throw (fetch failure) — server action's
+        // {success, error} channel didn't fire. Don't leave the
+        // dialog stuck.
+        logger.error("Failed to create post", { error: err });
+        toast.error(
+          "Something went wrong. Please try again, or contact the HelpDesk at helpdesk@mcrpathways.org if the issue continues.",
+        );
       }
     });
-  }, [plainText, contentJson, attachments, pollData]);
+  }, [
+    plainText,
+    contentJson,
+    attachments,
+    pollData,
+    isAnnouncement,
+    announcementExpiresAt,
+    announcementSendEmail,
+  ]);
 
   // Reset state when dialog closes (if no content — discarded)
   const handleDialogOpenChange = useCallback(
@@ -144,6 +212,9 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         setPlainText("");
         setAttachments([]);
         setPollData(null);
+        setIsAnnouncement(false);
+        setAnnouncementExpiresAt("");
+        setAnnouncementSendEmail(false);
         setError(null);
         resetPreview();
         setResetKey((k) => k + 1);
@@ -151,6 +222,18 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
     },
     [resetPreview]
   );
+
+  const handleAnnouncementToggle = useCallback(() => {
+    setIsAnnouncement((prev) => {
+      if (prev) {
+        // Toggling off — clear the metadata so a re-toggle starts
+        // fresh rather than carrying stale values.
+        setAnnouncementExpiresAt("");
+        setAnnouncementSendEmail(false);
+      }
+      return !prev;
+    });
+  }, []);
 
   const handleClearPendingAction = useCallback(() => {
     setPendingAction(null);
@@ -165,7 +248,11 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
   const isSubmitDisabled =
     isPending ||
     (!plainText.trim() && attachments.length === 0) ||
-    attachments.some((a) => a.uploading);
+    attachments.some((a) => a.uploading) ||
+    // Announcement-mode requires the expiry picker to be filled.
+    // Server validates the full constraints; this gate just keeps
+    // the Post button from looking enabled when there's no expiry.
+    (isAnnouncement && !announcementExpiresAt);
 
   return (
     <>
@@ -199,6 +286,18 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
               onDocumentClick={() => openDialog("document")}
               onPollClick={() => openDialog("poll")}
               onKudosClick={() => setKudosDialogOpen(true)}
+              onAnnouncementClick={
+                canPostAnnouncements
+                  ? () => {
+                      // Open the create dialog AND switch it into
+                      // announcement-mode in one click. The chip in
+                      // the dialog's own action bar lets the author
+                      // toggle off mid-compose.
+                      setIsAnnouncement(true);
+                      setDialogOpen(true);
+                    }
+                  : undefined
+              }
               pollActive={false}
               disabled={false}
             />
@@ -236,6 +335,13 @@ export function PostComposer({ userProfile, mentionUsers }: PostComposerProps) {
         isPending={isPending}
         isSubmitDisabled={isSubmitDisabled}
         resetKey={resetKey}
+        canPostAnnouncements={canPostAnnouncements}
+        isAnnouncement={isAnnouncement}
+        announcementExpiresAt={announcementExpiresAt}
+        announcementSendEmail={announcementSendEmail}
+        onAnnouncementToggle={handleAnnouncementToggle}
+        onAnnouncementExpiresChange={setAnnouncementExpiresAt}
+        onAnnouncementSendEmailChange={setAnnouncementSendEmail}
         onEditorChange={handleEditorChange}
         onAttachmentsChange={handleAttachmentsChange}
         onPollChange={setPollData}

@@ -16,6 +16,7 @@ export async function updateUserProfile(
     is_systems_admin?: boolean;
     is_content_editor?: boolean;
     is_line_manager?: boolean;
+    can_post_announcements?: boolean;
     fte?: number;
     contract_type?: string;
     department?: string | null;
@@ -40,12 +41,22 @@ export async function updateUserProfile(
     delete data.is_ld_admin;
     delete data.is_systems_admin;
     delete data.is_content_editor;
+    delete data.can_post_announcements;
   }
 
   // Systems-only admins cannot change HR admin flag or department
   if (isSystemsAdmin && !isHRAdmin) {
     delete data.is_hr_admin;
     delete data.department;
+  }
+
+  // can_post_announcements is gated to systems admins ONLY.
+  // W4b design: comms authority is decoupled from HR data access —
+  // even an HR admin without systems-admin shouldn't be able to
+  // grant broadcast posting authority. Strip the field on the way
+  // through if the caller isn't a systems admin.
+  if (!isSystemsAdmin) {
+    delete data.can_post_announcements;
   }
 
   // Whitelist: only allow expected fields through to the database
@@ -59,6 +70,7 @@ export async function updateUserProfile(
     "is_systems_admin",
     "is_content_editor",
     "is_line_manager",
+    "can_post_announcements",
     "fte",
     "contract_type",
     "department",

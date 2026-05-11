@@ -81,6 +81,7 @@ export interface UserTableProfile {
   is_systems_admin: boolean | null;
   is_content_editor: boolean | null;
   is_line_manager: boolean | null;
+  can_post_announcements: boolean | null;
   job_title: string | null;
   avatar_url: string | null;
   induction_completed_at: string | null;
@@ -289,6 +290,7 @@ export function UserTable({
     is_ld_admin: p.is_ld_admin ?? false,
     is_systems_admin: p.is_systems_admin ?? false,
     is_content_editor: p.is_content_editor ?? false,
+    can_post_announcements: p.can_post_announcements ?? false,
     is_external: p.is_external ?? false,
     phone: null,
     start_date: p.start_date,
@@ -498,6 +500,7 @@ export function UserTable({
           isSystemsAdmin={permissionsProfile.is_systems_admin ?? false}
           isContentEditor={permissionsProfile.is_content_editor ?? false}
           isLineManager={permissionsProfile.is_line_manager ?? false}
+          canPostAnnouncements={permissionsProfile.can_post_announcements ?? false}
           open={!!permissionsProfile}
           onOpenChange={(open) => {
             if (!open) setPermissionsProfile(null);
