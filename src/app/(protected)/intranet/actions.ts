@@ -1051,11 +1051,21 @@ async function fanOutAnnouncement(args: {
   if (!sendEmail) return;
 
   const subject = `Announcement from MCR — ${preview.slice(0, 60)}`;
+  // Absolute URL is critical for email — recipients open the message
+  // outside the app, so a relative href has no base to resolve against.
+  // Mirrors the fallback already used by sendMentionEmails (this file)
+  // and src/lib/email.ts; trim guards against dashboard-pasted env vars
+  // that pick up trailing whitespace (Drive integration ran into this
+  // — see CLAUDE.md "Trim env vars when their value is used as a URL
+  // host"). `||` over `??` so an empty-string env var still falls back.
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "https://intranet.mcrpathways.org";
   // Plain text body for now — the email pipeline already handles
   // body_html as the canonical column. Wrapping the content in a
   // minimal <div> keeps Resend happy while staying out of the way
   // of the existing email styling.
-  const bodyHtml = `<div><p>${escapeHtml(senderName)} posted an announcement on the MCR intranet:</p><p>${escapeHtml(preview)}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL?.trim() ?? ""}${link}">View the announcement</a></p></div>`;
+  const bodyHtml = `<div><p>${escapeHtml(senderName)} posted an announcement on the MCR intranet:</p><p>${escapeHtml(preview)}</p><p><a href="${appUrl}${link}">View the announcement</a></p></div>`;
 
   const emailRows = recipients
     .filter((r) => !!r.email)
