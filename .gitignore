@@ -41,8 +41,11 @@ yarn-error.log*
 # supabase
 supabase/.temp/
 
-# claude code
-.claude/
+# claude code — share project-scoped rules; keep personal/runtime files local
+.claude/*
+!.claude/rules/
+!.claude/agents/
+!.claude/commands/
 
 # service account keys
 *-service-key.json
