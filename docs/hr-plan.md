@@ -264,10 +264,12 @@ Database tables already created in migration `00024`. Larger features for later.
 - **Columns:** `profile_id`, `title`, `description`, `category` (performance/development/strategic), `status` (not_started/in_progress/completed/deferred), `progress` (0–100), `due_date`, `review_period`, `aligned_to`
 - **UI needed:** Objective cards with progress bars, status badges, alignment tags
 
-### Praise / Shout-outs
-- **Table:** `praise`
-- **Columns:** `from_profile_id`, `to_profile_id`, `message`, `category` (teamwork/innovation/customer_focus/above_and_beyond/leadership), `is_public`
-- **UI needed:** Praise cards, team feed, possibly visible on intranet news feed
+### Praise / Shout-outs — SHIPPED as Kudos (Intranet)
+- **Status:** Built in the Intranet news feed module, not HR. PRs #298 (backend + render + compose) and #299 (post-publish editor).
+- **Tables actually used:** `posts.post_type = 'kudos'` + `posts.kudos_category` + `post_kudos_recipients` join table (migration 00095). No `praise` table — the news-feed posts table holds the message, recipients are a multi-recipient join, the kudos category sits on the post.
+- **Differences from the original HR plan:** the schema sketch above proposed a single `to_profile_id` (one recipient per praise); the shipped version is multi-recipient with a cap of 10. Categories are humanizer-vetted (Going the extra mile / Team player / Bright idea / Came through / Always there / Thank you) rather than the placeholder list. No `is_public` toggle — all kudos are public because the news feed is the surface (private recognition is a different feature, not built).
+- **Surface:** appears in the intranet news feed with a yellow top strip + `KudosHeader` reading "[Sender] sent kudos to [Recipients] for [Category]". Notifications go to every recipient via the bell (Mentions module pill).
+- **See:** `memory/kudos-feature.md` for the full design rationale + key files.
 
 ### Document Signing / Acknowledgements
 - **What:** Lightweight e-signature/acknowledgement system for post-start letters and policy acknowledgements
