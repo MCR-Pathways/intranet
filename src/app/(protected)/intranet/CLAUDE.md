@@ -106,3 +106,35 @@ Adding extraction for other types (DOCX page count via JSZip + parsing, etc.) is
 - `image_width` and `image_height` are `number | null` (NULL for documents and link previews).
 - `page_count` is `number | null` (NULL for non-PDFs and extraction failures).
 - `attachment_type` is the `"image" | "document" | "link"` discriminator. Always check this before using `drive_file_id` or image dimensions.
+
+## Post-Type Discriminator (W4)
+
+`posts.post_type` is a `text` column with a CHECK whitelist: `news / kudos / announcement / tool_shed_postcard / tool_shed_three_two_one / tool_shed_takeover`. Default is `'news'`. The three Tool Shed slots are pre-reserved so the W5 merge can be pure rendering (no schema PR). `'announcement'` is reserved but unused — W4b was attempted and scratched; see `memory/announcement-deferred.md`.
+
+Type-specific data hangs off the `posts` row via additional optional columns:
+- Kudos: `posts.kudos_category` (text, with a consistency CHECK — required when post_type='kudos', forbidden otherwise) + `post_kudos_recipients` join table for multi-recipient.
+- Announcement (slot reserved but not built): would need a similar consistency-CHECK pattern for `announcement_expires_at`.
+
+When adding a new post type:
+1. Add the value to the `post_type` CHECK whitelist (new migration; the existing whitelist in 00095 lists current values).
+2. Decide whether type-specific data goes inline (extra column with consistency CHECK) or in a separate table (join). Kudos uses both — `kudos_category` inline, recipients in a join.
+3. Add the type to `POST_TYPES` in `src/lib/intranet.ts` and a type-guard (`isKudosCategory`-style) if there's an enum-shaped sub-value.
+4. Branch the renderer in `PostCard` on the `post_type`. Single-signature visual accent (top strip + header badge) per the W4 design — avoid full-card chrome.
+5. Add the new source kind to all five maps in `src/lib/notifications.ts` (`NOTIFICATION_SOURCE_KINDS`, `INFORMATIONAL_SOURCE_KINDS`, `SOURCE_KIND_REASON_LABEL`, `SOURCE_KIND_ICON`, `SOURCE_KIND_ACTION_VERB`, `SOURCE_KIND_MODULE`).
+
+## Dialog Reuse Pattern for Post-Type Variants
+
+When a post type needs both a compose flow AND an edit flow with locked fields, **reuse the same dialog with an optional `editTarget` prop** rather than forking a separate dialog. Mode is derived from `!!editTarget` — no enum, no `mode: "create" | "edit"` discriminator string.
+
+The pattern (used in `KudosCreateDialog` for W4 + W4-edit):
+1. Optional `editTarget?: T` prop carries the locked state — for kudos, the post id + category + existing recipients + original message.
+2. State hydrates from `editTarget` on each open false→true transition via a `wasOpenRef` gate. Re-running on every open means a save → revalidation → reopen cycle picks up fresh server-side data even when the editTarget's primary key (e.g. postId) hasn't changed. The ref gate prevents re-hydration on parent re-renders that would otherwise stomp in-progress edits.
+3. Locked field renders: muted-tone chip with a Lock icon in place of × (recipients), static chip without a picker (category). Editable fields render unchanged.
+4. Submit branches: create-mode calls the create action; edit-mode runs the edit actions sequentially (see "Sequential, not parallel" in root CLAUDE.md — `editPost` + `addKudosRecipients` raced before the fix).
+5. The same `reset()` callback hydrates from the editTarget in both directions (initial open + post-discard reset). The hydration `useEffect` body is just `reset()` — DRYs the duplicated state-setter block.
+
+`editTarget` must be memoised on the parent side (`useMemo` keyed on the underlying post fields) so the dialog's `useMemo` deps and the hydration effect don't churn on every parent re-render. Inline object literals recreate on every render and break the gate.
+
+Source-of-truth carrying: `editTarget` carries the FULL locked-row data (id + label + avatar + job_title for recipients), not just ids. A recipient who's been deactivated after the original kudos was sent still renders correctly in their locked chip because the data came from the kudos record, not the live mention list.
+
+Reference: `src/components/news-feed/kudos-create-dialog.tsx`.

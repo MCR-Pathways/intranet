@@ -99,8 +99,9 @@ Multi-PR initiative responding to design feedback (April 2026). Full research an
 - [x] **W1** — Width sweep + DailyBanner alignment with centre column on `/intranet`. New `src/lib/layout.ts`, `--centre-column` CSS variable, AppLayout wrapper. PR #284.
 - [ ] **W2** — 3-column home layout. Adds right rail (~312px, sticky) on `/intranet` only. Visible at xl (≥1280px); hidden at lg/md/sm with a tab fallback inside the feed page at md. **Right-rail content depends on W6's rescoping — see W6 note.**
 - [x] **W3** — original "greeting + attention banner" plan. Pivoted to **W3-rev** (notification centre overhaul + quiet greeting + DailyBanner retirement). See `memory/intranet-design-feedback.md` for the locked scope. Shipped across PRs #289 (.1a), #292 (.1b), #293 (.2a), #294 (.2b), #295 (.3), #296 (.4).
-- [ ] **W4** — Type-pill differentiation on feed cards (tonal Badge in header line; `default`/`success`/`warning` variants matching existing Tool Shed accents). No filter tabs at our scale. **Independent of W3-rev — unblocked.**
-- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts). **Independent of W3-rev — unblocked.**
+- [x] **W4** — Originally scoped as "type-pill differentiation on feed cards"; expanded into a full post-type taxonomy + Kudos compose + post-publish kudos editor. Shipped across PRs #298 (backend + render + compose + Pin-to-corner-icon + notification click-to-clear) and #299 (post-publish editor reuse). Six humanizer-vetted Kudos categories, multi-recipient cap of 10, yellow strip + KudosHeader as the type signal (matches the "single signature accent" pattern from the Viva Engage 2023 "less decoration" research). Post-type discriminator + reserved slots for Tool Shed types (W5) and Announcement (W4b — see below). See `memory/kudos-feature.md`.
+- [~] **W4b** — Announcement post type. Attempted 2026-05-11 (PR #300, branch `feature/w4b`); scratched at Colin's direction before merge. Research + design decisions preserved in `memory/announcement-deferred.md` for revival. The schema slot is reserved in 00095's CHECK whitelist so a future revisit doesn't need a new migration to register the type. Triggers for revival documented in the memory file.
+- [ ] **W5** — Tool Shed merge into home feed (Postcard / 3-2-1 / Takeover entries appear inline with news posts). **Independent of W3-rev — unblocked.** The three Tool Shed types are pre-reserved in `posts.post_type` so the merge can be pure rendering work — no schema PR needed.
 - [ ] **W6** — Quick-actions rail. **Needs rescoping after W3-rev.** Original audit (in research doc §1) had ~half its candidates absorbed by the bell: working_location, office arrival confirmation, resume next compliance course, open weekly roundup, approve pending leave — all now state rows in the bell with inline actions. The remaining quick-action candidates are pure navigation shortcuts (Book leave, Submit absence, Find a colleague, etc.) — that's a smaller surface, may fold into W2's right rail rather than warranting its own workstream. Re-audit before scoping.
 - [ ] **W7** — Composer redesign (3-step modal: type picker → form → preview & send). Independent.
 - [ ] **W8** — Postcard signature card (3D flip; scoped Source Serif 4 + Story Script + Special Elite to the postcard surface only). Independent.
@@ -120,15 +121,15 @@ These now apply to all future intranet work:
 
 ### Recommended next pickup order
 
-W4 → W5 → W6 re-audit → W2 → W7/W8.
+W5 → W6 re-audit → W2 → W7/W8.
 
-W4 + W5 are unblocked, small, and both touch the feed; doing them before any layout change avoids re-styling the same cards twice. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 then lands with a clear right-rail purpose.
+W4 is shipped; W4b is deferred. W5 (Tool Shed merge into the feed) is the next unblocked feed-touching workstream and the post_type slots are already reserved for it. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 then lands with a clear right-rail purpose.
 
 ### HR Phase 3
 - [ ] Surveys & pulse checks
 - [ ] DEI / equality monitoring
 - [ ] Performance: 1-to-1 records, objectives
-- [ ] Praise / shout-outs
+- [x] ~~Praise / shout-outs~~ — shipped as Kudos (Intranet module, not HR). See `memory/kudos-feature.md`.
 - [ ] Document signing / acknowledgements
 - [ ] Reports & analytics with charts
 - See [docs/hr-plan.md](./hr-plan.md) for full details
