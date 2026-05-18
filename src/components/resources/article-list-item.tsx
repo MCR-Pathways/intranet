@@ -98,7 +98,7 @@ export function ArticleListItem({
         <Link
           href={`/resources/article/${article.slug}`}
           className={cn(
-            "flex items-start gap-3 flex-1 min-w-0 hover:underline underline-offset-4 decoration-muted-foreground/30",
+            "group/link flex items-start gap-3 flex-1 min-w-0",
             // Compact rows are nested under an expanded folder — indent past
             // the folder icon so the hierarchy reads without a left border.
             isCompact
@@ -106,17 +106,22 @@ export function ArticleListItem({
               : "px-5 md:px-6 py-2.5"
           )}
         >
-          <div className="text-muted-foreground shrink-0 mt-0.5 no-underline">
+          <div className="text-muted-foreground shrink-0 mt-0.5">
             <FileText className={cn(isCompact ? "h-4 w-4" : "h-[18px] w-[18px]")} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{article.title}</div>
+            {/* Underline only the title — applying hover:underline on the
+                parent Link bleeds the decoration through descendant text
+                because `text-decoration` cascades from <a>. */}
+            <div className="text-sm font-medium truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30">
+              {article.title}
+            </div>
             {excerpt && (
-              <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75 no-underline">
+              <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75">
                 {excerpt}
               </div>
             )}
-            <div className="text-xs text-muted-foreground mt-0.5 no-underline">
+            <div className="text-xs text-muted-foreground mt-0.5">
               {isPublished ? "Updated" : "Draft · edited"} {formatDate(displayDate)}
             </div>
           </div>

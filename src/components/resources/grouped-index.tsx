@@ -126,12 +126,14 @@ export function GroupedIndex({
               <div className="flex items-center hover:bg-muted/70 transition-colors">
                 <Link
                   href={`/resources/${subcatPath}`}
-                  className="flex items-center gap-2.5 px-5 md:px-6 py-2.5 flex-1 min-w-0 hover:underline underline-offset-4 decoration-muted-foreground/30"
+                  className="group/link flex items-center gap-2.5 px-5 md:px-6 py-2.5 flex-1 min-w-0"
                 >
                   <FolderOpen
-                    className={cn("h-4 w-4 shrink-0 no-underline", colour.fg)}
+                    className={cn("h-4 w-4 shrink-0", colour.fg)}
                   />
-                  <span className="font-medium text-sm truncate">
+                  {/* Underline only the name — parent-Link underline cascades
+                      through the icon otherwise. */}
+                  <span className="font-medium text-sm truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30">
                     {subcategory.name}
                   </span>
                 </Link>
