@@ -248,7 +248,7 @@ export function CommentItem({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  className="rounded-full shrink-0"
                   aria-label="Comment actions"
                   title="Actions"
                 >

@@ -77,7 +77,6 @@ export function CardActionsKebab({
         }}
         className={cn(
           "absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md bg-card/80 backdrop-blur-sm text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          "opacity-0 group-hover/card:opacity-100 group-focus-within/card:opacity-100 data-[state=open]:opacity-100 transition-opacity",
           className
         )}
       >
