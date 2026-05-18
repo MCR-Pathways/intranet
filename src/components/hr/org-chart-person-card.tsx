@@ -130,7 +130,7 @@ export function OrgChartPersonCard({
             </div>
           </div>
 
-          {/* Focus button — appears on hover for managers */}
+          {/* Focus button — always visible for managers (touch-accessible) */}
           {hasChildren && (
             <button
               type="button"

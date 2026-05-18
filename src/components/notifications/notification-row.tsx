@@ -163,6 +163,7 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
               size="icon"
               className="data-[state=open]:bg-accent flex-shrink-0"
               aria-label={`Actions for ${row.title}`}
+              title="Actions"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
