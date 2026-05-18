@@ -37,7 +37,7 @@ export function ResourceHeaderActions({
         {/* Bookmarks — all users */}
         <Button variant="outline" size="sm" className="bg-card" asChild>
           <Link href="/resources/bookmarks">
-            <Bookmark className="h-3.5 w-3.5" />
+            <Bookmark aria-hidden="true" />
             Bookmarks
           </Link>
         </Button>
