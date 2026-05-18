@@ -208,8 +208,13 @@ Rule 3 overrides rule 4. Data-loss prevention beats click-efficiency.
 Row-level action buttons (kebabs, bookmark toggles, clear-X, focus-on-team, save/done/mute) are **always visible by default**. Touch input has no hover state; gating row actions behind `opacity-0 group-hover:opacity-100` makes them invisible on Chromebook touch — and there is no `@media (hover: none)` fallback wired across this codebase (`grep -rn '@media (hover' src/` returns zero matches as of 2026-05-18). Linear, Notion, GitHub, and Airtable all default to always-visible row actions for the same reason.
 
 ```tsx
-// ✓ Always visible
-<Button variant="ghost" size="icon-sm" aria-label="Actions for {entity}">
+// ✓ Always visible (both aria-label and title per the icon-button rule above)
+<Button
+  variant="ghost"
+  size="icon-sm"
+  aria-label="Actions for {entity}"
+  title="Actions"
+>
   <MoreHorizontal />
 </Button>
 
@@ -219,6 +224,7 @@ Row-level action buttons (kebabs, bookmark toggles, clear-X, focus-on-team, save
   size="icon-sm"
   className="opacity-0 group-hover:opacity-100 transition-opacity"
   aria-label="Actions for {entity}"
+  title="Actions"
 >
   <MoreHorizontal />
 </Button>
