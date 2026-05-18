@@ -161,8 +161,9 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 data-[state=open]:bg-accent transition-opacity flex-shrink-0"
+              className="data-[state=open]:bg-accent flex-shrink-0"
               aria-label={`Actions for ${row.title}`}
+              title="Actions"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>

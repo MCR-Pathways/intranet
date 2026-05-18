@@ -130,7 +130,7 @@ export function OrgChartPersonCard({
             </div>
           </div>
 
-          {/* Focus button — appears on hover for managers */}
+          {/* Focus button — always visible for managers (touch-accessible) */}
           {hasChildren && (
             <button
               type="button"
@@ -138,7 +138,7 @@ export function OrgChartPersonCard({
                 e.stopPropagation();
                 onFocus(personId);
               }}
-              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted"
               title="Focus on this person's team"
               aria-label={`Focus on ${name}'s team`}
             >

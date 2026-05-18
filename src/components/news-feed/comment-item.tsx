@@ -241,14 +241,14 @@ export function CommentItem({
             )}
           </div>
 
-          {/* Three-dot menu — hover-revealed, Facebook-style */}
+          {/* Three-dot menu — always visible for users with delete rights */}
           {canDelete && !isEditing && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  className="rounded-full shrink-0 data-[state=open]:bg-accent"
                   aria-label="Comment actions"
                   title="Actions"
                 >

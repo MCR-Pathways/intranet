@@ -393,7 +393,7 @@ function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProp
         )}
       </div>
 
-      {/* Per-row clear (X). Hidden until row hover/focus. State rows
+      {/* Per-row clear (X). Always visible for event rows. State rows
           have no DB id to clear and resolve naturally — no X. */}
       {!isStateRow && (
         <button
@@ -402,8 +402,9 @@ function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProp
             e.stopPropagation();
             onClear();
           }}
-          className="opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 p-1 rounded hover:bg-muted-foreground/10"
+          className="flex-shrink-0 p-1 rounded hover:bg-muted-foreground/10 transition-colors"
           aria-label={`Clear ${row.title}`}
+          title="Clear"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
