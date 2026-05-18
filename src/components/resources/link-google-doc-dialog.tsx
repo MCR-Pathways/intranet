@@ -197,7 +197,7 @@ export function LinkGoogleDocDialog({
       <DialogContent className="sm:max-w-md bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ExternalLink className="h-5 w-5 text-mcr-teal" />
+            <ExternalLink className="h-5 w-5 text-muted-foreground" />
             Link Google Doc
           </DialogTitle>
           <DialogDescription>
