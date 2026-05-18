@@ -203,6 +203,48 @@ Apply the six-question decision tree per table:
 
 Rule 3 overrides rule 4. Data-loss prevention beats click-efficiency.
 
+### Row-action visibility
+
+Row-level action buttons (kebabs, bookmark toggles, clear-X, focus-on-team, save/done/mute) are **always visible by default**. Touch input has no hover state; gating row actions behind `opacity-0 group-hover:opacity-100` makes them invisible on Chromebook touch — and there is no `@media (hover: none)` fallback wired across this codebase (`grep -rn '@media (hover' src/` returns zero matches as of 2026-05-18). Linear, Notion, GitHub, and Airtable all default to always-visible row actions for the same reason.
+
+```tsx
+// ✓ Always visible
+<Button variant="ghost" size="icon-sm" aria-label="Actions for {entity}">
+  <MoreHorizontal />
+</Button>
+
+// ✗ Hover-only — breaks on touch
+<Button
+  variant="ghost"
+  size="icon-sm"
+  className="opacity-0 group-hover:opacity-100 transition-opacity"
+  aria-label="Actions for {entity}"
+>
+  <MoreHorizontal />
+</Button>
+```
+
+If the dropdown-open state needs a distinct read against the always-visible trigger, pair the always-visible trigger with `data-[state=open]:bg-accent` so the active state is visible without depending on opacity:
+
+```tsx
+<Button
+  variant="ghost"
+  size="icon-sm"
+  className="data-[state=open]:bg-accent"
+  aria-label="..."
+  title="Actions"
+>
+```
+
+**Acceptable hover-reveal exceptions** — pointer-only editor or long-form surfaces where always-visible chrome creates reader fatigue:
+- Plate editor block toolbars (selection-driven, pointer-only).
+- Long-form article heading anchor `#` link (always-visible adds noise to every heading).
+- Admin image-edit overlays (admin authoring workflow).
+
+If a row appears in a list view used by any non-editor role, default to always-visible. Touch parity beats hover polish.
+
+**Refresh stale code comments when removing hover gates.** Lines like `{/* Three-dot menu — hover-revealed, Facebook-style */}` describe behaviour that no longer exists once the gate is removed; the comment becomes a lie. Surfaced on PR #305: three "hover-revealed" / "appears on hover" comments survived a sweep and had to be updated in a follow-up commit.
+
 ### Edit patterns (four slots)
 
 Pick the slot by the structural test, not by intuition:
@@ -244,6 +286,8 @@ Pick the slot by the structural test, not by intuition:
 - Do not use `variant="destructive"` on an inline row trigger — use `ghost` + tinted hover, or move into the kebab.
 - Do not use the `sm` size for a primary CTA — fails WCAG touch-target on Chromebooks. Same rule applies to icon-only equivalents: never `icon-sm` or `icon-xs` for a Submit / Send / Save / Approve. Use `icon` (h-10 w-10).
 - Do not use `variant="ghost"` for any of: Save, Submit, Cancel, Clear, Reset, Approve, Publish, Send. These are all primary CTAs (Cancel sits in the secondary-by-intent group). Smoke-test on PR #282 found 8 instances of this regression spread across 6 files — comment-edit Save read identically grey to Cancel, chat-composer send buttons faded into the toolbar, quiz inline editors had Cancel-as-ghost paired with sm sizes that fail the touch-target rule. Cancel/Clear/Reset → `secondary`. Save/Submit/Send/Approve/Publish → `default` (or `success` if irreversible). Inline-editor toolbars are not exempt; "small container" is not a justification for ghost-on-primary or sm-on-primary.
+- Do not gate row-level action buttons behind `opacity-0 group-hover:opacity-100` (or `group-focus-within` variants). Touch users have no hover state; the affordance disappears entirely on Chromebook touch. Default to always-visible per "Row-action visibility" above; the narrow exceptions (Plate editor toolbars, heading anchors, admin image overlays) are pointer-only surfaces. PR #305 swept 5 surfaces over to always-visible — apply the same rule to any new row component.
+- Do not add explicit `h-X w-X` to SVG children of `Button` or `DropdownMenuItem`. Both primitives auto-size their SVGs (`[&_svg]:size-X` on each Button size variant; `[&>svg]:size-4` on DropdownMenuItem). Explicit sizing is redundant and may fight the variant's intended ratio. See `src/lib/CLAUDE.md`.
 
 ## See also
 
