@@ -196,7 +196,7 @@ export function NativeArticleView({
   const editUrl = `/resources/article/${article.slug}/edit`;
 
   return (
-    <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
+    <div className={ARTICLE_CARD_CLASSES}>
       <ArticleBreadcrumb
         category={category}
         parentCategory={parentCategory}

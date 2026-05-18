@@ -19,6 +19,14 @@ interface ArticlesListProps {
   bookmarkedIds?: Set<string>;
 }
 
+/**
+ * Direct-articles list for a category page (articles attached at the
+ * category root, not in a subcategory).
+ *
+ * Renders zebra-striped rows that flow edge-to-edge inside the parent
+ * CategoryContent wrapper. The search input (shown when > 5 articles) sits
+ * above the list with its own divider.
+ */
 export function ArticlesList({
   articles,
   categoryId,
@@ -53,41 +61,49 @@ export function ArticlesList({
   }
 
   return (
-    <div className="space-y-3">
+    <>
       {articles.length > 5 && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Filter articles..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="px-6 md:px-7 py-3 border-b border-border">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter articles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title={search ? "No articles match your search" : "No articles yet"}
-          description={
-            canEdit
-              ? "Link a Google Doc to add content to this category."
-              : "Articles will appear here once published."
-          }
-        />
+        <div className="px-6 py-10">
+          <EmptyState
+            icon={FileText}
+            title={search ? "No articles match your search" : "No articles yet"}
+            description={
+              canEdit
+                ? "Link a Google Doc to add content to this category."
+                : "Articles will appear here once published."
+            }
+          />
+        </div>
       ) : (
-        <div className="rounded-lg bg-background p-1">
+        <div>
           {filtered.map((article) => (
-            <ArticleListItem
+            <div
               key={article.id}
-              article={article}
-              categorySlug={categorySlug}
-              canEdit={canEdit}
-              isBookmarked={bookmarkedIds.has(article.id)}
-              onDelete={() => setDeleteTarget(article)}
-              onMove={() => setMoveTarget(article)}
-            />
+              className="odd:bg-muted/50 border-b border-border last:border-b-0"
+            >
+              <ArticleListItem
+                article={article}
+                categorySlug={categorySlug}
+                canEdit={canEdit}
+                isBookmarked={bookmarkedIds.has(article.id)}
+                onDelete={() => setDeleteTarget(article)}
+                onMove={() => setMoveTarget(article)}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -115,6 +131,6 @@ export function ArticlesList({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

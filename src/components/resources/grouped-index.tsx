@@ -29,9 +29,13 @@ interface GroupedIndexProps {
 }
 
 /**
- * Grouped index for category pages — each subcategory is an expandable
- * section showing its articles inline. Replaces the old subcategory cards
- * + flat article list pattern to eliminate duplication.
+ * Grouped index for category pages — each subcategory is an expandable row
+ * showing its articles inline when expanded.
+ *
+ * Layout: a flat list of zebra-striped rows that flow edge-to-edge inside
+ * the parent CategoryContent wrapper. Folder rows alternate `bg-muted/50` /
+ * `bg-card`; article rows nest inside the expanded folder with a softer
+ * background tint so the hierarchy is visible without per-row borders.
  *
  * WS2: editors see a kebab on each subcategory section header (Rename /
  * + New subcategory / Delete) and a kebab on each nested article row
@@ -108,7 +112,7 @@ export function GroupedIndex({
 
   return (
     <>
-      <div className="space-y-3">
+      <div>
         {groups.map(({ subcategory, articles }) => {
           const isOpen = !collapsed.has(subcategory.id);
           const subcatPath = `${parentSlugPath}/${subcategory.slug}`;
@@ -116,38 +120,40 @@ export function GroupedIndex({
           return (
             <div
               key={subcategory.id}
-              className="group/card relative rounded-xl border border-border overflow-hidden"
+              className="odd:bg-muted/50 border-b border-border last:border-b-0"
             >
-              {/* Section header — name navigates, chevron toggles, kebab handles actions */}
-              <div className="flex items-center bg-card">
+              {/* Folder row — name navigates, kebab handles actions, chevron toggles */}
+              <div className="flex items-center hover:bg-muted/70 transition-colors">
                 <Link
                   href={`/resources/${subcatPath}`}
-                  className="flex items-center gap-2.5 px-4 py-3 flex-1 min-w-0 hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-2.5 px-5 md:px-6 py-2.5 flex-1 min-w-0 hover:underline underline-offset-4 decoration-muted-foreground/30"
                 >
-                  <FolderOpen className={cn("h-4 w-4 shrink-0", colour.fg)} />
-                  <span className="font-semibold text-[13px] truncate hover:underline underline-offset-4">
+                  <FolderOpen
+                    className={cn("h-4 w-4 shrink-0 no-underline", colour.fg)}
+                  />
+                  <span className="font-medium text-sm truncate">
                     {subcategory.name}
                   </span>
-                  {articles.length > 0 && (
-                    <span className="text-xs text-muted-foreground ml-1 shrink-0">
-                      {articles.length} {articles.length === 1 ? "article" : "articles"}
-                    </span>
-                  )}
                 </Link>
-                {/* Editor kebab — between link and chevron per plan spec */}
                 {canEdit && (
-                  <div className="relative flex items-center pr-1">
+                  <div className="px-1 shrink-0">
                     <CategoryCardActions
                       category={subcategory}
                       canEdit={canEdit}
+                      variant="inline"
                     />
                   </div>
                 )}
                 <button
                   type="button"
                   onClick={() => toggleSection(subcategory.id)}
-                  className="flex items-center px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors border-l border-border"
-                  aria-label={isOpen ? `Collapse ${subcategory.name}` : `Expand ${subcategory.name}`}
+                  className="flex items-center px-3 md:px-4 py-2.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  aria-label={
+                    isOpen
+                      ? `Collapse ${subcategory.name}`
+                      : `Expand ${subcategory.name}`
+                  }
+                  aria-expanded={isOpen}
                 >
                   <ChevronDown
                     className={cn(
@@ -158,10 +164,12 @@ export function GroupedIndex({
                 </button>
               </div>
 
-              {/* Articles list — collapses. Uses ArticleListItem compact variant
-                  so each nested row gets the full editor kebab. */}
+              {/* Articles list — nested under the folder. Inherits the
+                  folder row's zebra background; a thin top border separates
+                  the folder header from its children. Article rows indent
+                  via `variant="compact"` (see article-list-item.tsx). */}
               {isOpen && articles.length > 0 && (
-                <div className="border-t border-border p-1.5">
+                <div className="border-t border-border/50">
                   {articles.map((article) => (
                     <ArticleListItem
                       key={article.id}

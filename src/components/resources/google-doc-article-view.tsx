@@ -329,7 +329,7 @@ export function GoogleDocArticleView({
   }, [effectiveModifiedAt, serverNow]);
 
   return (
-    <div className={ARTICLE_CARD_CLASSES} style={{ minHeight: "calc(100vh - 14rem)" }}>
+    <div className={ARTICLE_CARD_CLASSES}>
       <ArticleBreadcrumb
         category={category}
         parentCategory={parentCategory}

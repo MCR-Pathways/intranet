@@ -17,9 +17,15 @@ export const ARTICLE_CONTENT_MODIFIERS =
 export const ARTICLE_PROSE_CLASSES =
   `prose prose-sm max-w-[720px] ${ARTICLE_CONTENT_MODIFIERS}`;
 
-/** Card wrapper classes for article detail views. */
+/** Card wrapper classes for article detail views.
+ *
+ * Soft-retreat shape: matches the canonical data-table wrapper
+ * (`bg-card rounded-xl border border-border shadow-sm overflow-clip`).
+ * Drops the previous `shadow-md` + inline `minHeight: calc(100vh - 14rem)`
+ * that forced a tall white slab on short content. Tightened padding +
+ * rhythm so the header doesn't dominate the visible area. */
 export const ARTICLE_CARD_CLASSES =
-  "bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5";
+  "bg-card border border-border shadow-sm rounded-xl overflow-clip p-5 md:p-6 space-y-4";
 
 // ─── Internal link detection ────────────────────────────────────────────
 
