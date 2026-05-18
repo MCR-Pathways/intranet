@@ -17,13 +17,23 @@ interface CategoryCardActionsProps {
    */
   category: ResourceCategory;
   canEdit: boolean;
+  /**
+   * Forwarded to `CardActionsKebab`. "card" (default) positions absolutely
+   * in a `group/card` parent; "inline" renders as a flex sibling for row
+   * layouts. See `card-actions-kebab.tsx`.
+   */
+  variant?: "card" | "inline";
 }
 
 /**
  * Kebab actions for category and subcategory cards. Rename (edit in place),
  * + New subcategory, Delete. Renders nothing for non-editors.
  */
-export function CategoryCardActions({ category, canEdit }: CategoryCardActionsProps) {
+export function CategoryCardActions({
+  category,
+  canEdit,
+  variant = "card",
+}: CategoryCardActionsProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [newSubOpen, setNewSubOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -45,7 +55,10 @@ export function CategoryCardActions({ category, canEdit }: CategoryCardActionsPr
 
   return (
     <>
-      <CardActionsKebab triggerLabel={`Actions for ${category.name}`}>
+      <CardActionsKebab
+        triggerLabel={`Actions for ${category.name}`}
+        variant={variant}
+      >
         <DropdownMenuItem onSelect={() => setEditOpen(true)}>
           Rename
         </DropdownMenuItem>

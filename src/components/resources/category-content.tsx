@@ -48,61 +48,66 @@ export function CategoryContent({
     baseIcon === Folder && hasContent ? FolderOpen : baseIcon;
 
   return (
-    <div className="bg-card shadow-md rounded-xl overflow-clip p-6 md:p-7 space-y-5" style={{ minHeight: "calc(100vh - 14rem)" }}>
-      {/* Breadcrumbs — no "Home", starts from Resources */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
-        <Link
-          href="/resources"
-          className="hover:text-foreground hover:underline underline-offset-4"
-        >
-          Resources
-        </Link>
-        {ancestors.map((a) => (
-          <span key={a.slug} className="contents">
-            <span className="text-muted-foreground/50 select-none">/</span>
-            <Link
-              href={`/resources/${a.slugPath}`}
-              className="hover:text-foreground hover:underline underline-offset-4"
-            >
-              {a.name}
-            </Link>
-          </span>
-        ))}
-        <span className="text-muted-foreground/50 select-none">/</span>
-        <span className="text-foreground font-medium">{category.name}</span>
-      </nav>
-
-      {/* Category header with contextual editor actions (WS2). */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colour.bg} ${colour.fg}`}
+    <div className="bg-card border border-border shadow-sm rounded-xl overflow-clip">
+      {/* Padded top section: breadcrumb + category header */}
+      <div className="p-5 md:p-6 space-y-4">
+        {/* Breadcrumbs — no "Home", starts from Resources */}
+        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+          <Link
+            href="/resources"
+            className="hover:text-foreground hover:underline underline-offset-4"
           >
-            {createElement(categoryIcon, {
-              className: "h-[22px] w-[22px]",
-            })}
+            Resources
+          </Link>
+          {ancestors.map((a) => (
+            <span key={a.slug} className="contents">
+              <span className="text-muted-foreground/50 select-none">/</span>
+              <Link
+                href={`/resources/${a.slugPath}`}
+                className="hover:text-foreground hover:underline underline-offset-4"
+              >
+                {a.name}
+              </Link>
+            </span>
+          ))}
+          <span className="text-muted-foreground/50 select-none">/</span>
+          <span className="text-foreground font-medium">{category.name}</span>
+        </nav>
+
+        {/* Category header with contextual editor actions (WS2). */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colour.bg} ${colour.fg}`}
+            >
+              {createElement(categoryIcon, {
+                className: "h-[18px] w-[18px]",
+              })}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-[18px] font-semibold tracking-tight leading-tight">
+                {category.name}
+              </h2>
+              {category.description && (
+                <p className="text-[13px] text-muted-foreground mt-0.5">
+                  {category.description}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-[22px] font-bold tracking-tight">
-              {category.name}
-            </h2>
-            {category.description && (
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                {category.description}
-              </p>
-            )}
-          </div>
+          <ResourceHeaderActions
+            canEdit={canEdit}
+            draftCount={draftCount}
+            defaultCategoryId={category.id}
+          />
         </div>
-        <ResourceHeaderActions
-          canEdit={canEdit}
-          draftCount={draftCount}
-          defaultCategoryId={category.id}
-        />
       </div>
 
-      {/* Direct articles in this category (not in subcategories) */}
+      {/* Direct articles in this category (not in subcategories).
+          Renders edge-to-edge as zebra rows; its own top border separates
+          it from the padded header above. */}
       {directArticles.length > 0 && (
-        <section>
+        <section className="border-t border-border">
           <ArticlesList
             articles={directArticles}
             categoryId={category.id}
@@ -113,20 +118,23 @@ export function CategoryContent({
         </section>
       )}
 
-      {/* Grouped index — subcategories as expandable sections with articles */}
+      {/* Grouped index — subcategories as expandable zebra rows with
+          inline articles. */}
       {subcategoryGroups.length > 0 && (
-        <GroupedIndex
-          groups={subcategoryGroups}
-          parentSlugPath={categorySlugPath}
-          parentIconColour={category.icon_colour}
-          canEdit={canEdit}
-          bookmarkedIds={bookmarkedIds}
-        />
+        <section className="border-t border-border">
+          <GroupedIndex
+            groups={subcategoryGroups}
+            parentSlugPath={categorySlugPath}
+            parentIconColour={category.icon_colour}
+            canEdit={canEdit}
+            bookmarkedIds={bookmarkedIds}
+          />
+        </section>
       )}
 
       {/* Empty state */}
       {!hasContent && (
-        <div className="text-sm text-muted-foreground py-8 text-center">
+        <div className="border-t border-border px-6 py-12 text-sm text-muted-foreground text-center">
           No content in this category yet.
         </div>
       )}

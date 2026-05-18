@@ -2,6 +2,7 @@
 
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,21 +19,52 @@ interface CardActionsKebabProps {
   children: React.ReactNode;
   /** Additional classes for absolute positioning inside the parent card. */
   className?: string;
+  /**
+   * Layout variant:
+   *   "card" (default) — absolute top-right inside a `group/card` parent.
+   *   "inline" — a flex sibling button. No absolute positioning, no
+   *   hover-reveal gating. Use for list rows where the kebab sits in a
+   *   dedicated action zone alongside other controls.
+   */
+  variant?: "card" | "inline";
 }
 
 /**
- * Kebab trigger for card-level editor actions. Expects the parent card to
- * have a named Tailwind group (`group/card`) so sibling cards' hover state
- * doesn't trigger this one. Always keyboard-reachable via tab + focus-within.
+ * Kebab trigger for card-level editor actions.
  *
- * Wrap each card like: `<div class="group/card relative">...</div>` and put
- * this kebab inside (it will position absolutely top-right).
+ * Two layouts share one menu surface so callers don't duplicate `DropdownMenu`
+ * + menu-item children for the two contexts in the resources module:
+ *
+ * - `variant="card"` (default) — absolute top-right inside a `group/card`
+ *   parent (the Resources landing category grid). Hover-reveal: hidden until
+ *   the card is hovered or focused.
+ * - `variant="inline"` — inline flex sibling, always visible. Used by the
+ *   category-page row list where the kebab sits in the row's action zone.
  */
 export function CardActionsKebab({
   triggerLabel,
   children,
   className,
+  variant = "card",
 }: CardActionsKebabProps) {
+  if (variant === "inline") {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={triggerLabel}
+            title="Actions"
+          >
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

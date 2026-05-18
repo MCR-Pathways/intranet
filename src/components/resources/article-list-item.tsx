@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   FileText,
-  ChevronRight,
   MoreHorizontal,
   FolderInput,
   Trash2,
@@ -39,9 +38,9 @@ interface ArticleListItemProps {
   onMove?: () => void;
   onUnlink?: () => void;
   /**
-   * "compact" trims the excerpt and reduces vertical padding for nested use
-   * inside GroupedIndex subcategory sections. Default ("default") shows the
-   * full excerpt + generous spacing for direct-category article lists.
+   * "compact" trims the excerpt and tightens vertical padding for nested
+   * use inside GroupedIndex subcategory sections. Default ("default") shows
+   * the full excerpt + generous spacing for direct-category article lists.
    */
   variant?: "default" | "compact";
 }
@@ -95,52 +94,63 @@ export function ArticleListItem({
 
   return (
     <>
-      <div
-        className={cn(
-          "group relative flex items-start gap-3 rounded-lg transition-colors hover:bg-muted",
-          isCompact ? "px-3 py-2" : "px-3.5 py-3"
-        )}
-      >
+      <div className="flex items-center hover:bg-muted/70 transition-colors">
         <Link
           href={`/resources/article/${article.slug}`}
-          className="absolute inset-0 z-0"
+          className={cn(
+            "group/link flex items-start gap-3 flex-1 min-w-0",
+            // Compact rows are nested under an expanded folder — indent past
+            // the folder icon so the hierarchy reads without a left border.
+            isCompact
+              ? "pl-11 md:pl-12 pr-4 py-2"
+              : "px-5 md:px-6 py-2.5"
+          )}
         >
-          <span className="sr-only">Read {article.title}</span>
+          <div className="text-muted-foreground shrink-0 mt-0.5">
+            <FileText className={cn(isCompact ? "h-4 w-4" : "h-[18px] w-[18px]")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            {/* Underline only the title — applying hover:underline on the
+                parent Link bleeds the decoration through descendant text
+                because `text-decoration` cascades from <a>.
+                `title` restores the full-text affordance lost when the
+                previous absolute-inset Link + sr-only span pattern was
+                replaced with a sibling layout. */}
+            <div
+              className="text-sm font-medium truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30"
+              title={article.title}
+            >
+              {article.title}
+            </div>
+            {excerpt && (
+              <div
+                className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75"
+                title={excerpt}
+              >
+                {excerpt}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {isPublished ? "Updated" : "Draft · edited"} {formatDate(displayDate)}
+            </div>
+          </div>
         </Link>
 
-        <div className="text-muted-foreground shrink-0 mt-0.5">
-          <FileText className={cn(isCompact ? "h-4 w-4" : "h-[18px] w-[18px]")} />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium truncate">{article.title}</div>
-          {excerpt && (
-            <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75">
-              {excerpt}
-            </div>
-          )}
-          <div className="text-xs text-muted-foreground mt-0.5">
-            {isPublished ? "Updated" : "Draft · edited"} {formatDate(displayDate)}
-          </div>
-        </div>
-
         {isPublished && (
-          <div className="relative z-10" onClick={(e) => e.preventDefault()}>
+          <div className="px-1 shrink-0">
             <BookmarkToggle articleId={article.id} initialBookmarked={isBookmarked} />
           </div>
         )}
 
         {canEdit && (
-          <div className="relative z-10">
+          <div className="px-2 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   aria-label={`Actions for ${article.title}`}
                   title="Actions"
-                  className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 transition-opacity"
-                  onClick={(e) => e.preventDefault()}
                 >
                   <MoreHorizontal />
                 </Button>
@@ -198,10 +208,6 @@ export function ArticleListItem({
             </DropdownMenu>
           </div>
         )}
-
-        <div className="text-muted-foreground shrink-0">
-          <ChevronRight className="h-4 w-4" />
-        </div>
       </div>
 
       <PublishConfirmDialog

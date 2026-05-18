@@ -74,9 +74,14 @@ describe("shared constants", () => {
     expect(ARTICLE_CONTENT_MODIFIERS).not.toContain("flex-");
   });
 
-  it("ARTICLE_CARD_CLASSES includes card styling", () => {
+  it("ARTICLE_CARD_CLASSES matches the canonical card wrapper", () => {
     expect(ARTICLE_CARD_CLASSES).toContain("bg-card");
-    expect(ARTICLE_CARD_CLASSES).toContain("shadow-md");
+    expect(ARTICLE_CARD_CLASSES).toContain("border border-border");
     expect(ARTICLE_CARD_CLASSES).toContain("rounded-xl");
+    expect(ARTICLE_CARD_CLASSES).toContain("shadow-sm");
+  });
+
+  it("ARTICLE_CARD_CLASSES drops the heavy shadow (soft-retreat shape)", () => {
+    expect(ARTICLE_CARD_CLASSES).not.toContain("shadow-md");
   });
 });
