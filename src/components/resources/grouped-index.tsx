@@ -132,8 +132,12 @@ export function GroupedIndex({
                     className={cn("h-4 w-4 shrink-0", colour.fg)}
                   />
                   {/* Underline only the name — parent-Link underline cascades
-                      through the icon otherwise. */}
-                  <span className="font-medium text-sm truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30">
+                      through the icon otherwise. `title` exposes the full
+                      name when truncated by `truncate`. */}
+                  <span
+                    className="font-medium text-sm truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30"
+                    title={subcategory.name}
+                  >
                     {subcategory.name}
                   </span>
                 </Link>

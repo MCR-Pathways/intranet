@@ -63,7 +63,7 @@ export function ArticlesList({
   return (
     <>
       {articles.length > 5 && (
-        <div className="px-6 md:px-7 py-3 border-b border-border">
+        <div className="px-5 md:px-6 py-3 border-b border-border">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

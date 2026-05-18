@@ -112,12 +112,21 @@ export function ArticleListItem({
           <div className="min-w-0 flex-1">
             {/* Underline only the title — applying hover:underline on the
                 parent Link bleeds the decoration through descendant text
-                because `text-decoration` cascades from <a>. */}
-            <div className="text-sm font-medium truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30">
+                because `text-decoration` cascades from <a>.
+                `title` restores the full-text affordance lost when the
+                previous absolute-inset Link + sr-only span pattern was
+                replaced with a sibling layout. */}
+            <div
+              className="text-sm font-medium truncate group-hover/link:underline underline-offset-4 decoration-muted-foreground/30"
+              title={article.title}
+            >
               {article.title}
             </div>
             {excerpt && (
-              <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75">
+              <div
+                className="text-xs text-muted-foreground mt-0.5 line-clamp-1 opacity-75"
+                title={excerpt}
+              >
                 {excerpt}
               </div>
             )}
