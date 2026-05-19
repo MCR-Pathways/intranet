@@ -10,7 +10,9 @@
  *     [--drive-folder=1u0nCOG8fvuw81lRrKXDwbHtuvaT2O-q5] \
  *     [--category-slug=mentor-training] \
  *     [--parent-category-slug=programme-resources] \
- *     [--author-email=abdulmuiz.adaranijo@mcrpathways.org]
+ *     [--author-email=abdulmuiz.adaranijo@mcrpathways.org] \
+ *     [--dry-run] \
+ *     [--allow-overwrite-published]
  *
  * Exits non-zero on the first 404 / >25MB asset / Drive failure / DB error.
  * Re-runs are idempotent: same slug ⇒ existing article is updated; existing
@@ -53,13 +55,21 @@ interface Args {
   categorySlug: string;
   parentCategorySlug: string;
   authorEmail: string;
+  dryRun: boolean;
+  allowOverwritePublished: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
   const map: Record<string, string> = {};
+  const flags = new Set<string>();
   for (const arg of argv.slice(2)) {
     const m = arg.match(/^--([^=]+)=(.*)$/);
-    if (m) map[m[1]] = m[2];
+    if (m) {
+      map[m[1]] = m[2];
+      continue;
+    }
+    const f = arg.match(/^--([a-z][a-z0-9-]*)$/);
+    if (f) flags.add(f[1]);
   }
   if (!map.slug) {
     console.error("Missing --slug=<wp-slug>");
@@ -77,6 +87,8 @@ function parseArgs(argv: string[]): Args {
     categorySlug: map["category-slug"] ?? map.slug, // default: category slug == page slug
     parentCategorySlug: map["parent-category-slug"] ?? DEFAULT_PARENT_CATEGORY,
     authorEmail: map["author-email"] ?? DEFAULT_AUTHOR_EMAIL,
+    dryRun: flags.has("dry-run"),
+    allowOverwritePublished: flags.has("allow-overwrite-published"),
   };
 }
 
@@ -141,6 +153,7 @@ async function upsertArticle(
     title: string;
     categoryId: string;
     authorId: string;
+    allowOverwritePublished: boolean;
   },
 ): Promise<{ id: string; created: boolean }> {
   const { data: existing } = await supabase
@@ -156,7 +169,7 @@ async function upsertArticle(
     // is a real article someone created via the admin UI between bits — halt.
     const { data: existingRow } = await supabase
       .from("resource_articles")
-      .select("content_type, category_id")
+      .select("content_type, category_id, status")
       .eq("id", existing.id)
       .single();
     if (!existingRow) {
@@ -170,6 +183,11 @@ async function upsertArticle(
     if (existingRow.category_id !== params.categoryId) {
       throw new Error(
         `Slug '${params.slug}' is taken by an article in a different category (existing=${existingRow.category_id}, target=${params.categoryId}). Refuse to overwrite. Resolve manually.`,
+      );
+    }
+    if (existingRow.status === "published" && !params.allowOverwritePublished) {
+      throw new Error(
+        `Article '${params.slug}' is currently published. Refuse to overwrite content_json without --allow-overwrite-published (prevents accidental clobber of post-migration editorial edits).`,
       );
     }
 
@@ -244,12 +262,18 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  console.log(`\n=== Migrating ${args.slug} ===`);
+  console.log(`\n=== Migrating ${args.slug}${args.dryRun ? " (DRY RUN)" : ""} ===`);
   console.log(`  XML:               ${args.xml}`);
   console.log(`  Drive root folder: ${args.driveFolder}`);
   console.log(`  Drive subfolder:   Resources/${args.slug}/`);
   console.log(`  Author email:      ${args.authorEmail}`);
   console.log(`  Category:          ${args.parentCategorySlug} > ${args.categorySlug}`);
+  if (args.dryRun) {
+    console.log(`  Mode:              dry-run (no Drive uploads, no DB writes)`);
+  }
+  if (args.allowOverwritePublished) {
+    console.log(`  Mode:              --allow-overwrite-published (will rewrite content_json on published articles)`);
+  }
 
   // 1. Parse XML, find target page
   console.log("\n[1/8] Parsing XML and locating target page");
@@ -275,15 +299,48 @@ async function main() {
   console.log(`  ✓ category_id = ${categoryId}`);
   console.log(`  ✓ author_id   = ${authorId}`);
 
-  // 3. Upsert article row (status='draft')
-  console.log("\n[3/8] Upserting article row");
-  const article = await upsertArticle(supabase, {
-    slug: args.slug,
-    title: decodeHtmlEntities(page.title),
-    categoryId,
-    authorId,
-  });
-  console.log(`  ✓ article_id = ${article.id}  (${article.created ? "created" : "updated existing"})`);
+  // 3. Upsert article row (status='draft'). In dry-run, just read the
+  // existing row so we can apply the same slug-clash / status checks
+  // without writing anything.
+  console.log(`\n[3/8] ${args.dryRun ? "Inspecting" : "Upserting"} article row`);
+  let article: { id: string; created: boolean };
+  if (args.dryRun) {
+    const { data: existing } = await supabase
+      .from("resource_articles")
+      .select("id, content_type, category_id, status")
+      .eq("slug", args.slug)
+      .maybeSingle();
+    if (existing?.id) {
+      if (existing.content_type !== "native") {
+        console.error(`  ✗ Slug clash: existing article is content_type='${existing.content_type}', not 'native'. Would halt in real run.`);
+        process.exit(1);
+      }
+      if (existing.category_id !== categoryId) {
+        console.error(`  ✗ Slug clash: existing article is in a different category. Would halt in real run.`);
+        process.exit(1);
+      }
+      if (existing.status === "published" && !args.allowOverwritePublished) {
+        console.error(`  ✗ Article is currently published. Would halt in real run (pass --allow-overwrite-published to override).`);
+        process.exit(1);
+      }
+      article = { id: existing.id, created: false };
+      console.log(`  ✓ article_id = ${article.id}  (would update existing)`);
+    } else {
+      // Stub UUID-shaped id so subsequent steps have something to chew on.
+      // uploadAssets never writes in dry-run so this never reaches the DB.
+      article = { id: "00000000-0000-0000-0000-000000000000", created: true };
+      console.log(`  ✓ article_id = <new>  (would create with status='draft')`);
+    }
+  } else {
+    article = await upsertArticle(supabase, {
+      slug: args.slug,
+      title: decodeHtmlEntities(page.title),
+      categoryId,
+      authorId,
+      allowOverwritePublished: args.allowOverwritePublished,
+    });
+    console.log(`  ✓ article_id = ${article.id}  (${article.created ? "created" : "updated existing"})`);
+  }
 
   // 4. Clean HTML
   console.log("\n[4/8] Cleaning HTML (strip shortcodes, normalise whitespace)");
@@ -297,7 +354,7 @@ async function main() {
   for (const u of urls) console.log(`      ${u}`);
 
   // 6. Upload assets to Drive + insert resource_media rows
-  console.log("\n[6/8] Uploading assets to Drive");
+  console.log(`\n[6/8] ${args.dryRun ? "Inspecting assets (no uploads)" : "Uploading assets to Drive"}`);
   let assetMap = new Map<string, AssetInfo>();
   try {
     const result = await uploadAssets({
@@ -308,13 +365,20 @@ async function main() {
       slug: args.slug,
       driveFolderId: args.driveFolder,
       supabase,
+      dryRun: args.dryRun,
     });
     assetMap = result.assetMap;
-    console.log(`  ✓ Uploaded ${result.uploaded}, skipped ${result.skipped}`);
+    if (args.dryRun) {
+      console.log(`  ✓ Would upload ${result.wouldUpload}, would reuse (cross-article) ${result.reused}`);
+    } else {
+      console.log(`  ✓ Uploaded ${result.uploaded}, reused (cross-article) ${result.reused}`);
+    }
   } catch (err) {
     if (err instanceof MigrationHaltError) {
       console.error(`\n  ✗ HALT: ${err.message}`);
-      console.error(`  No further changes made. Article ${article.id} is in 'draft' state with empty content.`);
+      if (!args.dryRun) {
+        console.error(`  No further changes made. Article ${article.id} is in 'draft' state with empty content.`);
+      }
       process.exit(1);
     }
     throw err;
@@ -376,7 +440,13 @@ async function main() {
     );
   }
 
-  // 8. Persist content_json + publishAndIndex
+  // 8. Persist content_json + publishAndIndex (skipped in dry-run).
+  if (args.dryRun) {
+    console.log(`\n[8/8] Skipping content_json save + publish (dry-run)`);
+    console.log(`  Dry-run complete. Re-run without --dry-run to apply.`);
+    return;
+  }
+
   console.log("\n[8/8] Saving content_json and publishing");
   const { error: updateErr } = await supabase
     .from("resource_articles")
