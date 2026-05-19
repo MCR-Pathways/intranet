@@ -41,8 +41,8 @@ while true; do
     echo
   } >> "$HISTORY"
 
-  LAST_RESULT=$(awk -F': ' '/^Last iteration result:/ { print $2; exit }' "$RESUME")
-  CURRENT_SLUG=$(awk -F': ' '/^Last slug:/ { print $2; exit }' "$RESUME")
+  LAST_RESULT=$(awk -F':[[:space:]]*' '/^Last iteration result:/ { print $2; exit }' "$RESUME")
+  CURRENT_SLUG=$(awk -F':[[:space:]]*' '/^Last slug:/ { print $2; exit }' "$RESUME")
 
   if [ "$EXIT" -ne 0 ] && [ "$LAST_RESULT" != "BLOCKED" ]; then
     echo "ralph-once.sh exited $EXIT with result=$LAST_RESULT. Halting." | tee -a "$HISTORY"

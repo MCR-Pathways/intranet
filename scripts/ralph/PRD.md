@@ -32,7 +32,10 @@ scope during planning).
 ## Invariants (never violate)
 
 ### Source + identity
-- Source of truth: `/Users/abdulmuizadaranijo/Desktop/oldintranet.xml`.
+- Source of truth: WP export XML at `$WP_XML_PATH` (defaults to
+  `$HOME/Desktop/oldintranet.xml` in `ralph-once.sh`; override the env
+  var if the file lives elsewhere). The migration script requires the
+  path via `--xml=...` regardless — the wrapper injects it.
 - Destination: existing live Resources categories. Never create new ones.
 - One WP page → one Resources article (strict 1:1).
 - Author: `abdulmuiz.adaranijo@mcrpathways.org` (Abdulmuiz's profile id).
@@ -43,11 +46,11 @@ scope during planning).
 - Helpers: `scripts/wp-migration/asset-upload.ts`, `scripts/wp-migration/xml-parse.ts`.
 - Walker: `src/lib/wp-migration/html-to-plate.ts` (shared with UI Import HTML).
 - Publish: `publishAndIndex()` from `src/lib/resource-publish.ts`.
-- Standard invocation:
+- Standard invocation (the `--xml` value comes from `$WP_XML_PATH`):
   ```
   npx tsx scripts/migrate-wp-page.ts \
     --slug=<slug> \
-    --xml=/Users/abdulmuizadaranijo/Desktop/oldintranet.xml \
+    --xml="$WP_XML_PATH" \
     [--category-slug=<sub>] \
     [--parent-category-slug=<parent>] \
     [--dry-run] \
