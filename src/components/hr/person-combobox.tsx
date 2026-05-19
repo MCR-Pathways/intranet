@@ -64,7 +64,7 @@ export function PersonCombobox({
           <span className="truncate">
             {selectedPerson ? selectedPerson.full_name : placeholder}
           </span>
-          <div className="flex items-center gap-1 ml-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {value && (
               <X
                 className="h-3.5 w-3.5 opacity-50 hover:opacity-100"
@@ -74,7 +74,7 @@ export function PersonCombobox({
                 }}
               />
             )}
-            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+            <ChevronsUpDown className="opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>

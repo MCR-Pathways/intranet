@@ -515,7 +515,7 @@ export function ReportsDashboard({
               onClick={handleExportCSV}
               disabled={isPending}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download />
               {isPending ? "Exporting..." : "Export CSV"}
             </Button>
           </div>

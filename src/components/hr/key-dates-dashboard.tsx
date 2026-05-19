@@ -254,7 +254,7 @@ export function KeyDatesDashboard({ keyDates, employees }: KeyDatesDashboardProp
           {showCompleted ? "Hide Completed" : "Show Completed"}
         </Button>
         <Button onClick={() => setCreateOpen(true)} className="ml-auto">
-          <Plus className="h-4 w-4 mr-1" /> Add Key Date
+          <Plus /> Add Key Date
         </Button>
       </div>
 

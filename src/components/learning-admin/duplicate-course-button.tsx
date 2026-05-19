@@ -48,7 +48,7 @@ export function DuplicateCourseButton({
         className="shrink-0"
         onClick={() => setShowConfirm(true)}
       >
-        <Copy className="h-4 w-4 mr-1.5" />
+        <Copy />
         Duplicate
       </Button>
 

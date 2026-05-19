@@ -93,7 +93,7 @@ export function ProfileLeavingTab({
 
           <Button variant="outline" size="sm" asChild>
             <Link href={`/hr/leaving/${leavingForm.id}`}>
-              <ExternalLink className="mr-2 h-4 w-4" />
+              <ExternalLink />
               View Full Form
             </Link>
           </Button>

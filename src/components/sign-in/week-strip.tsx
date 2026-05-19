@@ -159,7 +159,7 @@ export const WeekStrip = forwardRef<WeekStripHandle, WeekStripProps>(function We
           disabled={weekOffset <= -2}
           type="button"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft />
         </Button>
         <h2 className="text-lg font-semibold">{weekLabel}</h2>
         <Button
@@ -169,7 +169,7 @@ export const WeekStrip = forwardRef<WeekStripHandle, WeekStripProps>(function We
           disabled={weekOffset >= 4}
           type="button"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight />
         </Button>
       </div>
 

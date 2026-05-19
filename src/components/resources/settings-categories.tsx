@@ -74,7 +74,7 @@ export function SettingsCategories() {
           Manage the category tree. Categories must be empty before they can be deleted.
         </p>
         <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus />
           New Category
         </Button>
       </div>

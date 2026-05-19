@@ -115,7 +115,7 @@ export function Header({ user, profile, initialInboxRows, onMenuToggle, onSideba
                 className="relative rounded-full"
                 aria-label={`User menu for ${displayName}`}
               >
-                <Avatar className="h-10 w-10">
+                <Avatar>
                   <AvatarImage
                     src={filterAvatarUrl(profile?.avatar_url)}
                     alt={displayName}

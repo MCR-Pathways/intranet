@@ -99,7 +99,7 @@ export default async function CourseCatalogPage({
         actions={
           <Button asChild variant="outline">
             <Link href="/learning">
-              <BookOpen className="h-4 w-4 mr-2" />
+              <BookOpen />
               My Learning
             </Link>
           </Button>

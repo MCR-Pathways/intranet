@@ -233,7 +233,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
           </SelectContent>
         </Select>
         <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus />
           Create Course
         </Button>
       </div>

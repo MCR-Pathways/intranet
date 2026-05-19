@@ -168,7 +168,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
               setAddError(null);
             }}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Add Lesson
           </Button>
         </div>

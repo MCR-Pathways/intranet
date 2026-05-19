@@ -63,7 +63,7 @@ export function ProfileOnboardingTab({
                 type="button"
                 onClick={() => setCreateDialogOpen(true)}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus />
                 Start Onboarding
               </Button>
             ) : undefined
@@ -156,7 +156,7 @@ function ActiveChecklistCard({ checklist }: { checklist: OnboardingChecklistWith
           </div>
           <Button type="button" variant="outline" size="sm" asChild>
             <Link href={`/hr/onboarding/${checklist.id}`}>
-              <ExternalLink className="h-3.5 w-3.5 mr-1" />
+              <ExternalLink />
               View Full Checklist
             </Link>
           </Button>

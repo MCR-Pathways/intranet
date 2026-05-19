@@ -165,7 +165,7 @@ export function LessonSidebar({
       <div className="border-b border-border p-4">
         <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
           <Link href={`/learning/courses/${courseId}`}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
+            <ChevronLeft />
             Back to Course
           </Link>
         </Button>

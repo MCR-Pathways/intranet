@@ -233,7 +233,7 @@ export function NativeArticleView({
                 {canEdit && (
                   <Button size="sm" asChild>
                     <Link href={editUrl}>
-                      <Pencil className="h-4 w-4" />
+                      <Pencil />
                       Edit
                     </Link>
                   </Button>
@@ -289,6 +289,7 @@ export function NativeArticleView({
               <span
                 className={isStale ? "text-amber-600" : undefined}
                 title={formatDate(new Date(updatedAt))}
+                suppressHydrationWarning
               >
                 Updated {timeAgo(updatedAt)}
                 {isStale && " — may need review"}

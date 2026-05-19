@@ -280,7 +280,7 @@ export function AssetPageContent({
         </Select>
         {isHRAdmin && (
           <Button onClick={() => setCreateOpen(true)} className="ml-auto">
-            <Plus className="h-4 w-4 mr-1" /> Add Asset
+            <Plus /> Add Asset
           </Button>
         )}
       </div>

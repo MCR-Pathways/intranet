@@ -181,7 +181,7 @@ export default async function LearningPage() {
         actions={
           <Button asChild>
             <Link href="/learning/courses">
-              <BookOpen className="h-4 w-4 mr-2" />
+              <BookOpen />
               Browse Catalogue
             </Link>
           </Button>
@@ -239,7 +239,7 @@ export default async function LearningPage() {
             <Button asChild variant="destructive">
               <Link href="/learning/courses?category=compliance">
                 Complete Now
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight />
               </Link>
             </Button>
           </CardContent>
@@ -259,7 +259,7 @@ export default async function LearningPage() {
             <Button asChild>
               <Link href="/learning/courses?category=compliance">
                 View Compliance Courses
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight />
               </Link>
             </Button>
           </CardContent>

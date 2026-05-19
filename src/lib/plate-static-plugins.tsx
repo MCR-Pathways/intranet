@@ -39,7 +39,6 @@ import {
   BaseTableCellHeaderPlugin,
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
-import { formatFileSize } from "@/lib/utils";
 import {
   createSlugDeduplicator,
   ARTICLE_CONTENT_MODIFIERS,
@@ -52,7 +51,13 @@ import {
 // =============================================
 
 function ParagraphStatic(props: SlateElementProps) {
-  return <SlateElement {...props} as="p" />;
+  // Indent-list paragraphs become <div> instead of <p> — Plate renders a
+  // <ul>/<ol> child inside, and <p> can't contain block-level <ul>/<ol>
+  // (invalid HTML → hydration warnings). <div> wraps the list cleanly while
+  // preserving Plate's data-slate-* attributes for selection tracking.
+  const el = props.element as Record<string, unknown>;
+  const isListStyled = Boolean(el.indent && el.listStyleType);
+  return <SlateElement {...props} as={isListStyled ? "div" : "p"} />;
 }
 
 function BlockquoteStatic(props: SlateElementProps) {
@@ -123,7 +128,7 @@ function HrStatic(props: SlateElementProps) {
   );
 }
 
-function LinkStatic({ children, element, ...props }: SlateElementProps) {
+function LinkStatic({ children, element, attributes }: SlateElementProps) {
   const url = ((element as Record<string, unknown>).url as string) || "";
 
   // Check if link is internal: relative path or absolute intranet URL
@@ -140,15 +145,18 @@ function LinkStatic({ children, element, ...props }: SlateElementProps) {
     } catch { /* not a valid URL, treat as external */ }
   }
 
+  // Render <a> directly without SlateElement wrapper. The default wrapper
+  // emits <div data-slate-inline={true}> around inline elements, which is
+  // invalid HTML inside <p>. Spreading `attributes` keeps Slate's per-node
+  // ref + data-slate-* attributes on the <a> itself.
   return (
-    <SlateElement element={element} {...props}>
-      <a
-        href={href}
-        {...(!isInternal && { target: "_blank", rel: "noopener noreferrer" })}
-      >
-        {children}
-      </a>
-    </SlateElement>
+    <a
+      {...attributes}
+      href={href}
+      {...(!isInternal && { target: "_blank", rel: "noopener noreferrer" })}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -281,18 +289,34 @@ function ImageStatic({ children, element, ...props }: SlateElementProps) {
 
 function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
+  // MCR-hosted videos (served via /api/drive-file/{id}) render with the native
+  // <video> element so we get controls + manual play (no autoplay). External
+  // YouTube/Vimeo videos stay as iframes — the embed providers handle their
+  // own play UI. Note: `autoplay` removed from the allow= list on the iframe
+  // path too, so an external embed can't request autoplay either.
+  const isLocalVideo = url.startsWith("/api/drive-file/");
   return (
     <SlateElement element={element} {...props}>
       <div className="not-prose my-4 aspect-video w-full overflow-hidden rounded-lg bg-muted">
-        <iframe
-          src={url}
-          title="Embedded video"
-          className="h-full w-full"
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          loading="lazy"
-        />
+        {isLocalVideo ? (
+          <video
+            src={url}
+            controls
+            preload="metadata"
+            playsInline
+            className="h-full w-full"
+          />
+        ) : (
+          <iframe
+            src={url}
+            title="Embedded video"
+            className="h-full w-full"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        )}
       </div>
       {children}
     </SlateElement>
@@ -303,36 +327,53 @@ function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
 // FILE ATTACHMENT
 // =============================================
 
-function FileStatic({ children, element, ...props }: SlateElementProps) {
+// Office MIME types — for these we route the link to Drive's /preview URL so
+// a new-tab click renders the file in Drive's native viewer. PDFs / images
+// / text / CSV go through our /api/drive-file proxy and render in the
+// browser's own viewer.
+const OFFICE_DOC_MIMES = new Set([
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+/**
+ * Documents (PDFs, Office docs, images-as-files, plain text) render as a
+ * plain inline hyperlink — same visual treatment as external links such as
+ * Google Slides URLs. Click opens the file in a new tab where the browser's
+ * native viewer (or Drive's /preview viewer for Office docs) takes over.
+ *
+ * No download card, no inline iframe. Keeps articles with many attached
+ * documents compact and consistent with the rest of the link UX.
+ *
+ * The /preview routing for Office docs requires the file to be domain-shared
+ * with the org domain — the WP migration's asset uploader and the news-feed
+ * upload pipeline both call `shareFileWithDomain()` to ensure this.
+ */
+function FileStatic({ children, element, attributes }: SlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
   const name = (element as Record<string, unknown>).name as string | undefined;
-  const size = (element as Record<string, unknown>).size as number | undefined;
+  const mimeType = (element as Record<string, unknown>).mimeType as string | undefined;
 
-  const sizeText = size ? formatFileSize(size) : "";
+  const driveFileId = url.match(/\/api\/drive-file\/([^/?#]+)/)?.[1];
+  const href =
+    mimeType && OFFICE_DOC_MIMES.has(mimeType) && driveFileId
+      ? `https://drive.google.com/file/d/${driveFileId}/preview`
+      : url;
 
   return (
-    <SlateElement element={element} {...props}>
-      <a
-        href={url}
-        download
-        className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 my-2 hover:bg-muted/50 transition-colors no-underline text-foreground"
-      >
-        {/* Lucide FileText icon paths (RSC-safe, matches editor element) */}
-        <svg className="h-5 w-5 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-          <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-          <path d="M10 9H8" />
-          <path d="M16 13H8" />
-          <path d="M16 17H8" />
-        </svg>
-        <span className="flex-1 min-w-0">
-          <span className="text-sm font-medium truncate block">{name ?? "File"}</span>
-          {sizeText && <span className="text-xs text-muted-foreground">{sizeText}</span>}
-        </span>
-        <span className="text-xs text-muted-foreground">Download</span>
-      </a>
+    <a
+      {...attributes}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {name ?? "Document"}
       {children}
-    </SlateElement>
+    </a>
   );
 }
 
@@ -634,8 +675,45 @@ export function createNativeStaticEditor(value: Value) {
 }
 
 /**
+ * Stamp a deterministic `id` property on every element node, derived from
+ * its index path in the tree. Plate's static renderer otherwise generates
+ * random ids each render (server + client get different values), producing
+ * hydration warnings. With ids pre-stamped, server and client renders agree.
+ *
+ * Text leaves (no `type` field) are skipped. Existing ids are preserved so
+ * heading slugs from addHeadingIds (which double as URL anchors) are kept.
+ */
+function addStableNodeIds(value: Value): Value {
+  function walk(nodes: Value[number][], path: string): Value[number][] {
+    let changed = false;
+    const out = nodes.map((node, i) => {
+      const record = node as Record<string, unknown>;
+      const nodePath = path ? `${path}-${i}` : `${i}`;
+      // Skip text leaves and any record without a `type` field
+      if (typeof record.type !== "string") return node;
+
+      const existingId = record.id as string | undefined;
+      const children = record.children as Value[number][] | undefined;
+      const newChildren = children ? walk(children, nodePath) : undefined;
+      const needsId = !existingId;
+      const childrenChanged = newChildren && newChildren !== children;
+
+      if (!needsId && !childrenChanged) return node;
+      changed = true;
+      return {
+        ...record,
+        ...(needsId ? { id: `n${nodePath}` } : {}),
+        ...(newChildren ? { children: newChildren } : {}),
+      } as Value[number];
+    });
+    return changed ? out : nodes;
+  }
+  return walk(value as Value[number][], "") as Value;
+}
+
+/**
  * Prepare a native article for rendering with heading IDs and TOC data.
- * Chains nestToggleChildren → addHeadingIds → createStaticEditor.
+ * Chains nestToggleChildren → addHeadingIds → addStableNodeIds → createStaticEditor.
  *
  * Used by NativeArticleView — returns both the editor and extracted
  * headings for the TOC sidebar. Heading slugs are guaranteed to match
@@ -647,10 +725,11 @@ export function prepareNativeArticle(value: Value): {
 } {
   const nested = nestToggleChildren(value);
   const { value: processed, headings } = addHeadingIds(nested);
+  const withStableIds = addStableNodeIds(processed);
 
   const editor = createStaticEditor({
     plugins: staticPlugins,
-    value: processed,
+    value: withStableIds,
     override: {
       components: staticComponents,
     },

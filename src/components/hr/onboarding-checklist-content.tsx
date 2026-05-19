@@ -232,7 +232,7 @@ export function OnboardingChecklistContent({
             size="sm"
             onClick={() => setAddItemDialogOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Add Item
           </Button>
           <div className="flex-1" />
@@ -242,7 +242,7 @@ export function OnboardingChecklistContent({
             size="sm"
             onClick={() => setCancelDialogOpen(true)}
           >
-            <Ban className="h-4 w-4 mr-1" />
+            <Ban />
             Cancel Onboarding
           </Button>
           <Button
@@ -251,7 +251,7 @@ export function OnboardingChecklistContent({
             disabled={!allComplete}
             onClick={() => setCompleteDialogOpen(true)}
           >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <CheckCircle2 />
             Complete Onboarding
           </Button>
         </div>

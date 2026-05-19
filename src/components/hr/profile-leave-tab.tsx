@@ -52,11 +52,11 @@ export function ProfileLeaveTab({
       {isHRAdmin && (
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEntitlementOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Set Entitlement
           </Button>
           <Button variant="outline" size="sm" onClick={() => setRecordLeaveOpen(true)}>
-            <FileText className="h-4 w-4 mr-1" />
+            <FileText />
             Record Leave
           </Button>
         </div>

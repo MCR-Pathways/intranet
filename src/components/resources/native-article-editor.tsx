@@ -204,38 +204,44 @@ export function NativeArticleEditor({
             </span>
           )}
 
+          {/* Save: navy `default` per docs/button-system.md
+              ("Save, Submit, Continue, Create, Add..."). Auto-save runs
+              every 5s; the manual button is the explicit-commit affordance. */}
           <Button
-            variant="outline"
-            size="sm"
             onClick={handleManualSave}
             disabled={saveStatus === "saving"}
           >
-            <Save className="h-3.5 w-3.5 mr-1.5" />
+            <Save />
             Save
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          {/* View article: navigation away from the editor. Outline needs
+              `bg-card` so it renders visibly on the grey editor surround
+              (per the doc's Contrast reference). */}
+          <Button variant="outline" className="bg-card" asChild>
             <Link href={`/resources/article/${article.slug}`}>
               View article
             </Link>
           </Button>
-          {/* Primary Publish / Unpublish (WS2). Confirmation before either. */}
+          {/* Publish: green `success` per the doc ("Publish (article,
+              course, post)"). Unpublish is a step-back, not a commit
+              forward, so outline + bg-card matching View article. */}
           {isPublished ? (
             <Button
               variant="outline"
-              size="sm"
+              className="bg-card"
               onClick={() => setPublishOpen(true)}
               disabled={isPublishPending}
             >
-              <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+              <EyeOff />
               Unpublish
             </Button>
           ) : (
             <Button
-              size="sm"
+              variant="success"
               onClick={() => setPublishOpen(true)}
               disabled={isPublishPending}
             >
-              <Send className="h-3.5 w-3.5 mr-1.5" />
+              <Send />
               Publish
             </Button>
           )}

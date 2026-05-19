@@ -259,7 +259,7 @@ export function ProfileAbsenceTab({
         </h3>
         {isHRAdmin && (
           <Button onClick={() => setRecordDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Record Absence
           </Button>
         )}

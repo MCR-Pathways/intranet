@@ -426,7 +426,7 @@ export function SectionQuizEditor({
                 }
                 className="shrink-0 text-muted-foreground hover:text-destructive"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 />
               </Button>
             )}
           </div>
@@ -709,7 +709,7 @@ export function SectionQuizEditor({
                         size="sm"
                         className="text-muted-foreground hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -798,7 +798,7 @@ export function SectionQuizEditor({
             size="sm"
             onClick={() => setIsAdding(true)}
           >
-            <Plus className="mr-1 h-4 w-4" />
+            <Plus />
             Add Question
           </Button>
         </div>

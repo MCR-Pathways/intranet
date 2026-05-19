@@ -419,7 +419,7 @@ export function DepartmentManagementContent({
           {departments.length} department{departments.length !== 1 ? "s" : ""}
         </p>
         <Button type="button" onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus />
           Create Department
         </Button>
       </div>

@@ -51,9 +51,9 @@ export function ResourceHeaderActions({
                   href="/resources/drafts"
                   aria-label={`${draftCount} draft${draftCount === 1 ? "" : "s"} in progress`}
                 >
-                  <FileEdit className="h-3.5 w-3.5" />
+                  <FileEdit />
                   Drafts
-                  <span className="inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
+                  <span className="inline-flex items-center justify-center min-w-4 rounded-full bg-muted px-1 text-[10px] font-semibold text-foreground">
                     {draftCount}
                   </span>
                 </Link>
@@ -62,16 +62,16 @@ export function ResourceHeaderActions({
 
             <Button variant="ghost" size="icon" asChild>
               <Link href="/resources/settings" aria-label="Settings" title="Settings">
-                <Settings className="h-4 w-4" />
+                <Settings />
               </Link>
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm">
-                  <Plus className="h-4 w-4" />
+                  <Plus />
                   New
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  <ChevronDown className="opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

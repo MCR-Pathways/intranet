@@ -258,7 +258,7 @@ export default async function CourseDetailPage({
               href={`/learning/courses/${course.id}?preview=true`}
               target="_blank"
             >
-              <Eye className="h-4 w-4 mr-1.5" />
+              <Eye />
               Preview as Learner
             </Link>
           </Button>

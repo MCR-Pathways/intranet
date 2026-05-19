@@ -212,7 +212,7 @@ export function NotificationsPage({
                 aria-label="Inbox actions"
                 className="data-[state=open]:bg-accent"
               >
-                <MoreHorizontal className="h-5 w-5" />
+                <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

@@ -121,7 +121,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           disabled={weekOffset <= MIN_WEEK_OFFSET}
           type="button"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft />
         </Button>
         <h2 className="text-lg font-semibold">{weekLabel}</h2>
         <Button
@@ -132,7 +132,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           disabled={weekOffset >= MAX_WEEK_OFFSET}
           type="button"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight />
         </Button>
       </div>
 

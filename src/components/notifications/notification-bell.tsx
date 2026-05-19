@@ -194,7 +194,6 @@ export function NotificationBell({ initialRows }: NotificationBellProps) {
               badge carries the attention signal; the bell fill just
               reinforces "there's something here". */}
           <Bell
-            className="h-5 w-5"
             {...(count > 0 ? { fill: "currentColor" } : {})}
           />
           {count > 0 && (

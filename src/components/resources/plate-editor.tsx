@@ -47,6 +47,7 @@ import {
   VideoEmbedDialog,
   FileUploadDialog,
 } from "./media-dialogs";
+import { ImportHtmlDialog } from "./import-html-dialog";
 import {
   ParagraphElement,
   BlockquoteElement,
@@ -93,6 +94,7 @@ import {
   ImageIcon,
   Video,
   Paperclip,
+  ClipboardPaste,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -113,6 +115,7 @@ interface InsertBlockDropdownProps {
   onOpenImageDialog: () => void;
   onOpenEmbedDialog: () => void;
   onOpenFileDialog: () => void;
+  onOpenImportHtmlDialog: () => void;
 }
 
 function InsertBlockDropdown({
@@ -120,6 +123,7 @@ function InsertBlockDropdown({
   onOpenImageDialog,
   onOpenEmbedDialog,
   onOpenFileDialog,
+  onOpenImportHtmlDialog,
 }: InsertBlockDropdownProps) {
   return (
     <DropdownMenu>
@@ -189,6 +193,13 @@ function InsertBlockDropdown({
           <Paperclip className="h-4 w-4" />
           File attachment
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onSelect={onOpenImportHtmlDialog}>
+          <ClipboardPaste className="h-4 w-4" />
+          Import HTML…
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -203,6 +214,7 @@ interface EditorToolbarProps {
   onOpenImageDialog: () => void;
   onOpenEmbedDialog: () => void;
   onOpenFileDialog: () => void;
+  onOpenImportHtmlDialog: () => void;
 }
 
 function EditorToolbar({
@@ -210,6 +222,7 @@ function EditorToolbar({
   onOpenImageDialog,
   onOpenEmbedDialog,
   onOpenFileDialog,
+  onOpenImportHtmlDialog,
 }: EditorToolbarProps) {
   const prevent = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -290,6 +303,7 @@ function EditorToolbar({
         onOpenImageDialog={onOpenImageDialog}
         onOpenEmbedDialog={onOpenEmbedDialog}
         onOpenFileDialog={onOpenFileDialog}
+        onOpenImportHtmlDialog={onOpenImportHtmlDialog}
       />
     </div>
   );
@@ -328,6 +342,7 @@ export function PlateRichEditor({
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showEmbedDialog, setShowEmbedDialog] = useState(false);
   const [showFileDialog, setShowFileDialog] = useState(false);
+  const [showImportHtmlDialog, setShowImportHtmlDialog] = useState(false);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -514,6 +529,26 @@ export function PlateRichEditor({
     [editor],
   );
 
+  const handleHtmlImport = useCallback(
+    (
+      value: Record<string, unknown>[],
+      mode: "append" | "replace",
+    ) => {
+      const nodes = value as unknown as Value;
+      if (mode === "replace") {
+        // Remove existing top-level nodes back-to-front so paths stay valid.
+        for (let i = editor.children.length - 1; i >= 0; i--) {
+          editor.tf.removeNodes({ at: [i] });
+        }
+        editor.tf.insertNodes(nodes, { at: [0] });
+      } else {
+        editor.tf.insertNodes(nodes, { at: [editor.children.length] });
+      }
+      editor.tf.focus();
+    },
+    [editor],
+  );
+
   return (
     <div className={cn("rounded-lg border border-input bg-card overflow-hidden", className)}>
       <Plate editor={editor} onValueChange={handleValueChange}>
@@ -522,6 +557,7 @@ export function PlateRichEditor({
           onOpenImageDialog={() => setShowImageDialog(true)}
           onOpenEmbedDialog={() => setShowEmbedDialog(true)}
           onOpenFileDialog={() => setShowFileDialog(true)}
+          onOpenImportHtmlDialog={() => setShowImportHtmlDialog(true)}
         />
         <PlateContent
           placeholder="Start writing..."
@@ -546,6 +582,11 @@ export function PlateRichEditor({
         onOpenChange={setShowFileDialog}
         articleId={articleId}
         onInsert={handleFileInsert}
+      />
+      <ImportHtmlDialog
+        open={showImportHtmlDialog}
+        onOpenChange={setShowImportHtmlDialog}
+        onImport={handleHtmlImport}
       />
     </div>
   );

@@ -215,7 +215,7 @@ export function SectionManager({ courseId, sections }: SectionManagerProps) {
             <InfoTooltip text="Organise your course into sections. Each section can have lessons and an optional quiz that gates access to the next section." />
           </CardTitle>
           <Button size="sm" onClick={handleCreate} disabled={isPending} aria-busy={isPending}>
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Add Section
           </Button>
         </CardHeader>
@@ -473,11 +473,11 @@ function SortableSectionRow({
           )}
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onCancelEdit}>
-              <X className="h-3.5 w-3.5 mr-1" />
+              <X />
               Cancel
             </Button>
             <Button size="sm" onClick={onSaveEdit} disabled={isPending} aria-busy={isPending}>
-              <Check className="h-3.5 w-3.5 mr-1" />
+              <Check />
               {isPending ? "Saving..." : "Save"}
             </Button>
           </div>

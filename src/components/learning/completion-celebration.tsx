@@ -51,7 +51,7 @@ export function CompletionCelebration({
             {hasCertificate && (
               <Button asChild>
                 <a href={`/api/certificate/${courseId}`} download>
-                  <Award className="h-4 w-4 mr-2" />
+                  <Award />
                   Download Certificate
                 </a>
               </Button>

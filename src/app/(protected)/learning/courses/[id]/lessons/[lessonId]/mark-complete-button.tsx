@@ -41,7 +41,7 @@ export function MarkCompleteButton({
         <Button asChild>
           <Link href={nextHref}>
             {nextLabel}
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <ArrowRight />
           </Link>
         </Button>
       );

@@ -37,7 +37,7 @@ export function ComposerActionBar({
         disabled={disabled}
         className="text-muted-foreground hover:text-green-600 hover:bg-green-50"
       >
-        <ImagePlus className="mr-1.5 h-5 w-5 text-green-500" />
+        <ImagePlus className="text-green-500" />
         Photo
       </Button>
       <Button
@@ -48,7 +48,7 @@ export function ComposerActionBar({
         disabled={disabled}
         className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
       >
-        <Paperclip className="mr-1.5 h-5 w-5 text-blue-500" />
+        <Paperclip className="text-blue-500" />
         Document
       </Button>
       <Button
@@ -59,7 +59,7 @@ export function ComposerActionBar({
         disabled={disabled || pollActive}
         className="text-muted-foreground hover:text-amber-600 hover:bg-amber-50"
       >
-        <BarChart3 className="mr-1.5 h-5 w-5 text-amber-500" />
+        <BarChart3 className="text-amber-500" />
         Poll
       </Button>
       {onKudosClick && (
@@ -71,7 +71,7 @@ export function ComposerActionBar({
           disabled={disabled}
           className="text-muted-foreground hover:text-yellow-700 hover:bg-yellow-50"
         >
-          <Award className="mr-1.5 h-5 w-5 text-yellow-600" />
+          <Award className="text-yellow-600" />
           Kudos
         </Button>
       )}

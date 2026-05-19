@@ -127,17 +127,21 @@ export async function GET(
     // Convert Node.js Readable to Web ReadableStream
     const webStream = Readable.toWeb(file.stream) as ReadableStream;
 
-    // Content-Disposition: inline for browser-renderable types (images +
-    // PDFs), attachment for everything else. Inline lets the browser's
-    // native viewer render the file inside an iframe (used by the news-
-    // feed document lightbox); attachment triggers the download dialog.
+    // Content-Disposition: inline for browser-renderable types (images,
+    // PDFs, videos), attachment for everything else. Inline lets the
+    // browser's native viewer render the file inside an iframe — used by
+    // the news-feed document lightbox AND by the Resources article video
+    // embed (iframe around /api/drive-file/{id} plays MP4s in Chrome's
+    // native controls). Attachment triggers the download dialog.
     // The download anchor on the card uses <a download={filename}>, which
     // beats Content-Disposition: inline on Chrome and Firefox 82+, so the
     // same URL serves both preview and download from one proxy.
     // Uses filename* with UTF-8 encoding for non-ASCII characters (RFC 6266).
     const mimeType = media.mime_type || "application/octet-stream";
     const isInlineable =
-      mimeType.startsWith("image/") || mimeType === "application/pdf";
+      mimeType.startsWith("image/") ||
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("video/");
     const rawName = media.name || "file";
     const disposition = isInlineable
       ? "inline"

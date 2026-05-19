@@ -11,12 +11,14 @@ import { revalidatePath } from "next/cache";
 import { requireContentEditor } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/types/database.types";
-import type { Value } from "platejs";
-import { serializeHtml } from "platejs/static";
-import { createNativeStaticEditor } from "@/lib/plate-static-plugins";
 import { indexArticleSections, removeArticleFromIndex } from "@/lib/algolia";
 import { parseHtmlIntoSections } from "@/lib/html-sections";
 import { logger } from "@/lib/logger";
+import { serialiseContentToHtml, publishAndIndex } from "@/lib/resource-publish";
+import {
+  htmlToPlate,
+  sanitiseHtmlForImport,
+} from "@/lib/wp-migration/html-to-plate";
 
 // =============================================
 // CONSTANTS
@@ -66,31 +68,6 @@ async function ensureUniqueSlug(
 
 function revalidate() {
   revalidatePath("/resources", "layout");
-}
-
-/**
- * Serialise Plate JSON to HTML for Algolia indexing and synced_html storage.
- * Returns "" for empty/missing content (callers should clear synced_html + Algolia).
- * Returns null only on serialisation error (callers should skip update to avoid data loss).
- */
-async function serialiseContentToHtml(contentJson: unknown): Promise<string | null> {
-  if (!contentJson || !Array.isArray(contentJson) || contentJson.length === 0) {
-    return "";
-  }
-  try {
-    const editor = createNativeStaticEditor(contentJson as Value);
-    const fullHtml = await serializeHtml(editor, { stripDataAttributes: true });
-    // Strip Plate's <div class="slate-editor"> wrapper so headings are
-    // top-level for parseHtmlIntoSections (Algolia section extraction).
-    const trimmed = fullHtml.trim();
-    const match = trimmed.match(/^<div[^>]*>([\s\S]*)<\/div>$/);
-    return match ? match[1] : trimmed;
-  } catch (err) {
-    logger.error("Failed to serialise native content to HTML", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
-  }
 }
 
 // =============================================
@@ -257,74 +234,11 @@ export async function publishNativeArticle(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await requireContentEditor();
-    const supabase = createServiceClient();
-
-    const { data: article, error } = await supabase
-      .from("resource_articles")
-      .update({
-        status: "published",
-        last_published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", articleId)
-      .eq("content_type", "native")
-      .select("id, title, slug, content_json, resource_categories!category_id(name, slug)")
-      .single();
-
-    if (error || !article) {
-      logger.error("Failed to publish native article", { error: error?.message, articleId });
-      return { success: false, error: "Failed to publish" };
+    const result = await publishAndIndex(articleId);
+    if (result.success) {
+      revalidate();
     }
-
-    // Generate synced_html from content_json and index in Algolia
-    try {
-      const html = await serialiseContentToHtml(article.content_json);
-
-      if (html === null) {
-        // Serialisation error — skip update to avoid data loss
-      } else {
-        // Persist synced_html (empty string clears stale data)
-        const { error: syncError } = await supabase
-          .from("resource_articles")
-          .update({ synced_html: html || null })
-          .eq("id", articleId)
-          .eq("content_type", "native");
-
-        if (syncError) {
-          logger.error("Failed to persist synced_html on publish", {
-            error: syncError.message,
-            articleId,
-          });
-        }
-
-        if (html) {
-          const cat = article.resource_categories as unknown as { name: string; slug: string } | null;
-          const sections = parseHtmlIntoSections(html);
-          await indexArticleSections(
-            article.id,
-            article.slug,
-            article.title,
-            "native",
-            cat?.name ?? "",
-            cat?.slug ?? "",
-            sections,
-            new Date().toISOString()
-          );
-        } else {
-          // Content cleared — remove stale search index
-          await removeArticleFromIndex(articleId);
-        }
-      }
-    } catch (err) {
-      logger.error("Algolia indexing failed on publish", {
-        error: err instanceof Error ? err.message : String(err),
-        articleId,
-      });
-      // Don't fail the publish — Algolia is non-critical
-    }
-
-    revalidate();
-    return { success: true };
+    return result;
   } catch (error) {
     logger.error("publishNativeArticle error", {
       error: error instanceof Error ? error.message : String(error),
@@ -448,6 +362,55 @@ export async function reindexNativeArticle(
       error: error instanceof Error ? error.message : String(error),
     });
     return { success: false, error: "Failed to reindex" };
+  }
+}
+
+// =============================================
+// IMPORT HTML AS PLATE
+// =============================================
+
+const IMPORT_HTML_MAX_CHARS = 100_000;
+
+/**
+ * Convert pasted HTML into Plate value nodes the editor can insert.
+ *
+ * Sanitises the input first (strips <script>, <style>, on* handlers, javascript:
+ * URLs), then runs the HTML→Plate walker shared with the WP migration. No asset
+ * URL rewriting in this path — external image / file URLs are kept verbatim.
+ * The editor's existing upload affordances are how editors get assets onto Drive.
+ */
+export async function importHtmlAsPlate(html: string): Promise<{
+  success: boolean;
+  value?: Record<string, unknown>[];
+  warnings?: string[];
+  error?: string;
+}> {
+  try {
+    await requireContentEditor();
+
+    if (!html || typeof html !== "string") {
+      return { success: false, error: "HTML is required" };
+    }
+    if (html.length > IMPORT_HTML_MAX_CHARS) {
+      return {
+        success: false,
+        error: `HTML too large (max ${IMPORT_HTML_MAX_CHARS.toLocaleString()} characters)`,
+      };
+    }
+
+    const sanitised = sanitiseHtmlForImport(html);
+    const { value, warnings } = htmlToPlate(sanitised);
+
+    return {
+      success: true,
+      value: value as unknown as Record<string, unknown>[],
+      warnings,
+    };
+  } catch (error) {
+    logger.error("importHtmlAsPlate error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Failed to convert HTML" };
   }
 }
 

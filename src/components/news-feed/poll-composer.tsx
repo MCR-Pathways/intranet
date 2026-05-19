@@ -174,7 +174,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
           onClick={addOption}
           disabled={disabled}
         >
-          <Plus className="mr-1.5 h-4 w-4" />
+          <Plus />
           Add option
         </Button>
       )}

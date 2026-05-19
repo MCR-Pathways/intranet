@@ -216,7 +216,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
           onClick={handleExport}
           disabled={isPending}
         >
-          <Download className="h-3.5 w-3.5 mr-1" />
+          <Download />
           Export CSV
         </Button>
       </div>

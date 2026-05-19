@@ -18,7 +18,7 @@ export function PreviewModeBanner({ courseId }: PreviewModeBannerProps) {
       </div>
       <Button variant="outline" size="sm" className="shrink-0" asChild>
         <Link href={`/learning/admin/courses/${courseId}`}>
-          <X className="h-3.5 w-3.5 mr-1" />
+          <X />
           Exit Preview
         </Link>
       </Button>

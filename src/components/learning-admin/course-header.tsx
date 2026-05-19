@@ -70,7 +70,7 @@ export function CourseHeader({
         className="shrink-0"
         aria-label="Course settings"
       >
-        <Settings className="h-4 w-4" />
+        <Settings />
       </Button>
       {isPending && (
         <span className="text-xs text-muted-foreground animate-pulse">
