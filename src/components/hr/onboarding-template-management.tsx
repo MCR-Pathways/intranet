@@ -272,7 +272,7 @@ export function OnboardingTemplateManagement({
       {/* Actions bar */}
       <div className="flex justify-end">
         <Button type="button" onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus />
           New Template
         </Button>
       </div>
@@ -393,7 +393,7 @@ export function OnboardingTemplateManagement({
                           setAddItemDialogOpen(true);
                         }}
                       >
-                        <Plus className="h-3 w-3 mr-1" />
+                        <Plus />
                         Add Item
                       </Button>
                     </div>

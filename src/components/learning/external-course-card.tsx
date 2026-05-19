@@ -101,7 +101,7 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
                   className="text-muted-foreground hover:text-destructive"
                   disabled={isPending}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

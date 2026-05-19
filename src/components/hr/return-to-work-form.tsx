@@ -659,7 +659,7 @@ export function ReturnToWorkForm({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button disabled={isPending}>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    <CheckCircle2 />
                     I Confirm This Is Accurate
                   </Button>
                 </AlertDialogTrigger>
@@ -688,7 +688,7 @@ export function ReturnToWorkForm({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" disabled={isPending}>
-                    <Unlock className="h-4 w-4 mr-2" />
+                    <Unlock />
                     Unlock for Corrections
                   </Button>
                 </AlertDialogTrigger>

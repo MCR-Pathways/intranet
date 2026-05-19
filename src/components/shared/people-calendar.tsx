@@ -248,7 +248,7 @@ export function PeopleCalendar({
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" className="bg-card" onClick={prevMonth} type="button">
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft />
         </Button>
         <div className="flex items-center gap-2">
           <select
@@ -276,7 +276,7 @@ export function PeopleCalendar({
           )}
         </div>
         <Button variant="outline" size="sm" className="bg-card" onClick={nextMonth} type="button">
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight />
         </Button>
       </div>
 

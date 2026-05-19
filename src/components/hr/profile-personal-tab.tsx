@@ -140,7 +140,7 @@ export function ProfilePersonalTab({
           <CardTitle className="text-sm font-medium">Personal Details</CardTitle>
           {!isEditing ? (
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-              <Pencil className="h-3.5 w-3.5 mr-1" />
+              <Pencil />
               Edit
             </Button>
           ) : (
@@ -338,7 +338,7 @@ export function ProfilePersonalTab({
             onClick={handleOpenAddContact}
             disabled={emergencyContacts.length >= 2}
           >
-            <Plus className="h-3.5 w-3.5 mr-1" />
+            <Plus />
             Add Contact
           </Button>
         </CardHeader>

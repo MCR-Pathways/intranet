@@ -155,7 +155,7 @@ export function SectionQuizPlayer({
             )}
             <Button asChild variant="outline">
               <Link href={`/learning/courses/${courseId}`}>
-                <ArrowRight className="h-4 w-4 mr-2" />
+                <ArrowRight />
                 Continue to next section
               </Link>
             </Button>
@@ -356,7 +356,7 @@ export function SectionQuizPlayer({
                 </div>
                 <Button asChild>
                   <Link href={`/learning/courses/${courseId}`}>
-                    <ArrowRight className="h-4 w-4 mr-2" />
+                    <ArrowRight />
                     Continue to next section
                   </Link>
                 </Button>
@@ -373,7 +373,7 @@ export function SectionQuizPlayer({
                   Review the correct answers above, then try again.
                 </p>
                 <Button variant="outline" onClick={handleRetry} className="mx-auto">
-                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  <RefreshCcw />
                   Retry Quiz
                 </Button>
               </div>

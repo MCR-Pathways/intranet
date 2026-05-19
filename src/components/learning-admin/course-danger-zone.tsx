@@ -133,7 +133,7 @@ export function CourseDangerZone({
                 onClick={() => setShowUnpublishDialog(true)}
                 disabled={isPending}
               >
-                <Undo2 className="h-3.5 w-3.5 mr-1" />
+                <Undo2 />
                 Revert to Draft
               </Button>
             </div>

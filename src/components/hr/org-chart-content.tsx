@@ -557,7 +557,7 @@ export function OrgChartContent({
             </Select>
 
             <Button variant="outline" size="sm" onClick={handleFindMe}>
-              <Locate className="h-4 w-4 mr-1" />
+              <Locate />
               Find Me
             </Button>
 
@@ -694,7 +694,7 @@ export function OrgChartContent({
             onClick={handleZoomIn}
             aria-label="Zoom in"
           >
-            <ZoomIn className="h-4 w-4" />
+            <ZoomIn />
           </Button>
           <Button
             type="button"
@@ -704,7 +704,7 @@ export function OrgChartContent({
             onClick={handleZoomOut}
             aria-label="Zoom out"
           >
-            <ZoomOut className="h-4 w-4" />
+            <ZoomOut />
           </Button>
           <Button
             type="button"
@@ -714,7 +714,7 @@ export function OrgChartContent({
             onClick={handleFitToScreen}
             aria-label="Fit to screen"
           >
-            <Maximize className="h-4 w-4" />
+            <Maximize />
           </Button>
         </div>
 

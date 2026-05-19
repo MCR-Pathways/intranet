@@ -1,7 +1,9 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import noCustomButtonSizing from "./eslint-rules/no-custom-button-sizing.mjs";
+import noCustomButtonSizing, {
+  noIconSizingInsideButton,
+} from "./eslint-rules/no-custom-button-sizing.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -11,6 +13,7 @@ const eslintConfig = defineConfig([
       "mcr-button": {
         rules: {
           "no-custom-button-sizing": noCustomButtonSizing,
+          "no-icon-sizing-inside-button": noIconSizingInsideButton,
         },
       },
     },
@@ -33,6 +36,12 @@ const eslintConfig = defineConfig([
       // files with pre-existing violations; each sweep PR removes its
       // files as they clean up.
       "mcr-button/no-custom-button-sizing": "error",
+      // Icon classNames inside Button (h-X / w-X / mr-X / ml-X) — the size
+      // variant injects [&_svg]:size-X and the base className has gap-2, so
+      // any of these on an icon child are redundant. Started as `warn` while
+      // the codebase had ~130 existing violations; promoted to `error` after
+      // the sweep cleared them all via the rule's autofix.
+      "mcr-button/no-icon-sizing-inside-button": "error",
     },
   },
   {

@@ -127,12 +127,12 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
       <DialogTrigger asChild>
         {mode === "create" ? (
           <Button size="sm">
-            <Plus className="mr-1 h-4 w-4" />
+            <Plus />
             Add External Course
           </Button>
         ) : (
           <Button variant="ghost" size="sm">
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil />
           </Button>
         )}
       </DialogTrigger>

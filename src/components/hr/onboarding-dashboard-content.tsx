@@ -90,12 +90,12 @@ export function OnboardingDashboardContent({
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" asChild>
             <Link href="/hr/onboarding/templates">
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings />
               Manage Templates
             </Link>
           </Button>
           <Button type="button" onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus />
             New Onboarding
           </Button>
         </div>

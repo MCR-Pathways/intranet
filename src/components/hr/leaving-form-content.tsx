@@ -207,7 +207,7 @@ export function LeavingFormContent({
           <div className="flex items-center gap-2">
             {isEditable && (
               <Button onClick={handleSave} disabled={isPending} variant="outline" size="sm">
-                <Save className="mr-2 h-4 w-4" />
+                <Save />
                 {isPending ? "Saving..." : "Save"}
               </Button>
             )}
@@ -215,7 +215,7 @@ export function LeavingFormContent({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button disabled={isPending} size="sm">
-                    <Send className="mr-2 h-4 w-4" />
+                    <Send />
                     Submit to HR
                   </Button>
                 </AlertDialogTrigger>
@@ -235,7 +235,7 @@ export function LeavingFormContent({
             )}
             {form.status === "submitted" && isHRAdmin && (
               <Button onClick={handleStartProcessing} disabled={isPending} size="sm">
-                <PlayCircle className="mr-2 h-4 w-4" />
+                <PlayCircle />
                 Start Processing
               </Button>
             )}
@@ -243,7 +243,7 @@ export function LeavingFormContent({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button disabled={isPending} size="sm">
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    <CheckCircle2 />
                     Complete Offboarding
                   </Button>
                 </AlertDialogTrigger>
@@ -265,7 +265,7 @@ export function LeavingFormContent({
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" disabled={isPending}>
-                    <XCircle className="mr-2 h-4 w-4" />
+                    <XCircle />
                     Cancel
                   </Button>
                 </AlertDialogTrigger>

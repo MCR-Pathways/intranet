@@ -63,7 +63,7 @@ export function ProfileKeyDatesSection({
         <CardTitle className="text-base">Key Dates</CardTitle>
         {isHRAdmin && (
           <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Add
+            <Plus /> Add
           </Button>
         )}
       </CardHeader>

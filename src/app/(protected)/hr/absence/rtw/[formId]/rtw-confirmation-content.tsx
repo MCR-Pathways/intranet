@@ -290,7 +290,7 @@ export function RTWConfirmationContent({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button disabled={isPending} size="lg">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <CheckCircle2 />
                 I Confirm This Is Accurate
               </Button>
             </AlertDialogTrigger>

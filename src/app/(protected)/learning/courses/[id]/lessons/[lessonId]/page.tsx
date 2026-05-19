@@ -351,14 +351,14 @@ export default async function LessonPage({
                   <Link
                     href={`/learning/courses/${courseId}/lessons/${prevLesson.id}`}
                   >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    <ChevronLeft />
                     Previous
                   </Link>
                 </Button>
               ) : (
                 <Button variant="ghost" asChild>
                   <Link href={`/learning/courses/${courseId}`}>
-                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    <ChevronLeft />
                     Course
                   </Link>
                 </Button>

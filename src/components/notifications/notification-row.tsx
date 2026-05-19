@@ -165,7 +165,7 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
               aria-label={`Actions for ${row.title}`}
               title="Actions"
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">

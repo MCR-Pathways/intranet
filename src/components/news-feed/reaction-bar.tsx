@@ -207,7 +207,7 @@ export function ReactionBar({
           className="flex-1 gap-2 font-medium text-muted-foreground"
           onClick={onCommentClick}
         >
-          <MessageCircle className="h-4 w-4" />
+          <MessageCircle />
           Comment
         </Button>
       </div>

@@ -188,7 +188,7 @@ export function EmployeeDetailContent({
               size="sm"
               onClick={() => setEmploymentDialogOpen(true)}
             >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
+              <Pencil />
               Edit Employment
             </Button>
             <Button
@@ -196,7 +196,7 @@ export function EmployeeDetailContent({
               size="sm"
               onClick={() => setPermissionsDialogOpen(true)}
             >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
+              <Pencil />
               Edit Permissions
             </Button>
           </div>
@@ -224,7 +224,7 @@ export function EmployeeDetailContent({
                 size="sm"
                 onClick={() => setPersonalDialogOpen(true)}
               >
-                <Pencil className="h-3.5 w-3.5 mr-1" />
+                <Pencil />
                 Edit
               </Button>
             </CardHeader>

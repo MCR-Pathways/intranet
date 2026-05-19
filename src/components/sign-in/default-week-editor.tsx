@@ -196,7 +196,7 @@ export function DefaultWeekEditor({
               onClick={startEditing}
               type="button"
             >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
+              <Pencil />
               Edit
             </Button>
           ) : (
@@ -207,7 +207,7 @@ export function DefaultWeekEditor({
               type="button"
               disabled={isPending}
             >
-              <X className="h-3.5 w-3.5 mr-1" />
+              <X />
               Cancel
             </Button>
           )}

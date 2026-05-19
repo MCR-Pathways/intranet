@@ -250,7 +250,7 @@ function GlobalSearchInner() {
         onClick={() => setOpen(true)}
         className="relative"
       >
-        <Search className="h-5 w-5" />
+        <Search />
         <span className="sr-only">Search</span>
       </Button>
 

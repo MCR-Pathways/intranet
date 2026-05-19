@@ -163,9 +163,9 @@ export function TeamComplianceSection({
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-        <BookOpen className="h-5 w-5" />
+        <BookOpen />
         <span className="text-lg font-semibold">Team Compliance</span>
-        <Badge variant={summaryVariant} className="ml-1">
+        <Badge variant={summaryVariant}>
           {compliantCount} of {totalCount} compliant
         </Badge>
       </Button>

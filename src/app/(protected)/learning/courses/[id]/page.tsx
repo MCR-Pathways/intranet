@@ -334,7 +334,7 @@ export default async function CourseDetailPage({
                 {hasCertificate && courseIssuesCertificate && (
                   <Button asChild className="w-full">
                     <a href={`/api/certificate/${course.id}`} download>
-                      <Award className="h-4 w-4 mr-2" />
+                      <Award />
                       Download Certificate
                     </a>
                   </Button>
@@ -342,7 +342,7 @@ export default async function CourseDetailPage({
                 {course.content_url && (
                   <Button asChild className="w-full" variant="outline">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ExternalLink />
                       Review Course
                     </a>
                   </Button>
@@ -353,14 +353,14 @@ export default async function CourseDetailPage({
                 {hasLessons ? (
                   <Button asChild className="w-full">
                     <Link href={`/learning/courses/${course.id}/lessons/${resumeLessonId}`}>
-                      <PlayCircle className="h-4 w-4 mr-2" />
+                      <PlayCircle />
                       {isInProgress ? "Continue Learning" : "Start Learning"}
                     </Link>
                   </Button>
                 ) : course.content_url ? (
                   <Button asChild className="w-full">
                     <a href={course.content_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <ExternalLink />
                       {isInProgress ? "Continue Course" : "Start Course"}
                     </a>
                   </Button>

@@ -223,7 +223,7 @@ export function DayDetailPanel({
                 onClick={() => onRequestLeave(date)}
                 className="w-full"
               >
-                <CalendarPlus className="h-4 w-4 mr-1.5" />
+                <CalendarPlus />
                 Request Leave
               </Button>
             )}

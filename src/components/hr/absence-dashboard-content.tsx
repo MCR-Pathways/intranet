@@ -195,7 +195,7 @@ export function AbsenceDashboardContent({
         <div className="text-right">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/hr/users/${row.original.profile_id}?tab=absence`}>
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink />
             </Link>
           </Button>
         </div>
@@ -259,7 +259,7 @@ export function AbsenceDashboardContent({
         <div className="text-right">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/hr/users/${row.original.employee_id}?tab=absence`}>
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink />
             </Link>
           </Button>
         </div>

@@ -273,7 +273,7 @@ export function ProfileDocumentsTab({
               size="sm"
               onClick={() => setUploadDialogOpen(true)}
             >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+              <Plus />
               Upload Document
             </Button>
           )}

@@ -129,7 +129,7 @@ function LeaveRowActions({
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm" disabled={isPending}>
-              <Undo2 className="h-3.5 w-3.5 mr-1" />
+              <Undo2 />
               Withdraw
             </Button>
           </AlertDialogTrigger>

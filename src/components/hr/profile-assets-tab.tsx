@@ -132,7 +132,7 @@ export function ProfileAssetsTab({
                       className="mt-2"
                       onClick={() => setReturnTarget(a)}
                     >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Return
+                      <RotateCcw /> Return
                     </Button>
                   )}
                 </CardContent>

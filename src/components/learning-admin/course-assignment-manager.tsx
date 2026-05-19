@@ -202,7 +202,7 @@ export function CourseAssignmentManager({
             <InfoTooltip text="Assigning auto-enrols matching users. Removing does not unenrol existing users" />
           </CardTitle>
           <Button size="sm" onClick={() => setShowDialog(true)}>
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus />
             Assign
           </Button>
         </CardHeader>

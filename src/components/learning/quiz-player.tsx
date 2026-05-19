@@ -272,7 +272,7 @@ export function QuizPlayer({
                   onClick={handleRetry}
                   className="mx-auto"
                 >
-                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  <RefreshCcw />
                   Retry Quiz
                 </Button>
               </div>
