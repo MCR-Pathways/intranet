@@ -100,24 +100,54 @@ export async function uploadAssets({
     return { assetMap, uploaded, reused, wouldUpload };
   }
 
-  // Pre-flight: lookup any existing resource_media rows for these URLs.
+  // Pre-flight #1: lookup any existing resource_media rows for these URLs.
   // Keyed by original_url GLOBALLY (across all articles), not per-article —
   // this is what unlocks cross-article dedup. The junction table tracks
   // which articles reference each media row.
-  const { data: existingRows, error: existingErr } = await supabase
+  const { data: rowsByUrl, error: urlLookupErr } = await supabase
     .from("resource_media")
     .select("id, file_id, original_name, original_url, mime_type, file_size")
     .in("original_url", urls);
-  if (existingErr) {
+  if (urlLookupErr) {
     throw new MigrationHaltError(
-      `resource_media pre-flight lookup failed: ${existingErr.message}`,
+      `resource_media pre-flight URL lookup failed: ${urlLookupErr.message}`,
     );
   }
   const existingByUrl = new Map(
-    (existingRows ?? [])
+    (rowsByUrl ?? [])
       .filter((r) => r.original_url !== null)
       .map((r) => [r.original_url as string, r]),
   );
+
+  // Pre-flight #2: legacy fallback for rows uploaded before migration 00097
+  // landed (no `original_url` to key by). For those, match by original_name
+  // within the current article's existing media — same shape as the old
+  // per-article idempotency check. Without this, the first re-run after
+  // migration 00097 ships would re-upload every asset on every article
+  // we've already migrated.
+  const expectedFileNames = urls.map((url) => {
+    const attachment = attachmentsByUrl.get(url);
+    return inferFileName(url, attachment?.title ?? null);
+  });
+  const { data: legacyRows, error: legacyLookupErr } = await supabase
+    .from("resource_media")
+    .select("id, file_id, original_name, original_url, mime_type, file_size, article_id")
+    .eq("article_id", articleId)
+    .in("original_name", expectedFileNames)
+    .is("original_url", null);
+  if (legacyLookupErr) {
+    throw new MigrationHaltError(
+      `resource_media pre-flight legacy lookup failed: ${legacyLookupErr.message}`,
+    );
+  }
+  const legacyByName = new Map(
+    (legacyRows ?? []).map((r) => [r.original_name, r]),
+  );
+
+  // Collect media ids to link to this article via the junction, then batch
+  // the upsert at the end of the loop. One round-trip beats N for
+  // asset-heavy pages like group-work (71 PDFs).
+  const junctionMediaIds: string[] = [];
 
   for (const url of urls) {
     const attachment = attachmentsByUrl.get(url);
@@ -125,20 +155,21 @@ export async function uploadAssets({
 
     // Cross-article dedup: URL already uploaded for some other (or this)
     // article. Link the current article via the junction; skip Drive upload.
-    const existing = existingByUrl.get(url);
+    const existing =
+      existingByUrl.get(url) ?? legacyByName.get(fileName);
     if (existing) {
       assetMap.set(url, {
         fileId: existing.file_id,
-        mimeType: existing.mime_type ?? inferMimeFromExt(fileName) ?? "application/octet-stream",
+        mimeType: existing.mime_type,
         fileName: existing.original_name,
-        size: existing.file_size ?? 0,
+        size: existing.file_size,
       });
       reused++;
       if (dryRun) {
         log("↺ would link", fileName, `(existing media ${existing.file_id})`);
       } else {
-        await ensureJunctionRow(supabase, existing.id, articleId);
-        log("↺ reused", fileName, `(existing media ${existing.file_id} → junction added)`);
+        junctionMediaIds.push(existing.id);
+        log("↺ reused", fileName, `(existing media ${existing.file_id})`);
       }
       continue;
     }
@@ -235,8 +266,8 @@ export async function uploadAssets({
       );
     }
 
-    // Junction row for the current article.
-    await ensureJunctionRow(supabase, insertedMedia.id, articleId);
+    // Queue the junction row — single batch insert after the loop.
+    junctionMediaIds.push(insertedMedia.id);
 
     assetMap.set(url, {
       fileId: uploadResult.fileId,
@@ -248,35 +279,39 @@ export async function uploadAssets({
     log("✓ uploaded", fileName, `(${formatBytes(size)}) → ${uploadResult.fileId}`);
   }
 
+  // Batch junction-row insert: one round-trip for all (mediaId, articleId)
+  // pairs accumulated during the loop (both new uploads and cross-article
+  // reuses). Dedupe locally first; the table-level UNIQUE constraint plus
+  // ignoreDuplicates: true also handles concurrent-run safety.
+  if (!dryRun && junctionMediaIds.length > 0) {
+    const uniqueMediaIds = Array.from(new Set(junctionMediaIds));
+    const { error: junctionErr } = await supabase
+      .from("resource_media_articles")
+      .upsert(
+        uniqueMediaIds.map((mediaId) => ({
+          media_id: mediaId,
+          article_id: articleId,
+        })) as Database["public"]["Tables"]["resource_media_articles"]["Insert"][],
+        { onConflict: "media_id,article_id", ignoreDuplicates: true },
+      );
+    if (junctionErr) {
+      throw new MigrationHaltError(
+        `resource_media_articles batch upsert failed (${uniqueMediaIds.length} rows for article ${articleId}): ${junctionErr.message}`,
+      );
+    }
+  }
+
   return { assetMap, uploaded, reused, wouldUpload };
 }
 
-/** Insert junction row for (media, article); idempotent via UNIQUE constraint. */
-async function ensureJunctionRow(
-  supabase: SupabaseClient<Database>,
-  mediaId: string,
-  articleId: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("resource_media_articles")
-    .upsert(
-      {
-        media_id: mediaId,
-        article_id: articleId,
-      } as Database["public"]["Tables"]["resource_media_articles"]["Insert"],
-      { onConflict: "media_id,article_id", ignoreDuplicates: true },
-    );
-  if (error) {
-    throw new MigrationHaltError(
-      `resource_media_articles junction insert failed for media=${mediaId} article=${articleId}: ${error.message}`,
-    );
-  }
-}
-
 /**
- * Retry `fn` up to 3 times with exponential backoff (1s → 2s → 4s) on any
- * thrown error. On final failure, rethrows as MigrationHaltError with the
- * `label` prefix so the operator can see what failed.
+ * Retry `fn` up to 3 times with exponential backoff (1s → 2s → 4s) on
+ * TRANSIENT errors only (Drive 429 or 5xx, ENOTFOUND/ECONNRESET). Client
+ * errors (4xx other than 429, e.g. 400/401/403/404) throw immediately —
+ * retrying them just wastes time and masks misconfiguration.
+ *
+ * googleapis errors carry a numeric `code` field for HTTP status; node
+ * fetch/network errors carry an `errno`/`code` string. We check both.
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -289,11 +324,16 @@ async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastErr = err;
+      if (!isTransientError(err)) {
+        throw new MigrationHaltError(
+          `${opts.label} failed with non-transient error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
       const msg = err instanceof Error ? err.message : String(err);
       log(
         "⟳ retry",
         opts.label,
-        `attempt ${attempt + 1}/${delays.length} failed: ${msg}`,
+        `transient (attempt ${attempt + 1}/${delays.length}): ${msg}`,
       );
       if (attempt < delays.length - 1) {
         await new Promise((r) => setTimeout(r, delays[attempt]));
@@ -304,6 +344,37 @@ async function withRetry<T>(
     `${opts.label} failed after ${delays.length} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
   );
 }
+
+/** True for HTTP 429 / 5xx and common transient network error codes. */
+function isTransientError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: unknown; status?: unknown };
+
+  // googleapis errors expose HTTP status as a number on `code`.
+  if (typeof e.code === "number") {
+    return e.code === 429 || (e.code >= 500 && e.code < 600);
+  }
+  // Some fetch / network errors put HTTP status on `status` instead.
+  if (typeof e.status === "number") {
+    return e.status === 429 || (e.status >= 500 && e.status < 600);
+  }
+  // Node socket/network errors carry a string `code` like ECONNRESET.
+  if (typeof e.code === "string") {
+    return TRANSIENT_NET_CODES.has(e.code);
+  }
+  return false;
+}
+
+const TRANSIENT_NET_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "EPIPE",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+]);
 
 // =============================================
 // HELPERS

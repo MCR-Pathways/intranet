@@ -146,6 +146,15 @@ async function lookupAuthorId(
   return profile.id;
 }
 
+/**
+ * Resolve the target article row for this slug. Runs the slug-clash /
+ * content-type / category / publish-status guards regardless of dryRun;
+ * only the writes (UPDATE / INSERT) are skipped when dryRun is true.
+ *
+ * Returns a stub id when dry-running on a not-yet-existing slug so
+ * downstream steps have something concrete to pass around — that id
+ * never reaches the DB.
+ */
 async function upsertArticle(
   supabase: SupabaseClient<Database>,
   params: {
@@ -154,11 +163,12 @@ async function upsertArticle(
     categoryId: string;
     authorId: string;
     allowOverwritePublished: boolean;
+    dryRun: boolean;
   },
 ): Promise<{ id: string; created: boolean }> {
   const { data: existing } = await supabase
     .from("resource_articles")
-    .select("id")
+    .select("id, content_type, category_id, status")
     .eq("slug", params.slug)
     .maybeSingle();
 
@@ -167,28 +177,24 @@ async function upsertArticle(
     // counts as a WP migration target only if it's already content_type='native'
     // and sits under the same category id we're about to write. Anything else
     // is a real article someone created via the admin UI between bits — halt.
-    const { data: existingRow } = await supabase
-      .from("resource_articles")
-      .select("content_type, category_id, status")
-      .eq("id", existing.id)
-      .single();
-    if (!existingRow) {
-      throw new Error(`Failed to read existing article ${params.slug} for slug-clash check`);
-    }
-    if (existingRow.content_type !== "native") {
+    if (existing.content_type !== "native") {
       throw new Error(
-        `Slug '${params.slug}' is taken by a non-native article (content_type='${existingRow.content_type}'). Refuse to overwrite. Resolve manually.`,
+        `Slug '${params.slug}' is taken by a non-native article (content_type='${existing.content_type}'). Refuse to overwrite. Resolve manually.`,
       );
     }
-    if (existingRow.category_id !== params.categoryId) {
+    if (existing.category_id !== params.categoryId) {
       throw new Error(
-        `Slug '${params.slug}' is taken by an article in a different category (existing=${existingRow.category_id}, target=${params.categoryId}). Refuse to overwrite. Resolve manually.`,
+        `Slug '${params.slug}' is taken by an article in a different category (existing=${existing.category_id}, target=${params.categoryId}). Refuse to overwrite. Resolve manually.`,
       );
     }
-    if (existingRow.status === "published" && !params.allowOverwritePublished) {
+    if (existing.status === "published" && !params.allowOverwritePublished) {
       throw new Error(
         `Article '${params.slug}' is currently published. Refuse to overwrite content_json without --allow-overwrite-published (prevents accidental clobber of post-migration editorial edits).`,
       );
+    }
+
+    if (params.dryRun) {
+      return { id: existing.id, created: false };
     }
 
     // Existing — bump title + category. Do NOT bump updated_at here: the
@@ -209,6 +215,12 @@ async function upsertArticle(
       throw new Error(`Failed to update existing article ${params.slug}: ${error.message}`);
     }
     return { id: existing.id, created: false };
+  }
+
+  if (params.dryRun) {
+    // Stub UUID-shaped id so uploadAssets has something to pass around;
+    // it never reaches the DB because dryRun skips the junction insert.
+    return { id: "00000000-0000-0000-0000-000000000000", created: true };
   }
 
   const { data: created, error: insertErr } = await supabase
@@ -299,46 +311,21 @@ async function main() {
   console.log(`  ✓ category_id = ${categoryId}`);
   console.log(`  ✓ author_id   = ${authorId}`);
 
-  // 3. Upsert article row (status='draft'). In dry-run, just read the
-  // existing row so we can apply the same slug-clash / status checks
-  // without writing anything.
+  // 3. Upsert article row (status='draft'). upsertArticle runs the same
+  // slug-clash / publish-status guards in dry-run mode and just skips the
+  // UPDATE/INSERT writes — so the duplicated check block here goes away.
   console.log(`\n[3/8] ${args.dryRun ? "Inspecting" : "Upserting"} article row`);
-  let article: { id: string; created: boolean };
+  const article = await upsertArticle(supabase, {
+    slug: args.slug,
+    title: decodeHtmlEntities(page.title),
+    categoryId,
+    authorId,
+    allowOverwritePublished: args.allowOverwritePublished,
+    dryRun: args.dryRun,
+  });
   if (args.dryRun) {
-    const { data: existing } = await supabase
-      .from("resource_articles")
-      .select("id, content_type, category_id, status")
-      .eq("slug", args.slug)
-      .maybeSingle();
-    if (existing?.id) {
-      if (existing.content_type !== "native") {
-        console.error(`  ✗ Slug clash: existing article is content_type='${existing.content_type}', not 'native'. Would halt in real run.`);
-        process.exit(1);
-      }
-      if (existing.category_id !== categoryId) {
-        console.error(`  ✗ Slug clash: existing article is in a different category. Would halt in real run.`);
-        process.exit(1);
-      }
-      if (existing.status === "published" && !args.allowOverwritePublished) {
-        console.error(`  ✗ Article is currently published. Would halt in real run (pass --allow-overwrite-published to override).`);
-        process.exit(1);
-      }
-      article = { id: existing.id, created: false };
-      console.log(`  ✓ article_id = ${article.id}  (would update existing)`);
-    } else {
-      // Stub UUID-shaped id so subsequent steps have something to chew on.
-      // uploadAssets never writes in dry-run so this never reaches the DB.
-      article = { id: "00000000-0000-0000-0000-000000000000", created: true };
-      console.log(`  ✓ article_id = <new>  (would create with status='draft')`);
-    }
+    console.log(`  ✓ article_id = ${article.id}  (would ${article.created ? "create" : "update existing"})`);
   } else {
-    article = await upsertArticle(supabase, {
-      slug: args.slug,
-      title: decodeHtmlEntities(page.title),
-      categoryId,
-      authorId,
-      allowOverwritePublished: args.allowOverwritePublished,
-    });
     console.log(`  ✓ article_id = ${article.id}  (${article.created ? "created" : "updated existing"})`);
   }
 
