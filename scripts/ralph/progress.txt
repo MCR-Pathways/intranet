@@ -1,0 +1,58 @@
+# WordPress migration progress
+# Format: [status] slug → category-path
+# Statuses: [ ] todo | [x] done | [BLOCKED: reason]
+# Parser: first line matching `^\[ \] ([a-z0-9/-]+) → (.+)$` after the
+# active bit's `##` header and before the next `##` header.
+# Active bit is named in RESUME.md's "Active bit" line.
+
+## Bit 1 — proof of concept (DONE manually)
+[x] mentor-training → programme-resources/mentor-training
+
+## Bit 2 — PC workflow cluster
+[ ] participation-forms → programme-resources/scotland-programme
+[ ] yt-participation-forms → programme-resources/england-programme
+[ ] pc-support → programme-resources/pc-support
+
+## Bit 3 — large-asset stress test
+[ ] group-work → programme-resources/scotland-programme
+
+## Bit 4 — reference content
+[ ] jargon → organisation/jargon-buster
+[ ] mission-vision-values → organisation/mission-vision-values
+[ ] information-for-new-staff → people-benefits/new-staff-info
+
+## Bit 5 — live-link cluster (BLOCKED from day one)
+[BLOCKED: needs 4 Drive URLs from XML + confirmation we don't lift docs] mentor-yp-engagement → programme-resources/mentor-yp-engagement
+[BLOCKED: AI chatbot reference — what is it, does any link need preserving?] yp-resources → programme-resources/yp-resources
+
+## Bit 6 — HR-policy library
+[ ] people-services → people-benefits/people-services
+
+## Bit 7 — external-affairs cluster
+[ ] fundraising → fundraising-partnerships/fundraising
+[ ] policy-public-affairs → fundraising-partnerships/policy-public-affairs
+
+## Bit 8 — brand/comms cluster
+[ ] marketing-toolkit → marketing-comms/marketing-toolkit
+[ ] social-media-policy → marketing-comms/social-media-policy
+[ ] press-media-protocol → marketing-comms/press-protocol
+
+## Bit 9 — IT/systems cluster
+[ ] cyber-security → it-digital/cyber-security
+[ ] pathfinder-guides → it-digital/pathfinder-guides
+
+## Bit 11 — calendar embed (BLOCKED from day one)
+[BLOCKED: needs Calendar iframe approach — media_embed spike / <a> link / new calendar_embed Plate element?] communication-calendars → marketing-comms/comms-calendars
+
+## Bit 12 — crisis comms (BLOCKED from day one)
+[BLOCKED: 5 personal mobile numbers — lift verbatim / mentions / role-based / hybrid?] crisis-communications → marketing-comms/crisis-comms
+
+## Bit 13 — strategic plan (BLOCKED from day one)
+[BLOCKED: Elementor extraction + 14 MP4s + Plate HTML5 video element needed] strategic-plan-2025-2028 → organisation/strategy
+
+## Bit 14 — FAQs (BLOCKED from day one)
+[BLOCKED: 4 child slugs to locate in XML first] faqs → organisation/faq
+[BLOCKED: child slug to locate] faqs/school-staff → organisation/faq
+[BLOCKED: child slug to locate] faqs/young-person → organisation/faq
+[BLOCKED: child slug to locate] faqs/mentor → organisation/faq
+[BLOCKED: child slug to locate] faqs/organisation → organisation/faq
