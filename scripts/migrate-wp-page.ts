@@ -16,7 +16,7 @@
  * Re-runs are idempotent: same slug ⇒ existing article is updated; existing
  * resource_media rows (matched by original_name) are reused.
  */
-import he from "he";
+import { parseHTML } from "linkedom";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadWpExport, findPageBySlug } from "./wp-migration/xml-parse";
 import { uploadAssets, MigrationHaltError } from "./wp-migration/asset-upload";
@@ -26,6 +26,20 @@ import {
 } from "@/lib/wp-migration/html-to-plate";
 import { publishAndIndex } from "@/lib/resource-publish";
 import type { Database } from "@/types/database.types";
+
+/**
+ * Decode HTML entities (numeric + named) by round-tripping through linkedom's
+ * DOM parser. Covers the full HTML5 entity set including &nbsp;, &ndash;,
+ * &rsquo;, &hellip;, and numeric forms like &#8217; — anything a browser
+ * would decode. Reuses the linkedom dep we already pay for in the walker
+ * instead of bringing in the `he` library.
+ */
+function decodeHtmlEntities(s: string): string {
+  if (!s) return "";
+  const { document } = parseHTML(`<!DOCTYPE html><html><body></body></html>`);
+  document.body.innerHTML = s;
+  return document.body.textContent ?? s;
+}
 
 const WP_UPLOADS_PREFIX = "https://i.mcrpathways.org/wp-content/uploads/";
 const DEFAULT_DRIVE_FOLDER = "1u0nCOG8fvuw81lRrKXDwbHtuvaT2O-q5"; // MCR Intranet Attachments
@@ -265,7 +279,7 @@ async function main() {
   console.log("\n[3/8] Upserting article row");
   const article = await upsertArticle(supabase, {
     slug: args.slug,
-    title: he.decode(page.title),
+    title: decodeHtmlEntities(page.title),
     categoryId,
     authorId,
   });
@@ -308,7 +322,7 @@ async function main() {
 
   // 7. Convert HTML → Plate JSON
   console.log("\n[7/8] Converting HTML → Plate JSON");
-  const articleTitle = he.decode(page.title).trim();
+  const articleTitle = decodeHtmlEntities(page.title).trim();
   const walkResult = htmlToPlate(cleaned, assetMap);
   const { warnings } = walkResult;
   let value = walkResult.value;
