@@ -34,6 +34,7 @@ import {
   validateMagicBytes,
   sanitiseFilename,
   shareFileWithDomain,
+  deleteFileFromDrive,
 } from "@/lib/google-drive-upload";
 import type { Database } from "@/types/database.types";
 import type { AssetInfo } from "@/lib/wp-migration/html-to-plate";
@@ -223,7 +224,7 @@ export async function uploadAssets({
     }
 
     // Drive upload + domain-share with exponential backoff on transient
-    // failures (Drive 5xx / 429 / network blips). 3 attempts, 1s → 2s → 4s.
+    // failures (Drive 5xx / 429 / network blips).
     const uploadResult = await withRetry(
       () =>
         uploadFileToDrive(buffer, mimeType, fileName, {
@@ -237,15 +238,24 @@ export async function uploadAssets({
     // for Office docs (DOCX/XLSX/PPTX) without a Request-Access challenge.
     // The proxy still gates direct /api/drive-file/{id} access via session
     // auth + the resource_media whitelist, independent of this share.
-    await withRetry(
-      () => shareFileWithDomain(uploadResult.fileId, ORG_DOMAIN),
-      { label: `Drive domain-share (${fileName}, file ${uploadResult.fileId})` },
-    );
+    // Cleanup: if the share fails after upload succeeded, delete the now-
+    // orphaned Drive file. Same orphan-prevention pattern as media-actions.ts.
+    try {
+      await withRetry(
+        () => shareFileWithDomain(uploadResult.fileId, ORG_DOMAIN),
+        { label: `Drive domain-share (${fileName}, file ${uploadResult.fileId})` },
+      );
+    } catch (err) {
+      await cleanupOrphanedDriveFile(uploadResult.fileId, fileName, "share-failed");
+      throw err;
+    }
 
     // Insert resource_media (canonical row for this Drive file) and grab
     // its id so the junction row below can link to it. article_id on
     // resource_media stays for backwards-compat reads — it points at the
     // FIRST article that referenced the file.
+    // Cleanup: if the DB insert fails after Drive upload + share succeeded,
+    // delete the orphaned file so a retry doesn't leave Drive littered.
     const { data: insertedMedia, error: insertErr } = await supabase
       .from("resource_media")
       .insert({
@@ -261,8 +271,9 @@ export async function uploadAssets({
       .single();
 
     if (insertErr || !insertedMedia) {
+      await cleanupOrphanedDriveFile(uploadResult.fileId, fileName, "db-insert-failed");
       throw new MigrationHaltError(
-        `resource_media insert failed for ${fileName} (file uploaded to Drive ${uploadResult.fileId}): ${insertErr?.message ?? "unknown"}`,
+        `resource_media insert failed for ${fileName} (Drive file ${uploadResult.fileId} cleaned up): ${insertErr?.message ?? "unknown"}`,
       );
     }
 
@@ -305,21 +316,23 @@ export async function uploadAssets({
 }
 
 /**
- * Retry `fn` up to 3 times with exponential backoff (1s → 2s → 4s) on
- * TRANSIENT errors only (Drive 429 or 5xx, ENOTFOUND/ECONNRESET). Client
- * errors (4xx other than 429, e.g. 400/401/403/404) throw immediately —
- * retrying them just wastes time and masks misconfiguration.
+ * Retry `fn` on TRANSIENT errors only (Drive 429 or 5xx,
+ * ENOTFOUND/ECONNRESET etc.). Client errors (4xx other than 429, e.g.
+ * 400/401/403/404) throw immediately — retrying them just wastes time
+ * and masks misconfiguration.
  *
  * googleapis errors carry a numeric `code` field for HTTP status; node
  * fetch/network errors carry an `errno`/`code` string. We check both.
  */
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = [1000, 2000]; // wait BEFORE attempts 2 and 3; length === MAX_ATTEMPTS - 1
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   opts: { label: string },
 ): Promise<T> {
-  const delays = [1000, 2000, 4000];
   let lastErr: unknown;
-  for (let attempt = 0; attempt < delays.length; attempt++) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       return await fn();
     } catch (err) {
@@ -333,16 +346,39 @@ async function withRetry<T>(
       log(
         "⟳ retry",
         opts.label,
-        `transient (attempt ${attempt + 1}/${delays.length}): ${msg}`,
+        `transient (attempt ${attempt + 1}/${MAX_ATTEMPTS}): ${msg}`,
       );
-      if (attempt < delays.length - 1) {
-        await new Promise((r) => setTimeout(r, delays[attempt]));
+      if (attempt < BACKOFF_MS.length) {
+        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
       }
     }
   }
   throw new MigrationHaltError(
-    `${opts.label} failed after ${delays.length} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    `${opts.label} failed after ${MAX_ATTEMPTS} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
   );
+}
+
+/**
+ * Best-effort cleanup of a Drive file we uploaded but couldn't fully
+ * register (share failed, or DB insert failed). Logs on cleanup failure
+ * but never throws — the caller is already on an error path and the
+ * orphaned file is recoverable manually via the Drive admin UI.
+ */
+async function cleanupOrphanedDriveFile(
+  fileId: string,
+  fileName: string,
+  reason: string,
+): Promise<void> {
+  try {
+    await deleteFileFromDrive(fileId);
+    log("✗ cleaned up", fileName, `(orphaned ${fileId}; reason: ${reason})`);
+  } catch (cleanupErr) {
+    log(
+      "⚠ cleanup failed",
+      fileName,
+      `(orphaned ${fileId}; reason: ${reason}; cleanup error: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)})`,
+    );
+  }
 }
 
 /** True for HTTP 429 / 5xx and common transient network error codes. */
