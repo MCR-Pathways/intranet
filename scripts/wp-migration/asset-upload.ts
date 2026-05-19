@@ -201,8 +201,11 @@ export async function uploadAssets({
 // =============================================
 
 function inferFileName(url: string, title: string | null): string {
-  // Prefer the WP attachment title when present, but only if it has a useful
-  // extension; otherwise fall back to the URL basename.
+  // Prefer the WP attachment title when present, but trust the URL's
+  // extension over the title's. Titles like "Mentor Guide v1.2" carry a
+  // trailing dot that path.extname misreads as an extension (".2"), which
+  // would drop the real ".pdf" from the URL — so we only treat the title's
+  // extension as authoritative when it matches the URL's.
   const urlPath = (() => {
     try {
       return new URL(url).pathname;
@@ -216,12 +219,20 @@ function inferFileName(url: string, title: string | null): string {
     const sanitised = sanitiseFilename(title.trim());
     const titleExt = path.extname(sanitised);
     const urlExt = path.extname(urlBase);
-    if (titleExt) {
+
+    // Title already carries the URL's extension — accept verbatim.
+    if (urlExt && titleExt.toLowerCase() === urlExt.toLowerCase()) {
       return sanitised;
     }
+    // Title has no extension, or a misleading one like ".1" from a version
+    // number. Append the URL's extension so the file gets the right type.
+    // Keeps any trailing-dot version info in the base (e.g. "Guide v1.2.pdf"
+    // is fine — multi-dot filenames are valid and preserve user intent).
     if (urlExt) {
       return sanitiseFilename(`${sanitised}${urlExt}`);
     }
+    // No URL extension to lean on — trust the title as-is.
+    return sanitised;
   }
   return sanitiseFilename(urlBase);
 }
