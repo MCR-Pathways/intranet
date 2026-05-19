@@ -11,13 +11,15 @@ Branch: feature/wp-migration-bit-2 (off main)
 
 ## Last page migrated
 
-(none — Bit 2 starting fresh)
+Bit 2 complete: pc-support → programme-resources/pc-support (28 PDFs).
+participation-forms and yt-participation-forms were initially migrated but
+then removed — their content had already been consolidated into pc-support
+upstream. Cleanup landed in the same PR (#311).
 
 ## Next page
 
-slug: participation-forms
-WP URL: https://i.mcrpathways.org/participation-forms/
-Target category: programme-resources/scotland-programme
+(Bit 2 closed. Next iteration starts Bit 3 — group-work — on a new branch
+after #311 merges.)
 
 ## Dev server
 
