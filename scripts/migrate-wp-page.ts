@@ -6,7 +6,7 @@
  *   set -a; source .env.local; set +a
  *   npx tsx scripts/migrate-wp-page.ts \
  *     --slug=mentor-training \
- *     --xml=/Users/abdulmuizadaranijo/Desktop/oldintranet.xml \
+ *     --xml=<absolute-path-to-wp-export.xml> \
  *     [--drive-folder=1u0nCOG8fvuw81lRrKXDwbHtuvaT2O-q5] \
  *     [--category-slug=mentor-training] \
  *     [--parent-category-slug=programme-resources] \
@@ -16,6 +16,7 @@
  * Re-runs are idempotent: same slug ⇒ existing article is updated; existing
  * resource_media rows (matched by original_name) are reused.
  */
+import he from "he";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadWpExport, findPageBySlug } from "./wp-migration/xml-parse";
 import { uploadAssets, MigrationHaltError } from "./wp-migration/asset-upload";
@@ -27,7 +28,6 @@ import { publishAndIndex } from "@/lib/resource-publish";
 import type { Database } from "@/types/database.types";
 
 const WP_UPLOADS_PREFIX = "https://i.mcrpathways.org/wp-content/uploads/";
-const DEFAULT_XML = "/Users/abdulmuizadaranijo/Desktop/oldintranet.xml";
 const DEFAULT_DRIVE_FOLDER = "1u0nCOG8fvuw81lRrKXDwbHtuvaT2O-q5"; // MCR Intranet Attachments
 const DEFAULT_PARENT_CATEGORY = "programme-resources";
 const DEFAULT_AUTHOR_EMAIL = "abdulmuiz.adaranijo@mcrpathways.org";
@@ -51,9 +51,14 @@ function parseArgs(argv: string[]): Args {
     console.error("Missing --slug=<wp-slug>");
     process.exit(2);
   }
+  if (!map.xml) {
+    console.error("Missing --xml=<absolute-path-to-wp-export.xml>");
+    console.error("Tip: download the WP export to a known location and pass it explicitly.");
+    process.exit(2);
+  }
   return {
     slug: map.slug,
-    xml: map.xml ?? DEFAULT_XML,
+    xml: map.xml,
     driveFolder: map["drive-folder"] ?? DEFAULT_DRIVE_FOLDER,
     categorySlug: map["category-slug"] ?? map.slug, // default: category slug == page slug
     parentCategorySlug: map["parent-category-slug"] ?? DEFAULT_PARENT_CATEGORY,
@@ -260,7 +265,7 @@ async function main() {
   console.log("\n[3/8] Upserting article row");
   const article = await upsertArticle(supabase, {
     slug: args.slug,
-    title: decodeHtmlEntities(page.title),
+    title: he.decode(page.title),
     categoryId,
     authorId,
   });
@@ -303,7 +308,7 @@ async function main() {
 
   // 7. Convert HTML → Plate JSON
   console.log("\n[7/8] Converting HTML → Plate JSON");
-  const articleTitle = decodeHtmlEntities(page.title).trim();
+  const articleTitle = he.decode(page.title).trim();
   const walkResult = htmlToPlate(cleaned, assetMap);
   const { warnings } = walkResult;
   let value = walkResult.value;
@@ -381,16 +386,6 @@ async function main() {
   console.log(`  Article URL:    /resources/article/${args.slug}`);
   console.log(`  Drive folder:   MCR Intranet Attachments / Resources / ${args.slug}/`);
   console.log(`  Author:         ${args.authorEmail}`);
-}
-
-function decodeHtmlEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&apos;/g, "'");
 }
 
 main().catch((err: unknown) => {
