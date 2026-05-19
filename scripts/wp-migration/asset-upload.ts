@@ -47,6 +47,12 @@ import type { WpAttachment } from "./xml-parse";
 const MAX_ASSET_BYTES = 64 * 1024 * 1024;
 const ORG_DOMAIN = "mcrpathways.org";
 
+// Chunk size for .in() lookups. WP upload URLs are ~100 chars; a chunk of
+// 50 produces a query parameter ~5KB, well under PostgREST's ~8KB
+// practical URL-length ceiling. group-work (71 PDFs) is the only single
+// page in scope today that exceeds one chunk.
+const LOOKUP_CHUNK_SIZE = 50;
+
 export class MigrationHaltError extends Error {
   constructor(message: string) {
     super(message);
@@ -105,17 +111,24 @@ export async function uploadAssets({
   // Keyed by original_url GLOBALLY (across all articles), not per-article —
   // this is what unlocks cross-article dedup. The junction table tracks
   // which articles reference each media row.
-  const { data: rowsByUrl, error: urlLookupErr } = await supabase
-    .from("resource_media")
-    .select("id, file_id, original_name, original_url, mime_type, file_size")
-    .in("original_url", urls);
-  if (urlLookupErr) {
-    throw new MigrationHaltError(
-      `resource_media pre-flight URL lookup failed: ${urlLookupErr.message}`,
-    );
-  }
+  //
+  // Chunked .in() to keep the URL parameter list under PostgREST's
+  // practical query-length limit (~8KB headers). WP attachment URLs are
+  // ~100 chars; a single chunk of 50 is ~5KB which leaves headroom.
+  // group-work (71 PDFs) is the largest single article in scope today,
+  // so this matters for that one page.
+  const rowsByUrl = await chunkedIn(
+    urls,
+    LOOKUP_CHUNK_SIZE,
+    (chunk) =>
+      supabase
+        .from("resource_media")
+        .select("id, file_id, original_name, original_url, mime_type, file_size")
+        .in("original_url", chunk),
+    "pre-flight URL lookup",
+  );
   const existingByUrl = new Map(
-    (rowsByUrl ?? [])
+    rowsByUrl
       .filter((r) => r.original_url !== null)
       .map((r) => [r.original_url as string, r]),
   );
@@ -130,19 +143,20 @@ export async function uploadAssets({
     const attachment = attachmentsByUrl.get(url);
     return inferFileName(url, attachment?.title ?? null);
   });
-  const { data: legacyRows, error: legacyLookupErr } = await supabase
-    .from("resource_media")
-    .select("id, file_id, original_name, original_url, mime_type, file_size, article_id")
-    .eq("article_id", articleId)
-    .in("original_name", expectedFileNames)
-    .is("original_url", null);
-  if (legacyLookupErr) {
-    throw new MigrationHaltError(
-      `resource_media pre-flight legacy lookup failed: ${legacyLookupErr.message}`,
-    );
-  }
+  const legacyRows = await chunkedIn(
+    expectedFileNames,
+    LOOKUP_CHUNK_SIZE,
+    (chunk) =>
+      supabase
+        .from("resource_media")
+        .select("id, file_id, original_name, original_url, mime_type, file_size, article_id")
+        .eq("article_id", articleId)
+        .in("original_name", chunk)
+        .is("original_url", null),
+    "pre-flight legacy lookup",
+  );
   const legacyByName = new Map(
-    (legacyRows ?? []).map((r) => [r.original_name, r]),
+    legacyRows.map((r) => [r.original_name, r]),
   );
 
   // Collect media ids to link to this article via the junction, then batch
@@ -254,31 +268,42 @@ export async function uploadAssets({
     // its id so the junction row below can link to it. article_id on
     // resource_media stays for backwards-compat reads — it points at the
     // FIRST article that referenced the file.
+    //
     // Cleanup: if the DB insert fails after Drive upload + share succeeded,
     // delete the orphaned file so a retry doesn't leave Drive littered.
-    const { data: insertedMedia, error: insertErr } = await supabase
-      .from("resource_media")
-      .insert({
-        file_id: uploadResult.fileId,
-        article_id: articleId,
-        original_name: fileName,
-        original_url: url,
-        mime_type: mimeType,
-        file_size: size,
-        uploaded_by: uploadedBy,
-      } as Database["public"]["Tables"]["resource_media"]["Insert"])
-      .select("id")
-      .single();
+    // Wrap the whole insert in try/catch so a network-layer throw (timeout,
+    // socket reset) also triggers cleanup — supabase-js returns errors via
+    // `{ error }` for HTTP-level failures but throws for true network
+    // exceptions, and we need both paths to clean up.
+    let insertedMediaId: string;
+    try {
+      const { data: insertedMedia, error: insertErr } = await supabase
+        .from("resource_media")
+        .insert({
+          file_id: uploadResult.fileId,
+          article_id: articleId,
+          original_name: fileName,
+          original_url: url,
+          mime_type: mimeType,
+          file_size: size,
+          uploaded_by: uploadedBy,
+        } as Database["public"]["Tables"]["resource_media"]["Insert"])
+        .select("id")
+        .single();
 
-    if (insertErr || !insertedMedia) {
+      if (insertErr || !insertedMedia) {
+        throw new Error(insertErr?.message ?? "resource_media insert returned no row");
+      }
+      insertedMediaId = insertedMedia.id;
+    } catch (err) {
       await cleanupOrphanedDriveFile(uploadResult.fileId, fileName, "db-insert-failed");
       throw new MigrationHaltError(
-        `resource_media insert failed for ${fileName} (Drive file ${uploadResult.fileId} cleaned up): ${insertErr?.message ?? "unknown"}`,
+        `resource_media insert failed for ${fileName} (Drive file ${uploadResult.fileId} cleaned up): ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 
     // Queue the junction row — single batch insert after the loop.
-    junctionMediaIds.push(insertedMedia.id);
+    junctionMediaIds.push(insertedMediaId);
 
     assetMap.set(url, {
       fileId: uploadResult.fileId,
@@ -356,6 +381,33 @@ async function withRetry<T>(
   throw new MigrationHaltError(
     `${opts.label} failed after ${MAX_ATTEMPTS} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
   );
+}
+
+/**
+ * Run a `.in()` lookup in chunks to stay under PostgREST's URL-length
+ * ceiling, concatenating the rows from each chunk. The `runQuery`
+ * callback returns a PostgREST query builder result — same shape as a
+ * direct .in() call — so callers can compose any additional filters
+ * (.eq, .is, .select) inside the callback.
+ */
+async function chunkedIn<T>(
+  values: string[],
+  chunkSize: number,
+  runQuery: (chunk: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  label: string,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    const chunk = values.slice(i, i + chunkSize);
+    const { data, error } = await runQuery(chunk);
+    if (error) {
+      throw new MigrationHaltError(
+        `${label} failed (chunk ${i}–${i + chunk.length}): ${error.message}`,
+      );
+    }
+    if (data) out.push(...data);
+  }
+  return out;
 }
 
 /**
