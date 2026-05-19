@@ -3129,6 +3129,7 @@ export type Database = {
           file_id: string
           article_id: string | null
           original_name: string
+          original_url: string | null
           mime_type: string
           file_size: number
           uploaded_by: string
@@ -3139,6 +3140,7 @@ export type Database = {
           file_id: string
           article_id?: string | null
           original_name: string
+          original_url?: string | null
           mime_type: string
           file_size: number
           uploaded_by: string
@@ -3149,6 +3151,7 @@ export type Database = {
           file_id?: string
           article_id?: string | null
           original_name?: string
+          original_url?: string | null
           mime_type?: string
           file_size?: number
           uploaded_by?: string
@@ -3167,6 +3170,42 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_media_articles: {
+        Row: {
+          id: string
+          media_id: string
+          article_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          media_id: string
+          article_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          media_id?: string
+          article_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_media_articles_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "resource_media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_media_articles_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "resource_articles"
             referencedColumns: ["id"]
           },
         ]
