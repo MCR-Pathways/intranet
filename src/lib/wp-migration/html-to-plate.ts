@@ -692,12 +692,17 @@ function collapseEmptyParagraphs(nodes: PlateNode[]): Value {
   return nodes.filter((n) => {
     if (n.type !== "p") return true;
     if (!Array.isArray(n.children)) return true;
-    const text = n.children
-      .map((c) => (isTextLeaf(c) ? c.text : ""))
-      .join("")
-      .trim();
-    // Preserve list paragraphs even if visually empty
+    // Preserve list paragraphs even if visually empty.
     if (n.indent && n.listStyleType) return true;
-    return text.length > 0;
+    // A paragraph counts as content-bearing if it has either non-empty text
+    // OR any inline non-text child (e.g. `<a>` link element). The earlier
+    // text-only check incorrectly dropped paragraphs whose sole content was
+    // an inline link — e.g. WP source `<p><a href="...pdf">Paper Form</a></p>`
+    // would be filtered out, losing the link entirely. See participation-forms
+    // for the original case that surfaced this.
+    return n.children.some((c) => {
+      if (isTextLeaf(c)) return c.text.trim().length > 0;
+      return true;
+    });
   }) as Value;
 }

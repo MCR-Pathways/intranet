@@ -54,6 +54,12 @@ mcr-pathways-*.json
 # vercel
 .vercel
 
+# ralph loop runtime artifacts (history log + lock + stop signal are local)
+scripts/ralph/ralph-history.log
+scripts/ralph/.lock
+scripts/ralph/.lock/
+scripts/ralph/STOP
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
