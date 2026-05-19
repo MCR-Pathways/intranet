@@ -77,7 +77,13 @@ import { VideoEmbedDialog } from "./media-dialogs";
 // =============================================
 
 export function ParagraphElement(props: PlateElementProps) {
-  return <PlateElement {...props} as="p" />;
+  // Indent-list paragraphs become <div> instead of <p> — Plate renders a
+  // <ul>/<ol> child inside, and <p> can't contain block-level <ul>/<ol>
+  // (invalid HTML → hydration warnings). Mirror of the static-renderer
+  // ParagraphStatic fix in src/lib/plate-static-plugins.tsx.
+  const el = props.element as Record<string, unknown>;
+  const isListStyled = Boolean(el.indent && el.listStyleType);
+  return <PlateElement {...props} as={isListStyled ? "div" : "p"} />;
 }
 
 export function BlockquoteElement(props: PlateElementProps) {
@@ -115,19 +121,23 @@ export function HrElement(props: PlateElementProps) {
   );
 }
 
-export function LinkElement({ children, element, ...props }: PlateElementProps) {
+export function LinkElement({ children, element, attributes }: PlateElementProps) {
   const url = (element as Record<string, unknown>).url as string;
+  // Render <a> directly without PlateElement wrapper. The default wrapper
+  // emits <div data-slate-inline> around inline elements, which is invalid
+  // HTML inside <p>. Spreading `attributes` keeps Slate's per-node ref +
+  // data-slate-* attributes on the <a> itself so editor selection still
+  // tracks the node. Mirror of the LinkStatic fix in plate-static-plugins.tsx.
   return (
-    <PlateElement element={element} {...props}>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-link underline underline-offset-4 hover:text-link/80"
-      >
-        {children}
-      </a>
-    </PlateElement>
+    <a
+      {...attributes}
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-link underline underline-offset-4 hover:text-link/80"
+    >
+      {children}
+    </a>
   );
 }
 
@@ -319,8 +329,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Insert row above"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <Rows3 className="h-3 w-3" />
+            <Plus />
+            <Rows3 />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Insert row above</TooltipContent>
@@ -338,8 +348,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Insert row below"
           >
-            <Rows3 className="h-3 w-3" />
-            <Plus className="h-3.5 w-3.5" />
+            <Rows3 />
+            <Plus />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Insert row below</TooltipContent>
@@ -357,8 +367,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Insert column left"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <Columns3 className="h-3 w-3" />
+            <Plus />
+            <Columns3 />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Insert column left</TooltipContent>
@@ -376,8 +386,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Insert column right"
           >
-            <Columns3 className="h-3 w-3" />
-            <Plus className="h-3.5 w-3.5" />
+            <Columns3 />
+            <Plus />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Insert column right</TooltipContent>
@@ -397,8 +407,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Delete row"
           >
-            <Minus className="h-3.5 w-3.5" />
-            <Rows3 className="h-3 w-3" />
+            <Minus />
+            <Rows3 />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Delete row</TooltipContent>
@@ -416,8 +426,8 @@ function TableFloatingToolbar() {
             }}
             aria-label="Delete column"
           >
-            <Minus className="h-3.5 w-3.5" />
-            <Columns3 className="h-3 w-3" />
+            <Minus />
+            <Columns3 />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Delete column</TooltipContent>
@@ -435,7 +445,7 @@ function TableFloatingToolbar() {
             }}
             aria-label="Delete table"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">Delete table</TooltipContent>
@@ -510,7 +520,7 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
                   }}
                   aria-label={preset.label}
                 >
-                  <preset.icon className="h-3.5 w-3.5" />
+                  <preset.icon />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">{preset.label}</TooltipContent>
@@ -531,7 +541,7 @@ export function ColumnGroupElement({ children, element, ...props }: PlateElement
                 }}
                 aria-label="Remove columns"
               >
-                <X className="h-3.5 w-3.5" />
+                <X />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Remove columns</TooltipContent>
@@ -941,7 +951,7 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
             setShowDeleteConfirm(true);
           }}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 />
         </Button>
       </div>
 
