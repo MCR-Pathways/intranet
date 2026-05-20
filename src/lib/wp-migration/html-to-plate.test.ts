@@ -8,12 +8,45 @@ import { describe, it, expect } from "vitest";
 import { htmlToPlate } from "./html-to-plate";
 
 describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern)", () => {
-  it("emits the image as a link target, not the bare filename", () => {
-    // WP pattern: <a href="x.pdf"><img src="screenshot.png"/></a>
-    // Author's intent: clickable screenshot opens the PDF.
-    // Before this fix, the walker walked the <a> element via walkInline,
-    // saw it had no textContent (the <img> contributes none), and emitted
-    // a link labelled with the filename — losing the image entirely.
+  it("keeps the image when it's the only surface for the file", () => {
+    // Source: <a href="x.pdf"><img/></a> with NO other reference to x.pdf
+    // in the document. The image-preview is the only surface; preserve it.
+    const assetMap = new Map([
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf",
+        {
+          fileId: "PDF_ID",
+          mimeType: "application/pdf",
+          fileName: "Doc.pdf",
+          size: 1000,
+        },
+      ],
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png",
+        {
+          fileId: "IMG_ID",
+          mimeType: "image/png",
+          fileName: "Screenshot.png",
+          size: 500,
+        },
+      ],
+    ]);
+    const html = `<a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png" alt="Doc screenshot" /></a>`;
+    const { value, warnings } = htmlToPlate(html, assetMap);
+    const imgNode = value.find(
+      (n) => (n as { type: string }).type === "img",
+    ) as { type: string; url: string };
+    expect(imgNode).toBeDefined();
+    expect(imgNode.url).toBe("/api/drive-file/IMG_ID");
+    const flatText = JSON.stringify(value);
+    expect(flatText).not.toContain("Doc.pdf");
+    expect(warnings).toEqual([]);
+  });
+
+  it("drops the image-preview anchor when the same href appears as a text link elsewhere (dedupe)", () => {
+    // WP pattern: <a href="x.pdf"><img/></a> AND <ul><li><a href="x.pdf">Label</a></li></ul>
+    // Two surfaces for the same file — the visual preview duplicates the
+    // text link. Drop the preview; the text link carries the click action.
     const assetMap = new Map([
       [
         "https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf",
@@ -34,18 +67,17 @@ describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern
         },
       ],
     ]);
-    const html = `<a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png" alt="Welcome Pack screenshot" /></a>`;
+    const html = `<a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png" alt="Screenshot" /></a><ul><li><a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf">Welcome Pack</a></li></ul>`;
     const { value, warnings } = htmlToPlate(html, assetMap);
-    // The image must survive — it's the visual preview the author placed.
-    const imgNode = value.find(
-      (n) => (n as { type: string }).type === "img",
-    ) as { type: string; url: string };
-    expect(imgNode).toBeDefined();
-    expect(imgNode.url).toBe("/api/drive-file/IMG_ID");
-    // There should be NO orphan "Welcome-Pack.pdf" filename-labelled link.
+    // No image node should be emitted — the preview was redundant.
+    const imgNodes = value.filter((n) => (n as { type: string }).type === "img");
+    expect(imgNodes).toHaveLength(0);
+    // The bullet-list link with "Welcome Pack" label should remain.
     const flatText = JSON.stringify(value);
-    expect(flatText).not.toContain("Welcome-Pack.pdf");
-    expect(warnings).toEqual([]);
+    expect(flatText).toContain("Welcome Pack");
+    expect(flatText).not.toContain("Welcome-Pack.pdf"); // no filename fallback
+    // Walker should warn that it dropped the preview.
+    expect(warnings.some((w) => /duplicate image-preview/i.test(w))).toBe(true);
   });
 
   it("emits a warning when an anchor falls back to the filename for visible text", () => {

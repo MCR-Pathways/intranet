@@ -100,6 +100,14 @@ export interface WalkerOptions {
    * `undefined` (Import HTML path) leaves WP URLs verbatim.
    */
   internalSlugs?: Set<string>;
+  /**
+   * Map of href → occurrence count across the body. Internal to the
+   * walker — populated by htmlToPlate before walking. Consumed by the
+   * image-preview-anchor deduplication path to detect when a
+   * `<a href="x.pdf"><img/></a>` preview is redundant with a text link
+   * to the same file elsewhere on the page.
+   */
+  hrefCounts?: Map<string, number>;
 }
 
 const WP_PAGE_PREFIX = "https://i.mcrpathways.org/";
@@ -175,12 +183,24 @@ export function htmlToPlate(
   if (!body) {
     return { value: [], warnings: ["empty body after parse"] };
   }
+  // Count how many times each href appears as an <a href>. Used by the
+  // block walker to detect image-preview anchors that duplicate a text
+  // link elsewhere on the page (WP authors commonly emit both forms for
+  // the same file: <a href="x.pdf"><img/></a> for the visual preview AND
+  // <a href="x.pdf">Label</a> in a bullet list). When that's the case
+  // the walker drops the image-preview entirely — one surface is enough.
+  const hrefCounts = new Map<string, number>();
+  for (const a of Array.from(body.querySelectorAll("a[href]"))) {
+    const href = a.getAttribute("href");
+    if (!href) continue;
+    hrefCounts.set(href, (hrefCounts.get(href) ?? 0) + 1);
+  }
   const value = walkBlocks(
     Array.from(body.childNodes) as DomNode[],
     assetMap,
     warnings,
     0,
-    options,
+    { ...options, hrefCounts },
   );
   return { value: collapseEmptyParagraphs(value), warnings };
 }
@@ -415,16 +435,35 @@ function appendBlocks(
     }
 
     // Clickable-image-preview pattern: <a href="x.pdf"><img src="..."></a>.
-    // The author wrapped the image in a link so clicking it opens the PDF.
-    // walkInline would extract `el.textContent` here, get an empty string
-    // (images have no textContent), and fall back to `asset.fileName` as
-    // the visible text — producing an ugly filename-labelled link and
-    // silently dropping the image. Emit the image as a block node
-    // instead so the visual preview survives.
+    // The author wrapped an image in an anchor so clicking the visual
+    // preview opens the PDF. WP authors commonly emit BOTH this form AND
+    // a text-link reference to the same file in a bullet list nearby —
+    // two surfaces for one file. The walker's pre-pass populated
+    // hrefCounts so we can detect the duplicate and drop the preview
+    // anchor entirely (the text-link surface elsewhere serves the click
+    // action and is visually cleaner). If the href has only ONE
+    // occurrence in the body, this anchor IS the only surface; preserve
+    // the image as a non-clickable visual (Plate's <img> node has no
+    // linkTarget; rebuilding click-through requires a separate node-spec
+    // change, tracked elsewhere).
+    const href = el.getAttribute("href") ?? "";
     const imgChildren = Array.from(el.querySelectorAll("img"));
     const hasOnlyImage = imgChildren.length > 0
       && (el.textContent ?? "").trim() === "";
     if (hasOnlyImage) {
+      const hrefAppearsMultiple = (options?.hrefCounts?.get(href) ?? 0) > 1;
+      if (hrefAppearsMultiple) {
+        // Duplicate of a text link elsewhere on the page — drop the
+        // preview entirely. Surface as a warning for the migration log.
+        warnings.push(
+          `Dropped duplicate image-preview anchor for ${href} — file is also linked as text elsewhere on the page.`,
+        );
+        return;
+      }
+      // Sole surface for this file — keep the image as a visual preview.
+      // Click affordance is lost (img has no linkTarget) but the file is
+      // still reachable via the asset map. Operators can edit if they
+      // want to restore an explicit text link.
       for (const imgEl of imgChildren) {
         const imgNode = buildImgNode(imgEl, assetMap, warnings);
         if (imgNode) out.push(imgNode);
