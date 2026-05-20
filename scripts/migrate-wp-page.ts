@@ -405,19 +405,21 @@ async function main() {
   const walkResult = htmlToPlate(cleaned, assetMap, { internalSlugs });
   const { warnings } = walkResult;
   let value = walkResult.value;
-  // Strip duplicate first H1 if it matches the article title (WP pages
-  // often begin with their own H1 echoing the page title — the article
-  // view already renders the title, so the body H1 is redundant).
+  // Strip duplicate first heading if it matches the article title (WP
+  // pages often begin with their own H1 echoing the page title — the
+  // article view already renders the title, so the body heading is
+  // redundant). Walker demotes in-body H1 to H2 for accessibility, so
+  // the duplicate may now appear at either level — recognise both.
   if (value.length > 0) {
     const first = value[0] as { type?: string; children?: Array<{ text?: string }> };
-    if (first.type === "h1") {
+    if (first.type === "h1" || first.type === "h2") {
       const text = (first.children ?? [])
         .map((c) => c.text ?? "")
         .join("")
         .trim();
       if (text.toLowerCase() === articleTitle.toLowerCase()) {
         value = value.slice(1);
-        console.log(`  ↺ stripped duplicate top-level h1 matching title: "${text}"`);
+        console.log(`  ↺ stripped duplicate top-level ${first.type} matching title: "${text}"`);
       }
     }
   }
