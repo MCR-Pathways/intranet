@@ -147,6 +147,32 @@ async function lookupAuthorId(
 }
 
 /**
+ * Fetch the slugs of every non-deleted Resources article so the walker can
+ * rewrite cross-references between migrated pages — e.g. an `<a href="...
+ * i.mcrpathways.org/mentor-training/">` inside pc-support becomes
+ * `/resources/article/mentor-training` instead of bouncing the reader to
+ * the (soon-retired) WP site.
+ *
+ * Returns an empty set if the query fails — better to skip rewriting than
+ * to halt the whole migration over a search-quality issue.
+ */
+async function loadMigratedSlugs(
+  supabase: SupabaseClient<Database>,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("resource_articles")
+    .select("slug")
+    .is("deleted_at", null);
+  if (error) {
+    console.warn(
+      `  ⚠ Failed to fetch migrated slugs for cross-link rewriting: ${error.message}. Continuing without rewriting.`,
+    );
+    return new Set();
+  }
+  return new Set((data ?? []).map((r) => r.slug));
+}
+
+/**
  * Resolve the target article row for this slug. Runs the slug-clash /
  * content-type / category / publish-status guards regardless of dryRun;
  * only the writes (UPDATE / INSERT) are skipped when dryRun is true.
@@ -308,8 +334,10 @@ async function main() {
     args.categorySlug,
   );
   const authorId = await lookupAuthorId(supabase, args.authorEmail);
+  const internalSlugs = await loadMigratedSlugs(supabase);
   console.log(`  ✓ category_id = ${categoryId}`);
   console.log(`  ✓ author_id   = ${authorId}`);
+  console.log(`  ✓ internal slugs known to walker: ${internalSlugs.size}`);
 
   // 3. Upsert article row (status='draft'). upsertArticle runs the same
   // slug-clash / publish-status guards in dry-run mode and just skips the
@@ -374,7 +402,7 @@ async function main() {
   // 7. Convert HTML → Plate JSON
   console.log("\n[7/8] Converting HTML → Plate JSON");
   const articleTitle = decodeHtmlEntities(page.title).trim();
-  const walkResult = htmlToPlate(cleaned, assetMap);
+  const walkResult = htmlToPlate(cleaned, assetMap, { internalSlugs });
   const { warnings } = walkResult;
   let value = walkResult.value;
   // Strip duplicate first H1 if it matches the article title (WP pages
