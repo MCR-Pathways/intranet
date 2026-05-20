@@ -176,6 +176,52 @@ export function sanitiseHtmlForImport(html: string): string {
 // =============================================
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4"]);
+
+/**
+ * Detect an anchor that's acting as a navigation marker rather than a real
+ * link. WP page authors and Elementor's Toggle/Tab widgets both produce
+ * structurally-similar HTML for "this is the start of a section":
+ *
+ *   <a name="section-slug"></a>       — WP page-anchor jump target
+ *   <a name="x">Section name</a>      — WP page-anchor with visible label
+ *   <a class="elementor-toggle-title">Title</a>  — Elementor Toggle title
+ *   <a class="elementor-tab-title" href="#">…</a> — Elementor Tab title
+ *
+ * None of these are real links the reader should click. In a flat-Plate
+ * migration they become orphan inline anchors that visually masquerade as
+ * cross-reference links — see memory/wp-migration-design-audit.md for the
+ * pages where this was severe (group-work's 7 themes, new-staff-info's 16
+ * step titles, pc-support's "PC Guidebook").
+ */
+function isNavigationMarkerAnchor(el: Element): boolean {
+  const href = el.getAttribute("href");
+  const hrefIsEmpty = !href || href === "" || href === "#";
+  if (!hrefIsEmpty) return false;
+  if (el.hasAttribute("name")) return true;
+  const className = el.getAttribute("class") ?? "";
+  if (/\btoggle-title\b|\btab-title\b/i.test(className)) return true;
+  return false;
+}
+
+/**
+ * Find the most recent heading level already emitted into `out` so that an
+ * orphan navigation-marker promoted to a heading lands at the right depth.
+ *
+ * - No prior heading → level 1 (so the orphan becomes H2 — a top-level
+ *   section, peer of where the page-title H1 would be).
+ * - Previous H2 → orphan becomes H3 (group-work themes case).
+ * - Previous H3 → orphan becomes H4 (new-staff-info step titles).
+ *
+ * Capped at H6.
+ */
+function findMostRecentHeadingLevel(out: PlateNode[]): number {
+  for (let i = out.length - 1; i >= 0; i--) {
+    const match = /^h([1-6])$/.exec(out[i].type);
+    if (match) return parseInt(match[1], 10);
+  }
+  return 1;
+}
+
 const TRANSPARENT_WRAPPER_TAGS = new Set([
   "div",
   "section",
@@ -294,6 +340,21 @@ function appendBlocks(
   }
 
   if (tag === "a") {
+    // Navigation-marker anchors (WP jump-anchors, Elementor Toggle/Tab
+    // widgets) end up at block level after the surrounding <div>s walk
+    // transparently. They were intended as section headers by the WP
+    // author; promote to a heading at the depth-context appropriate level.
+    if (isNavigationMarkerAnchor(el)) {
+      const text = (el.textContent ?? "").trim();
+      if (text) {
+        const level = Math.min(findMostRecentHeadingLevel(out) + 1, 6);
+        out.push({
+          type: `h${level}`,
+          children: [{ text }],
+        });
+      }
+      return;
+    }
     const fileOrEmbed = buildLinkBlock(el, assetMap);
     if (fileOrEmbed) {
       out.push(fileOrEmbed);
@@ -476,6 +537,24 @@ function walkInline(
     }
 
     if (tag === "a") {
+      // Navigation-marker anchors inline (e.g. WP's
+      // `<p><a name="bookmark"></a>Term</p>` pattern) carry no link target.
+      // Drop the wrapping anchor; emit any inline children at the same
+      // level. Empty-children anchors contribute nothing and disappear.
+      // Block-level promotion to a heading happens in appendBlocks; inline
+      // context (this branch) deliberately stays inline because the
+      // surrounding <p> may have other meaningful content.
+      if (isNavigationMarkerAnchor(el)) {
+        const children = walkInline(
+          Array.from(el.childNodes) as DomNode[],
+          assetMap,
+          warnings,
+          marks,
+        );
+        if (children.length) out.push(...children);
+        continue;
+      }
+
       const href = el.getAttribute("href") ?? "";
 
       // WP-uploaded asset → rewrite URL to point at our Drive (or Drive's
