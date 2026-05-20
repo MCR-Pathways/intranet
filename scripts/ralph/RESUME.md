@@ -1,29 +1,29 @@
 # RESUME for next iteration
 
-Last iteration ran at: never
+Last iteration ran at: 2026-05-19T14:35:00Z (smoke checks complete)
 Last iteration result: NONE
 Last slug: <none>
 
 ## Active bit
 
-Set by the operator before the first iteration of a new bit.
-For Bit 2 the operator will set:
-  Active bit: Bit 2 — PC workflow cluster
-  Branch: feature/wp-migration-bit-2 (off main)
+Bit 2 — PC workflow cluster
+Branch: feature/wp-migration-bit-2 (off main)
 
 ## Last page migrated
 
-(none — RALPH has not run yet)
+Bit 2 complete: pc-support → programme-resources/pc-support (28 PDFs).
+participation-forms and yt-participation-forms were initially migrated but
+then removed — their content had already been consolidated into pc-support
+upstream. Cleanup landed in the same PR (#311).
 
 ## Next page
 
-Determined by `scripts/ralph/progress.txt` for the active bit.
+(Bit 2 closed. Next iteration starts Bit 3 — group-work — on a new branch
+after #311 merges.)
 
 ## Dev server
 
-Status: assumed running on localhost:3000 before any iteration starts;
-if down, ralph-once.sh halts and writes HALTED so the operator can
-restart `npm run dev` and resume.
+Status: assumed running on localhost:3000.
 
 ## Outstanding anomalies (non-blocking)
 
@@ -31,17 +31,22 @@ restart `npm run dev` and resume.
 
 ## Recently BLOCKED entries
 
-(none yet — pre-tagged BLOCKED entries for Bits 5, 11, 12, 13, 14 are
-in `progress.txt` from initial setup, not from a RALPH iteration)
+(none yet)
 
 ## Chrome MCP
 
 Strategy: call `tabs_context_mcp` first; reuse a tab whose URL matches the
-target article URL, else create a new tab. Tab IDs are session-scoped
-and NOT persisted across `claude` restarts — always discover anew.
-
-Last URL: <none>
+target article URL, else create.
 
 ## Notes from previous iteration
 
-(none — first run)
+Smoke checks all passed (2026-05-19):
+- STOP signal halts loop cleanly
+- BLOCKED + IN_PROGRESS + whitespace-tolerant parsing all work
+- Chrome MCP auth persists across CLI restarts
+- mentor-training dry-run: 0 would-upload, 10 would-reuse (legacy fallback
+  matched all assets keyed by original_name since they pre-date 00097)
+- Walker produced 20 nodes for mentor-training, no halt-pattern warnings
+
+Bit 2 driven in-session (not via ralph-loop.sh) for visibility on the
+first real RALPH-pattern run. Will switch to loop for later bits.
