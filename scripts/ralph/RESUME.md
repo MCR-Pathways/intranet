@@ -1,52 +1,60 @@
 # RESUME for next iteration
 
-Last iteration ran at: 2026-05-19T14:35:00Z (smoke checks complete)
-Last iteration result: NONE
-Last slug: <none>
+Last iteration ran at: 2026-05-20T08:16:20Z (loop spawn failed — claude binary not on subshell PATH; ANTHROPIC_API_KEY missing)
+Last iteration result: FAILED-SPAWN (decommissioned for Bit 3; falling back to in-session)
+Last slug: <none migrated this attempt>
 
 ## Active bit
 
-Bit 2 — PC workflow cluster
-Branch: feature/wp-migration-bit-2 (off main)
+Bit 3 — large-asset stress test
+Branch: feature/wp-migration-bit-3 (off main)
+Drive mode: in-session (loop spawn issues documented in scripts/ralph/SPAWN_ISSUES.md)
 
 ## Last page migrated
 
-Bit 2 complete: pc-support → programme-resources/pc-support (28 PDFs).
-participation-forms and yt-participation-forms were initially migrated but
-then removed — their content had already been consolidated into pc-support
-upstream. Cleanup landed in the same PR (#311).
+Bit 2 closed: pc-support → programme-resources/pc-support (28 PDFs).
+participation-forms + yt-participation-forms had been consolidated into
+pc-support upstream; both were over-migrated then rolled back, scotland-
+programme + england-programme subcategories soft-deleted (PR #311 merged).
+Walker fix for collapseEmptyParagraphs (Tier 1) landed in the same PR —
+protects against `<p><a>...</a></p>` being dropped as empty.
 
 ## Next page
 
-(Bit 2 closed. Next iteration starts Bit 3 — group-work — on a new branch
-after #311 merges.)
+slug: group-work
+WP URL: https://i.mcrpathways.org/group-work/
+Target category: programme-resources/group-work
+   (Subcategory created via scripts/wp-migration/create-category.ts for
+   this bit since the original scotland-programme dest was soft-deleted
+   in Bit 2 cleanup.)
+
+Dry-run done in-session before this iteration: 72 distinct assets (71 PDFs
++ 1 JPG), 108 Plate nodes, no halt-pattern warnings.
 
 ## Dev server
 
-Status: assumed running on localhost:3000.
+Status: running on localhost:3000 (assumed; checked at start of in-session run).
 
 ## Outstanding anomalies (non-blocking)
 
-(none)
+- RALPH loop spawn failed end-to-end first try. Two prerequisites
+  surfaced — claude binary path resolution + headless API auth — both
+  documented in scripts/ralph/SPAWN_ISSUES.md. Loop validation pushed
+  to a future bit (or skipped entirely if API spend isn't worthwhile).
 
 ## Recently BLOCKED entries
 
-(none yet)
+(none — Bit 5/11/12/13/14 still have pre-tagged BLOCKED entries from
+the initial setup; not yet active)
 
 ## Chrome MCP
 
-Strategy: call `tabs_context_mcp` first; reuse a tab whose URL matches the
-target article URL, else create.
+Strategy: call `tabs_context_mcp` first; reuse a tab whose URL matches
+the target article URL, else create.
 
 ## Notes from previous iteration
 
-Smoke checks all passed (2026-05-19):
-- STOP signal halts loop cleanly
-- BLOCKED + IN_PROGRESS + whitespace-tolerant parsing all work
-- Chrome MCP auth persists across CLI restarts
-- mentor-training dry-run: 0 would-upload, 10 would-reuse (legacy fallback
-  matched all assets keyed by original_name since they pre-date 00097)
-- Walker produced 20 nodes for mentor-training, no halt-pattern warnings
-
-Bit 2 driven in-session (not via ralph-loop.sh) for visibility on the
-first real RALPH-pattern run. Will switch to loop for later bits.
+Bit 3 driven in-session (not via ralph-loop.sh) after the loop spawn
+crash. Same shape as Bits 1 and 2. group-work is the biggest single
+page in scope (72 assets, 108 Plate nodes) — first real stress test of
+the upload pipeline + retry logic + dedup junction at volume.

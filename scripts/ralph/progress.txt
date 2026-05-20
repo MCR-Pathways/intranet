@@ -14,7 +14,7 @@
 [x] pc-support → programme-resources/pc-support
 
 ## Bit 3 — large-asset stress test
-[ ] group-work → programme-resources/group-work (NOTE: operator creates this subcategory in the Resources admin UI before Bit 3 runs. Original scotland-programme dest was soft-deleted 2026-05-19 alongside the rolled-back participation-forms work — see Bit 2 cleanup commit in PR #311.)
+[ ] group-work → programme-resources/group-work
 
 ## Bit 4 — reference content
 [ ] jargon → organisation/jargon-buster
