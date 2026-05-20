@@ -77,6 +77,63 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
   });
 });
 
+describe("htmlToPlate — internal cross-link rewriting", () => {
+  it("rewrites i.mcrpathways.org links to /resources/article/<slug> when slug is in the migrated set", () => {
+    const html = `<p>See <a href="https://i.mcrpathways.org/mentor-training/">Mentor Training</a> for details.</p>`;
+    const { value } = htmlToPlate(html, undefined, {
+      internalSlugs: new Set(["mentor-training", "group-work"]),
+    });
+    const para = value[0] as { type: string; children: unknown[] };
+    const link = para.children.find(
+      (c) => (c as { type?: string }).type === "a",
+    ) as { type: string; url: string };
+    expect(link).toBeDefined();
+    expect(link.url).toBe("/resources/article/mentor-training");
+  });
+
+  it("leaves i.mcrpathways.org links unchanged when slug is NOT in the migrated set", () => {
+    const html = `<p>See <a href="https://i.mcrpathways.org/cyber-security/">Cyber Security</a>.</p>`;
+    const { value } = htmlToPlate(html, undefined, {
+      internalSlugs: new Set(["mentor-training"]),
+    });
+    const para = value[0] as { children: { type?: string; url?: string }[] };
+    const link = para.children.find((c) => c.type === "a") as { url: string };
+    expect(link.url).toBe("https://i.mcrpathways.org/cyber-security/");
+  });
+
+  it("leaves links unchanged when no internalSlugs set is provided", () => {
+    const html = `<p>See <a href="https://i.mcrpathways.org/mentor-training/">Mentor Training</a>.</p>`;
+    const { value } = htmlToPlate(html);
+    const para = value[0] as { children: { type?: string; url?: string }[] };
+    const link = para.children.find((c) => c.type === "a") as { url: string };
+    expect(link.url).toBe("https://i.mcrpathways.org/mentor-training/");
+  });
+
+  it("rewrites slug with no trailing slash", () => {
+    const html = `<a href="https://i.mcrpathways.org/group-work">Group Work</a>`;
+    const { value } = htmlToPlate(html, undefined, {
+      internalSlugs: new Set(["group-work"]),
+    });
+    // The standalone <a> goes through buildLinkBlock fallback to a <p>-wrapped
+    // inline link; check the inline anchor's url.
+    const para = value[0] as { children: { type?: string; url?: string }[] };
+    const link = para.children.find((c) => c.type === "a") as { url: string };
+    expect(link.url).toBe("/resources/article/group-work");
+  });
+
+  it("does not match deeper paths like /mentor-training/sub-page/", () => {
+    // Cautious behaviour: only top-level page slugs are rewritten. A deeper
+    // path could be a sub-resource that doesn't map to an article.
+    const html = `<a href="https://i.mcrpathways.org/mentor-training/sub-page/">Sub</a>`;
+    const { value } = htmlToPlate(html, undefined, {
+      internalSlugs: new Set(["mentor-training"]),
+    });
+    const para = value[0] as { children: { type?: string; url?: string }[] };
+    const link = para.children.find((c) => c.type === "a") as { url: string };
+    expect(link.url).toBe("https://i.mcrpathways.org/mentor-training/sub-page/");
+  });
+});
+
 describe("htmlToPlate — heading handling", () => {
   it("demotes a body-level H1 to H2", () => {
     const html = `<h1>In-body title</h1><p>body content</p>`;

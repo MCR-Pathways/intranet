@@ -84,6 +84,50 @@ export interface HtmlToPlateResult {
   warnings: string[];
 }
 
+/**
+ * Walker options threaded through every function in the walk. Optional
+ * features the migration script enables but the UI Import HTML path doesn't.
+ */
+export interface WalkerOptions {
+  /**
+   * Slugs of already-migrated Resources articles. When set, the walker
+   * rewrites `https://i.mcrpathways.org/{slug}/` anchor hrefs to the
+   * internal `/resources/article/{slug}` path so cross-references between
+   * migrated pages don't bounce users to the (soon-retired) WP site.
+   *
+   * Built once per migration run by the script querying
+   * `resource_articles` for `slug` where `deleted_at is null`. Set to
+   * `undefined` (Import HTML path) leaves WP URLs verbatim.
+   */
+  internalSlugs?: Set<string>;
+}
+
+const WP_PAGE_PREFIX = "https://i.mcrpathways.org/";
+
+/**
+ * Rewrite a cross-link to another WP page to its new intranet path if the
+ * destination has been migrated. Only matches top-level page slugs — deeper
+ * paths like `/mentor-training/sub-page/` are left alone because the deeper
+ * resource might not be a migrated article (could be a sub-resource, a
+ * legacy WP URL, etc.). The slug must match exactly.
+ */
+function rewriteInternalSlug(
+  href: string,
+  internalSlugs: Set<string> | undefined,
+): string {
+  if (!internalSlugs) return href;
+  if (!href.startsWith(WP_PAGE_PREFIX)) return href;
+  // Don't conflict with the more-specific WP_UPLOADS_PREFIX, which is
+  // handled elsewhere by the asset-rewrite path.
+  if (href.startsWith(WP_UPLOADS_PREFIX)) return href;
+  const path = href.slice(WP_PAGE_PREFIX.length);
+  const match = path.match(/^([a-z0-9][a-z0-9-]*)\/?$/);
+  if (!match) return href;
+  const slug = match[1];
+  if (!internalSlugs.has(slug)) return href;
+  return `/resources/article/${slug}`;
+}
+
 interface InlineMarks {
   bold?: true;
   italic?: true;
@@ -109,10 +153,12 @@ type DomNode = Element | ChildNode;
  * @param html - Cleaned HTML body content
  * @param assetMap - Optional WP-URL → Drive metadata map. When absent,
  *                  WP-content URLs in the input HTML are kept as-is.
+ * @param options - Optional walker options (internal-slug rewriting, etc.)
  */
 export function htmlToPlate(
   html: string,
   assetMap?: Map<string, AssetInfo>,
+  options?: WalkerOptions,
 ): HtmlToPlateResult {
   const warnings: string[] = [];
   const { document } = parseHTML(
@@ -127,6 +173,7 @@ export function htmlToPlate(
     assetMap,
     warnings,
     0,
+    options,
   );
   return { value: collapseEmptyParagraphs(value), warnings };
 }
@@ -239,10 +286,11 @@ function walkBlocks(
   assetMap: Map<string, AssetInfo> | undefined,
   warnings: string[],
   indent: number,
+  options?: WalkerOptions,
 ): PlateNode[] {
   const out: PlateNode[] = [];
   for (const node of nodes) {
-    appendBlocks(node, assetMap, warnings, indent, out);
+    appendBlocks(node, assetMap, warnings, indent, out, options);
   }
   return out;
 }
@@ -253,6 +301,7 @@ function appendBlocks(
   warnings: string[],
   indent: number,
   out: PlateNode[],
+  options?: WalkerOptions,
 ): void {
   if (node.nodeType === 3) {
     const text = node.textContent ?? "";
@@ -276,13 +325,13 @@ function appendBlocks(
     const headingType = tag === "h1" ? "h2" : tag;
     out.push({
       type: headingType,
-      children: walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings),
+      children: walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings, {}, options),
     });
     return;
   }
 
   if (tag === "p") {
-    const paraNodes = walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings);
+    const paraNodes = walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings, {}, options);
     const blocks: PlateNode[] = [];
     const inline: (PlateNode | TextLeaf)[] = [];
     for (const n of paraNodes) {
@@ -308,6 +357,7 @@ function appendBlocks(
       indent + 1,
       tag === "ol" ? "decimal" : "disc",
       out,
+      options,
     );
     return;
   }
@@ -318,6 +368,7 @@ function appendBlocks(
       assetMap,
       warnings,
       indent,
+      options,
     );
     out.push({
       type: "blockquote",
@@ -361,7 +412,7 @@ function appendBlocks(
     } else {
       out.push({
         type: "p",
-        children: walkInline([el], assetMap, warnings),
+        children: walkInline([el], assetMap, warnings, {}, options),
       });
     }
     return;
@@ -371,7 +422,7 @@ function appendBlocks(
 
   if (TRANSPARENT_WRAPPER_TAGS.has(tag)) {
     for (const child of Array.from(el.childNodes) as DomNode[]) {
-      appendBlocks(child, assetMap, warnings, indent, out);
+      appendBlocks(child, assetMap, warnings, indent, out, options);
     }
     return;
   }
@@ -387,7 +438,7 @@ function appendBlocks(
 
   warnings.push(`Unknown block tag <${tag}> — walking transparently.`);
   for (const child of Array.from(el.childNodes) as DomNode[]) {
-    appendBlocks(child, assetMap, warnings, indent, out);
+    appendBlocks(child, assetMap, warnings, indent, out, options);
   }
 }
 
@@ -407,6 +458,7 @@ function walkList(
   indent: number,
   listStyleType: "disc" | "decimal",
   out: PlateNode[],
+  options?: WalkerOptions,
 ): void {
   for (const child of Array.from(listEl.childNodes)) {
     if (child.nodeType !== 1) continue;
@@ -427,7 +479,7 @@ function walkList(
       directInline.push(sub as DomNode);
     }
 
-    const rawInlineChildren = walkInline(directInline, assetMap, warnings);
+    const rawInlineChildren = walkInline(directInline, assetMap, warnings, {}, options);
 
     // Trim pure-whitespace text leaves at the start and end of a list item,
     // matching the HTML rendering rule that collapses whitespace at block
@@ -480,6 +532,7 @@ function walkList(
         indent + 1,
         nested.type === "ol" ? "decimal" : "disc",
         out,
+        options,
       );
     }
   }
@@ -505,6 +558,7 @@ function walkInline(
   assetMap: Map<string, AssetInfo> | undefined,
   warnings: string[],
   marks: InlineMarks = {},
+  options?: WalkerOptions,
 ): (PlateNode | TextLeaf)[] {
   const out: (PlateNode | TextLeaf)[] = [];
   for (const node of nodes) {
@@ -526,6 +580,7 @@ function walkInline(
           assetMap,
           warnings,
           merged,
+          options,
         ),
       );
       continue;
@@ -550,6 +605,7 @@ function walkInline(
           assetMap,
           warnings,
           marks,
+          options,
         );
         if (children.length) out.push(...children);
         continue;
@@ -592,12 +648,17 @@ function walkInline(
         continue;
       }
 
-      // Plain external link.
+      // Plain external link. Rewrite known-internal cross-references
+      // to the new intranet's /resources/article/<slug> path so users
+      // don't bounce to the (soon-retired) WP site. No-op if the
+      // walker wasn't given an internalSlugs set, or if the slug
+      // isn't in the migrated list.
+      const rewrittenHref = rewriteInternalSlug(href, options?.internalSlugs);
       const linkText = (el.textContent ?? "").trim();
       out.push({
         type: "a",
-        url: href,
-        children: [{ text: linkText || href, ...marks }],
+        url: rewrittenHref,
+        children: [{ text: linkText || rewrittenHref, ...marks }],
       });
       continue;
     }
@@ -614,6 +675,7 @@ function walkInline(
         assetMap,
         warnings,
         marks,
+        options,
       ),
     );
   }
