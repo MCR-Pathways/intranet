@@ -221,8 +221,15 @@ function appendBlocks(
   const tag = el.tagName.toLowerCase();
 
   if (HEADING_TAGS.has(tag)) {
+    // Demote in-body H1 to H2. The page-title H1 is supplied by the article
+    // view's chrome (NativeArticleView, GoogleDocArticleView); any H1 inside
+    // body content creates a second H1 in the accessibility tree. HTML5
+    // and WAI-ARIA expect exactly one H1 per page. WP page authors sometimes
+    // put an H1 inside the body when they intended a section title — promote
+    // to H2 instead of preserving the regression.
+    const headingType = tag === "h1" ? "h2" : tag;
     out.push({
-      type: tag,
+      type: headingType,
       children: walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings),
     });
     return;
