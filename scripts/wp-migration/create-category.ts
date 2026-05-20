@@ -45,12 +45,25 @@ function parseArgs(argv: string[]): Args {
   return { slug: map.slug, name: map.name, parentSlug: map["parent-slug"] };
 }
 
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) {
+    console.error(`Missing env var: ${name}`);
+    console.error("Tip:  set -a; source .env.local; set +a; npx tsx scripts/wp-migration/create-category.ts ...");
+    process.exit(2);
+  }
+  return v;
+}
+
 async function main() {
   const args = parseArgs(process.argv);
 
+  const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+
   const sb = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    serviceRoleKey,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 

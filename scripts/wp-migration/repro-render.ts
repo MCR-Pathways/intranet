@@ -11,6 +11,7 @@
  *   npx tsx scripts/wp-migration/repro-render.ts <slug>
  */
 import { createClient } from "@supabase/supabase-js";
+import type { Value } from "platejs";
 import type { Database } from "@/types/database.types";
 import { prepareNativeArticle } from "@/lib/plate-static-plugins";
 
@@ -38,7 +39,7 @@ async function main() {
   console.log(`Top-level nodes: ${contentJson.length}`);
 
   try {
-    const { editor, headings } = prepareNativeArticle(contentJson as never);
+    const { editor, headings } = prepareNativeArticle(contentJson as unknown as Value);
     console.log(`prepareNativeArticle OK`);
     console.log(`Editor children: ${editor?.children?.length ?? "(null editor)"}`);
     console.log(`Headings extracted: ${headings.length}`);
