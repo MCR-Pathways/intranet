@@ -29,6 +29,11 @@ import type { Database } from "@/types/database.types";
 const DEFAULT_DRIVE_ROOT = "1u0nCOG8fvuw81lRrKXDwbHtuvaT2O-q5"; // MCR Intranet Attachments
 const RESOURCES_FOLDER_NAME = "Resources";
 
+// Chunk size for .in() lookups — same headroom calculation as asset-upload.ts:
+// 50 IDs per chunk × ~36-char UUIDs ≈ 2KB per query, well under PostgREST's
+// ~8KB practical URL ceiling.
+const LOOKUP_CHUNK_SIZE = 50;
+
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) { console.error(`Missing env var: ${name}`); process.exit(2); }
@@ -125,26 +130,61 @@ async function deleteOne(slug: string, supabase: ReturnType<typeof createClient<
   const allMediaIds = new Set<string>(legacyMedia.map((m) => m.id));
   junctionMediaIds.forEach((id) => allMediaIds.add(id));
 
+  // 3. Algolia removal — runs unconditionally so a no-media article still
+  // loses its index entry. Tolerant of failure (logs + continues) because
+  // the inverse (a successful DB delete with a still-indexed entry) is
+  // recoverable manually but worse than the warn-and-continue path.
+  try {
+    await removeArticleFromIndex(article.id);
+    console.log(`  ✓ Algolia removed`);
+  } catch (err) {
+    console.warn(`  ⚠ Algolia removal failed (continuing): ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   if (allMediaIds.size === 0) {
     console.log(`  no media rows referenced`);
   } else {
-    const { data: mediaRows, error: mediaErr } = await supabase
-      .from("resource_media")
-      .select("id, file_id, original_name, article_id")
-      .in("id", Array.from(allMediaIds));
-    if (mediaErr) { throw new Error(`[${slug}] media expand failed: ${mediaErr.message}`); }
+    const allMediaIdsArr = Array.from(allMediaIds);
 
-    // Identify which media rows are EXCLUSIVELY this article's (safe to delete)
-    // vs shared with other articles via junction (only delete the junction row).
+    // 4. Fetch the media rows themselves, chunked to stay under PostgREST's
+    // ~8KB URL ceiling on the .in() filter. 50 UUIDs per chunk ≈ 2KB.
+    const mediaRows: { id: string; file_id: string; original_name: string; article_id: string | null }[] = [];
+    for (let i = 0; i < allMediaIdsArr.length; i += LOOKUP_CHUNK_SIZE) {
+      const chunk = allMediaIdsArr.slice(i, i + LOOKUP_CHUNK_SIZE);
+      const { data, error: mediaErr } = await supabase
+        .from("resource_media")
+        .select("id, file_id, original_name, article_id")
+        .in("id", chunk);
+      if (mediaErr) { throw new Error(`[${slug}] media expand failed: ${mediaErr.message}`); }
+      mediaRows.push(...(data ?? []));
+    }
+
+    // 5. One batched lookup of every junction row touching these media,
+    // counted locally — replaces the previous N+1 pattern (one
+    // .select(count) per media). Chunked same way as the media fetch.
+    const junctionCounts = new Map<string, number>();
+    for (let i = 0; i < allMediaIdsArr.length; i += LOOKUP_CHUNK_SIZE) {
+      const chunk = allMediaIdsArr.slice(i, i + LOOKUP_CHUNK_SIZE);
+      const { data: junctionsForChunk, error: junctionsErr } = await supabase
+        .from("resource_media_articles")
+        .select("media_id")
+        .in("media_id", chunk);
+      if (junctionsErr) { throw new Error(`[${slug}] junctions fetch failed: ${junctionsErr.message}`); }
+      for (const j of junctionsForChunk ?? []) {
+        junctionCounts.set(j.media_id, (junctionCounts.get(j.media_id) ?? 0) + 1);
+      }
+    }
+
+    // Identify which media rows are EXCLUSIVELY this article's (safe to
+    // delete) vs shared with other articles via junction (only delete the
+    // junction row).
     const mediaIdsExclusive: string[] = [];
     const mediaIdsShared: string[] = [];
-    for (const m of mediaRows ?? []) {
-      const { count } = await supabase
-        .from("resource_media_articles")
-        .select("article_id", { count: "exact", head: true })
-        .eq("media_id", m.id);
-      const otherJunctionRefs = (count ?? 0) - (junctionMediaIds.has(m.id) ? 1 : 0);
-      if (otherJunctionRefs > 0 || (m.article_id && m.article_id !== article.id)) {
+    for (const m of mediaRows) {
+      const totalJunctionRefs = junctionCounts.get(m.id) ?? 0;
+      const otherJunctionRefs = totalJunctionRefs - (junctionMediaIds.has(m.id) ? 1 : 0);
+      const hasLegacyOwnerElsewhere = m.article_id && m.article_id !== article.id;
+      if (otherJunctionRefs > 0 || hasLegacyOwnerElsewhere) {
         mediaIdsShared.push(m.id);
         console.log(`  ⚠ media ${m.file_id} (${m.original_name}) shared with another article — will remove junction only`);
       } else {
@@ -154,16 +194,8 @@ async function deleteOne(slug: string, supabase: ReturnType<typeof createClient<
     console.log(`  exclusive media to delete: ${mediaIdsExclusive.length}`);
     console.log(`  shared media to keep (junction-only removal): ${mediaIdsShared.length}`);
 
-    // 3. Algolia first
-    try {
-      await removeArticleFromIndex(article.id);
-      console.log(`  ✓ Algolia removed`);
-    } catch (err) {
-      console.warn(`  ⚠ Algolia removal failed (continuing): ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    // 4. Drive deletes for exclusive media
-    const exclusiveMedia = (mediaRows ?? []).filter((m) => mediaIdsExclusive.includes(m.id));
+    // 6. Drive deletes for exclusive media
+    const exclusiveMedia = mediaRows.filter((m) => mediaIdsExclusive.includes(m.id));
     for (const m of exclusiveMedia) {
       try {
         await deleteFileFromDrive(m.file_id);
@@ -173,7 +205,7 @@ async function deleteOne(slug: string, supabase: ReturnType<typeof createClient<
       }
     }
 
-    // 5. Drop junction rows for this article (covers both shared + exclusive media)
+    // 7. Drop junction rows for this article (covers both shared + exclusive media)
     const { error: junctionDeleteErr } = await supabase
       .from("resource_media_articles")
       .delete()
@@ -183,18 +215,22 @@ async function deleteOne(slug: string, supabase: ReturnType<typeof createClient<
     }
     console.log(`  ✓ junction rows deleted`);
 
-    // 6. Delete exclusive resource_media rows (junction already gone via step 5)
+    // 8. Delete exclusive resource_media rows (junction already gone via step 7)
     if (mediaIdsExclusive.length > 0) {
-      const { error: mediaDelErr } = await supabase
-        .from("resource_media")
-        .delete()
-        .in("id", mediaIdsExclusive);
-      if (mediaDelErr) { throw new Error(`[${slug}] media delete failed: ${mediaDelErr.message}`); }
+      // Chunked, same reason as the .in() reads above.
+      for (let i = 0; i < mediaIdsExclusive.length; i += LOOKUP_CHUNK_SIZE) {
+        const chunk = mediaIdsExclusive.slice(i, i + LOOKUP_CHUNK_SIZE);
+        const { error: mediaDelErr } = await supabase
+          .from("resource_media")
+          .delete()
+          .in("id", chunk);
+        if (mediaDelErr) { throw new Error(`[${slug}] media delete failed: ${mediaDelErr.message}`); }
+      }
       console.log(`  ✓ ${mediaIdsExclusive.length} resource_media rows deleted`);
     }
   }
 
-  // 7. Delete the article row
+  // 9. Delete the article row
   const { error: articleDelErr } = await supabase
     .from("resource_articles")
     .delete()
@@ -202,7 +238,7 @@ async function deleteOne(slug: string, supabase: ReturnType<typeof createClient<
   if (articleDelErr) { throw new Error(`[${slug}] article delete failed: ${articleDelErr.message}`); }
   console.log(`  ✓ article row deleted`);
 
-  // 8. Delete the empty Drive subfolder
+  // 10. Delete the empty Drive subfolder
   await deletePerSlugFolder(slug);
 }
 

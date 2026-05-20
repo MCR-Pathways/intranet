@@ -23,8 +23,5 @@ async function main() {
       });
     }
   });
-  const haystack = JSON.stringify(json);
-  console.log("\nHas LIVE PDF file_id (1a83ftnNdsHNmWzZBd4jxS978v0tJOZLE)?", haystack.includes("1a83ftnNdsHNmWzZBd4jxS978v0tJOZLE"));
-  console.log("Has text 'Paper Consent Form'?", haystack.includes("Paper Consent Form"));
 }
 main().catch((e) => { console.error(e); process.exit(1); });
