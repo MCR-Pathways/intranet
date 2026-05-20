@@ -45,7 +45,7 @@ async function main() {
     console.log(`Headings extracted: ${headings.length}`);
     if (headings.length > 0) {
       console.log("Heading list:");
-      for (const h of headings) console.log(`  - slug=${(h as { slug?: string }).slug ?? "(missing slug)"} level=${(h as { level?: number }).level} : "${h.text}"`);
+      for (const h of headings) console.log(`  - slug=${h.slug} level=${h.level} : "${h.text}"`);
     }
   } catch (err) {
     console.error("prepareNativeArticle THREW:");

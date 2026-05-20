@@ -80,12 +80,27 @@ async function main() {
   }
   console.log(`Parent: "${parent.name}" (${parent.slug}, id=${parent.id})`);
 
-  // 2. Slug-clash check
-  const { data: existing } = await sb
-    .from("resource_categories")
-    .select("id, name, parent_id, deleted_at")
-    .eq("slug", args.slug)
-    .maybeSingle();
+  // 2. Slug-clash check. resource_categories.slug has a UNIQUE constraint
+  // (migration 00038:13), so `.maybeSingle()` returns 0 or 1 row — no
+  // `.limit(1)` needed. Wrap in try/catch because supabase-js throws on
+  // network-layer exceptions (timeout, socket reset) and returns errors
+  // via `{ error }` for HTTP failures — both paths need a clear exit.
+  let existing: { id: string; name: string; parent_id: string | null; deleted_at: string | null } | null;
+  try {
+    const { data, error: existingErr } = await sb
+      .from("resource_categories")
+      .select("id, name, parent_id, deleted_at")
+      .eq("slug", args.slug)
+      .maybeSingle();
+    if (existingErr) {
+      console.error(`Slug-clash check failed: ${existingErr.message}`);
+      process.exit(1);
+    }
+    existing = data;
+  } catch (err) {
+    console.error(`Network error during slug-clash check: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
   if (existing) {
     if (existing.deleted_at) {
       console.error(`Slug '${args.slug}' is taken by a SOFT-DELETED category (id=${existing.id}). Clear deleted_at to restore, or pick a different slug.`);
@@ -98,14 +113,26 @@ async function main() {
     process.exit(1);
   }
 
-  // 3. Next sort_order under this parent
-  const { data: siblings } = await sb
-    .from("resource_categories")
-    .select("sort_order")
-    .eq("parent_id", parent.id)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: false })
-    .limit(1);
+  // 3. Next sort_order under this parent. Same try/catch shape as the
+  // slug-clash check above — supabase-js throws on network exceptions.
+  let siblings: { sort_order: number }[] | null;
+  try {
+    const { data, error: siblingsErr } = await sb
+      .from("resource_categories")
+      .select("sort_order")
+      .eq("parent_id", parent.id)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+    if (siblingsErr) {
+      console.error(`Sibling lookup failed: ${siblingsErr.message}`);
+      process.exit(1);
+    }
+    siblings = data;
+  } catch (err) {
+    console.error(`Network error during sibling lookup: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
   const nextSort = (siblings?.[0]?.sort_order ?? -1) + 1;
   console.log(`Next sort_order under '${parent.slug}': ${nextSort}`);
 
