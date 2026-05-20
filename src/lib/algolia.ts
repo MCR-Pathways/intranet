@@ -73,6 +73,46 @@ export interface AlgoliaResourceRecord {
 // ─── Indexing operations (server-side) ───────────────────────────────────────
 
 /**
+ * Truncate a section's plaintext content to fit Algolia's per-record size
+ * limit (10KB on standard tier). Truncates on the last word boundary
+ * before the cap with a " …" suffix so search-result snippets can signal
+ * to the reader that the section continues on the page itself.
+ *
+ * The non-content fields on AlgoliaResourceRecord (title, hierarchy,
+ * slugs, timestamps, etc.) take ~500 bytes including JSON overhead; the
+ * 8000-byte content cap leaves ~1.5KB of headroom for the other fields
+ * + JSON encoding overhead.
+ */
+const ALGOLIA_MAX_CONTENT_BYTES = 8000;
+
+function truncateForAlgolia(content: string): string {
+  // Length comparison is on UTF-8 byte length, not character count —
+  // Algolia's limit is bytes, and many WP articles contain em-dashes,
+  // smart quotes, and other multi-byte characters that would slip past
+  // a `.length` check while still tripping the API limit.
+  const byteLength = Buffer.byteLength(content, "utf8");
+  if (byteLength <= ALGOLIA_MAX_CONTENT_BYTES) return content;
+
+  // Walk backwards from the byte cap until we find a UTF-8 boundary +
+  // a word break. Cap at characters to start; refine if still over.
+  let truncated = content.slice(0, ALGOLIA_MAX_CONTENT_BYTES);
+  // Cut on the last whitespace to avoid mid-word truncation.
+  const lastSpace = truncated.lastIndexOf(" ");
+  if (lastSpace > ALGOLIA_MAX_CONTENT_BYTES * 0.8) {
+    truncated = truncated.slice(0, lastSpace);
+  }
+
+  // Re-check byte length after slicing — multi-byte characters mean
+  // a 8000-character slice can still exceed 8000 bytes. Keep trimming
+  // 200 chars at a time until under the cap.
+  while (Buffer.byteLength(truncated + " …", "utf8") > ALGOLIA_MAX_CONTENT_BYTES) {
+    truncated = truncated.slice(0, truncated.length - 200);
+  }
+
+  return truncated + " …";
+}
+
+/**
  * Index article sections into Algolia.
  * Replaces any existing records for this article.
  */
@@ -96,7 +136,14 @@ export async function indexArticleSections(
     // First remove existing records for this article
     await removeArticleFromIndex(articleId);
 
-    // Build records — one per section
+    // Build records — one per section, with content truncation to stay
+    // under Algolia's per-record size limit (10KB on standard tier).
+    // The other fields (title + slugs + hierarchy + timestamps) take ~500
+    // bytes including JSON overhead; capping content at 8KB keeps the
+    // total record well under 10KB with headroom for headings up to 1KB.
+    // Truncation ends on a word boundary to avoid mid-word cuts in
+    // snippet rendering, with a clear " …" suffix so search UIs can
+    // signal that the section content is truncated.
     const records: AlgoliaResourceRecord[] = sections.map(
       (section, index) => ({
         objectID: `${articleId}_${index}`,
@@ -111,7 +158,7 @@ export async function indexArticleSections(
         hierarchy_lvl2: section.heading,
         sectionHeading: section.heading,
         sectionSlug: section.headingSlug,
-        content: section.content,
+        content: truncateForAlgolia(section.content),
         updatedAt,
       })
     );
