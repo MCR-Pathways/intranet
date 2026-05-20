@@ -120,7 +120,14 @@ function rewriteInternalSlug(
   // Don't conflict with the more-specific WP_UPLOADS_PREFIX, which is
   // handled elsewhere by the asset-rewrite path.
   if (href.startsWith(WP_UPLOADS_PREFIX)) return href;
-  const path = href.slice(WP_PAGE_PREFIX.length);
+  // Normalise to lowercase before regex-matching. WP migration source URLs
+  // are conventionally lowercase, but the walker is also used by the
+  // Resources "Import HTML" feature where users paste arbitrary content
+  // that may have mixed-case URLs. The regex below restricts to lowercase
+  // character class; without this normalisation, a paste like
+  // `https://i.mcrpathways.org/Mentor-Training/` would fall through to the
+  // unrewritten branch.
+  const path = href.slice(WP_PAGE_PREFIX.length).toLowerCase();
   const match = path.match(/^([a-z0-9][a-z0-9-]*)\/?$/);
   if (!match) return href;
   const slug = match[1];

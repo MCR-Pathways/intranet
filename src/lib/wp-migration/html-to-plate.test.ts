@@ -121,6 +121,19 @@ describe("htmlToPlate — internal cross-link rewriting", () => {
     expect(link.url).toBe("/resources/article/group-work");
   });
 
+  it("normalises mixed-case path to lowercase before matching (Import HTML paste resilience)", () => {
+    // The walker is shared with the Resources "Import HTML" UI feature.
+    // A user pasting `https://i.mcrpathways.org/Mentor-Training/` should
+    // still match the lowercase `mentor-training` slug in the set.
+    const html = `<a href="https://i.mcrpathways.org/Mentor-Training/">Mentor Training</a>`;
+    const { value } = htmlToPlate(html, undefined, {
+      internalSlugs: new Set(["mentor-training"]),
+    });
+    const para = value[0] as { children: { type?: string; url?: string }[] };
+    const link = para.children.find((c) => c.type === "a") as { url: string };
+    expect(link.url).toBe("/resources/article/mentor-training");
+  });
+
   it("does not match deeper paths like /mentor-training/sub-page/", () => {
     // Cautious behaviour: only top-level page slugs are rewritten. A deeper
     // path could be a sub-resource that doesn't map to an article.
