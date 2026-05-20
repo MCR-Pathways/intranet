@@ -7,6 +7,68 @@
 import { describe, it, expect } from "vitest";
 import { htmlToPlate } from "./html-to-plate";
 
+describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern)", () => {
+  it("emits the image as a link target, not the bare filename", () => {
+    // WP pattern: <a href="x.pdf"><img src="screenshot.png"/></a>
+    // Author's intent: clickable screenshot opens the PDF.
+    // Before this fix, the walker walked the <a> element via walkInline,
+    // saw it had no textContent (the <img> contributes none), and emitted
+    // a link labelled with the filename — losing the image entirely.
+    const assetMap = new Map([
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf",
+        {
+          fileId: "PDF_ID",
+          mimeType: "application/pdf",
+          fileName: "Welcome-Pack.pdf",
+          size: 1000,
+        },
+      ],
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png",
+        {
+          fileId: "IMG_ID",
+          mimeType: "image/png",
+          fileName: "Screenshot.png",
+          size: 500,
+        },
+      ],
+    ]);
+    const html = `<a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Welcome-Pack.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Screenshot.png" alt="Welcome Pack screenshot" /></a>`;
+    const { value, warnings } = htmlToPlate(html, assetMap);
+    // The image must survive — it's the visual preview the author placed.
+    const imgNode = value.find(
+      (n) => (n as { type: string }).type === "img",
+    ) as { type: string; url: string };
+    expect(imgNode).toBeDefined();
+    expect(imgNode.url).toBe("/api/drive-file/IMG_ID");
+    // There should be NO orphan "Welcome-Pack.pdf" filename-labelled link.
+    const flatText = JSON.stringify(value);
+    expect(flatText).not.toContain("Welcome-Pack.pdf");
+    expect(warnings).toEqual([]);
+  });
+
+  it("emits a warning when an anchor falls back to the filename for visible text", () => {
+    // Catch-all for the underlying issue: any <a> with no inner text and
+    // a WP-asset href will silently render the raw filename. Surface a
+    // warning so operators see these on the migration log.
+    const assetMap = new Map([
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf",
+        {
+          fileId: "DOC_ID",
+          mimeType: "application/pdf",
+          fileName: "Doc.pdf",
+          size: 1000,
+        },
+      ],
+    ]);
+    const html = `<p><a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf"></a></p>`;
+    const { warnings } = htmlToPlate(html, assetMap);
+    expect(warnings.some((w) => /filename fallback/i.test(w))).toBe(true);
+  });
+});
+
 describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => {
   it("promotes a block-level <a class='elementor-toggle-title'> to H2 when no prior heading exists", () => {
     // pc-support's "PC Guidebook" pattern — Elementor Toggle title sitting

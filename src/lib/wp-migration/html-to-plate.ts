@@ -413,6 +413,25 @@ function appendBlocks(
       }
       return;
     }
+
+    // Clickable-image-preview pattern: <a href="x.pdf"><img src="..."></a>.
+    // The author wrapped the image in a link so clicking it opens the PDF.
+    // walkInline would extract `el.textContent` here, get an empty string
+    // (images have no textContent), and fall back to `asset.fileName` as
+    // the visible text — producing an ugly filename-labelled link and
+    // silently dropping the image. Emit the image as a block node
+    // instead so the visual preview survives.
+    const imgChildren = Array.from(el.querySelectorAll("img"));
+    const hasOnlyImage = imgChildren.length > 0
+      && (el.textContent ?? "").trim() === "";
+    if (hasOnlyImage) {
+      for (const imgEl of imgChildren) {
+        const imgNode = buildImgNode(imgEl, assetMap, warnings);
+        if (imgNode) out.push(imgNode);
+      }
+      return;
+    }
+
     const fileOrEmbed = buildLinkBlock(el, assetMap);
     if (fileOrEmbed) {
       out.push(fileOrEmbed);
@@ -634,6 +653,18 @@ function walkInline(
             continue;
           }
           const linkText = (el.textContent ?? "").trim();
+          if (!linkText) {
+            // Anchor had no inner text content — walker falls back to the
+            // asset's raw filename as visible text. That's usually not what
+            // the author intended (most cases are <a><img/></a> where the
+            // image got dropped, or empty <a></a> from accidental
+            // double-linking in WP). Surface as a warning so the operator
+            // can clean up in the editor post-migration or fix in WP source
+            // before re-migration.
+            warnings.push(
+              `Anchor filename fallback for ${asset.fileName} — empty <a> in WP source, visible text is the raw filename. Consider editorial cleanup.`,
+            );
+          }
           out.push({
             type: "a",
             url: rewriteWpAnchorUrl(asset),
