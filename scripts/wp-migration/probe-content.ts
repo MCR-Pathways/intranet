@@ -9,7 +9,19 @@ async function main() {
   if (error || !data) { console.error("err:", error); process.exit(1); }
   const json = data.content_json as Array<{ type: string; url?: string; children?: Array<{ type?: string; text?: string; url?: string; children?: Array<{ text?: string }> }> }>;
   console.log("Top-level nodes:", json.length);
-  console.log("--- Node types ---");
+  console.log("--- Type histogram ---");
+  const typeCounts = new Map<string, number>();
+  for (const n of json) typeCounts.set(n.type, (typeCounts.get(n.type) ?? 0) + 1);
+  for (const [t, c] of typeCounts) console.log(`  ${t}: ${c}`);
+  console.log("--- Heading nodes ---");
+  json.forEach((n, i) => {
+    if (/^h[1-6]$/.test(n.type)) {
+      const text = (n.children || []).map((c) => c.text || (c.children || []).map((cc) => cc.text || "").join("") || "").join("");
+      console.log(`  [${i}] ${n.type} — "${text}" — full JSON keys: ${Object.keys(n).join(", ")}`);
+      console.log(`        full node: ${JSON.stringify(n).slice(0, 300)}`);
+    }
+  });
+  console.log("--- Node types (positional) ---");
   json.forEach((n, i) => {
     const text = (n.children || []).map((c) => c.text || (c.children || []).map((cc) => cc.text || "").join("") || "").join("");
     const inlineLinks = (n.children || []).filter((c) => c.type === "a");
