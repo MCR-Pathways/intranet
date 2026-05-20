@@ -6,9 +6,9 @@ Last slug: <none migrated this attempt>
 
 ## Active bit
 
-Bit 3 — large-asset stress test
-Branch: feature/wp-migration-bit-3 (off main)
-Drive mode: in-session (loop spawn issues documented in scripts/ralph/SPAWN_ISSUES.md)
+Bit 4 — reference content cluster (jargon + mission-vision-values + information-for-new-staff)
+Branch: feature/wp-migration-bit-4 (off main)
+Drive mode: in-session (loop spawn still parked per scripts/ralph/SPAWN_ISSUES.md)
 
 ## Last page migrated
 
