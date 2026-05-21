@@ -382,26 +382,28 @@ function FileStatic({ children, element, attributes }: SlateElementProps) {
 // TOGGLE
 // =============================================
 
-// Card-style accordion. Reasons for each choice:
-//   - `as="details"` makes the SlateElement render AS the <details>
-//     element rather than wrapping it in a <div>. HTML5 requires
-//     <summary> to be a direct child of <details>; without `as`, the
-//     wrapping div broke that contract and the browser fell back to its
-//     default "Details" label instead of showing the summary text.
-//   - No `open` attribute → toggles default to collapsed. Users open
-//     what they want to read, which is the whole point of the pattern.
+// Hairline-list accordion matching the OLD intranet's Elementor toggle
+// styling (verified via DOM inspection 2026-05-21):
+//   - No card container, no border, no background. Adjacent toggles
+//     stack as a continuous list. Separation comes from each title's
+//     own padding + the bold font weight.
+//   - `as="details"` makes the SlateElement BE the <details> element
+//     (HTML5 requires <summary> to be a direct child of <details>;
+//     without `as`, the wrapping div breaks that and the browser falls
+//     back to the default "Details" label).
+//   - No `open` attribute → toggles default to collapsed. The whole
+//     point of the pattern is the user opens what they want to read.
 //   - `group/toggle` parents the chevron's rotation animation so it
-//     responds to the parent <details>'s open/closed state.
-//   - `bg-card rounded-lg border border-border` lifts the toggle off
-//     the page background so it reads as a clickable surface.
-//   - `overflow-clip` ensures the rounded corners clip the body content
-//     when expanded (without breaking sticky positioning if any).
+//     responds to the <details>'s open/closed state.
+//   - Body content gets `px-4` so it visually indents under the title;
+//     adjacent toggles' titles remain flush-left so the list reads as
+//     a single column of options.
 function ToggleStatic({ children, ...props }: SlateElementProps) {
   return (
     <SlateElement
       {...props}
       as="details"
-      className="group/toggle bg-card rounded-lg border border-border overflow-clip my-2 [&>*:not(summary)]:px-4 [&>*:not(summary):first-of-type]:pt-2 [&>*:not(summary):last-child]:pb-3"
+      className="group/toggle [&>*:not(summary)]:px-4 [&>*:not(summary):first-of-type]:pt-1 [&>*:not(summary):last-child]:pb-3"
     >
       {children}
     </SlateElement>
@@ -409,21 +411,24 @@ function ToggleStatic({ children, ...props }: SlateElementProps) {
 }
 
 // `as="summary"` makes the SlateElement BE the <summary>, satisfying
-// HTML5's direct-child requirement. The rest:
-//   - `[&::-webkit-details-marker]:hidden` hides Safari's default
-//     disclosure marker in addition to `list-none` which handles
-//     Firefox/Chrome. With both, ONLY our custom chevron renders.
-//   - The ChevronRight icon rotates 90° when the parent <details> is
-//     open, via `group-open/toggle:rotate-90`.
-//   - `hover:bg-muted/40 focus-visible:bg-muted/40` and the focus ring
-//     make the click target legible to both mouse and keyboard users.
-//   - Generous padding (`px-4 py-3`) widens the click target.
+// HTML5's direct-child requirement. The rest matches the OLD's
+// `.elementor-tab-title`:
+//   - `font-semibold` (bold) — OLD used font-weight 700.
+//   - `py-3 px-2` — OLD used 15px padding around the title; the
+//     horizontal padding stays light so the title doesn't drift away
+//     from the surrounding article body.
+//   - Hover background + focus-visible state for legibility — the OLD
+//     relied on cursor change alone, but adding a subtle hover is a
+//     low-risk improvement for the new platform without changing the
+//     core silhouette.
+//   - `[&::-webkit-details-marker]:hidden` covers Safari in addition to
+//     `list-none` (Firefox/Chrome). Only our custom chevron renders.
 function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
   return (
     <SlateElement
       {...props}
       as="summary"
-      className="flex items-center gap-2 cursor-pointer list-none px-4 py-3 font-medium text-foreground hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+      className="flex items-center gap-2 cursor-pointer list-none px-2 py-3 font-semibold text-foreground rounded-md hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
     >
       <ChevronRight
         aria-hidden="true"
