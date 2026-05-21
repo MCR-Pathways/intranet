@@ -15,6 +15,7 @@ import {
   SlateElement,
   SlateLeaf,
 } from "platejs/static";
+import { ChevronRight } from "lucide-react";
 import {
   BaseHeadingPlugin,
   BaseBlockquotePlugin,
@@ -381,22 +382,54 @@ function FileStatic({ children, element, attributes }: SlateElementProps) {
 // TOGGLE
 // =============================================
 
+// Card-style accordion. Reasons for each choice:
+//   - `as="details"` makes the SlateElement render AS the <details>
+//     element rather than wrapping it in a <div>. HTML5 requires
+//     <summary> to be a direct child of <details>; without `as`, the
+//     wrapping div broke that contract and the browser fell back to its
+//     default "Details" label instead of showing the summary text.
+//   - No `open` attribute → toggles default to collapsed. Users open
+//     what they want to read, which is the whole point of the pattern.
+//   - `group/toggle` parents the chevron's rotation animation so it
+//     responds to the parent <details>'s open/closed state.
+//   - `bg-card rounded-lg border border-border` lifts the toggle off
+//     the page background so it reads as a clickable surface.
+//   - `overflow-clip` ensures the rounded corners clip the body content
+//     when expanded (without breaking sticky positioning if any).
 function ToggleStatic({ children, ...props }: SlateElementProps) {
   return (
-    <SlateElement {...props}>
-      <details open>
-        {children}
-      </details>
+    <SlateElement
+      {...props}
+      as="details"
+      className="group/toggle bg-card rounded-lg border border-border overflow-clip my-2 [&>*:not(summary)]:px-4 [&>*:not(summary):first-of-type]:pt-2 [&>*:not(summary):last-child]:pb-3"
+    >
+      {children}
     </SlateElement>
   );
 }
 
+// `as="summary"` makes the SlateElement BE the <summary>, satisfying
+// HTML5's direct-child requirement. The rest:
+//   - `[&::-webkit-details-marker]:hidden` hides Safari's default
+//     disclosure marker in addition to `list-none` which handles
+//     Firefox/Chrome. With both, ONLY our custom chevron renders.
+//   - The ChevronRight icon rotates 90° when the parent <details> is
+//     open, via `group-open/toggle:rotate-90`.
+//   - `hover:bg-muted/40 focus-visible:bg-muted/40` and the focus ring
+//     make the click target legible to both mouse and keyboard users.
+//   - Generous padding (`px-4 py-3`) widens the click target.
 function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
   return (
-    <SlateElement {...props}>
-      <summary className="cursor-pointer font-medium list-none flex items-center gap-1">
-        {children}
-      </summary>
+    <SlateElement
+      {...props}
+      as="summary"
+      className="flex items-center gap-2 cursor-pointer list-none px-4 py-3 font-medium text-foreground hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+    >
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open/toggle:rotate-90"
+      />
+      <span className="flex-1">{children}</span>
     </SlateElement>
   );
 }
