@@ -214,7 +214,7 @@ export function htmlToPlate(
     0,
     { ...options, textLinkHrefs },
   );
-  return { value: collapseEmptyParagraphs(value), warnings };
+  return { value: collapseEmptyParagraphs(indentToggleBodies(value)), warnings };
 }
 
 /**
@@ -279,9 +279,33 @@ const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4"]);
  * pages where this was severe (group-work's 7 themes, new-staff-info's 16
  * step titles, pc-support's "PC Guidebook").
  */
+/**
+ * Detect the Elementor accordion widget title pattern specifically:
+ * `<a tabindex="0">Title</a>` with NO href attribute. The toggle's
+ * click interactivity is supplied by Elementor's JS at runtime; the
+ * static HTML has just an anchor with a focus index. Verified on
+ * information-for-new-staff's WP source.
+ *
+ * Distinguished from generic navigation-marker anchors so the walker
+ * can emit a Plate `toggle` block (collapsible accordion in the read
+ * view) rather than a flat heading. Matches the OLD intranet's
+ * collapsible step-by-step UX.
+ */
+function isToggleTitleAnchor(el: Element): boolean {
+  if (el.getAttribute("href") !== null) return false;
+  if (!el.hasAttribute("tabindex")) return false;
+  return true;
+}
+
 function isNavigationMarkerAnchor(el: Element): boolean {
+  // Toggle titles are handled separately (they emit a `toggle` block,
+  // not a heading); exclude them here.
+  if (isToggleTitleAnchor(el)) return false;
   const href = el.getAttribute("href");
-  const hrefIsEmpty = !href || href === "" || href === "#";
+  // No href attribute at all (and no tabindex — that's a toggle, handled
+  // above) → bare anchor with no link target, treat as section marker.
+  if (href === null) return true;
+  const hrefIsEmpty = href === "" || href === "#";
   if (!hrefIsEmpty) return false;
   if (el.hasAttribute("name")) return true;
   const className = el.getAttribute("class") ?? "";
@@ -430,10 +454,24 @@ function appendBlocks(
   }
 
   if (tag === "a") {
+    // Elementor accordion widget title — emit a Plate `toggle` block so
+    // the read-view renders as a collapsible accordion (matches the OLD
+    // intranet UX where users click a step title to expand its content).
+    // Following content (until the next toggle title or a heading at
+    // the surrounding scope) gets indented as toggle body children by
+    // the indentToggleBodies post-process.
+    if (isToggleTitleAnchor(el)) {
+      const text = (el.textContent ?? "").trim();
+      if (text) {
+        out.push({ type: "toggle", children: [{ text }] });
+      }
+      return;
+    }
     // Navigation-marker anchors (WP jump-anchors, Elementor Toggle/Tab
-    // widgets) end up at block level after the surrounding <div>s walk
-    // transparently. They were intended as section headers by the WP
-    // author; promote to a heading at the depth-context appropriate level.
+    // widgets with `name` attribute or `toggle-title` class) end up at
+    // block level after the surrounding <div>s walk transparently. They
+    // were intended as section headers by the WP author; promote to a
+    // heading at the depth-context appropriate level.
     if (isNavigationMarkerAnchor(el)) {
       const text = (el.textContent ?? "").trim();
       if (text) {
@@ -924,6 +962,44 @@ function trimEdgeWhitespaceLeaves(
 
 function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
   return nodes.every((n) => isTextLeaf(n) && n.text.trim() === "");
+}
+
+/**
+ * Walk the flat output and indent blocks that follow a toggle title so
+ * they render as that toggle's body children. Plate's TogglePlugin uses
+ * an indent-based sibling model (see resources/CLAUDE.md): the static
+ * renderer's `nestToggleChildren` converts higher-indent siblings into
+ * `<details>` body content under the preceding `<summary>` title.
+ *
+ * Scope rules:
+ * - A `toggle` block opens scope at the current depth.
+ * - Subsequent blocks get `indent: existing_indent + 1` (preserves
+ *   nested list levels — a depth-1 numbered list inside a toggle stays
+ *   numbered, but indented one deeper).
+ * - A new `toggle` at the same scope closes the previous toggle's body
+ *   and opens a new one.
+ * - Any heading (h1-h6) closes all open toggle scopes.
+ */
+function indentToggleBodies(nodes: PlateNode[]): PlateNode[] {
+  const result: PlateNode[] = [];
+  let inToggle = false;
+  for (const node of nodes) {
+    const isToggle = node.type === "toggle";
+    const isHeading = /^h[1-6]$/.test(node.type);
+    if (isToggle) {
+      inToggle = true;
+      result.push(node);
+    } else if (isHeading) {
+      inToggle = false;
+      result.push(node);
+    } else if (inToggle) {
+      const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
+      result.push({ ...node, indent: existingIndent + 1 });
+    } else {
+      result.push(node);
+    }
+  }
+  return result;
 }
 
 function collapseEmptyParagraphs(nodes: PlateNode[]): Value {

@@ -177,6 +177,40 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     expect(value[0]).toEqual({ type: "h2", children: [{ text: "Theme name" }] });
   });
 
+  it("emits <a tabindex='0'> (Elementor accordion title) as a Plate toggle block with indented body", () => {
+    // WP source pattern from information-for-new-staff:
+    // <h3>Setting Up My Email</h3>
+    // <a tabindex="0">Accessing your work email</a>
+    // <p>Go to mail.</p>
+    // <a tabindex="0">Creating your email footer</a>
+    // <p>Step 1</p>
+    // <h3>Using Google Calendar</h3>
+    // Each `<a tabindex="0">` opens a toggle whose body is the
+    // subsequent blocks (until the next toggle or a heading closes it).
+    // Matches the OLD intranet's collapsible accordion UX.
+    const html = `<h3>Setting Up My Email</h3><a tabindex="0">Accessing your work email</a><p>Go to mail.</p><a tabindex="0">Creating your email footer</a><p>Step 1</p><h3>Using Google Calendar</h3><p>After calendar.</p>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toEqual([
+      { type: "h3", children: [{ text: "Setting Up My Email" }] },
+      { type: "toggle", children: [{ text: "Accessing your work email" }] },
+      { type: "p", indent: 1, children: [{ text: "Go to mail." }] },
+      { type: "toggle", children: [{ text: "Creating your email footer" }] },
+      { type: "p", indent: 1, children: [{ text: "Step 1" }] },
+      { type: "h3", children: [{ text: "Using Google Calendar" }] },
+      { type: "p", children: [{ text: "After calendar." }] },
+    ]);
+  });
+
+  it("nests list items inside a toggle by deepening their existing indent", () => {
+    // A numbered list inside a toggle should keep its list-style but get
+    // bumped one indent level deeper.
+    const html = `<a tabindex="0">Steps</a><ol><li>First</li><li>Second</li></ol>`;
+    const { value } = htmlToPlate(html);
+    expect(value[0]).toEqual({ type: "toggle", children: [{ text: "Steps" }] });
+    expect(value[1]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal" });
+    expect(value[2]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal" });
+  });
+
   it("treats <a name='bookmark'> empty anchor as navigation marker at block level", () => {
     const html = `<a name="advocate">Advocate</a>`;
     const { value } = htmlToPlate(html);
