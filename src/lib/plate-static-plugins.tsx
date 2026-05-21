@@ -643,6 +643,14 @@ function getPlateNodeText(node: Record<string, unknown>): string {
  * Creates new objects for modified nodes — does NOT mutate originals.
  * nestToggleChildren only shallow-copies toggle nodes; heading nodes
  * are original references that must not be mutated.
+ *
+ * Headings inside a toggle body still receive an `id` (so deep links via
+ * `#slug` continue to work) but they are NOT pushed to the returned
+ * headings array — the TOC shows only what's reachable without first
+ * expanding a collapsed toggle. Worked example: new-staff-info has an H4
+ * "Set preferences for all your calendars" inside the "Set your Calendar
+ * event notifications" toggle; the TOC entry would scroll to a heading
+ * the reader can't see until they expand the toggle.
  */
 export function addHeadingIds(value: Value): {
   value: Value;
@@ -651,21 +659,29 @@ export function addHeadingIds(value: Value): {
   const deduplicate = createSlugDeduplicator();
   const headings: ArticleHeading[] = [];
 
-  function walkAndCopy(nodes: Value[number][]): Value[number][] {
+  function walkAndCopy(nodes: Value[number][], insideToggle: boolean): Value[number][] {
     let changed = false;
     const result = nodes.map((node) => {
       const record = node as Record<string, unknown>;
       const type = record.type as string | undefined;
       const children = record.children as Value[number][] | undefined;
 
-      // Recurse into children first (toggles, columns, etc.)
-      const newChildren = children ? walkAndCopy(children) : undefined;
+      // Recurse into children first. Mark descendants as inside-toggle so
+      // their headings get IDs but skip the TOC. Note: only the toggle's
+      // BODY content is inside the toggle — the toggle's title (its
+      // `toggle_summary` child after nestToggleChildren runs) is also a
+      // descendant, but doesn't currently contain h1-h4 nodes from the
+      // walker, so this rule is safe.
+      const childIsInsideToggle = insideToggle || type === "toggle";
+      const newChildren = children ? walkAndCopy(children, childIsInsideToggle) : undefined;
 
       if (type && HEADING_TYPES.has(type)) {
         const text = getPlateNodeText(record).trim();
         if (text) {
           const slug = deduplicate(text);
-          headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          if (!insideToggle) {
+            headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          }
           changed = true;
           // Create new object with id — don't mutate original
           return {
@@ -687,7 +703,10 @@ export function addHeadingIds(value: Value): {
     return changed ? result : nodes;
   }
 
-  return { value: walkAndCopy(value as Value[number][]) as Value, headings };
+  return {
+    value: walkAndCopy(value as Value[number][], false) as Value,
+    headings,
+  };
 }
 
 // =============================================
