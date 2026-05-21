@@ -576,6 +576,24 @@ function walkList(
   out: PlateNode[],
   options?: WalkerOptions,
 ): void {
+  // Plate's BaseListPlugin wraps each list-styled paragraph in its OWN
+  // <ol>/<ul> via a `belowNodes` render hook, then uses `listStart` to set
+  // <ol start="N">. The interactive editor's `normalizeListStart` keeps
+  // these numbers in sync as the user types, but migrated content lands
+  // pre-built and is never normalised — so without listStart every <ol>
+  // defaults to start=1 and every numbered item visually reads "1.".
+  // Compute the position here so the rendered numbering is correct.
+  // Unordered lists don't need listStart (HTML's `start` attr is <ol>-only).
+  const isOrdered = listStyleType === "decimal";
+  let listIndex = 1;
+  if (isOrdered) {
+    const startAttr = listEl.getAttribute("start");
+    if (startAttr) {
+      const parsed = parseInt(startAttr, 10);
+      if (Number.isFinite(parsed) && parsed > 0) listIndex = parsed;
+    }
+  }
+
   for (const child of Array.from(listEl.childNodes)) {
     if (child.nodeType !== 1) continue;
     const childEl = child as Element;
@@ -620,7 +638,9 @@ function walkList(
     ) || realInline.some((n) => !isTextLeaf(n)); // inline links count
 
     if (voidBlocks.length && !hasRealText) {
-      // Pure-void list item — emit only the blocks, no bullet wrapper
+      // Pure-void list item — emit only the blocks, no bullet wrapper.
+      // No marker is displayed, so don't advance the counter; the next
+      // bulleted item picks up where the previous one left off.
       out.push(...voidBlocks);
     } else if (voidBlocks.length) {
       // Mixed: bullet for the real inline content, blocks as siblings beneath
@@ -628,16 +648,20 @@ function walkList(
         type: "p",
         indent,
         listStyleType,
+        ...(isOrdered ? { listStart: listIndex } : {}),
         children: realInline.length ? realInline : [{ text: "" }],
       });
       out.push(...voidBlocks);
+      if (isOrdered) listIndex++;
     } else {
       out.push({
         type: "p",
         indent,
         listStyleType,
+        ...(isOrdered ? { listStart: listIndex } : {}),
         children: inlineChildren.length ? inlineChildren : [{ text: "" }],
       });
+      if (isOrdered) listIndex++;
     }
 
     for (const nested of nestedLists) {

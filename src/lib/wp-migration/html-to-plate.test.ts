@@ -35,7 +35,7 @@ describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern
     const { value, warnings } = htmlToPlate(html, assetMap);
     const imgNode = value.find(
       (n) => (n as { type: string }).type === "img",
-    ) as { type: string; url: string };
+    ) as unknown as { type: string; url: string };
     expect(imgNode).toBeDefined();
     expect(imgNode.url).toBe("/api/drive-file/IMG_ID");
     const flatText = JSON.stringify(value);
@@ -72,8 +72,8 @@ describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern
     const { value, warnings } = htmlToPlate(html, assetMap);
     const imgNodes = value.filter((n) => (n as { type: string }).type === "img");
     expect(imgNodes).toHaveLength(2);
-    expect((imgNodes[0] as { url: string }).url).toBe("/api/drive-file/P1");
-    expect((imgNodes[1] as { url: string }).url).toBe("/api/drive-file/P2");
+    expect((imgNodes[0] as unknown as { url: string }).url).toBe("/api/drive-file/P1");
+    expect((imgNodes[1] as unknown as { url: string }).url).toBe("/api/drive-file/P2");
     expect(warnings.some((w) => /Dropped duplicate/i.test(w))).toBe(false);
   });
 
@@ -238,8 +238,8 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     const html = `<a tabindex="0">Steps</a><ol><li>First</li><li>Second</li></ol>`;
     const { value } = htmlToPlate(html);
     expect(value[0]).toEqual({ type: "toggle", children: [{ text: "Steps" }] });
-    expect(value[1]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal" });
-    expect(value[2]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal" });
+    expect(value[1]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal", listStart: 1 });
+    expect(value[2]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal", listStart: 2 });
   });
 
   it("treats <a name='bookmark'> empty anchor as navigation marker at block level", () => {
@@ -368,5 +368,49 @@ describe("htmlToPlate — heading handling", () => {
     const html = `<h2>Two</h2><h3>Three</h3><h4>Four</h4>`;
     const { value } = htmlToPlate(html);
     expect(value.map((n) => (n as { type: string }).type)).toEqual(["h2", "h3", "h4"]);
+  });
+});
+
+describe("htmlToPlate — ordered list numbering (listStart)", () => {
+  it("emits sequential listStart values across a flat <ol>", () => {
+    // Plate's BaseListPlugin wraps each list-styled paragraph in its OWN
+    // <ol>, using listStart as the <ol start="N"> attribute. Without it,
+    // every item visually reads "1." — the bug surfaced on new-staff-info.
+    const html = `<ol><li>Alpha</li><li>Bravo</li><li>Charlie</li><li>Delta</li></ol>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toHaveLength(4);
+    expect(value[0]).toMatchObject({ type: "p", listStyleType: "decimal", listStart: 1 });
+    expect(value[1]).toMatchObject({ type: "p", listStyleType: "decimal", listStart: 2 });
+    expect(value[2]).toMatchObject({ type: "p", listStyleType: "decimal", listStart: 3 });
+    expect(value[3]).toMatchObject({ type: "p", listStyleType: "decimal", listStart: 4 });
+  });
+
+  it("respects <ol start='N'> as the base index", () => {
+    const html = `<ol start="5"><li>Five</li><li>Six</li></ol>`;
+    const { value } = htmlToPlate(html);
+    expect(value[0]).toMatchObject({ listStart: 5 });
+    expect(value[1]).toMatchObject({ listStart: 6 });
+  });
+
+  it("restarts the counter inside a nested <ol>", () => {
+    // Nested ordered lists in HTML start at 1, independent of the outer list.
+    const html = `<ol><li>Outer one<ol><li>Inner one</li><li>Inner two</li></ol></li><li>Outer two</li></ol>`;
+    const { value } = htmlToPlate(html);
+    // value[0] = "Outer one" (listStart 1)
+    // value[1] = "Inner one" (listStart 1, deeper indent)
+    // value[2] = "Inner two" (listStart 2)
+    // value[3] = "Outer two" (listStart 2)
+    expect(value[0]).toMatchObject({ listStart: 1, indent: 1 });
+    expect(value[1]).toMatchObject({ listStart: 1, indent: 2 });
+    expect(value[2]).toMatchObject({ listStart: 2, indent: 2 });
+    expect(value[3]).toMatchObject({ listStart: 2, indent: 1 });
+  });
+
+  it("does NOT emit listStart on unordered lists (the <start> attribute is <ol>-only)", () => {
+    const html = `<ul><li>Alpha</li><li>Bravo</li></ul>`;
+    const { value } = htmlToPlate(html);
+    expect(value[0]).toMatchObject({ type: "p", listStyleType: "disc" });
+    expect(value[0]).not.toHaveProperty("listStart");
+    expect(value[1]).not.toHaveProperty("listStart");
   });
 });
