@@ -201,6 +201,37 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     ]);
   });
 
+  it("keeps a deeper heading INSIDE the toggle body (parent-level scope)", () => {
+    // Verified pattern on information-for-new-staff: an H4 nested inside
+    // an Elementor toggle's .elementor-tab-content. Walker must NOT close
+    // the toggle scope at the H4 because it's deeper than the parent H3.
+    const html = `<h3>Using Google Calendar</h3><a tabindex="0">Set your Calendar event notifications</a><h4>Set preferences for all your calendars</h4><p>Step 1</p><a tabindex="0">Set your work hours</a><p>WH step</p>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toEqual([
+      { type: "h3", children: [{ text: "Using Google Calendar" }] },
+      { type: "toggle", children: [{ text: "Set your Calendar event notifications" }] },
+      { type: "h4", indent: 1, children: [{ text: "Set preferences for all your calendars" }] },
+      { type: "p", indent: 1, children: [{ text: "Step 1" }] },
+      { type: "toggle", children: [{ text: "Set your work hours" }] },
+      { type: "p", indent: 1, children: [{ text: "WH step" }] },
+    ]);
+  });
+
+  it("closes the toggle on a heading at the parent level (next section)", () => {
+    // H3 "Using Google Calendar" opens a section. Toggles inside that
+    // section have parent level 3. A subsequent H3 closes any open toggle
+    // because it's a new section at the same level as the parent.
+    const html = `<h3>Using Google Calendar</h3><a tabindex="0">Step A</a><p>Body A</p><h3>Using Google Meet</h3><p>Meet content.</p>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toEqual([
+      { type: "h3", children: [{ text: "Using Google Calendar" }] },
+      { type: "toggle", children: [{ text: "Step A" }] },
+      { type: "p", indent: 1, children: [{ text: "Body A" }] },
+      { type: "h3", children: [{ text: "Using Google Meet" }] },
+      { type: "p", children: [{ text: "Meet content." }] },
+    ]);
+  });
+
   it("nests list items inside a toggle by deepening their existing indent", () => {
     // A numbered list inside a toggle should keep its list-style but get
     // bumped one indent level deeper.

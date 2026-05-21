@@ -971,27 +971,46 @@ function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
  * renderer's `nestToggleChildren` converts higher-indent siblings into
  * `<details>` body content under the preceding `<summary>` title.
  *
- * Scope rules:
- * - A `toggle` block opens scope at the current depth.
- * - Subsequent blocks get `indent: existing_indent + 1` (preserves
- *   nested list levels — a depth-1 numbered list inside a toggle stays
- *   numbered, but indented one deeper).
- * - A new `toggle` at the same scope closes the previous toggle's body
- *   and opens a new one.
- * - Any heading (h1-h6) closes all open toggle scopes.
+ * Scope rules (parent-heading-aware):
+ * - When a toggle opens, record the most recent heading level as the
+ *   toggle's "parent level."
+ * - Subsequent non-heading blocks get `indent + 1` (toggle body
+ *   siblings).
+ * - Another toggle opens its own scope (closing the previous one).
+ * - A heading DEEPER than the parent level stays INSIDE the toggle
+ *   body (it's a sub-heading of the toggle's procedure). Verified
+ *   on information-for-new-staff: `<a tabindex="0">Set your Calendar
+ *   event notifications</a>` followed by `<h4>Set preferences for
+ *   all your calendars</h4>` — the H4 is inside the toggle body in
+ *   the OLD intranet's Elementor `.elementor-tab-content`.
+ * - A heading at the parent level OR shallower closes the toggle
+ *   scope. This is the "back to a sibling/parent section" signal.
  */
 function indentToggleBodies(nodes: PlateNode[]): PlateNode[] {
   const result: PlateNode[] = [];
   let inToggle = false;
+  let toggleParentLevel = 0;
+  let mostRecentHeadingLevel = 0;
   for (const node of nodes) {
     const isToggle = node.type === "toggle";
-    const isHeading = /^h[1-6]$/.test(node.type);
+    const headingMatch = /^h([1-6])$/.exec(node.type);
+    const headingLevel = headingMatch ? parseInt(headingMatch[1], 10) : 0;
+
     if (isToggle) {
       inToggle = true;
+      toggleParentLevel = mostRecentHeadingLevel;
       result.push(node);
-    } else if (isHeading) {
-      inToggle = false;
-      result.push(node);
+    } else if (headingLevel > 0) {
+      if (inToggle && headingLevel > toggleParentLevel) {
+        // Sub-heading inside the toggle body — keep it inside, indented.
+        const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
+        result.push({ ...node, indent: existingIndent + 1 });
+      } else {
+        // Heading at the parent level or shallower — closes any open toggle.
+        inToggle = false;
+        result.push(node);
+      }
+      mostRecentHeadingLevel = headingLevel;
     } else if (inToggle) {
       const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
       result.push({ ...node, indent: existingIndent + 1 });
