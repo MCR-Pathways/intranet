@@ -38,6 +38,7 @@ import { TogglePlugin } from "@platejs/toggle/react";
 import { IndentPlugin } from "@platejs/indent/react";
 import { ImagePlugin, MediaEmbedPlugin, FilePlugin } from "@platejs/media/react";
 import { toggleList, ListStyleType } from "@platejs/list";
+import { ListContinuationPlugin } from "./plate-list-continuation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArticleLinkPopover } from "./article-link-popover";
@@ -430,6 +431,12 @@ export function PlateRichEditor({
         }),
         MediaEmbedPlugin,
         FilePlugin,
+        // ListContinuationPlugin overrides insertBreak so pressing Enter on
+        // a void block (img/file/media_embed) continues the surrounding
+        // list — Google Docs / MS Word behaviour. Must register AFTER the
+        // void-block plugins (Image/MediaEmbed/File) so their default
+        // insertBreak is the one we wrap.
+        ListContinuationPlugin,
       ],
       override: {
         components: {
