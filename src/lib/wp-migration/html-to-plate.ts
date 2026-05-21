@@ -84,6 +84,72 @@ export interface HtmlToPlateResult {
   warnings: string[];
 }
 
+/**
+ * Walker options threaded through every function in the walk. Optional
+ * features the migration script enables but the UI Import HTML path doesn't.
+ */
+export interface WalkerOptions {
+  /**
+   * Slugs of already-migrated Resources articles. When set, the walker
+   * rewrites `https://i.mcrpathways.org/{slug}/` anchor hrefs to the
+   * internal `/resources/article/{slug}` path so cross-references between
+   * migrated pages don't bounce users to the (soon-retired) WP site.
+   *
+   * Built once per migration run by the script querying
+   * `resource_articles` for `slug` where `deleted_at is null`. Set to
+   * `undefined` (Import HTML path) leaves WP URLs verbatim.
+   */
+  internalSlugs?: Set<string>;
+  /**
+   * Set of hrefs that appear as text links (non-image-preview anchors)
+   * somewhere in the body. Internal to the walker — populated by
+   * htmlToPlate before walking. Consumed by the image-preview-anchor
+   * deduplication path: when `<a href="x.pdf"><img/></a>` is encountered
+   * and the same href is in this set, the preview is dropped because
+   * a superior text-link surface already exists for the file.
+   *
+   * Using a "text-link surface exists?" set rather than a raw occurrence
+   * count avoids a data-loss bug: a page with TWO image previews and NO
+   * text link would have count=2 and previously have had both previews
+   * dropped, orphaning the file. With this design, image-only-anchor
+   * dedupe only fires when at least one text-link surface is present.
+   */
+  textLinkHrefs?: Set<string>;
+}
+
+const WP_PAGE_PREFIX = "https://i.mcrpathways.org/";
+
+/**
+ * Rewrite a cross-link to another WP page to its new intranet path if the
+ * destination has been migrated. Only matches top-level page slugs — deeper
+ * paths like `/mentor-training/sub-page/` are left alone because the deeper
+ * resource might not be a migrated article (could be a sub-resource, a
+ * legacy WP URL, etc.). The slug must match exactly.
+ */
+function rewriteInternalSlug(
+  href: string,
+  internalSlugs: Set<string> | undefined,
+): string {
+  if (!internalSlugs) return href;
+  if (!href.startsWith(WP_PAGE_PREFIX)) return href;
+  // Don't conflict with the more-specific WP_UPLOADS_PREFIX, which is
+  // handled elsewhere by the asset-rewrite path.
+  if (href.startsWith(WP_UPLOADS_PREFIX)) return href;
+  // Normalise to lowercase before regex-matching. WP migration source URLs
+  // are conventionally lowercase, but the walker is also used by the
+  // Resources "Import HTML" feature where users paste arbitrary content
+  // that may have mixed-case URLs. The regex below restricts to lowercase
+  // character class; without this normalisation, a paste like
+  // `https://i.mcrpathways.org/Mentor-Training/` would fall through to the
+  // unrewritten branch.
+  const path = href.slice(WP_PAGE_PREFIX.length).toLowerCase();
+  const match = path.match(/^([a-z0-9][a-z0-9-]*)\/?$/);
+  if (!match) return href;
+  const slug = match[1];
+  if (!internalSlugs.has(slug)) return href;
+  return `/resources/article/${slug}`;
+}
+
 interface InlineMarks {
   bold?: true;
   italic?: true;
@@ -109,10 +175,12 @@ type DomNode = Element | ChildNode;
  * @param html - Cleaned HTML body content
  * @param assetMap - Optional WP-URL → Drive metadata map. When absent,
  *                  WP-content URLs in the input HTML are kept as-is.
+ * @param options - Optional walker options (internal-slug rewriting, etc.)
  */
 export function htmlToPlate(
   html: string,
   assetMap?: Map<string, AssetInfo>,
+  options?: WalkerOptions,
 ): HtmlToPlateResult {
   const warnings: string[] = [];
   const { document } = parseHTML(
@@ -122,11 +190,29 @@ export function htmlToPlate(
   if (!body) {
     return { value: [], warnings: ["empty body after parse"] };
   }
+  // Identify which hrefs have at least one text-link surface in the body
+  // (anchor with non-empty textContent — NOT an image-only preview). Used
+  // by the block walker to detect when a <a href="x.pdf"><img/></a>
+  // preview is redundant: if a text link to the same href exists, the
+  // preview is dropped. If no text link exists, the preview is the sole
+  // surface and survives.
+  const textLinkHrefs = new Set<string>();
+  for (const a of Array.from(body.querySelectorAll("a[href]"))) {
+    const href = a.getAttribute("href");
+    if (!href) continue;
+    const isImageOnly =
+      a.querySelectorAll("img").length > 0 &&
+      (a.textContent ?? "").trim() === "";
+    if (!isImageOnly) {
+      textLinkHrefs.add(href);
+    }
+  }
   const value = walkBlocks(
     Array.from(body.childNodes) as DomNode[],
     assetMap,
     warnings,
     0,
+    { ...options, textLinkHrefs },
   );
   return { value: collapseEmptyParagraphs(value), warnings };
 }
@@ -176,6 +262,52 @@ export function sanitiseHtmlForImport(html: string): string {
 // =============================================
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4"]);
+
+/**
+ * Detect an anchor that's acting as a navigation marker rather than a real
+ * link. WP page authors and Elementor's Toggle/Tab widgets both produce
+ * structurally-similar HTML for "this is the start of a section":
+ *
+ *   <a name="section-slug"></a>       — WP page-anchor jump target
+ *   <a name="x">Section name</a>      — WP page-anchor with visible label
+ *   <a class="elementor-toggle-title">Title</a>  — Elementor Toggle title
+ *   <a class="elementor-tab-title" href="#">…</a> — Elementor Tab title
+ *
+ * None of these are real links the reader should click. In a flat-Plate
+ * migration they become orphan inline anchors that visually masquerade as
+ * cross-reference links — see memory/wp-migration-design-audit.md for the
+ * pages where this was severe (group-work's 7 themes, new-staff-info's 16
+ * step titles, pc-support's "PC Guidebook").
+ */
+function isNavigationMarkerAnchor(el: Element): boolean {
+  const href = el.getAttribute("href");
+  const hrefIsEmpty = !href || href === "" || href === "#";
+  if (!hrefIsEmpty) return false;
+  if (el.hasAttribute("name")) return true;
+  const className = el.getAttribute("class") ?? "";
+  if (/\btoggle-title\b|\btab-title\b/i.test(className)) return true;
+  return false;
+}
+
+/**
+ * Find the most recent heading level already emitted into `out` so that an
+ * orphan navigation-marker promoted to a heading lands at the right depth.
+ *
+ * - No prior heading → level 1 (so the orphan becomes H2 — a top-level
+ *   section, peer of where the page-title H1 would be).
+ * - Previous H2 → orphan becomes H3 (group-work themes case).
+ * - Previous H3 → orphan becomes H4 (new-staff-info step titles).
+ *
+ * Capped at H6.
+ */
+function findMostRecentHeadingLevel(out: PlateNode[]): number {
+  for (let i = out.length - 1; i >= 0; i--) {
+    const match = /^h([1-6])$/.exec(out[i].type);
+    if (match) return parseInt(match[1], 10);
+  }
+  return 1;
+}
+
 const TRANSPARENT_WRAPPER_TAGS = new Set([
   "div",
   "section",
@@ -193,10 +325,11 @@ function walkBlocks(
   assetMap: Map<string, AssetInfo> | undefined,
   warnings: string[],
   indent: number,
+  options?: WalkerOptions,
 ): PlateNode[] {
   const out: PlateNode[] = [];
   for (const node of nodes) {
-    appendBlocks(node, assetMap, warnings, indent, out);
+    appendBlocks(node, assetMap, warnings, indent, out, options);
   }
   return out;
 }
@@ -207,6 +340,7 @@ function appendBlocks(
   warnings: string[],
   indent: number,
   out: PlateNode[],
+  options?: WalkerOptions,
 ): void {
   if (node.nodeType === 3) {
     const text = node.textContent ?? "";
@@ -221,15 +355,22 @@ function appendBlocks(
   const tag = el.tagName.toLowerCase();
 
   if (HEADING_TAGS.has(tag)) {
+    // Demote in-body H1 to H2. The page-title H1 is supplied by the article
+    // view's chrome (NativeArticleView, GoogleDocArticleView); any H1 inside
+    // body content creates a second H1 in the accessibility tree. HTML5
+    // and WAI-ARIA expect exactly one H1 per page. WP page authors sometimes
+    // put an H1 inside the body when they intended a section title — promote
+    // to H2 instead of preserving the regression.
+    const headingType = tag === "h1" ? "h2" : tag;
     out.push({
-      type: tag,
-      children: walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings),
+      type: headingType,
+      children: walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings, {}, options),
     });
     return;
   }
 
   if (tag === "p") {
-    const paraNodes = walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings);
+    const paraNodes = walkInline(Array.from(el.childNodes) as DomNode[], assetMap, warnings, {}, options);
     const blocks: PlateNode[] = [];
     const inline: (PlateNode | TextLeaf)[] = [];
     for (const n of paraNodes) {
@@ -255,6 +396,7 @@ function appendBlocks(
       indent + 1,
       tag === "ol" ? "decimal" : "disc",
       out,
+      options,
     );
     return;
   }
@@ -265,6 +407,7 @@ function appendBlocks(
       assetMap,
       warnings,
       indent,
+      options,
     );
     out.push({
       type: "blockquote",
@@ -287,13 +430,67 @@ function appendBlocks(
   }
 
   if (tag === "a") {
+    // Navigation-marker anchors (WP jump-anchors, Elementor Toggle/Tab
+    // widgets) end up at block level after the surrounding <div>s walk
+    // transparently. They were intended as section headers by the WP
+    // author; promote to a heading at the depth-context appropriate level.
+    if (isNavigationMarkerAnchor(el)) {
+      const text = (el.textContent ?? "").trim();
+      if (text) {
+        const level = Math.min(findMostRecentHeadingLevel(out) + 1, 6);
+        out.push({
+          type: `h${level}`,
+          children: [{ text }],
+        });
+      }
+      return;
+    }
+
+    // Clickable-image-preview pattern: <a href="x.pdf"><img src="..."></a>.
+    // The author wrapped an image in an anchor so clicking the visual
+    // preview opens the PDF. WP authors commonly emit BOTH this form AND
+    // a text-link reference to the same file in a bullet list nearby —
+    // two surfaces for one file. The walker's pre-pass populated
+    // hrefCounts so we can detect the duplicate and drop the preview
+    // anchor entirely (the text-link surface elsewhere serves the click
+    // action and is visually cleaner). If the href has only ONE
+    // occurrence in the body, this anchor IS the only surface; preserve
+    // the image as a non-clickable visual (Plate's <img> node has no
+    // linkTarget; rebuilding click-through requires a separate node-spec
+    // change, tracked elsewhere).
+    const href = el.getAttribute("href") ?? "";
+    const imgChildren = Array.from(el.querySelectorAll("img"));
+    const hasOnlyImage = imgChildren.length > 0
+      && (el.textContent ?? "").trim() === "";
+    if (hasOnlyImage) {
+      const hasTextLinkSurface = options?.textLinkHrefs?.has(href) ?? false;
+      if (hasTextLinkSurface) {
+        // A text-link surface for this file already exists elsewhere on
+        // the page — drop the redundant image preview. Surface as a
+        // warning for the migration log.
+        warnings.push(
+          `Dropped duplicate image-preview anchor for ${href} — file is also linked as text elsewhere on the page.`,
+        );
+        return;
+      }
+      // Sole surface for this file — keep the image as a visual preview.
+      // Click affordance is lost (img has no linkTarget) but the file is
+      // still reachable via the asset map. Operators can edit if they
+      // want to restore an explicit text link.
+      for (const imgEl of imgChildren) {
+        const imgNode = buildImgNode(imgEl, assetMap, warnings);
+        if (imgNode) out.push(imgNode);
+      }
+      return;
+    }
+
     const fileOrEmbed = buildLinkBlock(el, assetMap);
     if (fileOrEmbed) {
       out.push(fileOrEmbed);
     } else {
       out.push({
         type: "p",
-        children: walkInline([el], assetMap, warnings),
+        children: walkInline([el], assetMap, warnings, {}, options),
       });
     }
     return;
@@ -303,7 +500,7 @@ function appendBlocks(
 
   if (TRANSPARENT_WRAPPER_TAGS.has(tag)) {
     for (const child of Array.from(el.childNodes) as DomNode[]) {
-      appendBlocks(child, assetMap, warnings, indent, out);
+      appendBlocks(child, assetMap, warnings, indent, out, options);
     }
     return;
   }
@@ -319,7 +516,7 @@ function appendBlocks(
 
   warnings.push(`Unknown block tag <${tag}> — walking transparently.`);
   for (const child of Array.from(el.childNodes) as DomNode[]) {
-    appendBlocks(child, assetMap, warnings, indent, out);
+    appendBlocks(child, assetMap, warnings, indent, out, options);
   }
 }
 
@@ -339,6 +536,7 @@ function walkList(
   indent: number,
   listStyleType: "disc" | "decimal",
   out: PlateNode[],
+  options?: WalkerOptions,
 ): void {
   for (const child of Array.from(listEl.childNodes)) {
     if (child.nodeType !== 1) continue;
@@ -359,7 +557,7 @@ function walkList(
       directInline.push(sub as DomNode);
     }
 
-    const rawInlineChildren = walkInline(directInline, assetMap, warnings);
+    const rawInlineChildren = walkInline(directInline, assetMap, warnings, {}, options);
 
     // Trim pure-whitespace text leaves at the start and end of a list item,
     // matching the HTML rendering rule that collapses whitespace at block
@@ -412,6 +610,7 @@ function walkList(
         indent + 1,
         nested.type === "ol" ? "decimal" : "disc",
         out,
+        options,
       );
     }
   }
@@ -437,6 +636,7 @@ function walkInline(
   assetMap: Map<string, AssetInfo> | undefined,
   warnings: string[],
   marks: InlineMarks = {},
+  options?: WalkerOptions,
 ): (PlateNode | TextLeaf)[] {
   const out: (PlateNode | TextLeaf)[] = [];
   for (const node of nodes) {
@@ -458,6 +658,7 @@ function walkInline(
           assetMap,
           warnings,
           merged,
+          options,
         ),
       );
       continue;
@@ -469,6 +670,25 @@ function walkInline(
     }
 
     if (tag === "a") {
+      // Navigation-marker anchors inline (e.g. WP's
+      // `<p><a name="bookmark"></a>Term</p>` pattern) carry no link target.
+      // Drop the wrapping anchor; emit any inline children at the same
+      // level. Empty-children anchors contribute nothing and disappear.
+      // Block-level promotion to a heading happens in appendBlocks; inline
+      // context (this branch) deliberately stays inline because the
+      // surrounding <p> may have other meaningful content.
+      if (isNavigationMarkerAnchor(el)) {
+        const children = walkInline(
+          Array.from(el.childNodes) as DomNode[],
+          assetMap,
+          warnings,
+          marks,
+          options,
+        );
+        if (children.length) out.push(...children);
+        continue;
+      }
+
       const href = el.getAttribute("href") ?? "";
 
       // WP-uploaded asset → rewrite URL to point at our Drive (or Drive's
@@ -485,6 +705,18 @@ function walkInline(
             continue;
           }
           const linkText = (el.textContent ?? "").trim();
+          if (!linkText) {
+            // Anchor had no inner text content — walker falls back to the
+            // asset's raw filename as visible text. That's usually not what
+            // the author intended (most cases are <a><img/></a> where the
+            // image got dropped, or empty <a></a> from accidental
+            // double-linking in WP). Surface as a warning so the operator
+            // can clean up in the editor post-migration or fix in WP source
+            // before re-migration.
+            warnings.push(
+              `Anchor filename fallback for ${asset.fileName} — empty <a> in WP source, visible text is the raw filename. Consider editorial cleanup.`,
+            );
+          }
           out.push({
             type: "a",
             url: rewriteWpAnchorUrl(asset),
@@ -506,12 +738,17 @@ function walkInline(
         continue;
       }
 
-      // Plain external link.
+      // Plain external link. Rewrite known-internal cross-references
+      // to the new intranet's /resources/article/<slug> path so users
+      // don't bounce to the (soon-retired) WP site. No-op if the
+      // walker wasn't given an internalSlugs set, or if the slug
+      // isn't in the migrated list.
+      const rewrittenHref = rewriteInternalSlug(href, options?.internalSlugs);
       const linkText = (el.textContent ?? "").trim();
       out.push({
         type: "a",
-        url: href,
-        children: [{ text: linkText || href, ...marks }],
+        url: rewrittenHref,
+        children: [{ text: linkText || rewrittenHref, ...marks }],
       });
       continue;
     }
@@ -528,6 +765,7 @@ function walkInline(
         assetMap,
         warnings,
         marks,
+        options,
       ),
     );
   }
