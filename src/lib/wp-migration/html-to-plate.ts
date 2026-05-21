@@ -101,13 +101,20 @@ export interface WalkerOptions {
    */
   internalSlugs?: Set<string>;
   /**
-   * Map of href → occurrence count across the body. Internal to the
-   * walker — populated by htmlToPlate before walking. Consumed by the
-   * image-preview-anchor deduplication path to detect when a
-   * `<a href="x.pdf"><img/></a>` preview is redundant with a text link
-   * to the same file elsewhere on the page.
+   * Set of hrefs that appear as text links (non-image-preview anchors)
+   * somewhere in the body. Internal to the walker — populated by
+   * htmlToPlate before walking. Consumed by the image-preview-anchor
+   * deduplication path: when `<a href="x.pdf"><img/></a>` is encountered
+   * and the same href is in this set, the preview is dropped because
+   * a superior text-link surface already exists for the file.
+   *
+   * Using a "text-link surface exists?" set rather than a raw occurrence
+   * count avoids a data-loss bug: a page with TWO image previews and NO
+   * text link would have count=2 and previously have had both previews
+   * dropped, orphaning the file. With this design, image-only-anchor
+   * dedupe only fires when at least one text-link surface is present.
    */
-  hrefCounts?: Map<string, number>;
+  textLinkHrefs?: Set<string>;
 }
 
 const WP_PAGE_PREFIX = "https://i.mcrpathways.org/";
@@ -183,24 +190,29 @@ export function htmlToPlate(
   if (!body) {
     return { value: [], warnings: ["empty body after parse"] };
   }
-  // Count how many times each href appears as an <a href>. Used by the
-  // block walker to detect image-preview anchors that duplicate a text
-  // link elsewhere on the page (WP authors commonly emit both forms for
-  // the same file: <a href="x.pdf"><img/></a> for the visual preview AND
-  // <a href="x.pdf">Label</a> in a bullet list). When that's the case
-  // the walker drops the image-preview entirely — one surface is enough.
-  const hrefCounts = new Map<string, number>();
+  // Identify which hrefs have at least one text-link surface in the body
+  // (anchor with non-empty textContent — NOT an image-only preview). Used
+  // by the block walker to detect when a <a href="x.pdf"><img/></a>
+  // preview is redundant: if a text link to the same href exists, the
+  // preview is dropped. If no text link exists, the preview is the sole
+  // surface and survives.
+  const textLinkHrefs = new Set<string>();
   for (const a of Array.from(body.querySelectorAll("a[href]"))) {
     const href = a.getAttribute("href");
     if (!href) continue;
-    hrefCounts.set(href, (hrefCounts.get(href) ?? 0) + 1);
+    const isImageOnly =
+      a.querySelectorAll("img").length > 0 &&
+      (a.textContent ?? "").trim() === "";
+    if (!isImageOnly) {
+      textLinkHrefs.add(href);
+    }
   }
   const value = walkBlocks(
     Array.from(body.childNodes) as DomNode[],
     assetMap,
     warnings,
     0,
-    { ...options, hrefCounts },
+    { ...options, textLinkHrefs },
   );
   return { value: collapseEmptyParagraphs(value), warnings };
 }
@@ -451,10 +463,11 @@ function appendBlocks(
     const hasOnlyImage = imgChildren.length > 0
       && (el.textContent ?? "").trim() === "";
     if (hasOnlyImage) {
-      const hrefAppearsMultiple = (options?.hrefCounts?.get(href) ?? 0) > 1;
-      if (hrefAppearsMultiple) {
-        // Duplicate of a text link elsewhere on the page — drop the
-        // preview entirely. Surface as a warning for the migration log.
+      const hasTextLinkSurface = options?.textLinkHrefs?.has(href) ?? false;
+      if (hasTextLinkSurface) {
+        // A text-link surface for this file already exists elsewhere on
+        // the page — drop the redundant image preview. Surface as a
+        // warning for the migration log.
         warnings.push(
           `Dropped duplicate image-preview anchor for ${href} — file is also linked as text elsewhere on the page.`,
         );

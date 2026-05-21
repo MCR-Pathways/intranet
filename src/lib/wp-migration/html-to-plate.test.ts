@@ -43,6 +43,40 @@ describe("htmlToPlate — image-wrapped-in-link (clickable-image-preview pattern
     expect(warnings).toEqual([]);
   });
 
+  it("keeps multiple image previews when there's no text link (no data loss)", () => {
+    // Edge case the textLinkHrefs design protects against: a page with
+    // multiple image previews pointing at the same file but NO text-link
+    // surface. A naive occurrence-count approach would drop all previews
+    // (count > 1), orphaning the file. The textLinkHrefs set correctly
+    // skips the dedupe path because no text-link surface exists.
+    const assetMap = new Map([
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf",
+        {
+          fileId: "PDF_ID",
+          mimeType: "application/pdf",
+          fileName: "Doc.pdf",
+          size: 1000,
+        },
+      ],
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Preview1.png",
+        { fileId: "P1", mimeType: "image/png", fileName: "p1.png", size: 1 },
+      ],
+      [
+        "https://i.mcrpathways.org/wp-content/uploads/2025/11/Preview2.png",
+        { fileId: "P2", mimeType: "image/png", fileName: "p2.png", size: 1 },
+      ],
+    ]);
+    const html = `<a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Preview1.png" alt="Preview 1" /></a><a href="https://i.mcrpathways.org/wp-content/uploads/2025/11/Doc.pdf"><img src="https://i.mcrpathways.org/wp-content/uploads/2025/11/Preview2.png" alt="Preview 2" /></a>`;
+    const { value, warnings } = htmlToPlate(html, assetMap);
+    const imgNodes = value.filter((n) => (n as { type: string }).type === "img");
+    expect(imgNodes).toHaveLength(2);
+    expect((imgNodes[0] as { url: string }).url).toBe("/api/drive-file/P1");
+    expect((imgNodes[1] as { url: string }).url).toBe("/api/drive-file/P2");
+    expect(warnings.some((w) => /Dropped duplicate/i.test(w))).toBe(false);
+  });
+
   it("drops the image-preview anchor when the same href appears as a text link elsewhere (dedupe)", () => {
     // WP pattern: <a href="x.pdf"><img/></a> AND <ul><li><a href="x.pdf">Label</a></li></ul>
     // Two surfaces for the same file — the visual preview duplicates the
