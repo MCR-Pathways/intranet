@@ -114,6 +114,8 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 
 **TogglePlugin uses indent-based model, not container model.** Toggle children are sibling blocks with higher `indent`, not nested children. `IndentPlugin` must be registered BEFORE `TogglePlugin`. Configure `inject.targetPlugins` to exclude list types to avoid conflict with `ListPlugin`.
 
+**IndentPlugin's `targetPlugins` must include every node type that can appear inside a toggle body — including void blocks (`img`, `file`, `media_embed`).** Plate's `withIndent` normaliser strips `indent` from any node whose type isn't in the configured list. Toggle visibility is driven by Plate's `toggleIndex` map (keyed by `element.id` + `indent`), so an image with no indent is never recognised as enclosed by the toggle and stays visible when the toggle is collapsed. Surfaced on new-staff-info's "Creating your email footer" toggle — the Gmail screenshot rendered below the closed toggle in the editor view.
+
 **`nestToggleChildren` preprocessor converts flat indent model to nested for static rendering.** Creates a `toggle_summary` virtual node to separate heading from body content inside `<details>/<summary>`. Uses `BaseToggleSummaryPlugin` (with `node.isElement: true`) so `PlateStatic` applies the component mapping. Decrements indent (not strips) to preserve multi-level hierarchy.
 
 **Column `flex-1` conflicts with explicit width percentages.** `flex-basis: 0%` from Tailwind's `flex-1` overrides `width: 66%` in flex layout. Apply `flex-1` only when no width is set: `cn("min-w-0 ...", !width && "flex-1")`.
