@@ -177,7 +177,7 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     expect(value[0]).toEqual({ type: "h2", children: [{ text: "Theme name" }] });
   });
 
-  it("emits <a tabindex='0'> (Elementor accordion title) as a Plate toggle block with indented body", () => {
+  it("emits <a tabindex='0'> (Elementor accordion title) as a container-shape toggle_v2 with body children", () => {
     // WP source pattern from information-for-new-staff:
     // <h3>Setting Up My Email</h3>
     // <a tabindex="0">Accessing your work email</a>
@@ -185,17 +185,34 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     // <a tabindex="0">Creating your email footer</a>
     // <p>Step 1</p>
     // <h3>Using Google Calendar</h3>
-    // Each `<a tabindex="0">` opens a toggle whose body is the
-    // subsequent blocks (until the next toggle or a heading closes it).
-    // Matches the OLD intranet's collapsible accordion UX.
+    // Each `<a tabindex="0">` opens a toggle. Walker emits a flat marker
+    // `{type: "toggle"}` followed by body siblings; groupToggleBodies then
+    // folds them into a container-shape toggle_v2 whose children are the
+    // toggle_v2_summary (title) plus the body blocks.
     const html = `<h3>Setting Up My Email</h3><a tabindex="0">Accessing your work email</a><p>Go to mail.</p><a tabindex="0">Creating your email footer</a><p>Step 1</p><h3>Using Google Calendar</h3><p>After calendar.</p>`;
     const { value } = htmlToPlate(html);
     expect(value).toEqual([
       { type: "h3", children: [{ text: "Setting Up My Email" }] },
-      { type: "toggle", children: [{ text: "Accessing your work email" }] },
-      { type: "p", indent: 1, children: [{ text: "Go to mail." }] },
-      { type: "toggle", children: [{ text: "Creating your email footer" }] },
-      { type: "p", indent: 1, children: [{ text: "Step 1" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          {
+            type: "toggle_v2_summary",
+            children: [{ text: "Accessing your work email" }],
+          },
+          { type: "p", children: [{ text: "Go to mail." }] },
+        ],
+      },
+      {
+        type: "toggle_v2",
+        children: [
+          {
+            type: "toggle_v2_summary",
+            children: [{ text: "Creating your email footer" }],
+          },
+          { type: "p", children: [{ text: "Step 1" }] },
+        ],
+      },
       { type: "h3", children: [{ text: "Using Google Calendar" }] },
       { type: "p", children: [{ text: "After calendar." }] },
     ]);
@@ -205,41 +222,87 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     // Verified pattern on information-for-new-staff: an H4 nested inside
     // an Elementor toggle's .elementor-tab-content. Walker must NOT close
     // the toggle scope at the H4 because it's deeper than the parent H3.
+    // The H4 lands as a child of toggle_v2 instead of indent-bumping
+    // alongside.
     const html = `<h3>Using Google Calendar</h3><a tabindex="0">Set your Calendar event notifications</a><h4>Set preferences for all your calendars</h4><p>Step 1</p><a tabindex="0">Set your work hours</a><p>WH step</p>`;
     const { value } = htmlToPlate(html);
     expect(value).toEqual([
       { type: "h3", children: [{ text: "Using Google Calendar" }] },
-      { type: "toggle", children: [{ text: "Set your Calendar event notifications" }] },
-      { type: "h4", indent: 1, children: [{ text: "Set preferences for all your calendars" }] },
-      { type: "p", indent: 1, children: [{ text: "Step 1" }] },
-      { type: "toggle", children: [{ text: "Set your work hours" }] },
-      { type: "p", indent: 1, children: [{ text: "WH step" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          {
+            type: "toggle_v2_summary",
+            children: [{ text: "Set your Calendar event notifications" }],
+          },
+          {
+            type: "h4",
+            children: [{ text: "Set preferences for all your calendars" }],
+          },
+          { type: "p", children: [{ text: "Step 1" }] },
+        ],
+      },
+      {
+        type: "toggle_v2",
+        children: [
+          {
+            type: "toggle_v2_summary",
+            children: [{ text: "Set your work hours" }],
+          },
+          { type: "p", children: [{ text: "WH step" }] },
+        ],
+      },
     ]);
   });
 
   it("closes the toggle on a heading at the parent level (next section)", () => {
     // H3 "Using Google Calendar" opens a section. Toggles inside that
     // section have parent level 3. A subsequent H3 closes any open toggle
-    // because it's a new section at the same level as the parent.
+    // because it's a new section at the same level as the parent — the H3
+    // lands as a sibling of the toggle, not as a body child.
     const html = `<h3>Using Google Calendar</h3><a tabindex="0">Step A</a><p>Body A</p><h3>Using Google Meet</h3><p>Meet content.</p>`;
     const { value } = htmlToPlate(html);
     expect(value).toEqual([
       { type: "h3", children: [{ text: "Using Google Calendar" }] },
-      { type: "toggle", children: [{ text: "Step A" }] },
-      { type: "p", indent: 1, children: [{ text: "Body A" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step A" }] },
+          { type: "p", children: [{ text: "Body A" }] },
+        ],
+      },
       { type: "h3", children: [{ text: "Using Google Meet" }] },
       { type: "p", children: [{ text: "Meet content." }] },
     ]);
   });
 
-  it("nests list items inside a toggle by deepening their existing indent", () => {
-    // A numbered list inside a toggle should keep its list-style but get
-    // bumped one indent level deeper.
+  it("emits list items inside a toggle as children of toggle_v2", () => {
+    // A numbered list inside a toggle keeps its walker-assigned indent
+    // (no post-pass +1 indent bump because the container shape relies on
+    // structural nesting, not indent, for scope). List numbering still
+    // increments via listStart.
     const html = `<a tabindex="0">Steps</a><ol><li>First</li><li>Second</li></ol>`;
     const { value } = htmlToPlate(html);
-    expect(value[0]).toEqual({ type: "toggle", children: [{ text: "Steps" }] });
-    expect(value[1]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal", listStart: 1 });
-    expect(value[2]).toMatchObject({ type: "p", indent: 2, listStyleType: "decimal", listStart: 2 });
+    expect(value).toHaveLength(1);
+    expect(value[0]).toMatchObject({ type: "toggle_v2" });
+    const toggleChildren = (value[0] as { children: unknown[] }).children;
+    expect(toggleChildren).toHaveLength(3);
+    expect(toggleChildren[0]).toEqual({
+      type: "toggle_v2_summary",
+      children: [{ text: "Steps" }],
+    });
+    expect(toggleChildren[1]).toMatchObject({
+      type: "p",
+      indent: 1,
+      listStyleType: "decimal",
+      listStart: 1,
+    });
+    expect(toggleChildren[2]).toMatchObject({
+      type: "p",
+      indent: 1,
+      listStyleType: "decimal",
+      listStart: 2,
+    });
   });
 
   it("treats <a name='bookmark'> empty anchor as navigation marker at block level", () => {
