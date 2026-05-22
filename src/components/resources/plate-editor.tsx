@@ -75,6 +75,14 @@ import {
   StrikethroughLeaf,
 } from "./plate-elements";
 import {
+  BaseToggleV2Plugin,
+  BaseToggleV2SummaryPlugin,
+} from "./plate-toggle-v2";
+import {
+  ToggleV2Element,
+  ToggleV2SummaryElement,
+} from "./plate-toggle-v2-elements";
+import {
   Bold,
   Italic,
   Underline,
@@ -178,6 +186,24 @@ function InsertBlockDropdown({
         >
           <ChevronRight className="h-4 w-4" />
           Toggle
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            editor.tf.insertNodes(
+              {
+                type: "toggle_v2",
+                children: [
+                  { type: "toggle_v2_summary", children: [{ text: "" }] },
+                  { type: "p", children: [{ text: "" }] },
+                ],
+              },
+              { select: true },
+            );
+            editor.tf.focus();
+          }}
+        >
+          <ChevronRight className="h-4 w-4" />
+          Toggle (container)
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -388,6 +414,8 @@ export function PlateRichEditor({
           },
         }),
         TogglePlugin,
+        BaseToggleV2Plugin,
+        BaseToggleV2SummaryPlugin,
         ImagePlugin.configure({
           options: {
             uploadImage: async (input) => {
@@ -456,6 +484,8 @@ export function PlateRichEditor({
           column_group: ColumnGroupElement,
           column: ColumnItemElement,
           toggle: ToggleElement,
+          toggle_v2: ToggleV2Element,
+          toggle_v2_summary: ToggleV2SummaryElement,
           img: ImageElement,
           media_embed: MediaEmbedElement,
           file: FileElement,
