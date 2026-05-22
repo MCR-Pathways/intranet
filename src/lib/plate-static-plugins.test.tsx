@@ -3,7 +3,6 @@ import type { Value } from "platejs";
 import { serializeHtml } from "platejs/static";
 import {
   createNativeStaticEditor,
-  nestToggleChildren,
   addHeadingIds,
   prepareNativeArticle,
 } from "./plate-static-plugins";
@@ -213,25 +212,8 @@ describe("serializeHtml", () => {
     expect(html).toContain("not-prose");
   });
 
-  it("serialises a toggle as details/summary", async () => {
-    const value: Value = [
-      {
-        type: "toggle",
-        id: "t1",
-        children: [{ text: "FAQ question" }],
-      },
-    ];
-    const editor = createNativeStaticEditor(value);
-    const html = await serializeHtml(editor, { stripDataAttributes: true });
-    expect(html).toContain("<details");
-    expect(html).toContain("<summary");
-    expect(html).toContain("FAQ question");
-  });
-
   it("serialises a toggle_v2 (container-shape) as details/summary with body children", async () => {
-    // The container shape persists what the legacy `toggle` only reconstructs
-    // at render time via nestToggleChildren. JSON is structurally nested:
-    // [{type: "toggle_v2_summary"}, ...body blocks].
+    // JSON is structurally nested: [{type: "toggle_v2_summary"}, ...body blocks].
     const value: Value = [
       {
         type: "toggle_v2",
@@ -392,107 +374,6 @@ describe("serializeHtml", () => {
   });
 });
 
-describe("nestToggleChildren", () => {
-  it("returns value unchanged when no toggles present", () => {
-    const value: Value = [
-      { type: "p", children: [{ text: "Hello" }] },
-      { type: "h1", children: [{ text: "Title" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toEqual(value);
-  });
-
-  it("handles a toggle at end of document with no children", () => {
-    const value: Value = [
-      { type: "p", children: [{ text: "Before" }] },
-      { type: "toggle", id: "t1", children: [{ text: "Empty toggle" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toHaveLength(2);
-    const toggle = result[1] as Record<string, unknown>;
-    expect(toggle.type).toBe("toggle");
-    // Children should be just the toggle_summary wrapper (no nested content)
-    const children = toggle.children as Record<string, unknown>[];
-    expect(children).toHaveLength(1);
-    expect(children[0].type).toBe("toggle_summary");
-  });
-
-  it("nests indented siblings after a toggle", () => {
-    const value: Value = [
-      { type: "toggle", id: "t1", children: [{ text: "Question" }] },
-      { type: "p", indent: 1, children: [{ text: "Answer line 1" }] },
-      { type: "p", indent: 1, children: [{ text: "Answer line 2" }] },
-      { type: "p", children: [{ text: "After toggle" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toHaveLength(2);
-
-    const toggle = result[0] as Record<string, unknown>;
-    expect(toggle.type).toBe("toggle");
-    const children = toggle.children as Record<string, unknown>[];
-    // toggle_summary + 2 nested paragraphs
-    expect(children).toHaveLength(3);
-    expect(children[0].type).toBe("toggle_summary");
-    expect(children[1].type).toBe("p");
-    expect(children[2].type).toBe("p");
-
-    expect((result[1] as Record<string, unknown>).type).toBe("p");
-  });
-
-  it("handles consecutive toggles with no content between", () => {
-    const value: Value = [
-      { type: "toggle", id: "t1", children: [{ text: "Q1" }] },
-      { type: "toggle", id: "t2", children: [{ text: "Q2" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toHaveLength(2);
-    // Each toggle has just a toggle_summary child
-    const t1Children = (result[0] as Record<string, unknown>).children as Record<string, unknown>[];
-    expect(t1Children).toHaveLength(1);
-    expect(t1Children[0].type).toBe("toggle_summary");
-    const t2Children = (result[1] as Record<string, unknown>).children as Record<string, unknown>[];
-    expect(t2Children).toHaveLength(1);
-    expect(t2Children[0].type).toBe("toggle_summary");
-  });
-
-  it("handles nested toggles", () => {
-    const value: Value = [
-      { type: "toggle", id: "t1", children: [{ text: "Outer" }] },
-      { type: "p", indent: 1, children: [{ text: "Outer content" }] },
-      { type: "toggle", id: "t2", indent: 1, children: [{ text: "Inner" }] },
-      { type: "p", indent: 2, children: [{ text: "Inner content" }] },
-      { type: "p", indent: 1, children: [{ text: "Back to outer" }] },
-      { type: "p", children: [{ text: "Outside" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toHaveLength(2); // outer toggle + "Outside" paragraph
-
-    const outer = result[0] as Record<string, unknown>;
-    const outerChildren = outer.children as Record<string, unknown>[];
-    // toggle_summary + "Outer content" + nested toggle + "Back to outer"
-    expect(outerChildren).toHaveLength(4);
-    expect(outerChildren[0].type).toBe("toggle_summary");
-
-    const innerToggle = outerChildren[2] as Record<string, unknown>;
-    expect(innerToggle.type).toBe("toggle");
-    const innerChildren = innerToggle.children as Record<string, unknown>[];
-    // toggle_summary + "Inner content"
-    expect(innerChildren).toHaveLength(2);
-    expect(innerChildren[0].type).toBe("toggle_summary");
-  });
-
-  it("does not nest indented content that does not follow a toggle", () => {
-    const value: Value = [
-      { type: "p", indent: 1, children: [{ text: "Indented but no toggle" }] },
-      { type: "p", children: [{ text: "Normal" }] },
-    ];
-    const result = nestToggleChildren(value);
-    expect(result).toHaveLength(2);
-    // Left as-is since no toggle precedes the indented content
-    expect(result).toEqual(value);
-  });
-});
-
 describe("addHeadingIds", () => {
   it("adds id properties to heading nodes", () => {
     const value: Value = [
@@ -554,40 +435,7 @@ describe("addHeadingIds", () => {
     expect(headings[0].slug).toBe("bold-heading");
   });
 
-  it("does NOT include headings nested inside a toggle body in the TOC", () => {
-    // Mirrors the new-staff-info bug: H4 "Set preferences for all your
-    // calendars" lives inside the "Set your Calendar event notifications"
-    // toggle. It must not appear in the TOC because the reader can't reach
-    // it without first expanding the toggle. But it still needs an `id`
-    // for deep-link compatibility (`#slug` URLs continue to work).
-    const value: Value = [
-      { type: "h2", children: [{ text: "Top section" }] },
-      {
-        type: "toggle",
-        children: [
-          { type: "toggle_summary", children: [{ text: "Step title" }] },
-          { type: "p", children: [{ text: "Body paragraph" }] },
-          { type: "h4", children: [{ text: "Sub-step heading" }] },
-        ],
-      },
-      { type: "h2", children: [{ text: "Next section" }] },
-    ];
-    const { value: result, headings } = addHeadingIds(value);
-
-    // Top-level H2s land in the TOC.
-    expect(headings).toEqual([
-      { text: "Top section", slug: "top-section", level: 2 },
-      { text: "Next section", slug: "next-section", level: 2 },
-    ]);
-
-    // The H4 inside the toggle still receives an id so deep links work.
-    const toggle = result[1] as Record<string, unknown>;
-    const toggleChildren = toggle.children as Value[number][];
-    const innerH4 = toggleChildren[2] as Record<string, unknown>;
-    expect(innerH4.id).toBe("sub-step-heading");
-  });
-
-  it("excludes headings inside a toggle_v2 from the TOC, same rule as toggle", () => {
+  it("excludes headings inside a toggle_v2 from the TOC", () => {
     // Same in-toggle exclusion logic applies to the container-shape toggle_v2.
     // Headings still get an id so #slug deep links continue to work; they
     // just don't surface in the TOC because the reader can't see them
@@ -646,19 +494,22 @@ describe("prepareNativeArticle", () => {
     expect(headings[1].slug).toBe("faq-1");
   });
 
-  it("processes toggles before adding heading IDs, but excludes in-toggle headings from the TOC", () => {
-    // nestToggleChildren runs first, so the indented H2 ends up inside the
-    // toggle's children. addHeadingIds then assigns an id to that H2 (deep
-    // links keep working) but skips it for the TOC (the reader can't see
-    // it without first expanding the toggle — see new-staff-info's
-    // "Set preferences for all your calendars" for the worked example).
+  it("excludes in-toggle headings from the TOC but keeps their id for deep linking", () => {
+    // Container-shape toggle_v2: heading is a child of toggle_v2, so deep
+    // link `#inside-toggle` continues to work but the heading stays out of
+    // the TOC because the reader can't see it without first expanding the
+    // toggle.
     const value: Value = [
-      { type: "toggle", id: "t1", children: [{ text: "Toggle" }] },
-      { type: "h2", indent: 1, children: [{ text: "Inside Toggle" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Toggle" }] },
+          { type: "h2", children: [{ text: "Inside Toggle" }] },
+        ],
+      },
     ];
     const { editor, headings } = prepareNativeArticle(value);
     expect(headings).toHaveLength(0);
-    // But the H2 still has an id rendered so #inside-toggle deep links work.
     return serializeHtml(editor, { stripDataAttributes: true }).then((html) => {
       expect(html).toContain('id="inside-toggle"');
     });
