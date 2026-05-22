@@ -262,7 +262,11 @@ describe("serializeHtml", () => {
     expect(html).toContain("sandbox");
   });
 
-  it("serialises a file attachment with download link", async () => {
+  it("serialises a file attachment as an inline link", async () => {
+    // FileStatic renders as a plain `<a target="_blank">` with the file
+    // name — no card chrome, no download text, no size label. The visual
+    // parity refactor (WS5) intentionally collapsed file attachments to
+    // inline links so native articles match Google Doc article styling.
     const value: Value = [
       {
         type: "file",
@@ -276,8 +280,7 @@ describe("serializeHtml", () => {
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain("/api/drive-file/xyz789");
     expect(html).toContain("Policy Document.pdf");
-    expect(html).toContain("2.4 MB");
-    expect(html).toContain("Download");
+    expect(html).toContain('target="_blank"');
   });
 
   it("serialises an image without dimensions (paste scenario)", async () => {
@@ -313,7 +316,7 @@ describe("serializeHtml", () => {
     expect(html).toContain("auto");
   });
 
-  it("serialises a file without size", async () => {
+  it("serialises a file without size as an inline link (no size text)", async () => {
     const value: Value = [
       {
         type: "file",
@@ -325,8 +328,7 @@ describe("serializeHtml", () => {
     const editor = createNativeStaticEditor(value);
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain("Report.pdf");
-    expect(html).toContain("Download");
-    // No size text rendered
+    // No size text rendered (FileStatic doesn't render size at all)
     expect(html).not.toContain("MB");
     expect(html).not.toContain("KB");
   });
@@ -524,6 +526,39 @@ describe("addHeadingIds", () => {
     expect(headings[0].text).toBe("Bold heading");
     expect(headings[0].slug).toBe("bold-heading");
   });
+
+  it("does NOT include headings nested inside a toggle body in the TOC", () => {
+    // Mirrors the new-staff-info bug: H4 "Set preferences for all your
+    // calendars" lives inside the "Set your Calendar event notifications"
+    // toggle. It must not appear in the TOC because the reader can't reach
+    // it without first expanding the toggle. But it still needs an `id`
+    // for deep-link compatibility (`#slug` URLs continue to work).
+    const value: Value = [
+      { type: "h2", children: [{ text: "Top section" }] },
+      {
+        type: "toggle",
+        children: [
+          { type: "toggle_summary", children: [{ text: "Step title" }] },
+          { type: "p", children: [{ text: "Body paragraph" }] },
+          { type: "h4", children: [{ text: "Sub-step heading" }] },
+        ],
+      },
+      { type: "h2", children: [{ text: "Next section" }] },
+    ];
+    const { value: result, headings } = addHeadingIds(value);
+
+    // Top-level H2s land in the TOC.
+    expect(headings).toEqual([
+      { text: "Top section", slug: "top-section", level: 2 },
+      { text: "Next section", slug: "next-section", level: 2 },
+    ]);
+
+    // The H4 inside the toggle still receives an id so deep links work.
+    const toggle = result[1] as Record<string, unknown>;
+    const toggleChildren = toggle.children as Value[number][];
+    const innerH4 = toggleChildren[2] as Record<string, unknown>;
+    expect(innerH4.id).toBe("sub-step-heading");
+  });
 });
 
 describe("prepareNativeArticle", () => {
@@ -555,14 +590,22 @@ describe("prepareNativeArticle", () => {
     expect(headings[1].slug).toBe("faq-1");
   });
 
-  it("processes toggles before adding heading IDs", () => {
+  it("processes toggles before adding heading IDs, but excludes in-toggle headings from the TOC", () => {
+    // nestToggleChildren runs first, so the indented H2 ends up inside the
+    // toggle's children. addHeadingIds then assigns an id to that H2 (deep
+    // links keep working) but skips it for the TOC (the reader can't see
+    // it without first expanding the toggle — see new-staff-info's
+    // "Set preferences for all your calendars" for the worked example).
     const value: Value = [
       { type: "toggle", id: "t1", children: [{ text: "Toggle" }] },
       { type: "h2", indent: 1, children: [{ text: "Inside Toggle" }] },
     ];
-    const { headings } = prepareNativeArticle(value);
-    expect(headings).toHaveLength(1);
-    expect(headings[0].text).toBe("Inside Toggle");
+    const { editor, headings } = prepareNativeArticle(value);
+    expect(headings).toHaveLength(0);
+    // But the H2 still has an id rendered so #inside-toggle deep links work.
+    return serializeHtml(editor, { stripDataAttributes: true }).then((html) => {
+      expect(html).toContain('id="inside-toggle"');
+    });
   });
 });
 

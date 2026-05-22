@@ -15,6 +15,7 @@ import {
   SlateElement,
   SlateLeaf,
 } from "platejs/static";
+import { ChevronRight } from "lucide-react";
 import {
   BaseHeadingPlugin,
   BaseBlockquotePlugin,
@@ -381,22 +382,59 @@ function FileStatic({ children, element, attributes }: SlateElementProps) {
 // TOGGLE
 // =============================================
 
+// Hairline-list accordion matching the OLD intranet's Elementor toggle
+// styling (verified via DOM inspection 2026-05-21):
+//   - No card container, no border, no background. Adjacent toggles
+//     stack as a continuous list. Separation comes from each title's
+//     own padding + the bold font weight.
+//   - `as="details"` makes the SlateElement BE the <details> element
+//     (HTML5 requires <summary> to be a direct child of <details>;
+//     without `as`, the wrapping div breaks that and the browser falls
+//     back to the default "Details" label).
+//   - No `open` attribute → toggles default to collapsed. The whole
+//     point of the pattern is the user opens what they want to read.
+//   - `group/toggle` parents the chevron's rotation animation so it
+//     responds to the <details>'s open/closed state.
+//   - Body content gets `px-4` so it visually indents under the title;
+//     adjacent toggles' titles remain flush-left so the list reads as
+//     a single column of options.
 function ToggleStatic({ children, ...props }: SlateElementProps) {
   return (
-    <SlateElement {...props}>
-      <details open>
-        {children}
-      </details>
+    <SlateElement
+      {...props}
+      as="details"
+      className="group/toggle [&>*:not(summary)]:px-4 [&>*:not(summary):first-of-type]:pt-1 [&>*:not(summary):last-child]:pb-3"
+    >
+      {children}
     </SlateElement>
   );
 }
 
+// `as="summary"` makes the SlateElement BE the <summary>, satisfying
+// HTML5's direct-child requirement. The rest matches the OLD's
+// `.elementor-tab-title`:
+//   - `font-semibold` (bold) — OLD used font-weight 700.
+//   - `py-3 px-2` — OLD used 15px padding around the title; the
+//     horizontal padding stays light so the title doesn't drift away
+//     from the surrounding article body.
+//   - Hover background + focus-visible state for legibility — the OLD
+//     relied on cursor change alone, but adding a subtle hover is a
+//     low-risk improvement for the new platform without changing the
+//     core silhouette.
+//   - `[&::-webkit-details-marker]:hidden` covers Safari in addition to
+//     `list-none` (Firefox/Chrome). Only our custom chevron renders.
 function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
   return (
-    <SlateElement {...props}>
-      <summary className="cursor-pointer font-medium list-none flex items-center gap-1">
-        {children}
-      </summary>
+    <SlateElement
+      {...props}
+      as="summary"
+      className="flex items-center gap-2 cursor-pointer list-none px-2 py-3 font-semibold text-foreground rounded-md hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+    >
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open/toggle:rotate-90"
+      />
+      <span className="flex-1">{children}</span>
     </SlateElement>
   );
 }
@@ -605,6 +643,14 @@ function getPlateNodeText(node: Record<string, unknown>): string {
  * Creates new objects for modified nodes — does NOT mutate originals.
  * nestToggleChildren only shallow-copies toggle nodes; heading nodes
  * are original references that must not be mutated.
+ *
+ * Headings inside a toggle body still receive an `id` (so deep links via
+ * `#slug` continue to work) but they are NOT pushed to the returned
+ * headings array — the TOC shows only what's reachable without first
+ * expanding a collapsed toggle. Worked example: new-staff-info has an H4
+ * "Set preferences for all your calendars" inside the "Set your Calendar
+ * event notifications" toggle; the TOC entry would scroll to a heading
+ * the reader can't see until they expand the toggle.
  */
 export function addHeadingIds(value: Value): {
   value: Value;
@@ -613,21 +659,29 @@ export function addHeadingIds(value: Value): {
   const deduplicate = createSlugDeduplicator();
   const headings: ArticleHeading[] = [];
 
-  function walkAndCopy(nodes: Value[number][]): Value[number][] {
+  function walkAndCopy(nodes: Value[number][], insideToggle: boolean): Value[number][] {
     let changed = false;
     const result = nodes.map((node) => {
       const record = node as Record<string, unknown>;
       const type = record.type as string | undefined;
       const children = record.children as Value[number][] | undefined;
 
-      // Recurse into children first (toggles, columns, etc.)
-      const newChildren = children ? walkAndCopy(children) : undefined;
+      // Recurse into children first. Mark descendants as inside-toggle so
+      // their headings get IDs but skip the TOC. Note: only the toggle's
+      // BODY content is inside the toggle — the toggle's title (its
+      // `toggle_summary` child after nestToggleChildren runs) is also a
+      // descendant, but doesn't currently contain h1-h4 nodes from the
+      // walker, so this rule is safe.
+      const childIsInsideToggle = insideToggle || type === "toggle";
+      const newChildren = children ? walkAndCopy(children, childIsInsideToggle) : undefined;
 
       if (type && HEADING_TYPES.has(type)) {
         const text = getPlateNodeText(record).trim();
         if (text) {
           const slug = deduplicate(text);
-          headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          if (!insideToggle) {
+            headings.push({ text, slug, level: HEADING_LEVEL[type] });
+          }
           changed = true;
           // Create new object with id — don't mutate original
           return {
@@ -649,7 +703,10 @@ export function addHeadingIds(value: Value): {
     return changed ? result : nodes;
   }
 
-  return { value: walkAndCopy(value as Value[number][]) as Value, headings };
+  return {
+    value: walkAndCopy(value as Value[number][], false) as Value,
+    headings,
+  };
 }
 
 // =============================================

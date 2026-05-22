@@ -601,6 +601,12 @@ export function ColumnItemElement({ children, element, ...props }: PlateElementP
 // TOGGLE
 // =============================================
 
+// Editor-side toggle. Matches the static read-view's visual silhouette
+// (no card, font-semibold title, OLD-intranet hairline list) so editors
+// see what readers will see — minus the chevron-rotation animation and
+// hover-the-whole-row click target (the title text must stay editable
+// in place, so only the chevron button toggles open/closed; the row
+// hover is removed because clicking the row text doesn't toggle).
 export function ToggleElement({ children, element, ...props }: PlateElementProps) {
   const id = (element as Record<string, unknown>).id as string || "";
   const state = useToggleButtonState(id);
@@ -608,22 +614,22 @@ export function ToggleElement({ children, element, ...props }: PlateElementProps
 
   return (
     <PlateElement element={element} {...props}>
-      <div className="flex items-start gap-1 my-1">
+      <div className="flex items-center gap-2 py-3 px-2">
         <button
           type="button"
           contentEditable={false}
-          className="mt-1 flex-shrink-0 select-none rounded p-0.5 hover:bg-muted transition-colors"
+          className="shrink-0 select-none rounded p-0.5 hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none transition-colors"
           aria-expanded={open}
           {...buttonProps}
         >
           <ChevronRight
             className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
+              "size-4 text-muted-foreground transition-transform duration-150",
               open && "rotate-90"
             )}
           />
         </button>
-        <div className="flex-1 min-w-0 font-medium">{children}</div>
+        <div className="flex-1 min-w-0 font-semibold text-foreground">{children}</div>
       </div>
     </PlateElement>
   );
