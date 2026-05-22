@@ -214,7 +214,7 @@ export function htmlToPlate(
     0,
     { ...options, textLinkHrefs },
   );
-  return { value: collapseEmptyParagraphs(indentToggleBodies(value)), warnings };
+  return { value: collapseEmptyParagraphs(groupToggleBodies(value)), warnings };
 }
 
 /**
@@ -1010,38 +1010,96 @@ function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
  * - A heading at the parent level OR shallower closes the toggle
  *   scope. This is the "back to a sibling/parent section" signal.
  */
-function indentToggleBodies(nodes: PlateNode[]): PlateNode[] {
+/**
+ * Group the walker's flat output into container-shape toggle_v2 nodes.
+ *
+ * Walker emits a flat sequence with `{ type: "toggle", children: [{ text }] }`
+ * markers and body siblings interleaved (the old shape consumed by the
+ * legacy indent-based `BaseTogglePlugin`). This pass turns each toggle
+ * marker + its scope-bounded body into:
+ *
+ *   { type: "toggle_v2", children: [
+ *       { type: "toggle_v2_summary", children: titleChildren },
+ *       ...bodyChildren
+ *   ] }
+ *
+ * Scope rule matches the old `indentToggleBodies`: body extends from the
+ * toggle marker forward until either (a) the next heading at the
+ * surrounding parent level or shallower, or (b) end of the slice.
+ * Headings DEEPER than `toggleParentLevel` stay inside the body. Nested
+ * `toggle` markers inside the body get grouped recursively into their own
+ * `toggle_v2` containers.
+ *
+ * `parentLevel` is the heading level immediately preceding the slice
+ * being processed. For the top-level pass it's 0 (no preceding heading);
+ * recursive calls into a toggle's body pass the toggle's own parent level
+ * forward so the nested-toggle closing rule mirrors the outer-toggle
+ * closing rule.
+ */
+function groupToggleBodies(
+  nodes: PlateNode[],
+  parentLevel = 0,
+): PlateNode[] {
   const result: PlateNode[] = [];
-  let inToggle = false;
-  let toggleParentLevel = 0;
-  let mostRecentHeadingLevel = 0;
-  for (const node of nodes) {
-    const isToggle = node.type === "toggle";
+  let i = 0;
+  let mostRecentHeadingLevel = parentLevel;
+
+  while (i < nodes.length) {
+    const node = nodes[i];
     const headingMatch = /^h([1-6])$/.exec(node.type);
     const headingLevel = headingMatch ? parseInt(headingMatch[1], 10) : 0;
 
-    if (isToggle) {
-      inToggle = true;
-      toggleParentLevel = mostRecentHeadingLevel;
-      result.push(node);
-    } else if (headingLevel > 0) {
-      if (inToggle && headingLevel > toggleParentLevel) {
-        // Sub-heading inside the toggle body — keep it inside, indented.
-        const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
-        result.push({ ...node, indent: existingIndent + 1 });
-      } else {
-        // Heading at the parent level or shallower — closes any open toggle.
-        inToggle = false;
-        result.push(node);
+    if (node.type === "toggle") {
+      const toggleParentLevel = mostRecentHeadingLevel;
+      const titleChildren = (node as { children?: PlateNode[] }).children ?? [
+        { text: "" },
+      ];
+      const bodySlice: PlateNode[] = [];
+      i++;
+
+      while (i < nodes.length) {
+        const next = nodes[i];
+
+        // A sibling toggle marker starts a new accordion item at the same
+        // parent level — the WP Elementor pattern is a flat list of
+        // `.elementor-toggle-item` siblings, not nested toggles. Stop
+        // collecting so this toggle's body ends here and the next one
+        // becomes a sibling.
+        if (next.type === "toggle") break;
+
+        const nextHeadingMatch = /^h([1-6])$/.exec(next.type);
+        const nextHeadingLevel = nextHeadingMatch
+          ? parseInt(nextHeadingMatch[1], 10)
+          : 0;
+
+        // Heading at the parent level or shallower closes this toggle.
+        if (nextHeadingLevel > 0 && nextHeadingLevel <= toggleParentLevel) {
+          break;
+        }
+
+        bodySlice.push(next);
+        i++;
       }
-      mostRecentHeadingLevel = headingLevel;
-    } else if (inToggle) {
-      const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
-      result.push({ ...node, indent: existingIndent + 1 });
+
+      // Recurse so any nested toggle markers inside the body also become
+      // container-shape. Pass `toggleParentLevel` forward as the parent
+      // level for the nested pass.
+      const groupedBody = groupToggleBodies(bodySlice, toggleParentLevel);
+
+      result.push({
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: titleChildren },
+          ...groupedBody,
+        ],
+      } as PlateNode);
     } else {
+      if (headingLevel > 0) mostRecentHeadingLevel = headingLevel;
       result.push(node);
+      i++;
     }
   }
+
   return result;
 }
 
