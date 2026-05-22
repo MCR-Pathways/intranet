@@ -569,6 +569,24 @@ const BaseToggleSummaryPlugin = createSlatePlugin({
   node: { isElement: true },
 });
 
+/**
+ * toggle_v2 is the container-shape successor to the indent-based `toggle`.
+ * The JSON is `{ type: "toggle_v2", children: [{type: "toggle_v2_summary"},
+ * ...body blocks] }`. Walker emission, storage converter, and editor cutover
+ * land in follow-up PRs; this PR adds the rendering path so any article
+ * already using the new shape renders correctly in both read view (here)
+ * and the editor (plate-toggle-v2-elements.tsx).
+ */
+const BaseToggleV2Plugin = createSlatePlugin({
+  key: "toggle_v2",
+  node: { isElement: true },
+});
+
+const BaseToggleV2SummaryPlugin = createSlatePlugin({
+  key: "toggle_v2_summary",
+  node: { isElement: true },
+});
+
 const staticPlugins = [
   BaseHeadingPlugin,
   BaseBlockquotePlugin,
@@ -592,6 +610,8 @@ const staticPlugins = [
   BaseIndentPlugin,
   BaseTogglePlugin,
   BaseToggleSummaryPlugin,
+  BaseToggleV2Plugin,
+  BaseToggleV2SummaryPlugin,
 ];
 
 const staticComponents = {
@@ -611,10 +631,12 @@ const staticComponents = {
   column_group: ColumnGroupStatic,
   column: ColumnItemStatic,
   toggle: ToggleStatic,
+  toggle_v2: ToggleStatic,
   img: ImageStatic,
   media_embed: MediaEmbedStatic,
   file: FileStatic,
   toggle_summary: ToggleSummaryStatic,
+  toggle_v2_summary: ToggleSummaryStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,
@@ -671,8 +693,10 @@ export function addHeadingIds(value: Value): {
       // BODY content is inside the toggle — the toggle's title (its
       // `toggle_summary` child after nestToggleChildren runs) is also a
       // descendant, but doesn't currently contain h1-h4 nodes from the
-      // walker, so this rule is safe.
-      const childIsInsideToggle = insideToggle || type === "toggle";
+      // walker, so this rule is safe. Applies equally to the container-shape
+      // `toggle_v2` whose body is already nested in JSON.
+      const childIsInsideToggle =
+        insideToggle || type === "toggle" || type === "toggle_v2";
       const newChildren = children ? walkAndCopy(children, childIsInsideToggle) : undefined;
 
       if (type && HEADING_TYPES.has(type)) {

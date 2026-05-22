@@ -228,6 +228,33 @@ describe("serializeHtml", () => {
     expect(html).toContain("FAQ question");
   });
 
+  it("serialises a toggle_v2 (container-shape) as details/summary with body children", async () => {
+    // The container shape persists what the legacy `toggle` only reconstructs
+    // at render time via nestToggleChildren. JSON is structurally nested:
+    // [{type: "toggle_v2_summary"}, ...body blocks].
+    const value: Value = [
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step title" }] },
+          { type: "p", children: [{ text: "Body paragraph" }] },
+          {
+            type: "img",
+            url: "/api/drive-file/in-body",
+            children: [{ text: "" }],
+          },
+        ],
+      },
+    ];
+    const editor = createNativeStaticEditor(value);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<details");
+    expect(html).toContain("<summary");
+    expect(html).toContain("Step title");
+    expect(html).toContain("Body paragraph");
+    expect(html).toContain("/api/drive-file/in-body");
+  });
+
   it("serialises an image with alt text and dimensions", async () => {
     const value: Value = [
       {
@@ -558,6 +585,35 @@ describe("addHeadingIds", () => {
     const toggleChildren = toggle.children as Value[number][];
     const innerH4 = toggleChildren[2] as Record<string, unknown>;
     expect(innerH4.id).toBe("sub-step-heading");
+  });
+
+  it("excludes headings inside a toggle_v2 from the TOC, same rule as toggle", () => {
+    // Same in-toggle exclusion logic applies to the container-shape toggle_v2.
+    // Headings still get an id so #slug deep links continue to work; they
+    // just don't surface in the TOC because the reader can't see them
+    // without first expanding the container.
+    const value: Value = [
+      { type: "h2", children: [{ text: "Top" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step title" }] },
+          { type: "h4", children: [{ text: "Inner H4" }] },
+        ],
+      },
+      { type: "h2", children: [{ text: "Bottom" }] },
+    ];
+    const { value: result, headings } = addHeadingIds(value);
+
+    expect(headings).toEqual([
+      { text: "Top", slug: "top", level: 2 },
+      { text: "Bottom", slug: "bottom", level: 2 },
+    ]);
+
+    const toggleV2 = result[1] as Record<string, unknown>;
+    const toggleV2Children = toggleV2.children as Value[number][];
+    const innerH4 = toggleV2Children[1] as Record<string, unknown>;
+    expect(innerH4.id).toBe("inner-h4");
   });
 });
 
