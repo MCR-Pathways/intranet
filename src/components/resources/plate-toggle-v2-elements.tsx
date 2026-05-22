@@ -128,7 +128,8 @@ export function ToggleV2SummaryElement({
           aria-expanded={open}
           aria-controls={contentId}
           aria-label={open ? "Collapse toggle" : "Expand toggle"}
-          className="mt-0.5 flex-shrink-0 select-none rounded p-0.5 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title={open ? "Collapse toggle" : "Expand toggle"}
+          className="mt-0.5 flex-shrink-0 select-none rounded p-0.5 hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none transition-colors"
         >
           <ChevronRight
             className={cn(
