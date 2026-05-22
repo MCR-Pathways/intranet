@@ -30,7 +30,6 @@ import { BaseListPlugin } from "@platejs/list";
 import { BaseCalloutPlugin } from "@platejs/callout";
 import { BaseImagePlugin, BaseMediaEmbedPlugin, BaseFilePlugin } from "@platejs/media";
 import { BaseColumnPlugin, BaseColumnItemPlugin } from "@platejs/layout";
-import { BaseTogglePlugin } from "@platejs/toggle";
 import { BaseIndentPlugin } from "@platejs/indent";
 import { createSlatePlugin } from "platejs";
 import {
@@ -439,106 +438,6 @@ function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
   );
 }
 
-/**
- * Convert the flat indent-based toggle model to a nested model for
- * static rendering. The editor stores toggle children as sibling blocks
- * with indent > 0. The static renderer needs them nested inside the
- * toggle's children array so they appear inside <details>.
- *
- * Only processes top-level nodes. Indented content NOT following a
- * toggle is left as-is.
- */
-export function nestToggleChildren(value: Value): Value {
-  const result: Value[number][] = [];
-  let i = 0;
-
-  while (i < value.length) {
-    const node = value[i] as Record<string, unknown>;
-
-    if (node.type !== "toggle") {
-      result.push(value[i]);
-      i++;
-      continue;
-    }
-
-    // Copy the toggle node
-    const toggle = { ...node };
-    const originalChildren = (toggle.children ?? []) as Value[number][];
-    const nestedChildren: Value[number][] = [];
-    const baseIndent = (node.indent as number) ?? 0;
-
-    // Scan forward for indented siblings (indent > this toggle's level)
-    i++;
-    while (i < value.length) {
-      const sibling = value[i] as Record<string, unknown>;
-      const indent = (sibling.indent as number) ?? 0;
-
-      if (indent <= baseIndent) break;
-
-      if (sibling.type === "toggle") {
-        const nestedSlice = collectToggleSlice(value, i);
-        nestedChildren.push(...nestedSlice.nodes);
-        i = nestedSlice.nextIndex;
-      } else {
-        // Decrement indent relative to toggle level, preserving multi-level hierarchy
-        const newIndent = indent - (baseIndent + 1);
-        const { indent: _indent, ...rest } = sibling;
-        nestedChildren.push({ ...rest, ...(newIndent > 0 ? { indent: newIndent } : {}) } as Value[number]);
-        i++;
-      }
-    }
-
-    // Wrap heading in toggle_summary, then append nested block children
-    toggle.children = [
-      { type: "toggle_summary", children: originalChildren },
-      ...nestedChildren,
-    ];
-    result.push(toggle as Value[number]);
-  }
-
-  return result;
-}
-
-/** Collect a toggle and all its indented children from the flat array. */
-function collectToggleSlice(
-  value: Value,
-  startIndex: number
-): { nodes: Value[number][]; nextIndex: number } {
-  const node = value[startIndex] as Record<string, unknown>;
-  const toggle = { ...node };
-  const originalChildren = (toggle.children ?? []) as Value[number][];
-  const nestedChildren: Value[number][] = [];
-  const baseIndent = (node.indent as number) ?? 0;
-
-  let i = startIndex + 1;
-  while (i < value.length) {
-    const sibling = value[i] as Record<string, unknown>;
-    const indent = (sibling.indent as number) ?? 0;
-
-    if (indent <= baseIndent) break;
-
-    if (sibling.type === "toggle") {
-      const nested = collectToggleSlice(value, i);
-      nestedChildren.push(...nested.nodes);
-      i = nested.nextIndex;
-    } else {
-      // Decrement indent relative to toggle level, preserving multi-level hierarchy
-      const newIndent = indent - (baseIndent + 1);
-      const { indent: _indent, ...rest } = sibling;
-      nestedChildren.push({ ...rest, ...(newIndent > 0 ? { indent: newIndent } : {}) } as Value[number]);
-      i++;
-    }
-  }
-
-  toggle.children = [
-    { type: "toggle_summary", children: originalChildren },
-    ...nestedChildren,
-  ];
-  // Strip indent from the toggle itself
-  const { indent: _indent, ...cleanToggle } = toggle;
-  return { nodes: [cleanToggle as Value[number]], nextIndex: i };
-}
-
 // =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
@@ -563,19 +462,12 @@ function StrikethroughStatic(props: SlateLeafProps) {
 // PLUGIN REGISTRY
 // =============================================
 
-/** Static-only plugin for the toggle_summary virtual node created by nestToggleChildren. */
-const BaseToggleSummaryPlugin = createSlatePlugin({
-  key: "toggle_summary",
-  node: { isElement: true },
-});
-
 /**
- * toggle_v2 is the container-shape successor to the indent-based `toggle`.
- * The JSON is `{ type: "toggle_v2", children: [{type: "toggle_v2_summary"},
- * ...body blocks] }`. Walker emission, storage converter, and editor cutover
- * land in follow-up PRs; this PR adds the rendering path so any article
- * already using the new shape renders correctly in both read view (here)
- * and the editor (plate-toggle-v2-elements.tsx).
+ * toggle_v2 is the container-shape toggle. JSON is
+ * `{ type: "toggle_v2", children: [{type: "toggle_v2_summary"}, ...body blocks] }`.
+ * The legacy indent-based `toggle` plugin was retired in the cutover PR;
+ * all stored articles use this shape (converted via
+ * scripts/convert-stored-toggles.ts before the cutover).
  */
 const BaseToggleV2Plugin = createSlatePlugin({
   key: "toggle_v2",
@@ -608,8 +500,6 @@ const staticPlugins = [
   BaseColumnPlugin,
   BaseColumnItemPlugin,
   BaseIndentPlugin,
-  BaseTogglePlugin,
-  BaseToggleSummaryPlugin,
   BaseToggleV2Plugin,
   BaseToggleV2SummaryPlugin,
 ];
@@ -630,12 +520,10 @@ const staticComponents = {
   th: TableCellHeaderStatic,
   column_group: ColumnGroupStatic,
   column: ColumnItemStatic,
-  toggle: ToggleStatic,
   toggle_v2: ToggleStatic,
   img: ImageStatic,
   media_embed: MediaEmbedStatic,
   file: FileStatic,
-  toggle_summary: ToggleSummaryStatic,
   toggle_v2_summary: ToggleSummaryStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
@@ -663,8 +551,6 @@ function getPlateNodeText(node: Record<string, unknown>): string {
  * properties. Returns both the modified value and extracted headings.
  *
  * Creates new objects for modified nodes — does NOT mutate originals.
- * nestToggleChildren only shallow-copies toggle nodes; heading nodes
- * are original references that must not be mutated.
  *
  * Headings inside a toggle body still receive an `id` (so deep links via
  * `#slug` continue to work) but they are NOT pushed to the returned
@@ -691,12 +577,10 @@ export function addHeadingIds(value: Value): {
       // Recurse into children first. Mark descendants as inside-toggle so
       // their headings get IDs but skip the TOC. Note: only the toggle's
       // BODY content is inside the toggle — the toggle's title (its
-      // `toggle_summary` child after nestToggleChildren runs) is also a
-      // descendant, but doesn't currently contain h1-h4 nodes from the
-      // walker, so this rule is safe. Applies equally to the container-shape
-      // `toggle_v2` whose body is already nested in JSON.
-      const childIsInsideToggle =
-        insideToggle || type === "toggle" || type === "toggle_v2";
+      // `toggle_v2_summary` child) is also a descendant, but doesn't
+      // currently contain h1-h4 nodes from the walker, so this rule is
+      // safe.
+      const childIsInsideToggle = insideToggle || type === "toggle_v2";
       const newChildren = children ? walkAndCopy(children, childIsInsideToggle) : undefined;
 
       if (type && HEADING_TYPES.has(type)) {
@@ -743,12 +627,9 @@ export function addHeadingIds(value: Value): {
  * Used by native-actions.ts.
  */
 export function createNativeStaticEditor(value: Value) {
-  // Preprocess: convert flat indent-based toggles to nested model for static rendering
-  const processedValue = nestToggleChildren(value);
-
   return createStaticEditor({
     plugins: staticPlugins,
-    value: processedValue,
+    value,
     override: {
       components: staticComponents,
     },
@@ -794,7 +675,7 @@ function addStableNodeIds(value: Value): Value {
 
 /**
  * Prepare a native article for rendering with heading IDs and TOC data.
- * Chains nestToggleChildren → addHeadingIds → addStableNodeIds → createStaticEditor.
+ * Chains addHeadingIds → addStableNodeIds → createStaticEditor.
  *
  * Used by NativeArticleView — returns both the editor and extracted
  * headings for the TOC sidebar. Heading slugs are guaranteed to match
@@ -804,8 +685,7 @@ export function prepareNativeArticle(value: Value): {
   editor: ReturnType<typeof createStaticEditor>;
   headings: ArticleHeading[];
 } {
-  const nested = nestToggleChildren(value);
-  const { value: processed, headings } = addHeadingIds(nested);
+  const { value: processed, headings } = addHeadingIds(value);
   const withStableIds = addStableNodeIds(processed);
 
   const editor = createStaticEditor({

@@ -34,7 +34,6 @@ import {
 } from "@platejs/table/react";
 import { ColumnPlugin, ColumnItemPlugin } from "@platejs/layout/react";
 import { insertColumnGroup } from "@platejs/layout";
-import { TogglePlugin } from "@platejs/toggle/react";
 import { IndentPlugin } from "@platejs/indent/react";
 import { ImagePlugin, MediaEmbedPlugin, FilePlugin } from "@platejs/media/react";
 import { toggleList, ListStyleType } from "@platejs/list";
@@ -65,7 +64,6 @@ import {
   TableCellHeaderElement,
   ColumnGroupElement,
   ColumnItemElement,
-  ToggleElement,
   ImageElement,
   MediaEmbedElement,
   FileElement,
@@ -178,18 +176,6 @@ function InsertBlockDropdown({
         <DropdownMenuItem
           onSelect={() => {
             editor.tf.insertNodes(
-              { type: "toggle", id: crypto.randomUUID(), children: [{ text: "" }] },
-              { select: true }
-            );
-            editor.tf.focus();
-          }}
-        >
-          <ChevronRight className="h-4 w-4" />
-          Toggle
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => {
-            editor.tf.insertNodes(
               {
                 type: "toggle_v2",
                 children: [
@@ -203,7 +189,7 @@ function InsertBlockDropdown({
           }}
         >
           <ChevronRight className="h-4 w-4" />
-          Toggle (container)
+          Toggle
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -401,19 +387,9 @@ export function PlateRichEditor({
         ColumnItemPlugin,
         IndentPlugin.configure({
           inject: {
-            // Void blocks (img/file/media_embed) MUST be in this list when
-            // they can appear inside toggle bodies. Plate's `withIndent`
-            // normaliser strips `indent` from any node type not in
-            // targetPlugins; without indent on the void block, Plate's
-            // toggle plugin can't map it to the enclosing toggle in its
-            // `toggleIndex` (built from element.id + indent), so the
-            // `aboveNodes` hide-wrap never fires and the image stays
-            // visible when the toggle is collapsed. Verified on the
-            // new-staff-info screenshot review 2026-05-21.
-            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote", "toggle", "img", "file", "media_embed"],
+            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote"],
           },
         }),
-        TogglePlugin,
         BaseToggleV2Plugin,
         BaseToggleV2SummaryPlugin,
         ImagePlugin.configure({
@@ -483,7 +459,6 @@ export function PlateRichEditor({
           th: TableCellHeaderElement,
           column_group: ColumnGroupElement,
           column: ColumnItemElement,
-          toggle: ToggleElement,
           toggle_v2: ToggleV2Element,
           toggle_v2_summary: ToggleV2SummaryElement,
           img: ImageElement,
