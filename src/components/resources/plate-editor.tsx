@@ -169,7 +169,7 @@ function InsertBlockDropdown({
         </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => {
-            editor.tf.insert.nodes(
+            editor.tf.insertNodes(
               { type: "toggle", id: crypto.randomUUID(), children: [{ text: "" }] },
               { select: true }
             );
@@ -284,7 +284,7 @@ function EditorToolbar({
       {/* Article link */}
       <ArticleLinkPopover
         onInsertLink={(url, title) => {
-          editor.tf.insert.nodes(
+          editor.tf.insertNodes(
             {
               type: "a",
               url,
