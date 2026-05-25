@@ -435,6 +435,33 @@ describe("addHeadingIds", () => {
     expect(headings[0].slug).toBe("bold-heading");
   });
 
+  it("INCLUDES a heading nested inside a toggle_v2_summary in the TOC (summary is always visible)", () => {
+    // The summary is the clickable title row — always rendered regardless
+    // of open/closed state — so a heading inside it is reachable without
+    // expanding anything. Walker doesn't produce this shape, but an editor
+    // could in principle structure it this way.
+    const value: Value = [
+      { type: "h2", children: [{ text: "Top" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          {
+            type: "toggle_v2_summary",
+            children: [
+              { type: "h3", children: [{ text: "Inside summary" }] },
+            ],
+          },
+          { type: "p", children: [{ text: "Body" }] },
+        ],
+      },
+    ];
+    const { headings } = addHeadingIds(value);
+    expect(headings).toEqual([
+      { text: "Top", slug: "top", level: 2 },
+      { text: "Inside summary", slug: "inside-summary", level: 3 },
+    ]);
+  });
+
   it("excludes headings inside a toggle_v2 from the TOC", () => {
     // Same in-toggle exclusion logic applies to the container-shape toggle_v2.
     // Headings still get an id so #slug deep links continue to work; they

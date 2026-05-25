@@ -574,14 +574,29 @@ export function addHeadingIds(value: Value): {
       const type = record.type as string | undefined;
       const children = record.children as Value[number][] | undefined;
 
-      // Recurse into children first. Mark descendants as inside-toggle so
-      // their headings get IDs but skip the TOC. Note: only the toggle's
-      // BODY content is inside the toggle — the toggle's title (its
-      // `toggle_v2_summary` child) is also a descendant, but doesn't
-      // currently contain h1-h4 nodes from the walker, so this rule is
-      // safe.
-      const childIsInsideToggle = insideToggle || type === "toggle_v2";
-      const newChildren = children ? walkAndCopy(children, childIsInsideToggle) : undefined;
+      // Recurse into children. For a toggle_v2, only the BODY (children
+      // from index 1 onward) is hidden until expanded — headings there
+      // should keep their `id` for deep-linking but stay out of the TOC.
+      // The SUMMARY (children[0]) is always visible (it's the clickable
+      // title row), so any heading nested inside it stays in the outer
+      // scope — appears in the TOC as normal. Walker output puts plain
+      // text in the summary, but the editor doesn't structurally prevent
+      // a user from nesting a heading inside, so the rule has to honour
+      // the visible/hidden split.
+      let newChildren: Value[number][] | undefined;
+      if (children) {
+        if (type === "toggle_v2") {
+          const summary =
+            children.length > 0
+              ? walkAndCopy([children[0]], insideToggle)
+              : [];
+          const body =
+            children.length > 1 ? walkAndCopy(children.slice(1), true) : [];
+          newChildren = [...summary, ...body];
+        } else {
+          newChildren = walkAndCopy(children, insideToggle);
+        }
+      }
 
       if (type && HEADING_TYPES.has(type)) {
         const text = getPlateNodeText(record).trim();
