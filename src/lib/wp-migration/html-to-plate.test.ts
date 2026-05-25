@@ -279,6 +279,25 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     });
   });
 
+  it("closes a root-level toggle (no preceding heading) on any subsequent heading", () => {
+    // Walker input where the article opens with `<a tabindex>` and no
+    // preceding heading. `toggleParentLevel` is 0; the trailing H2 should
+    // close the toggle's body rather than being swallowed into it.
+    const html = `<a tabindex="0">Root toggle</a><p>Body</p><h2>After</h2><p>Outside</p>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toEqual([
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Root toggle" }] },
+          { type: "p", children: [{ text: "Body" }] },
+        ],
+      },
+      { type: "h2", children: [{ text: "After" }] },
+      { type: "p", children: [{ text: "Outside" }] },
+    ]);
+  });
+
   it("subsequent sibling toggle inherits an in-body sub-heading's level as its parent", () => {
     // Mirrors legacy `indentToggleBodies` semantics. After a toggle whose
     // body contains an H4, the outer `mostRecentHeadingLevel` tracker bumps

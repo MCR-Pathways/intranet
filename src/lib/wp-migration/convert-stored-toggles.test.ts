@@ -140,6 +140,31 @@ describe("convertStoredToggles", () => {
     });
   });
 
+  it("closes a root-level toggle (no preceding heading) on any subsequent heading", () => {
+    // Stored content where the article starts with a toggle, no heading
+    // before it. `toggleParentLevel` is 0; the trailing heading should
+    // close the toggle's scope instead of being swallowed into the body.
+    const stored: Value = [
+      { type: "toggle", children: [{ text: "Step" }] },
+      { type: "p", indent: 1, children: [{ text: "Body" }] } as never,
+      { type: "h2", children: [{ text: "After" }] },
+      { type: "p", children: [{ text: "Outside" }] },
+    ];
+    const { value, toggleCount } = convertStoredToggles(stored);
+    expect(toggleCount).toBe(1);
+    expect(value).toEqual([
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step" }] },
+          { type: "p", children: [{ text: "Body" }] },
+        ],
+      },
+      { type: "h2", children: [{ text: "After" }] },
+      { type: "p", children: [{ text: "Outside" }] },
+    ]);
+  });
+
   it("returns toggleCount 0 and identical value when no toggles are present", () => {
     const stored: Value = [
       { type: "h2", children: [{ text: "Title" }] },
