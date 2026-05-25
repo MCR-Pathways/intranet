@@ -255,6 +255,30 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     ]);
   });
 
+  it("folds a toggle marker nested inside a blockquote into a toggle_v2 container", () => {
+    // Defensive: real WP Elementor content never nests `<a tabindex>` inside
+    // a blockquote (verified — 0 nested toggle markers across 9 native
+    // articles in prod), but the walker's blockquote branch recurses with a
+    // fresh `out` array (html-to-plate.ts:428-442), so a malformed source
+    // CAN land a marker inside a blockquote's children. groupToggleBodies
+    // walks container children recursively so the marker still folds.
+    const html = `<blockquote><a tabindex="0">Inside blockquote</a></blockquote>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toHaveLength(1);
+    expect(value[0]).toMatchObject({ type: "blockquote" });
+    const blockquoteChildren = (value[0] as { children: unknown[] }).children;
+    expect(blockquoteChildren).toHaveLength(1);
+    expect(blockquoteChildren[0]).toEqual({
+      type: "toggle_v2",
+      children: [
+        {
+          type: "toggle_v2_summary",
+          children: [{ text: "Inside blockquote" }],
+        },
+      ],
+    });
+  });
+
   it("subsequent sibling toggle inherits an in-body sub-heading's level as its parent", () => {
     // Mirrors legacy `indentToggleBodies` semantics. After a toggle whose
     // body contains an H4, the outer `mostRecentHeadingLevel` tracker bumps

@@ -1035,11 +1035,16 @@ function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
  *   the legacy single-pass behaviour where an in-body H4 bumped the
  *   tracker and the next toggle in the same section had `parent: 4`.
  *
- * Toggle markers are strictly siblings in walker output (verified: the
- * sole emission site at `out.push({ type: "toggle" })` in `appendBlocks`
- * runs in block-level context, and Elementor's source HTML never nests
- * toggles inside toggles). No recursive grouping inside body slices —
- * `bodySlice` is guaranteed toggle-marker-free by the closer rule above.
+ * After the top-level pass, the function walks any container children
+ * recursively. For the WP migration's current content set (verified: 0
+ * nested-in-container toggle markers across 9 native articles, all 17
+ * markers top-level in information-for-new-staff), this is defensive
+ * code with no effect. It future-proofs against content sources where a
+ * toggle title anchor might end up inside a `<blockquote>`, `<column>`,
+ * or other container — `appendBlocks` recurses into those via
+ * `walkBlocks(childNodes)` with a fresh `out` array, so an in-blockquote
+ * `<a tabindex="0">` would land nested. The top-level pass alone
+ * wouldn't touch it; the recursive descent here does.
  */
 function groupToggleBodies(nodes: PlateNode[]): PlateNode[] {
   const result: PlateNode[] = [];
@@ -1107,7 +1112,18 @@ function groupToggleBodies(nodes: PlateNode[]): PlateNode[] {
     }
   }
 
-  return result;
+  // Recurse into block-level children of any container in the result so a
+  // toggle marker that landed nested inside a blockquote, column, or other
+  // container also folds into a toggle_v2. No-op for already-grouped
+  // toggle_v2 children (which contain summary + body, no markers).
+  return result.map((node) => {
+    const children = (node as { children?: unknown }).children;
+    if (!Array.isArray(children)) return node;
+    return {
+      ...node,
+      children: groupToggleBodies(children as PlateNode[]),
+    } as PlateNode;
+  });
 }
 
 function collapseEmptyParagraphs(nodes: PlateNode[]): Value {
