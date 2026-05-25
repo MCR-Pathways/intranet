@@ -214,7 +214,7 @@ export function htmlToPlate(
     0,
     { ...options, textLinkHrefs },
   );
-  return { value: collapseEmptyParagraphs(indentToggleBodies(value)), warnings };
+  return { value: collapseEmptyParagraphs(groupToggleBodies(value)), warnings };
 }
 
 /**
@@ -1010,39 +1010,120 @@ function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
  * - A heading at the parent level OR shallower closes the toggle
  *   scope. This is the "back to a sibling/parent section" signal.
  */
-function indentToggleBodies(nodes: PlateNode[]): PlateNode[] {
+/**
+ * Group the walker's flat output into container-shape toggle_v2 nodes.
+ *
+ * Walker emits a flat sequence with `{ type: "toggle", children: [{ text }] }`
+ * markers and body siblings interleaved (the old shape consumed by the
+ * legacy indent-based `BaseTogglePlugin`). This pass turns each toggle
+ * marker + its scope-bounded body into:
+ *
+ *   { type: "toggle_v2", children: [
+ *       { type: "toggle_v2_summary", children: titleChildren },
+ *       ...bodyChildren
+ *   ] }
+ *
+ * Scope rule matches the old `indentToggleBodies` exactly:
+ *
+ * - Body extends from the toggle marker forward until a closer is hit.
+ * - Closers: next sibling `toggle` marker (WP Elementor's
+ *   `.elementor-toggle-item` is a flat list of accordion items, never
+ *   nested), or a heading at the surrounding parent level or shallower.
+ * - Headings DEEPER than `toggleParentLevel` stay inside the body —
+ *   AND they update the outer `mostRecentHeadingLevel`, so a subsequent
+ *   sibling toggle inherits the deeper level as its own parent. Mirrors
+ *   the legacy single-pass behaviour where an in-body H4 bumped the
+ *   tracker and the next toggle in the same section had `parent: 4`.
+ *
+ * After the top-level pass, the function walks any container children
+ * recursively. For the WP migration's current content set (verified: 0
+ * nested-in-container toggle markers across 9 native articles, all 17
+ * markers top-level in information-for-new-staff), this is defensive
+ * code with no effect. It future-proofs against content sources where a
+ * toggle title anchor might end up inside a `<blockquote>`, `<column>`,
+ * or other container — `appendBlocks` recurses into those via
+ * `walkBlocks(childNodes)` with a fresh `out` array, so an in-blockquote
+ * `<a tabindex="0">` would land nested. The top-level pass alone
+ * wouldn't touch it; the recursive descent here does.
+ */
+function groupToggleBodies(nodes: PlateNode[]): PlateNode[] {
   const result: PlateNode[] = [];
-  let inToggle = false;
-  let toggleParentLevel = 0;
+  let i = 0;
   let mostRecentHeadingLevel = 0;
-  for (const node of nodes) {
-    const isToggle = node.type === "toggle";
+
+  while (i < nodes.length) {
+    const node = nodes[i];
     const headingMatch = /^h([1-6])$/.exec(node.type);
     const headingLevel = headingMatch ? parseInt(headingMatch[1], 10) : 0;
 
-    if (isToggle) {
-      inToggle = true;
-      toggleParentLevel = mostRecentHeadingLevel;
-      result.push(node);
-    } else if (headingLevel > 0) {
-      if (inToggle && headingLevel > toggleParentLevel) {
-        // Sub-heading inside the toggle body — keep it inside, indented.
-        const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
-        result.push({ ...node, indent: existingIndent + 1 });
-      } else {
-        // Heading at the parent level or shallower — closes any open toggle.
-        inToggle = false;
-        result.push(node);
+    if (node.type === "toggle") {
+      const toggleParentLevel = mostRecentHeadingLevel;
+      const titleChildren = (node as { children?: PlateNode[] }).children ?? [
+        { text: "" },
+      ];
+      const bodySlice: PlateNode[] = [];
+      i++;
+
+      while (i < nodes.length) {
+        const next = nodes[i];
+
+        // A sibling toggle marker starts a new accordion item at the same
+        // parent level — the WP Elementor pattern is a flat list of
+        // `.elementor-toggle-item` siblings, not nested toggles. Stop
+        // collecting so this toggle's body ends here and the next one
+        // becomes a sibling.
+        if (next.type === "toggle") break;
+
+        const nextHeadingMatch = /^h([1-6])$/.exec(next.type);
+        const nextHeadingLevel = nextHeadingMatch
+          ? parseInt(nextHeadingMatch[1], 10)
+          : 0;
+
+        // Heading at the parent level or shallower closes this toggle.
+        if (nextHeadingLevel > 0 && nextHeadingLevel <= toggleParentLevel) {
+          break;
+        }
+
+        bodySlice.push(next);
+        // Mirror legacy `indentToggleBodies` semantics: an in-body
+        // sub-heading bumps the outer-scope's most-recent-heading
+        // tracker, so a subsequent sibling toggle inherits the
+        // sub-heading's level as its own `toggleParentLevel`. Without
+        // this, after `[h3, toggle A, h4-in-body, toggle B, h4]` the
+        // trailing h4 wouldn't close toggle B (4 > 3 keeps it in body),
+        // diverging from the legacy behaviour where it does close.
+        if (nextHeadingLevel > 0) {
+          mostRecentHeadingLevel = nextHeadingLevel;
+        }
+        i++;
       }
-      mostRecentHeadingLevel = headingLevel;
-    } else if (inToggle) {
-      const existingIndent = ((node as Record<string, unknown>).indent as number | undefined) ?? 0;
-      result.push({ ...node, indent: existingIndent + 1 });
+
+      result.push({
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: titleChildren },
+          ...bodySlice,
+        ],
+      } as PlateNode);
     } else {
+      if (headingLevel > 0) mostRecentHeadingLevel = headingLevel;
       result.push(node);
+      i++;
     }
   }
-  return result;
+
+  // Recurse into block-level children of any container in the result so a
+  // toggle marker that landed nested inside a blockquote, column, or other
+  // container also folds into a toggle_v2. No-op for already-grouped
+  // toggle_v2 children (which contain summary + body, no markers).
+  return result.map((node) => {
+    const children = (node as { children?: unknown }).children;
+    if (!Array.isArray(children)) return node;
+    return {
+      ...node,
+      children: groupToggleBodies(children as PlateNode[]),
+    } as PlateNode;
+  });
 }
 
 function collapseEmptyParagraphs(nodes: PlateNode[]): Value {
