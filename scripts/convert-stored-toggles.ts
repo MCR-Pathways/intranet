@@ -66,11 +66,25 @@ async function main() {
     .eq("content_type", "native");
   if (args.slug) query = query.eq("slug", args.slug);
 
-  const { data: articles, error } = await query;
-  if (error) {
-    console.error("Failed to fetch articles:", error.message);
+  let articles: Awaited<typeof query>["data"] = null;
+  try {
+    const res = await query;
+    if (res.error) {
+      console.error("Failed to fetch articles:", res.error.message);
+      process.exit(1);
+    }
+    articles = res.data;
+  } catch (err) {
+    // supabase-js uses fetch internally; network-level failures (DNS,
+    // socket reset, timeout) reject the promise instead of returning
+    // an error object.
+    console.error(
+      "Network error fetching articles:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   }
+
   if (!articles || articles.length === 0) {
     console.log(
       args.slug
@@ -104,14 +118,29 @@ async function main() {
 
     if (args.dryRun) continue;
 
-    const { error: updateErr } = await supabase
-      .from("resource_articles")
-      .update({ content_json: newValue as never })
-      .eq("id", article.id);
+    try {
+      const { error: updateErr } = await supabase
+        .from("resource_articles")
+        .update({
+          // Cast pattern matches scripts/migrate-wp-page.ts — Plate `Value`
+          // is JSON-serialisable and structurally compatible with the
+          // generated `Json | null` type on `content_json`.
+          content_json: newValue as unknown as Database["public"]["Tables"]["resource_articles"]["Update"]["content_json"],
+        })
+        .eq("id", article.id);
 
-    if (updateErr) {
-      errors.push({ slug: article.slug, message: updateErr.message });
-      console.error(`  ✗ ${article.slug}: ${updateErr.message}`);
+      if (updateErr) {
+        errors.push({ slug: article.slug, message: updateErr.message });
+        console.error(`  ✗ ${article.slug}: ${updateErr.message}`);
+      }
+    } catch (err) {
+      // Mirror the SELECT-side try/catch: network-level failures (timeout,
+      // socket reset) reject the promise instead of populating `error`.
+      // Surface as a per-article error and keep the loop going so one bad
+      // update doesn't abandon the remaining articles.
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ slug: article.slug, message });
+      console.error(`  ✗ ${article.slug}: ${message}`);
     }
   }
 
