@@ -138,7 +138,7 @@ export function ToggleV2SummaryElement({
             )}
           />
         </button>
-        <div className="flex-1 min-w-0 font-medium">{children}</div>
+        <div className="flex-1 min-w-0 font-semibold text-foreground">{children}</div>
       </div>
     </PlateElement>
   );
