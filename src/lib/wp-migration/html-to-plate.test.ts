@@ -255,6 +255,34 @@ describe("htmlToPlate — Elementor Toggle widget orphan-link promotion", () => 
     ]);
   });
 
+  it("subsequent sibling toggle inherits an in-body sub-heading's level as its parent", () => {
+    // Mirrors legacy `indentToggleBodies` semantics. After a toggle whose
+    // body contains an H4, the outer `mostRecentHeadingLevel` tracker bumps
+    // to 4; the next sibling toggle gets `parent: 4` (not the original H3
+    // level), so a trailing H4 closes the sibling toggle rather than
+    // landing in its body.
+    const html = `<h3>Section</h3><a tabindex="0">Step A</a><h4>Sub-step</h4><a tabindex="0">Step B</a><h4>Next section</h4><p>After.</p>`;
+    const { value } = htmlToPlate(html);
+    expect(value).toEqual([
+      { type: "h3", children: [{ text: "Section" }] },
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step A" }] },
+          { type: "h4", children: [{ text: "Sub-step" }] },
+        ],
+      },
+      {
+        type: "toggle_v2",
+        children: [
+          { type: "toggle_v2_summary", children: [{ text: "Step B" }] },
+        ],
+      },
+      { type: "h4", children: [{ text: "Next section" }] },
+      { type: "p", children: [{ text: "After." }] },
+    ]);
+  });
+
   it("closes the toggle on a heading at the parent level (next section)", () => {
     // H3 "Using Google Calendar" opens a section. Toggles inside that
     // section have parent level 3. A subsequent H3 closes any open toggle

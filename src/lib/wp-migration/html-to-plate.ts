@@ -1023,26 +1023,28 @@ function hasOnlyEmptyText(nodes: (PlateNode | TextLeaf)[]): boolean {
  *       ...bodyChildren
  *   ] }
  *
- * Scope rule matches the old `indentToggleBodies`: body extends from the
- * toggle marker forward until either (a) the next heading at the
- * surrounding parent level or shallower, or (b) end of the slice.
- * Headings DEEPER than `toggleParentLevel` stay inside the body. Nested
- * `toggle` markers inside the body get grouped recursively into their own
- * `toggle_v2` containers.
+ * Scope rule matches the old `indentToggleBodies` exactly:
  *
- * `parentLevel` is the heading level immediately preceding the slice
- * being processed. For the top-level pass it's 0 (no preceding heading);
- * recursive calls into a toggle's body pass the toggle's own parent level
- * forward so the nested-toggle closing rule mirrors the outer-toggle
- * closing rule.
+ * - Body extends from the toggle marker forward until a closer is hit.
+ * - Closers: next sibling `toggle` marker (WP Elementor's
+ *   `.elementor-toggle-item` is a flat list of accordion items, never
+ *   nested), or a heading at the surrounding parent level or shallower.
+ * - Headings DEEPER than `toggleParentLevel` stay inside the body —
+ *   AND they update the outer `mostRecentHeadingLevel`, so a subsequent
+ *   sibling toggle inherits the deeper level as its own parent. Mirrors
+ *   the legacy single-pass behaviour where an in-body H4 bumped the
+ *   tracker and the next toggle in the same section had `parent: 4`.
+ *
+ * Toggle markers are strictly siblings in walker output (verified: the
+ * sole emission site at `out.push({ type: "toggle" })` in `appendBlocks`
+ * runs in block-level context, and Elementor's source HTML never nests
+ * toggles inside toggles). No recursive grouping inside body slices —
+ * `bodySlice` is guaranteed toggle-marker-free by the closer rule above.
  */
-function groupToggleBodies(
-  nodes: PlateNode[],
-  parentLevel = 0,
-): PlateNode[] {
+function groupToggleBodies(nodes: PlateNode[]): PlateNode[] {
   const result: PlateNode[] = [];
   let i = 0;
-  let mostRecentHeadingLevel = parentLevel;
+  let mostRecentHeadingLevel = 0;
 
   while (i < nodes.length) {
     const node = nodes[i];
@@ -1078,19 +1080,24 @@ function groupToggleBodies(
         }
 
         bodySlice.push(next);
+        // Mirror legacy `indentToggleBodies` semantics: an in-body
+        // sub-heading bumps the outer-scope's most-recent-heading
+        // tracker, so a subsequent sibling toggle inherits the
+        // sub-heading's level as its own `toggleParentLevel`. Without
+        // this, after `[h3, toggle A, h4-in-body, toggle B, h4]` the
+        // trailing h4 wouldn't close toggle B (4 > 3 keeps it in body),
+        // diverging from the legacy behaviour where it does close.
+        if (nextHeadingLevel > 0) {
+          mostRecentHeadingLevel = nextHeadingLevel;
+        }
         i++;
       }
-
-      // Recurse so any nested toggle markers inside the body also become
-      // container-shape. Pass `toggleParentLevel` forward as the parent
-      // level for the nested pass.
-      const groupedBody = groupToggleBodies(bodySlice, toggleParentLevel);
 
       result.push({
         type: "toggle_v2",
         children: [
           { type: "toggle_v2_summary", children: titleChildren },
-          ...groupedBody,
+          ...bodySlice,
         ],
       } as PlateNode);
     } else {
