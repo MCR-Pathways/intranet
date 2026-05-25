@@ -586,13 +586,22 @@ export function addHeadingIds(value: Value): {
       let newChildren: Value[number][] | undefined;
       if (children) {
         if (type === "toggle_v2") {
-          const summary =
-            children.length > 0
-              ? walkAndCopy([children[0]], insideToggle)
-              : [];
-          const body =
-            children.length > 1 ? walkAndCopy(children.slice(1), true) : [];
-          newChildren = [...summary, ...body];
+          // walkAndCopy returns the input array reference when no descendant
+          // changed (the `changed ? out : nodes` return guard). Slice the
+          // summary + body separately, walk each, and only allocate a new
+          // children array if at least one half actually changed. Without
+          // this guard the unconditional `[...summary, ...body]` spread
+          // would defeat the cloning-skip optimisation: every toggle's
+          // parent chain would clone on every call even when no heading
+          // was modified.
+          const summaryNodes = children.slice(0, 1);
+          const bodyNodes = children.slice(1);
+          const newSummary = walkAndCopy(summaryNodes, insideToggle);
+          const newBody = walkAndCopy(bodyNodes, true);
+          newChildren =
+            newSummary !== summaryNodes || newBody !== bodyNodes
+              ? [...newSummary, ...newBody]
+              : children;
         } else {
           newChildren = walkAndCopy(children, insideToggle);
         }
