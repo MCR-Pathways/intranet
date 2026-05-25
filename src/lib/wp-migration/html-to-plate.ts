@@ -1079,8 +1079,18 @@ function groupToggleBodies(nodes: PlateNode[]): PlateNode[] {
           ? parseInt(nextHeadingMatch[1], 10)
           : 0;
 
-        // Heading at the parent level or shallower closes this toggle.
-        if (nextHeadingLevel > 0 && nextHeadingLevel <= toggleParentLevel) {
+        // Close on a heading at the parent level or shallower. The
+        // `toggleParentLevel === 0` arm handles a toggle that started
+        // before any preceding heading: with parent 0, the
+        // `nextHeadingLevel <= 0` check alone would never fire (real
+        // headings are 1-6), and every subsequent heading in the article
+        // would get swallowed into the body. The intent for a root-level
+        // toggle is the same as for any other: a sibling heading closes
+        // the scope.
+        if (
+          nextHeadingLevel > 0 &&
+          (toggleParentLevel === 0 || nextHeadingLevel <= toggleParentLevel)
+        ) {
           break;
         }
 
