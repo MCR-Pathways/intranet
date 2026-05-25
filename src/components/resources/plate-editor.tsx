@@ -387,7 +387,17 @@ export function PlateRichEditor({
         ColumnItemPlugin,
         IndentPlugin.configure({
           inject: {
-            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote"],
+            // Void blocks (img/file/media_embed) stay in this list because
+            // editors may indent them as part of regular document layout
+            // (right-aligned figures, etc). With container-shape toggles
+            // the indent-on-void workaround for legacy toggle scope is no
+            // longer needed; this entry now exists solely to preserve any
+            // user-applied indent on the void block itself. Empirically
+            // no current content has indented voids, but `withIndent`
+            // strips indent from any type absent here on the next
+            // normalisation pass — keeping the entries avoids silent loss
+            // of any future user-applied indent.
+            targetPlugins: ["p", "h1", "h2", "h3", "h4", "blockquote", "img", "file", "media_embed"],
           },
         }),
         BaseToggleV2Plugin,
