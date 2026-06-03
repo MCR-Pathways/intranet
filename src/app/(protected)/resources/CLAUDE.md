@@ -203,3 +203,47 @@ Two content paths coexist. Google Docs for living documents (policies, procedure
 ## Buttons
 
 Button rules live in `docs/button-system.md` (single source of truth for variants, sizes, label casing, a11y, helpers, per-context patterns). Never put `h-X w-X` on a Button `className` — use the `size` prop; an ESLint rule enforces this.
+
+## WP migration: context-clear protocol
+
+The general "multi-step work survives a context clear" rule lives in `memory/MEMORY.md`. WP-specific application:
+
+**Phases per bit:** audit → walker run → editor pass → PR → ship. Safe to clear at any of those four boundaries; never mid-phase.
+
+**Audit phase.** `memory/wp-migration-design-audit.md` is the canonical store. Write incrementally as each section completes — don't batch the whole row to the end:
+- OLD URL + NEW URL
+- WHO + WHEN + GOAL
+- SUCCESS
+- OLD shape — run BOTH lenses: DOM inspection (via `read_page` / `find`) AND visual screenshot inspection covering top + mid + bottom of the page (Elementor column layouts and editor intent only surface visually; DOM alone hides them — see `memory/feedback_audit_visual_and_intentionality.md`)
+- NEW shape (via fresh `find()` / `read_page` AND screenshots in the same session — see the existing audit's note on verifying every structural claim against fresh data)
+- IDEAL shape
+- DECISION (SHIP AS-IS / FIX BEFORE SHIP / BLOCKED)
+- BUILD COST
+
+If clearing mid-audit, write a thin `memory/wp-migration-bit-N-handover.md` first capturing what's been investigated so far and what's pending. Delete it on pickup once the next session has briefed itself.
+
+**Walker phase** ends when the article re-publishes and the change is verified in the UI / DOM — not just by running the conversion script. Re-publication is observable; "script ran" is not.
+
+**Standing rule — toggle summaries flatten to real H-tags, never bold paragraphs.** Every former WP toggle summary in a migrated article MUST emit as a real `<h2>` / `<h3>` / `<h4>` element. Level is determined by toggle nesting depth (top-level → h2 if the page body starts at h2, else h3; nested → demote by one). Never `<p>` with bold styling. Never `<strong>` standalone. Never a `<div>` with a typography class. The H-tag is load-bearing for (a) Algolia section indexing — `parseHtmlIntoSections` splits on body.children H1–H4 only, so a bold-but-not-heading collapses the whole article to one section, (b) screen-reader landmark navigation, (c) the on-page TOC built by `prepareNativeArticle`, and (d) prose typography sizes (H2 22px/600, H3 19.8px/600, H4 15.4px/600). Bold rendering is a free consequence of using the tag. Canonical implementation: `src/lib/wp-migration/flatten-toggle-v2.ts` — every WP migration runs through it during the walker phase. Per-page exceptions (a toggle that genuinely belongs as a collapsible) go in `flattenToggleV2`'s `options.exclude` AND get documented in the audit row. Backstop: the regression tests in `src/lib/plate-static-plugins.test.tsx` lock the "one heading → one section" contract. See `memory/feedback_wp_toggles_flatten_to_real_h_tags.md`.
+
+**Editor phase** — the editorial pass on an article. Runs the five-step workflow below for every page that needs editor work (whether it's a freshly migrated bit, a reopen of a previously-shipped article, or any other native-article editorial change). Phase ends when MARK DONE lands in the audit row; not before.
+
+**Five-step editorial-pass workflow** (per page, sequential — never start the next page until the current one finishes):
+
+1. **PLAN** — commit a checklist of specific edits to the page's audit row in `memory/wp-migration-design-audit.md`. Each item is a concrete change ("convert toggle_v2 #N (title) to H3 with content inline", "split Employment Policies toggle into H3 + 12 H4 children", etc.). The plan is the contract for what APPLY produces and what VERIFY checks against.
+2. **APPLY** — open `/resources/article/{slug}/edit` and make the edits. Plate auto-saves every 5s; reindex fires on 30s idle or explicit publish. For large pages (10+ edits), batch the changes (e.g., 5 + 5 + 5 + 2 toggle conversions) with auto-save between, rather than doing all in one undo-stack burst.
+3. **VERIFY — three lenses, all must pass, all artefacts saved to disk:**
+   - **Structure (DOM):** run `find()` on the rendered read view (`/resources/article/{slug}`, not `/edit`) querying all H2/H3/H4 headings. Confirm count + names match the PLAN. Commit the heading list to the audit row.
+   - **Visual:** screenshot top + mid + bottom of the rendered read view with `save_to_disk: true`. Reference paths in the audit row. Confirm visual hierarchy reads right, no broken images, no orphaned content, no leftover toggle wrappers.
+   - **Search (the actual UX promise):** pick 2–3 representative noun queries from the PLAN, run Cmd+K, confirm each deep-links to the new heading anchor (not the page top). Screenshot the Cmd+K result + the landed-page anchor. Commit the queries + results to the audit row. If search lands on the page top, the editorial pass failed regardless of how good the DOM looks.
+4. **SIGN-OFF** — post the three verification artefacts (DOM heading list, screenshot paths, search test results) to Colin in chat. Wait for explicit "matches what we wanted" before touching the next page. No silent progression.
+5. **MARK DONE** — update the audit row to "IMPLEMENTED + VERIFIED {date}" with the search-query test results recorded. Remove the page from the "Editorial passes in progress" tracker. Next page starts at step 1.
+
+**Failure modes:** any verify step failing → back to APPLY. Sign-off catching something missed → back to APPLY. Never "we'll fix it later."
+
+**Context-clear safety within an editorial pass:**
+- Safe between any of the five steps. The PLAN lives in the audit row; the edits live in the DB via Plate auto-save; the verify artefacts live on disk; the SIGN-OFF lives in chat history.
+- Unsafe mid-APPLY (some edits saved, others in undo stack only) → if a clear is imminent, save the article first (Plate auto-saves but a manual save guarantees), then write a thin `memory/editorial-pass-{slug}-handover.md` capturing "I'm N of M edits done, here's the plan reference, here's what's still pending." Delete on pickup.
+- Unsafe mid-VERIFY (some artefacts collected, others missing) → write a handover noting which lenses have run and which haven't.
+
+**PR phase** ends at merge. Don't clear context with an open PR mid-Gemini-review loop unless the handover captures every comment thread still owed a reply (per the "always reply to every Gemini comment" rule).
