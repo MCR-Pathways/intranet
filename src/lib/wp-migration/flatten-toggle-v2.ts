@@ -223,12 +223,21 @@ function isLabelParagraph(
   suffixes: string[],
 ): boolean {
   if (hasAnchorDescendant(paragraph)) return false;
-  const text = extractText(paragraph).trim().toLowerCase();
-  const summaryLower = summaryText.toLowerCase();
+  // Normalise whitespace before matching: WP HTML can carry &nbsp; (U+00A0)
+  // between tokens, runs of regular spaces, or stray tabs/newlines. Collapse
+  // every whitespace run to a single regular space so the equality check is
+  // robust to source-formatting variance.
+  const text = normaliseWhitespace(extractText(paragraph)).toLowerCase();
+  const summaryLower = normaliseWhitespace(summaryText).toLowerCase();
   for (const suffix of suffixes) {
-    if (text === `${summaryLower} ${suffix.toLowerCase()}`) return true;
+    const suffixLower = normaliseWhitespace(suffix).toLowerCase();
+    if (text === `${summaryLower} ${suffixLower}`) return true;
   }
   return false;
+}
+
+function normaliseWhitespace(input: string): string {
+  return input.replace(/\s+/g, " ").trim();
 }
 
 function hasAnchorDescendant(node: PlateNode): boolean {

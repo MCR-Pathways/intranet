@@ -220,4 +220,48 @@ describe("flattenToggleV2 — promoteParagraphLabels", () => {
     // The would-be-label paragraph stays as p
     expect((result.value[1] as { type?: string }).type).toBe("p");
   });
+
+  it("matches labels with non-breaking spaces and runs of spaces collapsed to one space", () => {
+    // WP HTML often serialises a tight word boundary as &nbsp; (U+00A0)
+    // and can drop extra whitespace between tokens. The matcher should
+    // treat those as equivalent to a single regular space.
+    const input = [
+      toggle("Theme Name", [
+        p("theme  name Activity\tPlans"),
+        p("ThemeName Resources"),
+      ]),
+    ] as unknown as Value;
+
+    const result = flattenToggleV2(input, {
+      promoteParagraphLabels: {
+        suffixes: ["Activity Plans", "Resources"],
+      },
+    });
+
+    // First paragraph matches "theme name activity plans" once collapsed.
+    // Second paragraph "ThemeName Resources" does NOT match because the
+    // summary normalises to "theme name" — collapsing whitespace doesn't
+    // merge previously-distinct tokens, only flattens runs of whitespace.
+    expect(result.labelPromotionCount).toBe(1);
+  });
+
+  it("matches labels with a non-breaking space in the source text", () => {
+    // WP HTML often serialises a tight word boundary as &nbsp; (U+00A0).
+    // After whitespace normalisation the nbsp is equivalent to a regular
+    // space, so the label still matches.
+    const NBSP = " ";
+    const input = [
+      toggle(`Theme${NBSP}Name`, [
+        p(`Theme${NBSP}Name${NBSP}Activity${NBSP}Plans`),
+      ]),
+    ] as unknown as Value;
+
+    const result = flattenToggleV2(input, {
+      promoteParagraphLabels: {
+        suffixes: ["Activity Plans"],
+      },
+    });
+
+    expect(result.labelPromotionCount).toBe(1);
+  });
 });
