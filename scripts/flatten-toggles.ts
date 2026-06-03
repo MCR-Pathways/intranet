@@ -9,22 +9,37 @@
  *   set -a; source .env.local; set +a
  *   npx tsx scripts/flatten-toggles.ts --slug=<slug> [--dry-run] [--exclude="<title>,<title>"] [--heading=h3]
  *
- * --slug=<slug>      REQUIRED. The article slug to operate on. No bulk mode
- *                    — every page in the editorial-pass queue has its own
- *                    audit decisions (e.g., people-services keeps COSHH
- *                    Assessments as a toggle while flattening everything
- *                    else), so per-slug invocation is the safer pattern.
- * --dry-run          Print what would change without writing to the DB.
- *                    Default is `false` (writes apply). Run with --dry-run
- *                    first to inspect.
- * --exclude="A,B"    Comma-separated list of toggle summary titles to skip.
- *                    Match is case-insensitive, trimmed. Use for the COSHH
- *                    Assessments case on people-services.
- * --heading=h2|h3    Heading level the promoted summary takes. Defaults
- *                    to h3 (the common case — toggle under H2 section
- *                    becomes H3 child). Use --heading=h2 for the pc-support
- *                    PC Guidebook case (single toggle that's really a
- *                    section heading).
+ * --slug=<slug>            REQUIRED. The article slug to operate on. No
+ *                          bulk mode — every page in the editorial-pass
+ *                          queue has its own audit decisions (e.g.,
+ *                          people-services keeps COSHH Assessments as a
+ *                          toggle while flattening everything else), so
+ *                          per-slug invocation is the safer pattern.
+ * --dry-run                Print what would change without writing to the
+ *                          DB. Default is `false` (writes apply). Run
+ *                          with --dry-run first to inspect.
+ * --exclude="A,B"          Comma-separated list of toggle summary titles
+ *                          to skip. Match is case-insensitive, trimmed.
+ *                          Use for the COSHH Assessments case on
+ *                          people-services.
+ * --heading=h2|h3          Heading level the promoted summary takes.
+ *                          Defaults to h3 (the common case — toggle
+ *                          under H2 section becomes H3 child). Use
+ *                          --heading=h2 for the pc-support PC Guidebook
+ *                          case (single toggle that's really a section
+ *                          heading).
+ * --promote-labels="A,B"   Comma-separated suffix list. After flattening
+ *                          a toggle summary "<X>" to a heading, promote
+ *                          any `p` inside the body whose text equals
+ *                          "<X> <suffix>" and that contains no anchor
+ *                          descendant to a sub-heading. Used for the
+ *                          group-work article where each theme body
+ *                          starts with bold "<Theme> Activity Plans"
+ *                          and "<Theme> Resources" label paragraphs.
+ * --promote-labels-level=h4
+ *                          Heading level the promoted labels take.
+ *                          Defaults to h4 (one below the standard h3
+ *                          summary level).
  *
  * Nested headings inside the toggle body are demoted by one level so the
  * outline shape stays consistent. Nested `toggle_v2` inside another
@@ -43,6 +58,8 @@ interface Args {
   dryRun: boolean;
   exclude: string[];
   heading: HeadingLevel;
+  promoteLabels: string[];
+  promoteLabelsLevel: HeadingLevel;
 }
 
 const VALID_HEADINGS: HeadingLevel[] = ["h1", "h2", "h3", "h4", "h5", "h6"];
@@ -52,6 +69,8 @@ function parseArgs(argv: string[]): Args {
   let dryRun = false;
   let exclude: string[] = [];
   let heading: HeadingLevel = "h3";
+  let promoteLabels: string[] = [];
+  let promoteLabelsLevel: HeadingLevel = "h4";
 
   for (const a of argv.slice(2)) {
     if (a === "--dry-run") dryRun = true;
@@ -71,6 +90,21 @@ function parseArgs(argv: string[]): Args {
         process.exit(2);
       }
       heading = h;
+    } else if (a.startsWith("--promote-labels=")) {
+      promoteLabels = a
+        .slice("--promote-labels=".length)
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    } else if (a.startsWith("--promote-labels-level=")) {
+      const h = a.slice("--promote-labels-level=".length) as HeadingLevel;
+      if (!VALID_HEADINGS.includes(h)) {
+        console.error(
+          `Invalid --promote-labels-level=${h}. Must be one of: ${VALID_HEADINGS.join(", ")}`,
+        );
+        process.exit(2);
+      }
+      promoteLabelsLevel = h;
     } else {
       console.error(`Unknown arg: ${a}`);
       process.exit(2);
@@ -80,7 +114,14 @@ function parseArgs(argv: string[]): Args {
     console.error("Missing required --slug=<slug>");
     process.exit(2);
   }
-  return { slug, dryRun, exclude, heading };
+  return {
+    slug,
+    dryRun,
+    exclude,
+    heading,
+    promoteLabels,
+    promoteLabelsLevel,
+  };
 }
 
 async function main() {
@@ -135,19 +176,38 @@ async function main() {
     process.exit(0);
   }
 
-  const { value: newValue, flattenedCount, skippedCount, demotionCount } =
-    flattenToggleV2(article.content_json as Value, {
-      summaryHeadingLevel: args.heading,
-      exclude: args.exclude,
-    });
+  const {
+    value: newValue,
+    flattenedCount,
+    skippedCount,
+    demotionCount,
+    labelPromotionCount,
+  } = flattenToggleV2(article.content_json as Value, {
+    summaryHeadingLevel: args.heading,
+    exclude: args.exclude,
+    promoteParagraphLabels:
+      args.promoteLabels.length > 0
+        ? {
+            suffixes: args.promoteLabels,
+            level: args.promoteLabelsLevel,
+          }
+        : undefined,
+  });
 
   console.log(
     `${args.dryRun ? "[dry-run] " : ""}${article.slug}: ${flattenedCount} toggle(s) → ${args.heading}` +
       (skippedCount > 0 ? `, ${skippedCount} excluded` : "") +
-      (demotionCount > 0 ? `, ${demotionCount} heading(s) demoted` : ""),
+      (demotionCount > 0 ? `, ${demotionCount} heading(s) demoted` : "") +
+      (labelPromotionCount > 0
+        ? `, ${labelPromotionCount} label(s) → ${args.promoteLabelsLevel}`
+        : ""),
   );
 
-  if (flattenedCount === 0 && demotionCount === 0) {
+  if (
+    flattenedCount === 0 &&
+    demotionCount === 0 &&
+    labelPromotionCount === 0
+  ) {
     console.log("Nothing to do.");
     process.exit(0);
   }

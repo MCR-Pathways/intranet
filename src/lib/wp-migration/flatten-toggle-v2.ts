@@ -75,6 +75,26 @@ export interface FlattenOptions {
    * trimmed. Use for per-page exceptions (e.g., ["COSHH Assessments"]).
    */
   exclude?: string[];
+  /**
+   * Promote label-style paragraphs inside a toggle body to sub-headings.
+   * A label is a `p` node whose trimmed text equals `<summary text>
+   * <suffix>` for one of the configured suffixes AND that contains no
+   * `<a>` descendant. Useful for the group-work article shape where
+   * each theme toggle's body starts with two bold-styled paragraph
+   * labels ("Theme Activity Plans" / "Theme Resources") that act as
+   * sub-section headings but were emitted as paragraphs by the walker.
+   *
+   * Set `level` to the heading level the labels should take (default
+   * "h4", one below the standard `summaryHeadingLevel` of h3).
+   *
+   * Link paragraphs that share the label text but contain an anchor
+   * (the actual download links) are left as paragraphs — the anchor
+   * descendant disambiguates.
+   */
+  promoteParagraphLabels?: {
+    suffixes: string[];
+    level?: HeadingLevel;
+  };
 }
 
 export interface FlattenResult {
@@ -82,6 +102,7 @@ export interface FlattenResult {
   flattenedCount: number;
   skippedCount: number;
   demotionCount: number;
+  labelPromotionCount: number;
 }
 
 const HEADING_LEVELS: HeadingLevel[] = ["h1", "h2", "h3", "h4", "h5", "h6"];
@@ -94,18 +115,31 @@ export function flattenToggleV2(
   const excludeSet = new Set(
     (options.exclude ?? []).map((s) => s.toLowerCase().trim()),
   );
-  return walk(value as PlateNode[], summaryLevel, excludeSet);
+  const labelConfig = options.promoteParagraphLabels
+    ? {
+        suffixes: options.promoteParagraphLabels.suffixes.map((s) => s.trim()),
+        level: options.promoteParagraphLabels.level ?? "h4",
+      }
+    : null;
+  return walk(value as PlateNode[], summaryLevel, excludeSet, labelConfig);
+}
+
+interface LabelConfig {
+  suffixes: string[];
+  level: HeadingLevel;
 }
 
 function walk(
   nodes: PlateNode[],
   summaryLevel: HeadingLevel,
   excludeSet: Set<string>,
+  labelConfig: LabelConfig | null,
 ): FlattenResult {
   const result: PlateNode[] = [];
   let flattenedCount = 0;
   let skippedCount = 0;
   let demotionCount = 0;
+  let labelPromotionCount = 0;
 
   for (const node of nodes) {
     if (node.type !== "toggle_v2") {
@@ -123,8 +157,9 @@ function walk(
       continue;
     }
 
-    const summaryText = extractText(summary).toLowerCase().trim();
-    if (excludeSet.has(summaryText)) {
+    const summaryTextRaw = extractText(summary).trim();
+    const summaryTextLower = summaryTextRaw.toLowerCase();
+    if (excludeSet.has(summaryTextLower)) {
       skippedCount++;
       result.push(node);
       continue;
@@ -139,8 +174,8 @@ function walk(
     } as PlateNode);
 
     // Process body children. Demote nested headings by one level; flatten
-    // nested toggles recursively at the next level down; pass everything
-    // else through unchanged.
+    // nested toggles recursively at the next level down; promote
+    // label-style paragraphs if configured; pass everything else through.
     const body = children.slice(1);
     const nextSummaryLevel = demoteHeading(summaryLevel);
     for (const bodyNode of body) {
@@ -149,15 +184,24 @@ function walk(
           [bodyNode] as PlateNode[],
           nextSummaryLevel,
           excludeSet,
+          labelConfig,
         );
         flattenedCount += nested.flattenedCount;
         skippedCount += nested.skippedCount;
         demotionCount += nested.demotionCount;
+        labelPromotionCount += nested.labelPromotionCount;
         result.push(...(nested.value as PlateNode[]));
       } else if (isHeading(bodyNode)) {
         const demoted = demoteHeading(bodyNode.type as HeadingLevel);
         if (demoted !== bodyNode.type) demotionCount++;
         result.push({ ...bodyNode, type: demoted });
+      } else if (
+        labelConfig &&
+        bodyNode.type === "p" &&
+        isLabelParagraph(bodyNode, summaryTextRaw, labelConfig.suffixes)
+      ) {
+        labelPromotionCount++;
+        result.push({ ...bodyNode, type: labelConfig.level });
       } else {
         result.push(bodyNode);
       }
@@ -169,7 +213,31 @@ function walk(
     flattenedCount,
     skippedCount,
     demotionCount,
+    labelPromotionCount,
   };
+}
+
+function isLabelParagraph(
+  paragraph: PlateNode,
+  summaryText: string,
+  suffixes: string[],
+): boolean {
+  if (hasAnchorDescendant(paragraph)) return false;
+  const text = extractText(paragraph).trim().toLowerCase();
+  const summaryLower = summaryText.toLowerCase();
+  for (const suffix of suffixes) {
+    if (text === `${summaryLower} ${suffix.toLowerCase()}`) return true;
+  }
+  return false;
+}
+
+function hasAnchorDescendant(node: PlateNode): boolean {
+  if (node.type === "a") return true;
+  const children = (node.children ?? []) as PlateNode[];
+  for (const child of children) {
+    if (hasAnchorDescendant(child)) return true;
+  }
+  return false;
 }
 
 function isHeading(node: PlateNode): boolean {
