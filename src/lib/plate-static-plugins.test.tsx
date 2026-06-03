@@ -6,6 +6,8 @@ import {
   addHeadingIds,
   prepareNativeArticle,
 } from "./plate-static-plugins";
+import { parseHtmlIntoSections } from "./html-sections";
+import { serialiseContentToHtml } from "./resource-publish";
 
 describe("createNativeStaticEditor", () => {
   it("creates an editor with the given value", () => {
@@ -770,5 +772,91 @@ describe("LinkStatic internal vs external", () => {
     const html = await serializeHtml(editor, { stripDataAttributes: true });
     expect(html).toContain("/resources/article/some-article");
     expect(html).not.toContain('target=');
+  });
+});
+
+describe("Algolia pipeline (createNativeStaticEditor → parseHtmlIntoSections)", () => {
+  // Regression guard for the silent section-indexing failure caught
+  // 2026-06-01. Plate's static editor internally stamps every element with
+  // a block-id; the default heading renderer wraps id-bearing headings in a
+  // <div data-slate-id=...><h2 id=...>...</h2></div>. parseHtmlIntoSections
+  // walks body.children, sees divs (not headings), and produces a single
+  // null-heading section regardless of how many headings the document had.
+  // The fix wires createNativeStaticEditor to a heading-component variant
+  // that renders <h2> as the top-level element so parseHtmlIntoSections can
+  // see it. These tests assert the pipeline-end behaviour, not the renderer
+  // in isolation — both pieces correct individually doesn't help us if the
+  // boundary between them is wrong.
+
+  it("produces one Algolia section per heading on a multi-heading article", async () => {
+    const value: Value = [
+      { type: "h1", children: [{ text: "Title" }] },
+      { type: "p", children: [{ text: "Intro paragraph." }] },
+      { type: "h2", children: [{ text: "Section A" }] },
+      { type: "p", children: [{ text: "Content under A." }] },
+      { type: "h2", children: [{ text: "Section B" }] },
+      { type: "p", children: [{ text: "Content under B." }] },
+      { type: "h3", children: [{ text: "Subsection B.1" }] },
+      { type: "p", children: [{ text: "Content under B.1." }] },
+    ];
+
+    const html = await serialiseContentToHtml(value);
+    expect(html).not.toBeNull();
+    const sections = parseHtmlIntoSections(html!);
+
+    // 4 heading-anchored sections: Title (h1), Section A, Section B, Subsection B.1.
+    // Intro paragraph rolls into the Title section's content.
+    expect(sections).toHaveLength(4);
+    expect(sections.map((s) => s.heading)).toEqual([
+      "Title",
+      "Section A",
+      "Section B",
+      "Subsection B.1",
+    ]);
+    expect(sections.map((s) => s.headingSlug)).toEqual([
+      "title",
+      "section-a",
+      "section-b",
+      "subsection-b-1",
+    ]);
+  });
+
+  it("emits headings as top-level elements (not wrapped in a div)", async () => {
+    // Direct shape assertion on the HTML — the previous regression was that
+    // headings rendered as <div ...><h2>...</h2></div>. parseHtmlIntoSections
+    // only sees direct body.children. If a heading-wrapping div ever returns
+    // (e.g. someone wires the wrong components map), this test fails fast.
+    const value: Value = [
+      { type: "h2", children: [{ text: "Section heading" }] },
+    ];
+    const html = await serialiseContentToHtml(value);
+    expect(html).not.toBeNull();
+    // Strip whitespace for a stable assertion. The expected shape is the
+    // <h2> tag at the start of the body fragment, not nested inside a div.
+    const trimmed = html!.trim();
+    expect(trimmed.startsWith("<h2")).toBe(true);
+  });
+
+  it("survives the full createNativeStaticEditor → serializeHtml → parseHtmlIntoSections chain end-to-end", async () => {
+    // End-to-end through the exact functions the reindex path uses.
+    // serialiseContentToHtml is a thin wrapper over createNativeStaticEditor
+    // + serializeHtml + the <div class="slate-editor"> outer-wrapper strip.
+    // The point of this test is that ANY future change to ANY step in the
+    // chain — renderer, serialiser, wrapper strip, section parser — that
+    // breaks the wire format gets caught.
+    const value: Value = [
+      { type: "h2", children: [{ text: "Welcome Pack" }] },
+      { type: "h2", children: [{ text: "Using your Workspace" }] },
+      { type: "h3", children: [{ text: "Accessing your email" }] },
+      { type: "p", children: [{ text: "Step content." }] },
+    ];
+    const html = await serialiseContentToHtml(value);
+    expect(html).not.toBeNull();
+    const sections = parseHtmlIntoSections(html!);
+    expect(sections.length).toBeGreaterThanOrEqual(3);
+    const headings = sections.map((s) => s.heading);
+    expect(headings).toContain("Welcome Pack");
+    expect(headings).toContain("Using your Workspace");
+    expect(headings).toContain("Accessing your email");
   });
 });

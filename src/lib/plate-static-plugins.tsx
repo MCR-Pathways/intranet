@@ -119,6 +119,31 @@ function H4Static(props: SlateElementProps) {
   return HeadingStatic(props, "h4");
 }
 
+/**
+ * Algolia-mode heading: always render heading as the top-level element so
+ * parseHtmlIntoSections (which inspects body.children) can see it. Used by
+ * createNativeStaticEditor only.
+ *
+ * Browser rendering uses the regular HeadingStatic which wraps in SlateElement
+ * to add Slate's data-* attributes + the anchor-link affordance. That path
+ * stays unchanged. The Algolia path must NEVER produce `<div><h2>...</h2></div>`
+ * because parseHtmlIntoSections walks body.children only — a heading nested
+ * inside a div is invisible to the indexer, and every native article ends up
+ * as a single Algolia section regardless of its heading count.
+ */
+function AlgoliaH1Static(props: SlateElementProps) {
+  return <SlateElement {...props} as="h1" />;
+}
+function AlgoliaH2Static(props: SlateElementProps) {
+  return <SlateElement {...props} as="h2" />;
+}
+function AlgoliaH3Static(props: SlateElementProps) {
+  return <SlateElement {...props} as="h3" />;
+}
+function AlgoliaH4Static(props: SlateElementProps) {
+  return <SlateElement {...props} as="h4" />;
+}
+
 function HrStatic(props: SlateElementProps) {
   return (
     <SlateElement {...props}>
@@ -531,6 +556,20 @@ const staticComponents = {
   strikethrough: StrikethroughStatic,
 };
 
+/**
+ * Static components for the Algolia HTML serialisation path. Headings render
+ * as top-level elements (no SlateElement wrapper div) so parseHtmlIntoSections
+ * can split on them. All other element renderers stay identical to the
+ * browser path.
+ */
+const staticComponentsAlgolia = {
+  ...staticComponents,
+  h1: AlgoliaH1Static,
+  h2: AlgoliaH2Static,
+  h3: AlgoliaH3Static,
+  h4: AlgoliaH4Static,
+};
+
 // =============================================
 // HEADING ID PREPROCESSOR
 // =============================================
@@ -655,7 +694,7 @@ export function createNativeStaticEditor(value: Value) {
     plugins: staticPlugins,
     value,
     override: {
-      components: staticComponents,
+      components: staticComponentsAlgolia,
     },
   });
 }
