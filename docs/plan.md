@@ -71,7 +71,9 @@
 - Plate toggle rebuilt from indent-based to container-based (parallel to WS6, not part of WS numbering): `toggle_v2` + `toggle_v2_summary` plugins replace the legacy `toggle` + `BaseTogglePlugin` + render-time `nestToggleChildren` inference. The container shape matches Elementor's Toggle widget on the OLD intranet — body lives inside the container as children, so closing the toggle structurally hides every block (images included). Storage converter walked 17 indent-shape toggles in `information-for-new-staff` into the container shape. Editor element renders the toggle title in `font-semibold` to match the static read view (WYSIWYG convention captured in `src/app/(protected)/resources/CLAUDE.md`).
 - Files stored on Google Drive via service account impersonation, served through proxy API route
 
-### Algolia Search- 2 indices in code: resources_articles, learning_courses (tool_shed_entries code references removed with W5; production dashboard deletion is a separate manual step)
+### Algolia Search
+
+- 2 indices in code: resources_articles, learning_courses (tool_shed_entries code references removed with W5; production dashboard deletion is a separate manual step)
 - Global Cmd+K search overlay with recent search management
 - Faceted course catalogue
 - Deep linking for resources (#sectionSlug)
@@ -124,6 +126,15 @@ These now apply to all future intranet work:
 - [ ] **Unified `intranet_feed` Algolia index** that indexes news posts. Cmd+K now covers `resources_articles` + `learning_courses` only — news posts are not indexed. A unified `intranet_feed` index would extend search to all news posts (Kudos included, and any post types W7 introduces). Scope: new Algolia index + indexing/removal hooks in the intranet actions file + deep-link routing from Cmd+K results. Reversible — easy to add later.
 
   **Triggers for picking this up:** (1) W7 lands and the composer puts more mixed content in the feed, increasing the surface area Cmd+K should cover; (2) periodic sync after first month of post-launch usage shows search coverage gap matters; (3) we add a third post type that warrants global findability. Until at least one trigger fires, leave Cmd+K covering only resources + courses.
+
+**Adjacent workstreams surfaced during content-migration editorial passes (not yet sequenced):**
+- [ ] **Algolia ranking review: H4 sub-sections outranking H3 parents.** Surfaced during the group-work editorial pass (2026-06-03). A Cmd+K query like "health wellbeing" surfaces the H4 record "Health & Wellbeing Resources" above the H3 theme record "Health & Wellbeing", even though the H3 is the conceptual entry point. Hypothesis: Algolia weights specificity and content length over heading hierarchy. Functionally not broken (H4 takes the user straight to the link list), but a deviation from intuition. Scope: index-settings review in `scripts/algolia-settings.mjs` — tune `customRanking` to weight shorter `sectionHeading` higher, or add an `attributesForRanking` boost for h2/h3 over h4. Small, reversible.
+
+  **Triggers for picking this up:** (1) more than one editorial pass surfaces the same H4-above-H3 inversion on different queries; (2) a content editor reports a Cmd+K result that "lands in the wrong place"; (3) the unified `intranet_feed` work above starts (good time to revisit ranking holistically). Until then, leave settings as-is — the inversions seen so far are arguably more precise, not less.
+
+- [ ] **Section-split indexing for Google Doc articles.** Surfaced during the group-work editorial pass (2026-06-03) when "mentoring group work" surfaced `participation-forms` at hit #1 — a legacy Google Doc article that exists on the index as a single record with `sectionHeading: null`. The Google Doc indexing path (`drive-actions.ts` → `syncGoogleDocArticle`) does NOT use the same H1–H4 section split that the native-article path (`indexArticleSections` via `parseHtmlIntoSections`) uses; every Doc article gets one record per article regardless of internal structure. Effect: Google Doc articles outrank native-article section records on shared-noun queries because they accumulate more matching terms across the whole document. Scope: extend the Google Doc indexing path to run synced HTML through `parseHtmlIntoSections` before pushing to Algolia, mirroring the native path. Risk: changes per-document record counts (1 → N), needs a full reindex of every Google Doc article post-deploy. See `memory/google-doc-section-indexing-backlog.md` for implementation context.
+
+  **Triggers for picking this up:** (1) a content editor reports a Cmd+K query landing on a Google Doc article when the intended target is a native article (or vice-versa, lost in a long Doc with no anchor); (2) the WP migration finishes and the editorial-pass workflow generalises to Doc articles; (3) the unified `intranet_feed` work above starts (cluster the section-indexing work for all content types together). Substantial scope — not trivial to retrofit per-document.
 
 ### Recommended next pickup order
 
