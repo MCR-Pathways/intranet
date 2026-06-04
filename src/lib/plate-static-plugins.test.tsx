@@ -860,3 +860,118 @@ describe("Algolia pipeline (createNativeStaticEditor → parseHtmlIntoSections)"
     expect(headings).toContain("Accessing your email");
   });
 });
+
+describe("glossary block — dual-map rendering", () => {
+  // Production-shape entries: an acronym carrying its expansion in parens, a
+  // term with an apostrophe, a multi-word term. The toy "Advocate/Befriender"
+  // case hides slug + parens edge behaviour.
+  const glossaryArticle: Value = [
+    { type: "h2", children: [{ text: "Terms" }] },
+    {
+      type: "glossary",
+      variant: "terms",
+      children: [
+        {
+          type: "glossary_entry",
+          children: [
+            { type: "glossary_term", children: [{ text: "Advocate" }] },
+            {
+              type: "glossary_definition",
+              children: [{ text: "An advocate speaks up for a young person." }],
+            },
+          ],
+        },
+        {
+          type: "glossary_entry",
+          children: [
+            { type: "glossary_term", children: [{ text: "Children's Hearing" }] },
+            {
+              type: "glossary_definition",
+              children: [{ text: "A legal meeting about a child's care." }],
+            },
+          ],
+        },
+      ],
+    },
+    { type: "h2", children: [{ text: "Acronyms" }] },
+    {
+      type: "glossary",
+      variant: "acronyms",
+      children: [
+        {
+          type: "glossary_entry",
+          children: [
+            {
+              type: "glossary_term",
+              children: [{ text: "Compulsory Supervision Order (CSO)" }],
+            },
+            {
+              type: "glossary_definition",
+              children: [{ text: "A legal order made at a Hearing." }],
+            },
+          ],
+        },
+      ],
+    },
+  ] as unknown as Value;
+
+  it("Algolia path: each term becomes its own section, slug from term text", async () => {
+    const html = await serialiseContentToHtml(glossaryArticle);
+    expect(html).not.toBeNull();
+    const sections = parseHtmlIntoSections(html!);
+    const byHeading = Object.fromEntries(
+      sections.map((s) => [s.heading, s])
+    );
+
+    // Section H2s survive as their own sections.
+    expect(byHeading["Terms"]).toBeDefined();
+    expect(byHeading["Acronyms"]).toBeDefined();
+
+    // Each term is its own section, with the definition as its content.
+    expect(byHeading["Advocate"]).toBeDefined();
+    expect(byHeading["Advocate"].headingSlug).toBe("advocate");
+    expect(byHeading["Advocate"].content).toContain("speaks up");
+
+    expect(byHeading["Children's Hearing"]).toBeDefined();
+    expect(byHeading["Children's Hearing"].headingSlug).toBe("children-s-hearing");
+
+    // Acronym keeps its parens in the heading text; slug collapses punctuation.
+    expect(byHeading["Compulsory Supervision Order (CSO)"]).toBeDefined();
+    expect(byHeading["Compulsory Supervision Order (CSO)"].headingSlug).toBe(
+      "compulsory-supervision-order-cso"
+    );
+  });
+
+  it("Algolia path: no <dl>/<dt>/<dd> wrappers leak into the indexed HTML", async () => {
+    const html = await serialiseContentToHtml(glossaryArticle);
+    expect(html).not.toBeNull();
+    // Fragments must collapse — terms render as <h4>, not <dt> inside <dl>.
+    expect(html).not.toContain("<dl");
+    expect(html).not.toContain("<dt");
+    expect(html).not.toContain("<dd");
+    expect(html).toContain("<h4");
+  });
+
+  it("browser path: renders a <dl> with <dt id> + <dd>, terms excluded from the TOC", async () => {
+    const { editor, headings } = prepareNativeArticle(glossaryArticle);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+
+    // Definition-list semantics in the browser.
+    expect(html).toContain("<dl");
+    expect(html).toContain("<dd");
+    // The term <dt> carries the same slug id parseHtmlIntoSections derives.
+    expect(html).toContain('id="advocate"');
+    expect(html).toContain('id="children-s-hearing"');
+
+    // TOC shows only the two real H2 sections — never the 3 terms.
+    expect(headings.map((h) => h.text)).toEqual(["Terms", "Acronyms"]);
+  });
+
+  it("browser path: each entry carries a data-glossary-text hook for the filter", async () => {
+    const { editor } = prepareNativeArticle(glossaryArticle);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    // Lower-cased term + definition text, the hook the on-page filter reads.
+    expect(html).toContain("data-glossary-text");
+    expect(html.toLowerCase()).toContain("advocate speaks up for a young person");
+  });
+});

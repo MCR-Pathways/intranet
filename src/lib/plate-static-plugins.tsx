@@ -41,6 +41,7 @@ import {
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
 import {
   createSlugDeduplicator,
+  slugifyHeading,
   ARTICLE_CONTENT_MODIFIERS,
   APP_ORIGIN,
   type ArticleHeading,
@@ -464,6 +465,90 @@ function ToggleSummaryStatic({ children, ...props }: SlateElementProps) {
 }
 
 // =============================================
+// GLOSSARY
+// =============================================
+
+// Browser path: a real definition list. `glossary` → <dl>,
+// `glossary_entry` → <div class="glossary-entry"> (a valid name/value group
+// inside <dl>, and the unit the on-page filter shows/hides), `glossary_term`
+// → <dt>, `glossary_definition` → <dd>. The <dt> carries a slug id derived
+// the same way parseHtmlIntoSections derives section slugs, so the Cmd+K
+// deep-link anchor matches the indexed section. Terms are <dt>, not headings,
+// so they never reach the article TOC.
+//
+// `data-glossary-text` on each entry is the lower-cased term + definition
+// text — the hook the PR2 on-page filter reads to show/hide entries without
+// re-touching this component.
+
+function GlossaryStatic({ children, element, ...props }: SlateElementProps) {
+  const variant = (element as Record<string, unknown>).variant as string | undefined;
+  return (
+    <SlateElement
+      element={element}
+      {...props}
+      as="dl"
+      data-variant={variant}
+      className={`glossary not-prose my-3${variant === "acronyms" ? " glossary-acronyms" : ""}`}
+    >
+      {children}
+    </SlateElement>
+  );
+}
+
+function GlossaryEntryStatic({ children, element, ...props }: SlateElementProps) {
+  const text = getPlateNodeText(element as Record<string, unknown>)
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  return (
+    <SlateElement element={element} {...props}>
+      {/* Layout (divider, stacked-vs-two-column, padding) lives in globals.css
+          .glossary-entry / .glossary-acronyms so the editor matches exactly. */}
+      <div className="glossary-entry" data-glossary-text={text}>
+        {children}
+      </div>
+    </SlateElement>
+  );
+}
+
+function GlossaryTermStatic({ children, element, ...props }: SlateElementProps) {
+  const text = getPlateNodeText(element as Record<string, unknown>).trim();
+  const id = text ? slugifyHeading(text) : undefined;
+  return (
+    <SlateElement element={element} {...props}>
+      <dt id={id} className="scroll-mt-24 font-semibold text-foreground">
+        {children}
+      </dt>
+    </SlateElement>
+  );
+}
+
+function GlossaryDefinitionStatic({ children, element, ...props }: SlateElementProps) {
+  // No margin — the entry's flex/grid gap handles term→definition spacing.
+  return (
+    <SlateElement element={element} {...props}>
+      <dd className="text-foreground/80">{children}</dd>
+    </SlateElement>
+  );
+}
+
+// Algolia path: render the container + entry as bare fragments so the term
+// and definition land at body.children level, where parseHtmlIntoSections
+// splits on them. The term becomes an <h4> (its own section), the definition
+// a <p> (the section's content). No indexer change needed — same dual-map
+// trick as AlgoliaH2Static.
+
+function GlossaryFragmentStatic({ children }: SlateElementProps) {
+  return <>{children}</>;
+}
+function GlossaryTermAlgoliaStatic(props: SlateElementProps) {
+  return <SlateElement {...props} as="h4" />;
+}
+function GlossaryDefinitionAlgoliaStatic(props: SlateElementProps) {
+  return <SlateElement {...props} as="p" />;
+}
+
+// =============================================
 // STATIC LEAF COMPONENTS
 // =============================================
 
@@ -504,6 +589,13 @@ const BaseToggleV2SummaryPlugin = createSlatePlugin({
   node: { isElement: true },
 });
 
+// Static-only glossary plugins (no editor transforms — the read/Algolia
+// editors don't edit). The interactive transforms live in plate-glossary.ts.
+const BaseGlossaryStaticPlugin = createSlatePlugin({ key: "glossary", node: { isElement: true } });
+const BaseGlossaryEntryStaticPlugin = createSlatePlugin({ key: "glossary_entry", node: { isElement: true } });
+const BaseGlossaryTermStaticPlugin = createSlatePlugin({ key: "glossary_term", node: { isElement: true } });
+const BaseGlossaryDefinitionStaticPlugin = createSlatePlugin({ key: "glossary_definition", node: { isElement: true } });
+
 const staticPlugins = [
   BaseHeadingPlugin,
   BaseBlockquotePlugin,
@@ -527,6 +619,10 @@ const staticPlugins = [
   BaseIndentPlugin,
   BaseToggleV2Plugin,
   BaseToggleV2SummaryPlugin,
+  BaseGlossaryStaticPlugin,
+  BaseGlossaryEntryStaticPlugin,
+  BaseGlossaryTermStaticPlugin,
+  BaseGlossaryDefinitionStaticPlugin,
 ];
 
 const staticComponents = {
@@ -550,6 +646,10 @@ const staticComponents = {
   media_embed: MediaEmbedStatic,
   file: FileStatic,
   toggle_v2_summary: ToggleSummaryStatic,
+  glossary: GlossaryStatic,
+  glossary_entry: GlossaryEntryStatic,
+  glossary_term: GlossaryTermStatic,
+  glossary_definition: GlossaryDefinitionStatic,
   bold: BoldStatic,
   italic: ItalicStatic,
   underline: UnderlineStatic,
@@ -568,6 +668,12 @@ const staticComponentsAlgolia = {
   h2: AlgoliaH2Static,
   h3: AlgoliaH3Static,
   h4: AlgoliaH4Static,
+  // Fragments collapse the container + entry wrappers so each term surfaces
+  // as a top-level <h4> + <p> pair for parseHtmlIntoSections.
+  glossary: GlossaryFragmentStatic,
+  glossary_entry: GlossaryFragmentStatic,
+  glossary_term: GlossaryTermAlgoliaStatic,
+  glossary_definition: GlossaryDefinitionAlgoliaStatic,
 };
 
 // =============================================

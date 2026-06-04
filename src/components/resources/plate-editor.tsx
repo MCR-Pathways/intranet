@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Value } from "platejs";
+import { PathApi, type Value } from "platejs";
 import {
   Plate,
   PlateContent,
@@ -81,6 +81,19 @@ import {
   ToggleV2SummaryElement,
 } from "./plate-toggle-v2-elements";
 import {
+  BaseGlossaryPlugin,
+  BaseGlossaryEntryPlugin,
+  BaseGlossaryTermPlugin,
+  BaseGlossaryDefinitionPlugin,
+  createEmptyGlossaryEntry,
+} from "./plate-glossary";
+import {
+  GlossaryElement,
+  GlossaryEntryElement,
+  GlossaryTermElement,
+  GlossaryDefinitionElement,
+} from "./plate-glossary-elements";
+import {
   Bold,
   Italic,
   Underline,
@@ -98,6 +111,7 @@ import {
   Table,
   Columns2,
   ChevronRight,
+  BookA,
   ImageIcon,
   Video,
   Paperclip,
@@ -132,6 +146,38 @@ function InsertBlockDropdown({
   onOpenFileDialog,
   onOpenImportHtmlDialog,
 }: InsertBlockDropdownProps) {
+  // Layout is chosen at insert and fixed thereafter, so there are two entries
+  // rather than one block + an in-editor layout control.
+  const insertGlossary = (variant: "terms" | "acronyms") => {
+    const node = {
+      type: "glossary",
+      variant,
+      children: [createEmptyGlossaryEntry()],
+    };
+    // If the cursor is inside an existing glossary, insert the new one as a
+    // sibling AFTER it — never a glossary nested in a glossary.
+    const containing = editor.api.above({
+      match: (n: { type?: string }) => n.type === "glossary",
+    });
+    let glossaryPath: number[] | undefined;
+    if (containing) {
+      const at = PathApi.next(containing[1]);
+      editor.tf.insertNodes(node, { at });
+      glossaryPath = at;
+    } else {
+      editor.tf.insertNodes(node, { select: true });
+      glossaryPath = editor.api.above({
+        match: (n: { type?: string }) => n.type === "glossary",
+      })?.[1];
+    }
+    // Land the cursor in the first term (not the definition).
+    if (glossaryPath) {
+      const termStart = editor.api.start([...glossaryPath, 0, 0]);
+      if (termStart) editor.tf.select(termStart);
+    }
+    editor.tf.focus();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -190,6 +236,14 @@ function InsertBlockDropdown({
         >
           <ChevronRight className="h-4 w-4" />
           Toggle
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => insertGlossary("terms")}>
+          <BookA className="h-4 w-4" />
+          Glossary (terms list)
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => insertGlossary("acronyms")}>
+          <BookA className="h-4 w-4" />
+          Glossary (acronyms table)
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -402,6 +456,10 @@ export function PlateRichEditor({
         }),
         BaseToggleV2Plugin,
         BaseToggleV2SummaryPlugin,
+        BaseGlossaryPlugin,
+        BaseGlossaryEntryPlugin,
+        BaseGlossaryTermPlugin,
+        BaseGlossaryDefinitionPlugin,
         ImagePlugin.configure({
           options: {
             uploadImage: async (input) => {
@@ -471,6 +529,10 @@ export function PlateRichEditor({
           column: ColumnItemElement,
           toggle_v2: ToggleV2Element,
           toggle_v2_summary: ToggleV2SummaryElement,
+          glossary: GlossaryElement,
+          glossary_entry: GlossaryEntryElement,
+          glossary_term: GlossaryTermElement,
+          glossary_definition: GlossaryDefinitionElement,
           img: ImageElement,
           media_embed: MediaEmbedElement,
           file: FileElement,
