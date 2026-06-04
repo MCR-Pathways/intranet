@@ -87,9 +87,14 @@ function applyEdits(value: Value): { value: Value; stats: EditStats } {
   };
 
   // Step 1: Flatten toggles, excluding COSSH (walker preserved source typo)
+  // Exclude BOTH spellings so the script stays idempotent: on the first
+  // run the toggle still carries the walker-preserved source typo
+  // "COSSH"; step 2 below renames it to "COSHH"; a second run must still
+  // recognise it as the keep-as-toggle exception, otherwise the flatten
+  // would wrongly collapse the COSHH section.
   const flat = flattenToggleV2(value, {
     summaryHeadingLevel: "h3",
-    exclude: ["COSSH Assessments"],
+    exclude: ["COSSH Assessments", "COSHH Assessments"],
   });
   stats.flattenedToggles = flat.flattenedCount;
   stats.excludedToggles = flat.skippedCount;
@@ -128,8 +133,11 @@ function applyEdits(value: Value): { value: Value; stats: EditStats } {
 
     // Step 3: Inside-Employment-Policies state machine. The H3 opens the
     // state; any subsequent p that contains an <a> child gets promoted
-    // to h4. Any non-anchor-paragraph node (typically the next H3)
-    // closes the state and is then processed normally.
+    // to h4. The state only closes on the next section heading (H2/H3),
+    // NOT on any non-anchor node — an interspersed spacer paragraph or
+    // intro sentence must not cut the run short and leave later policy
+    // links un-promoted. Non-heading non-anchor nodes fall through and
+    // are preserved unchanged while the state stays open.
     if (
       node.type === "h3" &&
       extractText(node).trim() === "Employment Policies"
@@ -146,8 +154,11 @@ function applyEdits(value: Value): { value: Value; stats: EditStats } {
         result.push({ ...node, type: "h4" });
         continue;
       }
-      // Exit the state — fall through to handle the closing node normally
-      insideEmploymentPolicies = false;
+      // Close the state only on a real section boundary; everything else
+      // falls through and is preserved while the state stays open.
+      if (node.type === "h2" || node.type === "h3") {
+        insideEmploymentPolicies = false;
+      }
     }
 
     // Step 5: Benefits H2 wrapper + demote the three items to H3
