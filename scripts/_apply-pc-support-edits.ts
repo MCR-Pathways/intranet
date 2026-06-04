@@ -114,15 +114,33 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data, error } = await supabase
-    .from("resource_articles")
-    .select("id, slug, content_json")
-    .eq("slug", "pc-support")
-    .eq("content_type", "native")
-    .maybeSingle();
+  let data: {
+    id: string;
+    slug: string;
+    content_json: unknown;
+  } | null = null;
+  try {
+    const res = await supabase
+      .from("resource_articles")
+      .select("id, slug, content_json")
+      .eq("slug", "pc-support")
+      .eq("content_type", "native")
+      .maybeSingle();
+    if (res.error) {
+      console.error("Failed to fetch pc-support:", res.error.message);
+      process.exit(1);
+    }
+    data = res.data;
+  } catch (err) {
+    console.error(
+      "Network error fetching pc-support:",
+      err instanceof Error ? err.message : String(err),
+    );
+    process.exit(1);
+  }
 
-  if (error || !data) {
-    console.error("Article not found:", error?.message);
+  if (!data) {
+    console.error("pc-support article not found");
     process.exit(1);
   }
 
@@ -170,16 +188,24 @@ async function main() {
     process.exit(0);
   }
 
-  const { error: updateErr } = await supabase
-    .from("resource_articles")
-    .update({
-      content_json:
-        final as unknown as Database["public"]["Tables"]["resource_articles"]["Update"]["content_json"],
-    })
-    .eq("id", data.id);
+  try {
+    const { error: updateErr } = await supabase
+      .from("resource_articles")
+      .update({
+        content_json:
+          final as unknown as Database["public"]["Tables"]["resource_articles"]["Update"]["content_json"],
+      })
+      .eq("id", data.id);
 
-  if (updateErr) {
-    console.error("Failed to update pc-support:", updateErr.message);
+    if (updateErr) {
+      console.error("Failed to update pc-support:", updateErr.message);
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error(
+      "Network error updating pc-support:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   }
 
