@@ -52,6 +52,14 @@ interface RenameStats {
   zwjStrippedCharCount: number;
 }
 
+// Single source of truth for invisible characters that leak through WP source
+// HTML and need stripping from headings: U+200B (ZWSP), U+200C (ZWNJ),
+// U+200D (ZWJ), U+FEFF (BOM). Two RegExp literals because `test()` on a
+// `/g` regex mutates `lastIndex` between calls — using a non-global regex
+// for the gate and a global one for the strip avoids that footgun.
+const INVISIBLE_HEADING_CHARS = /[​‌‍﻿]/;
+const INVISIBLE_HEADING_CHARS_G = /[​‌‍﻿]/g;
+
 function applyHeadingFixes(value: Value): { value: Value; stats: RenameStats } {
   const stats: RenameStats = {
     renamedH2GroupworkCount: 0,
@@ -72,7 +80,7 @@ function applyHeadingFixes(value: Value): { value: Value; stats: RenameStats } {
       };
     }
 
-    if (heading.includes("‍") || heading.includes("​")) {
+    if (INVISIBLE_HEADING_CHARS.test(heading)) {
       const cleanedChildren = (node.children ?? []).map((child) => {
         if (
           child &&
@@ -80,7 +88,7 @@ function applyHeadingFixes(value: Value): { value: Value; stats: RenameStats } {
           typeof (child as Leaf).text === "string"
         ) {
           const original = (child as { text: string }).text;
-          const cleaned = original.replace(/[‍​‌﻿]/g, "");
+          const cleaned = original.replace(INVISIBLE_HEADING_CHARS_G, "");
           if (cleaned.length !== original.length) {
             stats.zwjStrippedCharCount += original.length - cleaned.length;
           }
