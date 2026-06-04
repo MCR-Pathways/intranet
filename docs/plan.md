@@ -144,6 +144,10 @@ These now apply to all future intranet work:
 
   **Triggers for picking this up:** (1) a content editor or PC reports clicking a link and getting an unexpected destination type (Google Doc open-to-edit when they expected a PDF download); (2) the next editorial pass on a page mixing document types (people-services is dense with Doc/PDF mixes); (3) the wider Resources-module visual refresh. Reversible — easy to add later.
 
+- [ ] **Algolia synonyms for internal acronyms.** Surfaced during the people-services editorial pass (2026-06-04). The H3 "Certificate of Employers' Liability Insurance" is indexed correctly but a Cmd+K search for the colloquial term `"EL certificate"` returns zero hits — the acronym isn't in heading text, body content, or section title. Same blind spot will hit any internal abbreviation staff use in speech but not in formal headings (PC, YP, MCR, SLDR, SDS, EAP-vs-Employee-Assistance, etc.). Standard fix: Algolia's bidirectional `synonyms` API — define `["EL", "Employers Liability"]` once and queries for either return content containing either. Config-as-code in `scripts/algolia-settings.mjs` (already pushes searchableAttributes and customRanking; synonyms is the same shape). Per-index — applies to every article on the resources_articles index without per-page content changes.
+
+  **Triggers for picking this up:** (1) Colin provides the canonical acronym list (the gate — without it, guesses are noise); (2) any content editor reports a Cmd+K search "should have hit X but didn't" for an acronym-based query; (3) the wider Cmd+K relevance-tuning pass starts (cluster with the H4-outranking-H3 ranking item above). Small (~5 minutes to author once the list lands, ~5 minutes to push to the index). Reversible — synonyms can be removed via the same script.
+
 ### Recommended next pickup order
 
 W6 re-audit → W2 → W7 → W8.
