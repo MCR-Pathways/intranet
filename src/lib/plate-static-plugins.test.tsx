@@ -973,5 +973,10 @@ describe("glossary block — dual-map rendering", () => {
     // Lower-cased term + definition text, the hook the on-page filter reads.
     expect(html).toContain("data-glossary-text");
     expect(html.toLowerCase()).toContain("advocate speaks up for a young person");
+    // Term and definition are space-joined, not glued — so a filter query
+    // crossing the boundary still matches and the term's last word isn't
+    // fused to the definition's first word.
+    expect(html.toLowerCase()).toContain("advocate an advocate speaks");
+    expect(html.toLowerCase()).not.toContain("advocatean");
   });
 });

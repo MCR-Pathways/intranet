@@ -496,7 +496,17 @@ function GlossaryStatic({ children, element, ...props }: SlateElementProps) {
 }
 
 function GlossaryEntryStatic({ children, element, ...props }: SlateElementProps) {
-  const text = getPlateNodeText(element as Record<string, unknown>)
+  // Join the term and definition with a space, not "". getPlateNodeText on the
+  // whole entry would concatenate leaves with no separator ("Advocate" +
+  // "An advocate…" → "advocatean advocate…"), gluing the term to the
+  // definition's first word and breaking the on-page filter at that boundary.
+  const kids = ((element as Record<string, unknown>).children ?? []) as Record<
+    string,
+    unknown
+  >[];
+  const text = kids
+    .map((k) => getPlateNodeText(k))
+    .join(" ")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

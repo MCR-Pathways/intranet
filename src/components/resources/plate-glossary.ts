@@ -116,6 +116,14 @@ export const BaseGlossaryPlugin = createSlatePlugin({
             );
             return;
           }
+          // Exactly [term, definition] — lift any extra child (e.g. content
+          // pasted into the entry) out to sit as a sibling; the glossary
+          // normaliser above then lifts it to the top level rather than
+          // dropping it.
+          if (children.length > 2) {
+            editor.tf.liftNodes({ at: [...path, 2] });
+            return;
+          }
         }
 
         normalizeNode(entry);
