@@ -154,4 +154,20 @@ describe("glossary deleteBackward", () => {
     expect(g.children).toHaveLength(2); // both entries intact, nothing merged
     expect(editor.selection?.anchor.path.slice(0, 3)).toEqual([0, 0, 1]);
   });
+
+  it("Backspace at the start of the first term does nothing and does not crash", () => {
+    // Plate's PathApi.previous returns undefined for a first-child path (it
+    // does NOT throw like Slate's Path.previous), so the first-entry case
+    // falls through to a no-op. Locks that, and guards against a regression to
+    // the throwing variant.
+    const editor = makeEditor([
+      { type: "glossary", children: [entry("First", "First def")] },
+    ]);
+    editor.tf.select({ path: [0, 0, 0, 0], offset: 0 });
+    expect(() => editor.tf.deleteBackward("character")).not.toThrow();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = editor.children[0] as any;
+    expect(g.children).toHaveLength(1);
+    expect(editor.selection?.anchor.path.slice(0, 3)).toEqual([0, 0, 0]);
+  });
 });
