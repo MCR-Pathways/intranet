@@ -127,6 +127,6 @@
   },
   "overrides": {
     "jotai": "2.19.1",
-    "dompurify": "^3.4.8"
+    "dompurify": "3.4.8"
   }
 }
