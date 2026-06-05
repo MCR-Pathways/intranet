@@ -23,6 +23,7 @@
 
 import { useState } from "react";
 import { Info, Plus, Trash2 } from "lucide-react";
+import { PathApi } from "platejs";
 import { PlateElement, useEditorRef } from "platejs/react";
 import type { PlateElementProps } from "platejs/react";
 import { Button } from "@/components/ui/button";
@@ -172,6 +173,19 @@ export function GlossaryEntryElement({ children, element, ...props }: PlateEleme
     editor.tf.focus();
   }
 
+  // Insert a blank entry directly after this one, cursor in its term. The list
+  // is alphabetical, so editors need to add terms mid-list; the "Add entry"
+  // button only appends to the end. Mirrors the insertBreak (Enter-in-def) path.
+  function handleInsertBelow() {
+    const path = editor.api.findPath(element);
+    if (!path) return;
+    const at = PathApi.next(path);
+    editor.tf.insertNodes(createEmptyGlossaryEntry() as never, { at });
+    const termStart = editor.api.start([...at, 0]);
+    if (termStart) editor.tf.select(termStart);
+    editor.tf.focus();
+  }
+
   return (
     <PlateElement element={element} {...props}>
       {/* glossary-entry (globals.css) supplies divider, stacked-vs-two-column
@@ -195,6 +209,22 @@ export function GlossaryEntryElement({ children, element, ...props }: PlateEleme
           className="absolute right-0 top-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-focus-within/entry:opacity-100"
         >
           <Trash2 />
+        </Button>
+        {/* Insert-below: a "+" chip on the entry's bottom divider. Additive, so
+            hover-reveal is safe here (unlike the focus-only delete). bg-card + z
+            keep it legible where it straddles the divider. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-xs"
+          contentEditable={false}
+          aria-label="Insert entry below"
+          title="Insert entry below"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleInsertBelow}
+          className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-1/2 rounded-full border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100"
+        >
+          <Plus />
         </Button>
       </div>
     </PlateElement>

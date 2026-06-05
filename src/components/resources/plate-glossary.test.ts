@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { createSlateEditor } from "platejs";
+import { createSlateEditor, PathApi } from "platejs";
 import {
   BaseGlossaryPlugin,
   BaseGlossaryEntryPlugin,
   BaseGlossaryTermPlugin,
   BaseGlossaryDefinitionPlugin,
+  createEmptyGlossaryEntry,
 } from "./plate-glossary";
 
 function makeEditor(value: unknown) {
@@ -169,5 +170,36 @@ describe("glossary deleteBackward", () => {
     const g = editor.children[0] as any;
     expect(g.children).toHaveLength(1);
     expect(editor.selection?.anchor.path.slice(0, 3)).toEqual([0, 0, 0]);
+  });
+});
+
+describe("glossary insert-below", () => {
+  it("inserts a blank entry after the targeted one, cursor in its term", () => {
+    // Mirrors handleInsertBelow in plate-glossary-elements.tsx: insert a fresh
+    // entry at PathApi.next(entryPath), then put the cursor in its term. The
+    // list is alphabetical, so editors add terms mid-list this way; the bottom
+    // "Add entry" button only appends.
+    const editor = makeEditor([
+      {
+        type: "glossary",
+        children: [entry("First", "First def"), entry("Second", "Second def")],
+      },
+    ]);
+    const at = PathApi.next([0, 0]);
+    editor.tf.insertNodes(createEmptyGlossaryEntry() as never, { at });
+    const termStart = editor.api.start([...at, 0]);
+    if (termStart) editor.tf.select(termStart);
+    editor.tf.normalize({ force: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = editor.children[0] as any;
+    // First, blank, Second. The blank lands between them and stays valid.
+    expect(g.children).toHaveLength(3);
+    expect(g.children[0].children[0].children[0].text).toBe("First");
+    expect(g.children[1].type).toBe("glossary_entry");
+    expect(g.children[1].children[0].type).toBe("glossary_term");
+    expect(g.children[1].children[1].type).toBe("glossary_definition");
+    expect(g.children[2].children[0].children[0].text).toBe("Second");
+    // cursor in the new entry's term: [0,1,0]
+    expect(editor.selection?.anchor.path.slice(0, 3)).toEqual([0, 1, 0]);
   });
 });
