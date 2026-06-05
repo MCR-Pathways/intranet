@@ -89,6 +89,7 @@ type Entry = { term: unknown[]; def: unknown[]; termText: string; defText: strin
  *  phrases are exact, so running over the whole subtree is safe. */
 function applyCorrections(children: unknown[]): unknown[] {
   return children.map((c) => {
+    if (!c || typeof c !== "object") return c;
     const n = c as { text?: unknown; children?: unknown[] };
     if (typeof n.text === "string") {
       let t = n.text;
@@ -208,9 +209,20 @@ async function main() {
   }
   // Source: the live DB by default, or the backup file for a corrected re-run
   // (the DB already holds migrated glossary blocks, which can't be re-parsed).
-  const json: unknown = fromBackup
-    ? JSON.parse(readFileSync(backupPath, "utf8"))
-    : row.content_json;
+  let json: unknown;
+  if (fromBackup) {
+    try {
+      json = JSON.parse(readFileSync(backupPath, "utf8"));
+    } catch (err) {
+      console.error(
+        `Failed to read backup file at ${backupPath}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      process.exit(1);
+    }
+  } else {
+    json = row.content_json;
+  }
   if (!Array.isArray(json)) {
     console.error(fromBackup ? "backup file is not an array" : "content_json is not an array");
     process.exit(1);
