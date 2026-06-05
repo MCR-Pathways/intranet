@@ -126,6 +126,7 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "jotai": "2.19.1"
+    "jotai": "2.19.1",
+    "dompurify": "^3.4.8"
   }
 }
