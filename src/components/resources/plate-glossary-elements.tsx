@@ -206,7 +206,7 @@ export function GlossaryEntryElement({ children, element, ...props }: PlateEleme
           title="Delete entry"
           onMouseDown={(e) => e.preventDefault()}
           onClick={handleDelete}
-          className="absolute right-0 top-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-focus-within/entry:opacity-100"
+          className="pointer-events-none absolute right-0 top-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100 group-focus-within/entry:pointer-events-auto group-focus-within/entry:opacity-100"
         >
           <Trash2 />
         </Button>
@@ -222,7 +222,7 @@ export function GlossaryEntryElement({ children, element, ...props }: PlateEleme
           title="Insert entry below"
           onMouseDown={(e) => e.preventDefault()}
           onClick={handleInsertBelow}
-          className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-1/2 rounded-full border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100"
+          className="pointer-events-none absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-1/2 rounded-full border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-muted hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/entry:pointer-events-auto group-hover/entry:opacity-100 group-focus-within/entry:pointer-events-auto group-focus-within/entry:opacity-100"
         >
           <Plus />
         </Button>
