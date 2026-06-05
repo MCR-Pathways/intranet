@@ -182,17 +182,27 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const res = await supabase
-    .from("resource_articles")
-    .select("id, slug, content_json")
-    .eq("slug", SLUG)
-    .eq("content_type", "native")
-    .maybeSingle();
-  if (res.error) {
-    console.error("Failed to fetch jargon:", res.error.message);
+  let row: { id: string; slug: string; content_json: unknown } | null = null;
+  try {
+    const res = await supabase
+      .from("resource_articles")
+      .select("id, slug, content_json")
+      .eq("slug", SLUG)
+      .eq("content_type", "native")
+      .maybeSingle();
+    if (res.error) {
+      console.error("Failed to fetch jargon:", res.error.message);
+      process.exit(1);
+    }
+    row = res.data;
+  } catch (err) {
+    console.error(
+      "Network error fetching jargon:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   }
-  if (!res.data) {
+  if (!row) {
     console.error("jargon article not found");
     process.exit(1);
   }
@@ -200,7 +210,7 @@ async function main() {
   // (the DB already holds migrated glossary blocks, which can't be re-parsed).
   const json: unknown = fromBackup
     ? JSON.parse(readFileSync(backupPath, "utf8"))
-    : res.data.content_json;
+    : row.content_json;
   if (!Array.isArray(json)) {
     console.error(fromBackup ? "backup file is not an array" : "content_json is not an array");
     process.exit(1);
@@ -316,12 +326,23 @@ async function main() {
     console.log(`Backed up original content_json (${json.length} nodes) to ${backupPath}`);
   }
 
-  const { error: updateError } = await supabase
-    .from("resource_articles")
-    .update({ content_json: newContent as never })
-    .eq("id", res.data.id);
-  if (updateError) {
-    console.error("\nFailed to write content_json:", updateError.message);
+  try {
+    const { error: updateError } = await supabase
+      .from("resource_articles")
+      .update({
+        content_json:
+          newContent as unknown as Database["public"]["Tables"]["resource_articles"]["Update"]["content_json"],
+      })
+      .eq("id", row.id);
+    if (updateError) {
+      console.error("\nFailed to write content_json:", updateError.message);
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error(
+      "\nNetwork error writing content_json:",
+      err instanceof Error ? err.message : String(err),
+    );
     process.exit(1);
   }
   console.log(`\nWrote new content_json (${newContent.length} top-level nodes) to jargon.`);
