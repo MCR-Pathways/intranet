@@ -9,6 +9,14 @@ paths:
 
 These rules load when working on React components (`.tsx`) or stylesheets (`.css`). Path-scoped per Claude Code conventions; root `CLAUDE.md` carries the cross-cutting rules.
 
+## Before you design: read the house design guides
+
+Before designing, redesigning, or restyling any interactive surface, read **`docs/ui-ux-principles.md`** and **`docs/frontend-design-playbook.md`** — these are the project's own intentionality and frontend-design standards. Start with the section at the top of `ui-ux-principles.md`, **"Before you design: interrogate intent"** (Why does this exist? Who for, doing what? Is this generic? Fit for purpose? Did each element earn its place?). That gate decides whether a design is on purpose or generic AI output; running it is not optional.
+
+`ui-ux-principles.md` settles interaction questions: §2 visual hierarchy (weight + spacing first, colour only for behavioural signals), §9 list-vs-table-vs-grid, §6 empty states, §13 anti-patterns (multiple primary CTAs, colour-as-only-hierarchy, etc.). `frontend-design-playbook.md` covers typography, colour, motion, and the AI-slop tells to avoid. `docs/design-system.md` and `docs/button-system.md` sit downstream — brand tokens and button rules win where they apply.
+
+These two docs are only auto-surfaced by a hook when the `frontend-design` skill is explicitly invoked; on routine component work nothing else points to them, so reach for them yourself.
+
 ## Radix component contracts
 
 - Use `onSelect`, not `onClick`, for `DropdownMenuItem`. Radix primitives have specific event handler contracts.

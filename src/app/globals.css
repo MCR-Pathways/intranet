@@ -290,3 +290,44 @@ body {
   padding: 0.625rem 0.75rem;
   vertical-align: top;
 }
+
+/* ── Glossary block (Resources native articles) ──────────────────────────
+   One class contract, two shapes, so the editor matches the read view
+   (docs/ui-ux-principles.md §9: list for Terms, table for Acronyms;
+   §2: weight + spacing carry the hierarchy, no decorative colour):
+   • .glossary (Terms): definition list — bold term, definition beneath,
+     hairline divider between entries.
+   • .glossary-acronyms (Acronyms): tight two-column table (acronym | expansion).
+   Browser-only layout; the dual static-map still serialises flat <h4>+<p>
+   for Algolia (see src/lib/plate-static-plugins.tsx). */
+.glossary-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-block: 0.625rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.glossary-acronyms .glossary-entry {
+  display: grid;
+  grid-template-columns: minmax(72px, 22%) 1fr;
+  gap: 0 1.25rem;
+  align-items: baseline;
+  padding-block: 0.375rem;
+}
+/* Terms (stacked): indent the definition (the 2nd child) under the bold term,
+   the classic <dl> shape — the term reads as the label, the definition as its
+   body. Acronyms put the expansion in the second column, so no indent there. */
+.glossary-entry > :nth-child(2) {
+  padding-left: 0.875rem;
+}
+.glossary-acronyms .glossary-entry > :nth-child(2) {
+  padding-left: 0;
+}
+/* Drop the trailing divider under the last entry. In the read view the last
+   child of .glossary IS the last entry; in the editor it's the "Add entry"
+   button (no .glossary-entry inside), so the last entry keeps its divider to
+   separate it from that button — the same rule does the right thing in both. */
+.glossary > *:last-child .glossary-entry {
+  border-bottom: 0;
+}
