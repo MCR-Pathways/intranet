@@ -58,8 +58,13 @@ type Pair = { abbr: string; expansion: string; from: string; flag?: string };
 
 /** A clean acronym is short, mostly capitals/digits, no spaces. Flags compound
  *  forms (containing "/") and anything that looks like a phrase, not an abbr. */
+/** Collapse whitespace (JS \s already covers NBSP/U+00A0) and lower-case, for
+ *  comparing the two sides of a pair. */
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+
 function flagFor(abbr: string, exp: string): string | undefined {
   if (!abbr || !exp) return "empty side";
+  if (norm(abbr) === norm(exp)) return "abbr and expansion are identical";
   if (abbr.includes("/")) return "compound acronym (e.g. LAC/LAAC) — review split";
   if (abbr.length > 10) return "abbr unusually long — is it really an acronym?";
   if (/\s/.test(abbr)) return "abbr contains a space — likely not an acronym";
@@ -201,7 +206,7 @@ async function main() {
     synonyms: [p.abbr, p.expansion],
   }));
   try {
-    await client.saveSynonyms({ indexName: INDEX, synonymHit });
+    await client.saveSynonyms({ indexName: INDEX, synonymHit, forwardToReplicas: true });
     console.log(`\nPushed ${synonymHit.length} synonyms to "${INDEX}".`);
   } catch (err) {
     console.error("\nAlgolia saveSynonyms failed:", err instanceof Error ? err.message : String(err));
