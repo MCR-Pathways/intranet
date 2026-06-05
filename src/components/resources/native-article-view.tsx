@@ -8,7 +8,7 @@
  * with edit, feature, move, and delete actions.
  */
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { PlateStatic } from "platejs/static";
 import {
@@ -43,10 +43,16 @@ import {
 import { formatDate, timeAgo } from "@/lib/utils";
 import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { BookmarkToggle } from "./bookmark-toggle";
+import { GlossaryFilter } from "./glossary-filter";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
 import { ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES } from "@/lib/article-constants";
 import { prepareNativeArticle } from "@/lib/plate-static-plugins";
+import {
+  extractGlossaryEntryTexts,
+  extractGlossarySections,
+  normalizeFilterText,
+} from "@/lib/glossary-text";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Value } from "platejs";
@@ -103,7 +109,35 @@ export function NativeArticleView({
     return prepareNativeArticle(contentJson);
   }, [contentJson]);
 
-  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
+  // Glossary filter: the entry texts (term + definition) drive both whether the
+  // filter renders at all and its result count, derived from the same source as
+  // the rendered `data-glossary-text` hooks (glossary-text.ts). The query lives
+  // here so the TOC can hide sections the filter has emptied.
+  const articleRef = useRef<HTMLElement>(null);
+  const [glossaryQuery, setGlossaryQuery] = useState("");
+  const glossaryEntryTexts = useMemo(
+    () => extractGlossaryEntryTexts(contentJson),
+    [contentJson],
+  );
+  const glossarySections = useMemo(
+    () => extractGlossarySections(contentJson),
+    [contentJson],
+  );
+  // Headings to show in the TOC: drop any whose glossary section has entries
+  // but none match the active filter, so "On this page" never links to a
+  // section the filter has hidden.
+  const visibleHeadings = useMemo(() => {
+    const q = normalizeFilterText(glossaryQuery.trim());
+    if (!q) return headings;
+    const hidden = new Set(
+      glossarySections
+        .filter((s) => s.entryTexts.length > 0 && !s.entryTexts.some((t) => t.includes(q)))
+        .map((s) => s.heading),
+    );
+    return headings.filter((h) => !hidden.has(h.text));
+  }, [headings, glossarySections, glossaryQuery]);
+
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(visibleHeadings);
 
   // ─── Freshness indicator ──────────────────────────────────────────────────
 
@@ -298,9 +332,19 @@ export function NativeArticleView({
           </div>
 
           {editor ? (
-            <article className={ARTICLE_PROSE_CLASSES}>
-              <PlateStatic editor={editor} />
-            </article>
+            <>
+              {glossaryEntryTexts.length > 0 && (
+                <GlossaryFilter
+                  articleRef={articleRef}
+                  entryTexts={glossaryEntryTexts}
+                  query={glossaryQuery}
+                  onQueryChange={setGlossaryQuery}
+                />
+              )}
+              <article ref={articleRef} className={ARTICLE_PROSE_CLASSES}>
+                <PlateStatic editor={editor} />
+              </article>
+            </>
           ) : (
             <div className="text-sm text-muted-foreground italic py-8">
               This article has no content yet.
@@ -317,7 +361,7 @@ export function NativeArticleView({
         </div>
 
         <ArticleOutline
-          headings={headings}
+          headings={visibleHeadings}
           activeHeadingId={activeHeadingId}
           onHeadingClick={setActiveHeadingId}
         />

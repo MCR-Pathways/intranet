@@ -46,6 +46,7 @@ import {
   APP_ORIGIN,
   type ArticleHeading,
 } from "./article-constants";
+import { glossaryEntryText } from "./glossary-text";
 
 // =============================================
 // STATIC ELEMENT COMPONENTS
@@ -496,20 +497,10 @@ function GlossaryStatic({ children, element, ...props }: SlateElementProps) {
 }
 
 function GlossaryEntryStatic({ children, element, ...props }: SlateElementProps) {
-  // Join the term and definition with a space, not "". getPlateNodeText on the
-  // whole entry would concatenate leaves with no separator ("Advocate" +
-  // "An advocate…" → "advocatean advocate…"), gluing the term to the
-  // definition's first word and breaking the on-page filter at that boundary.
-  const kids = ((element as Record<string, unknown>).children ?? []) as Record<
-    string,
-    unknown
-  >[];
-  const text = kids
-    .map((k) => getPlateNodeText(k))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  // Term + definition joined with a space (shared with the on-page filter via
+  // glossary-text.ts) — not "", which would glue the term to the definition's
+  // first word and break the filter at that boundary.
+  const text = glossaryEntryText(element);
   return (
     <SlateElement element={element} {...props}>
       {/* Layout (divider, stacked-vs-two-column, padding) lives in globals.css

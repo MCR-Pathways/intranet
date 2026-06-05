@@ -331,3 +331,16 @@ body {
 .glossary > *:last-child .glossary-entry {
   border-bottom: 0;
 }
+/* On-page filter (glossary-filter.tsx). The .glossary-entry display rules above
+   out-specificity the UA `[hidden]` rule, so restate display:none for hidden
+   entries/glossaries. Headings hide via the bare `[hidden]` attribute (no
+   custom display on them). */
+.glossary-entry[hidden],
+.glossary[hidden] {
+  display: none;
+}
+mark.glossary-hl {
+  background-color: rgb(253 230 138 / 0.6); /* amber-200/60, matches Cmd+K */
+  color: inherit;
+  border-radius: 2px;
+}
