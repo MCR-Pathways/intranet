@@ -54,8 +54,9 @@ function clearHighlights(root: HTMLElement) {
     const parent = mark.parentNode;
     if (!parent) return;
     parent.replaceChild(document.createTextNode(mark.textContent ?? ""), mark);
-    parent.normalize();
   });
+  // Merge the text nodes left behind in one pass, not once per mark.
+  root.normalize();
 }
 
 /** Wrap each occurrence of `query` (already normalised, lower-cased) in
@@ -130,13 +131,26 @@ export function GlossaryFilter({
         entry.hidden = !match;
         if (match && q) highlight(entry, q);
       });
+      // A heading can precede more than one glossary (the block is reusable,
+      // e.g. two groups under one H2). Aggregate visibility so a heading hides
+      // only when ALL its glossaries are empty, not whichever the loop sees
+      // last. Mirrors extractGlossarySections, which merges a heading's entries.
+      const headingVisible = new Map<HTMLElement, boolean>();
       node!.querySelectorAll<HTMLElement>(".glossary").forEach((glossary) => {
         const anyVisible = Array.from(
           glossary.querySelectorAll<HTMLElement>(".glossary-entry"),
         ).some((e) => !e.hidden);
         glossary.hidden = !anyVisible;
         const heading = precedingHeading(glossary);
-        if (heading) heading.hidden = !anyVisible;
+        if (heading) {
+          headingVisible.set(
+            heading,
+            (headingVisible.get(heading) ?? false) || anyVisible,
+          );
+        }
+      });
+      headingVisible.forEach((visible, heading) => {
+        heading.hidden = !visible;
       });
       observer.observe(node!, { childList: true, subtree: true });
     }

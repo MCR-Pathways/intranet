@@ -137,7 +137,7 @@ export function NativeArticleView({
     return headings.filter((h) => !hidden.has(h.text));
   }, [headings, glossarySections, glossaryQuery]);
 
-  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(visibleHeadings);
 
   // ─── Freshness indicator ──────────────────────────────────────────────────
 
