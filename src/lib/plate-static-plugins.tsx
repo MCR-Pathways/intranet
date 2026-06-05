@@ -517,7 +517,7 @@ function GlossaryTermStatic({ children, element, ...props }: SlateElementProps) 
   const id = text ? slugifyHeading(text) : undefined;
   return (
     <SlateElement element={element} {...props}>
-      <dt id={id} className="scroll-mt-24 font-semibold text-foreground">
+      <dt id={id} className="scroll-mt-48 font-semibold text-foreground">
         {children}
       </dt>
     </SlateElement>
