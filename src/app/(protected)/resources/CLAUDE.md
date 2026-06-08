@@ -20,6 +20,8 @@ Google Docs-based knowledge base with Algolia search, category hierarchy, and co
 
 **Delete external records (Algolia, webhooks) BEFORE hard-deleting DB records.** When unlinking a Google Doc: (1) stop watch channel, (2) remove from Algolia, (3) hard-delete article. Wrap steps 1-2 in try-catch so step 3 always runs.
 
+**Pass `forwardToReplicas: true` on `saveSynonyms` (and `setSettings`) even with no replicas today.** The `resources_articles` index has no replicas now, but a write without the flag silently won't propagate if one is ever added — a search inconsistency that surfaces much later with no error. It's a free future-proof. The jargon synonym harvest (`scripts/wp-migration/jargon-synonyms.ts`) pushes 54 two-way org-acronym synonyms (e.g. SDS ⇄ Skills Development Scotland) index-wide; re-running updates in place via stable `jargon-syn-<abbr>` objectIDs.
+
 ## Webhooks
 
 **Always return 200 from webhook endpoints, even on error.** Google Drive retries on non-2xx responses. Log the error server-side but return 200 to prevent retry storms. See `src/app/api/drive/webhook/route.ts`.
