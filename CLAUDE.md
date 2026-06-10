@@ -345,3 +345,42 @@ These are universal rules that apply to every task regardless of which module yo
 **Don't carve exceptions to a documented rule during a strict-compliance pass.** Reaching for "but the chat-app convention is..." or "but the inline editor is small..." undermines the rule. The rule survives one of two ways: enforced uniformly, or rewritten to cover the new case explicitly. Halfway carve-outs make the rule unenforceable. PR #282 hit this: I tried to keep `variant="ghost"` on chat-style send icon buttons because Slack/WhatsApp/Twitter all use minimal send icons. The user pushed back. The button-system.md rule "never use ghost for the primary CTA of a view" had no carve-out, so the carve-out had to come out — buttons became filled `default` + `rounded-full` per the chat-app circle convention, captured as a new rule in `docs/button-system.md` rather than as an undocumented exception. If a real exception is warranted, write it into the rule. Otherwise enforce uniformly.
 
 **During a strict-compliance pass, surface implicit decisions before applying them; don't bundle adjacent tweaks.** Strict scope means changing exactly what the rule covers, surfacing anything else as a question, never bundling. PR #282 hit this with a `gap-1` → `gap-2` change on a button container that I made alongside a button-size bump — the rule covered button size, not gap. The user caught it and I reverted. This is distinct from "Apply CLAUDE.md rules at the scope the rule specifies" (about not over-generalising the rule outward); this one is about not smuggling unrelated visual tweaks into the same edit. If the gap genuinely needs changing, that's a separate decision and a separate scope.
+
+## Project documentation — `docs/project.html`
+
+This repo keeps a living project page at `docs/project.html`. It's the canonical answer to "what is this project, what's in flight, what have we decided?" Open it in a browser to see it; the file is self-contained.
+
+The page has four tabs: **Overview**, **Kanban** (To-do / In Progress / Done), **Architecture** (ADRs + feature history with Mermaid diagrams where relevant), and **Brand** (MCR palette reference).
+
+### Rule for future Claudes
+
+**After every PR merges into `main`, update `docs/project.html`** using the `mcr-project` skill in `update` mode.
+
+The mechanics:
+1. Identify the PR (`gh pr list --state merged --limit 1` if not given one).
+2. Read the PR title, body, and diff summary.
+3. Decide: is this a **feature** (new `features` entry), a **decision** (new ADR), a **card-move only** (just shuffle Kanban), or **skip** (typo / dep bump)?
+4. Patch the JSON block inside `docs/project.html` — it's delimited by `<!-- mcr-project:data:start -->` / `<!-- mcr-project:data:end -->`. **Edit only that block.** The rest of the file is generated chrome.
+5. If the PR introduces a new flow worth a diagram, add a Mermaid source string to the feature entry.
+6. Open `docs/project.html` to verify it still renders cleanly (no console errors, no Mermaid error messages, Kanban counts make sense).
+7. Commit the docs change. Either fold it into the PR before merging, or land it as a follow-up `docs: log PR #N in project page` commit on `main`.
+8. **Republish the page** so the hosted copy matches. The board is published to the MCR toolshed HTML host at the slug `intranet-project-board`. Republish with the `mcr-publish` skill in overwrite mode:
+   `node ~/.claude/skills/mcr-publish/publish.mjs "docs/project.html" --slug intranet-project-board --overwrite`
+   The published page is **public**. The publish step is a human action — the agent harness blocks it as exfiltration of internal review content, so a maintainer must run the command (or paste it after `!` in a Claude Code session). Keep the page free of live, unpatched security detail before republishing.
+
+The full data shape, classification rules, and quality bar live in the `mcr-project` skill (`~/.claude/skills/mcr-project/references/`).
+
+### Bar for what gets recorded
+
+Be conservative. Most PRs are card-moves. A feature entry is worth it only if:
+- A reader six months from now will want to find this change to understand the system.
+- It introduces a new flow, entity, or architectural shift.
+- It contains a tradeoff worth a `decisions` bullet.
+
+A new ADR is worth it only if the team will need to justify the decision later. Tactical "we used a Set instead of an Array" choices do not warrant an ADR.
+
+### Never
+
+- **Never rewrite `docs/project.html` from scratch.** It accumulates history; overwriting destroys it. Always edit the JSON block in place.
+- **Never delete a past `features` or `decisions` entry.** Append-only. If a decision is reversed, set the old ADR's `status` to `Superseded` and add a new ADR with a higher ID.
+- **Never restyle the page.** The Brand tab is locked across all MCR projects.
