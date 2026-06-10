@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCR Project — [Project Name]</title>
+<!--
+  MCR Project — Living Project Page Template
+
+  Generated and maintained by the `mcr-project` skill.
+
+  How to update:
+  1. Find the JSON block delimited by `mcr-project:data:start` / `mcr-project:data:end`.
+  2. Edit ONLY that block. The rest of the file is generated chrome and should not be edited.
+  3. Re-open the file in a browser; the renderer runs on page load.
+
+  Inherits the MCR Pathways brand from the mcr-planner skill. Do not retheme.
+-->
+<link rel="stylesheet" href="https://use.typekit.net/xef5jam.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ MCR BRAND THEME ============ */
+  :root {
+    --font-body: 'TT Commons Pro', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --mcr-dark-blue: #213350;
+    --mcr-light-blue: #5BC6E9;
+    --mcr-orange: #F09336;
+    --mcr-yellow: #F8D45B;
+    --mcr-green: #22a34b;
+    --mcr-teal: #2A6075;
+    --mcr-pink: #FF82B2;
+    --mcr-wine: #751B48;
+    --mcr-ivory: #FDF9EA;
+    --bg: #FDF9EA;
+    --surface: #FFFFFF;
+    --surface-elevated: #FFFFFF;
+    --surface-recessed: #F7F3E9;
+    --border: hsl(47, 30%, 85%);
+    --border-bright: hsl(47, 25%, 78%);
+    --text: #213350;
+    --text-dim: #6b7a8d;
+    --accent: #5BC6E9;
+    --accent-dim: rgba(91, 198, 233, 0.10);
+    --orange: #F09336;
+    --orange-dim: rgba(240, 147, 54, 0.10);
+    --green: #22a34b;
+    --green-dim: rgba(34, 163, 75, 0.10);
+    --teal: #2A6075;
+    --teal-dim: rgba(42, 96, 117, 0.08);
+    --pink-dim: rgba(255, 130, 178, 0.12);
+    --wine-dim: rgba(117, 27, 72, 0.10);
+    --yellow-dim: rgba(248, 212, 91, 0.18);
+    --radius: 0.75rem;
+    --shadow-sm: 0 1px 2px rgba(33, 51, 80, 0.04), 0 1px 3px rgba(33, 51, 80, 0.06);
+    --shadow-md: 0 2px 4px rgba(33, 51, 80, 0.04), 0 4px 12px rgba(33, 51, 80, 0.06);
+  }
+
+  /* ============ RESET ============ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ ANIMATION ============ */
+  @keyframes mcrFadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .mcr-panel.is-active > * {
+    animation: mcrFadeUp 0.32s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.04s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ============ LAYOUT ============ */
+  .mcr-shell {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 40px 64px;
+  }
+
+  /* ============ HEADER ============ */
+  .mcr-header {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mcr-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .mcr-logo { height: 32px; width: auto; color: var(--mcr-dark-blue); flex-shrink: 0; }
+
+  .mcr-header__divider { width: 1px; height: 22px; background: var(--border-bright); }
+
+  .mcr-header__type {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  .mcr-header__title {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    margin-bottom: 8px;
+    text-wrap: balance;
+  }
+
+  .mcr-header__subtitle {
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    max-width: 72ch;
+  }
+
+  .mcr-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .mcr-header__meta .mcr-meta-item strong {
+    color: var(--text);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .mcr-header__meta a {
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--border-bright);
+  }
+  .mcr-header__meta a:hover { color: var(--mcr-teal); border-bottom-color: var(--mcr-teal); }
+
+  /* ============ TABS ============ */
+  .mcr-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    margin: 0 -40px 28px;
+    padding: 0 40px;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mcr-tabs__list {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mcr-tabs__list::-webkit-scrollbar { display: none; }
+
+  .mcr-tabs__tab {
+    flex-shrink: 0;
+    padding: 14px 18px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .mcr-tabs__tab:hover { color: var(--text); }
+
+  .mcr-tabs__tab.is-active {
+    color: var(--text);
+    border-bottom-color: var(--mcr-light-blue);
+    font-weight: 600;
+  }
+
+  .mcr-tabs__count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--surface-recessed);
+    color: var(--text-dim);
+    padding: 1px 8px;
+    border-radius: 10px;
+    min-width: 22px;
+    text-align: center;
+  }
+  .mcr-tabs__tab.is-active .mcr-tabs__count {
+    background: var(--accent-dim);
+    color: var(--mcr-teal);
+  }
+
+  /* ============ PANELS ============ */
+  .mcr-panel { display: none; }
+  .mcr-panel.is-active { display: block; }
+
+  /* ============ CARDS ============ */
+  .mcr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    min-width: 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mcr-card--hero {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-bright);
+    padding: 28px 32px;
+  }
+
+  /* ============ SECTION HEADING ============ */
+  .mcr-sec-head {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    padding-top: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mcr-sec-head::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ============ OVERVIEW ============ */
+  .mcr-overview {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+  }
+
+  .mcr-overview__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .mcr-stat {
+    background: var(--surface-recessed);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .mcr-stat__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .mcr-stat__value {
+    font-family: var(--font-body);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .mcr-feed { display: grid; gap: 10px; }
+
+  .mcr-feed__item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--mcr-light-blue);
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+  }
+
+  .mcr-feed__date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .mcr-feed__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  /* ============ KANBAN ============ */
+  .mcr-kanban {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .mcr-col {
+    background: var(--surface-recessed);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mcr-col__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px 4px;
+    border-bottom: 1px dashed var(--border-bright);
+    margin-bottom: 4px;
+  }
+
+  .mcr-col__title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  .mcr-col__count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--surface);
+    padding: 2px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .mcr-col--todo .mcr-col__count { color: var(--mcr-teal); }
+  .mcr-col--in-progress .mcr-col__count { color: var(--mcr-orange); background: var(--orange-dim); border-color: rgba(240, 147, 54, 0.2); }
+  .mcr-col--done .mcr-col__count { color: var(--mcr-green); background: var(--green-dim); border-color: rgba(34, 163, 75, 0.2); }
+
+  .mcr-col__items { display: grid; gap: 10px; }
+
+  .mcr-kanban-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .mcr-kanban-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .mcr-kanban-card__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mcr-kanban-card__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mcr-kanban-card__note {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .mcr-kanban-card__meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mcr-kanban-card__meta a {
+    color: var(--mcr-teal);
+    text-decoration: none;
+  }
+  .mcr-kanban-card__meta a:hover { color: var(--mcr-dark-blue); }
+
+  .mcr-tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: lowercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+
+  .mcr-tag--blue   { background: var(--accent-dim); color: var(--mcr-teal); }
+  .mcr-tag--orange { background: var(--orange-dim); color: var(--mcr-orange); }
+  .mcr-tag--green  { background: var(--green-dim); color: var(--mcr-green); }
+  .mcr-tag--pink   { background: var(--pink-dim); color: var(--mcr-wine); }
+  .mcr-tag--yellow { background: var(--yellow-dim); color: #8a6f0a; }
+  .mcr-tag--teal   { background: var(--teal-dim); color: var(--mcr-teal); }
+  .mcr-tag--wine   { background: var(--wine-dim); color: var(--mcr-wine); }
+  .mcr-tag--gray   { background: var(--surface-recessed); color: var(--text-dim); }
+
+  .mcr-empty {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 18px 6px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ============ ARCHITECTURE ============ */
+  .mcr-arch { display: grid; gap: 20px; }
+
+  .mcr-adr {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-left: 4px solid var(--mcr-orange);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mcr-adr__head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mcr-adr__id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mcr-orange);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .mcr-adr__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mcr-adr__date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .mcr-adr__status {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--green-dim);
+    color: var(--mcr-green);
+  }
+  .mcr-adr__status--proposed { background: var(--yellow-dim); color: #8a6f0a; }
+  .mcr-adr__status--deprecated { background: var(--wine-dim); color: var(--mcr-wine); }
+  .mcr-adr__status--superseded { background: var(--surface-recessed); color: var(--text-dim); }
+
+  .mcr-adr__section { margin-top: 10px; }
+
+  .mcr-adr__section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .mcr-adr__section-body {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .mcr-feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mcr-feature__head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mcr-feature__date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .mcr-feature__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    text-wrap: balance;
+  }
+
+  .mcr-feature__pr {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--mcr-teal);
+    text-decoration: none;
+    background: var(--teal-dim);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .mcr-feature__pr:hover { background: var(--accent-dim); }
+
+  .mcr-feature__summary {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .mcr-feature__decisions {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--surface-recessed);
+    border-radius: 8px;
+    border-left: 3px solid var(--mcr-light-blue);
+  }
+
+  .mcr-feature__decisions-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--mcr-teal);
+    margin-bottom: 6px;
+  }
+
+  .mcr-feature__decisions ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .mcr-feature__decisions li {
+    font-size: 13px;
+    line-height: 1.6;
+    padding-left: 14px;
+    position: relative;
+    color: var(--text);
+  }
+  .mcr-feature__decisions li::before {
+    content: '\203A';
+    color: var(--mcr-teal);
+    font-weight: 700;
+    position: absolute;
+    left: 2px;
+  }
+
+  /* ============ MERMAID ============ */
+  .mcr-mermaid-wrap {
+    position: relative;
+    background: var(--surface-recessed);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 14px;
+    overflow: auto;
+  }
+
+  .mcr-mermaid-wrap svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+
+  .mermaid .nodeLabel { color: var(--text) !important; font-family: var(--font-body) !important; font-size: 15px !important; }
+  .mermaid .edgeLabel { color: var(--text-dim) !important; background-color: var(--bg) !important; font-family: var(--font-mono) !important; font-size: 12px !important; }
+  .mermaid .edgeLabel rect { fill: var(--bg) !important; }
+
+  /* ============ BRAND TAB ============ */
+  .mcr-brand-section { display: grid; gap: 28px; }
+
+  .mcr-swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .mcr-swatch {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    background: var(--surface);
+  }
+
+  .mcr-swatch__chip { height: 96px; display: block; }
+
+  .mcr-swatch__body {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .mcr-swatch__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .mcr-swatch__hex {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    user-select: all;
+  }
+
+  .mcr-swatch__usage {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  .mcr-type-sample {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mcr-type-sample__h1 { font-size: 42px; font-weight: 700; letter-spacing: -0.7px; margin-bottom: 6px; }
+  .mcr-type-sample__h2 { font-size: 28px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .mcr-type-sample__h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .mcr-type-sample__body { font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 14px; }
+  .mcr-type-sample__mono { font-family: var(--font-mono); font-size: 13px; color: var(--text); background: var(--surface-recessed); padding: 8px 12px; border-radius: 6px; display: inline-block; }
+  .mcr-type-sample__label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); margin-top: 14px; margin-bottom: 4px;
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 880px) {
+    .mcr-shell { padding: 20px 18px 48px; }
+    .mcr-tabs { margin: 0 -18px 22px; padding: 0 18px; }
+    .mcr-header__title { font-size: 28px; }
+    .mcr-overview { grid-template-columns: 1fr; }
+    .mcr-overview__stats { grid-template-columns: repeat(2, 1fr); }
+    .mcr-kanban { grid-template-columns: 1fr; }
+    .mcr-col { min-height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mcr-shell">
+
+  <!-- Header -->
+  <header class="mcr-header">
+    <div class="mcr-header__brand">
+      <svg class="mcr-logo" viewBox="0 0 52 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M37.6473 0C24.2175 0 23.4552 0.762475 23.4552 14.1956V19.5549C23.4552 32.988 24.2175 33.7505 37.6473 33.7505C38.216 33.7505 38.7608 33.7505 39.2856 33.7445L31.4991 44.7425C48.1995 44.7425 51.8374 41.1038 51.8374 24.3992V14.1956C51.8394 0.762475 51.0771 0 37.6473 0Z" fill="currentColor"/>
+        <path d="M9.81791 2.79641C0.526815 2.79641 0 3.32335 0 12.6168V19.6767C0 31.2335 2.51833 33.7505 14.0703 33.7505L8.68446 26.1417C9.04764 26.1437 9.42479 26.1457 9.81791 26.1457C19.109 26.1457 19.6358 25.6188 19.6358 16.3254V12.6168C19.6358 3.32335 19.109 2.79641 9.81791 2.79641Z" fill="currentColor"/>
+      </svg>
+      <span class="mcr-header__divider"></span>
+      <span class="mcr-header__type">Project</span>
+    </div>
+    <h1 class="mcr-header__title" id="project-name">Loading...</h1>
+    <p class="mcr-header__subtitle" id="project-summary"></p>
+    <div class="mcr-header__meta" id="project-meta"></div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="mcr-tabs" aria-label="Project sections">
+    <div class="mcr-tabs__list" role="tablist">
+      <button class="mcr-tabs__tab is-active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+      <button class="mcr-tabs__tab" data-tab="kanban" role="tab" aria-selected="false">Kanban <span class="mcr-tabs__count" id="kanban-total">0</span></button>
+      <button class="mcr-tabs__tab" data-tab="architecture" role="tab" aria-selected="false">Architecture <span class="mcr-tabs__count" id="arch-total">0</span></button>
+      <button class="mcr-tabs__tab" data-tab="brand" role="tab" aria-selected="false">Brand</button>
+    </div>
+  </nav>
+
+  <!-- Overview panel -->
+  <section class="mcr-panel is-active" data-panel="overview">
+    <div class="mcr-overview">
+      <div class="mcr-card mcr-card--hero" style="--i:0">
+        <div class="mcr-sec-head" style="padding-top:0;margin-bottom:8px">Vision</div>
+        <p id="vision-text" style="font-size:16px;line-height:1.65;color:var(--text)"></p>
+
+        <div class="mcr-overview__stats">
+          <div class="mcr-stat">
+            <div class="mcr-stat__label">To-do</div>
+            <div class="mcr-stat__value" id="stat-todo">0</div>
+          </div>
+          <div class="mcr-stat">
+            <div class="mcr-stat__label">In Progress</div>
+            <div class="mcr-stat__value" id="stat-in-progress">0</div>
+          </div>
+          <div class="mcr-stat">
+            <div class="mcr-stat__label">Done</div>
+            <div class="mcr-stat__value" id="stat-done">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="--i:1">
+        <div class="mcr-sec-head">Latest activity</div>
+        <div class="mcr-feed" id="feed"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kanban panel -->
+  <section class="mcr-panel" data-panel="kanban">
+    <div class="mcr-kanban">
+      <div class="mcr-col mcr-col--todo" style="--i:0">
+        <div class="mcr-col__head">
+          <span class="mcr-col__title">To-do</span>
+          <span class="mcr-col__count" id="col-todo-count">0</span>
+        </div>
+        <div class="mcr-col__items" id="col-todo"></div>
+      </div>
+      <div class="mcr-col mcr-col--in-progress" style="--i:1">
+        <div class="mcr-col__head">
+          <span class="mcr-col__title">In progress</span>
+          <span class="mcr-col__count" id="col-inprogress-count">0</span>
+        </div>
+        <div class="mcr-col__items" id="col-inprogress"></div>
+      </div>
+      <div class="mcr-col mcr-col--done" style="--i:2">
+        <div class="mcr-col__head">
+          <span class="mcr-col__title">Done</span>
+          <span class="mcr-col__count" id="col-done-count">0</span>
+        </div>
+        <div class="mcr-col__items" id="col-done"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture panel -->
+  <section class="mcr-panel" data-panel="architecture">
+    <div class="mcr-arch">
+      <div style="--i:0">
+        <div class="mcr-sec-head">Decisions (ADRs)</div>
+        <div id="adr-list" style="display:grid;gap:14px"></div>
+      </div>
+      <div style="--i:1">
+        <div class="mcr-sec-head">Feature history</div>
+        <div id="feature-list" style="display:grid;gap:16px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Brand panel — static, no data binding -->
+  <section class="mcr-panel" data-panel="brand">
+    <div class="mcr-brand-section">
+
+      <div style="--i:0">
+        <div class="mcr-sec-head">Palette</div>
+        <div class="mcr-swatches">
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#213350"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Dark Blue</div>
+              <div class="mcr-swatch__hex">#213350</div>
+              <div class="mcr-swatch__usage">Primary text, headers, primary actions.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#5BC6E9"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Light Blue</div>
+              <div class="mcr-swatch__hex">#5BC6E9</div>
+              <div class="mcr-swatch__usage">Accents, links, interactive elements.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#F09336"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Orange</div>
+              <div class="mcr-swatch__hex">#F09336</div>
+              <div class="mcr-swatch__usage">Secondary accents, CTAs, warnings.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#F8D45B"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Yellow</div>
+              <div class="mcr-swatch__hex">#F8D45B</div>
+              <div class="mcr-swatch__usage">Highlights, badges.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#22a34b"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Green</div>
+              <div class="mcr-swatch__hex">#22a34b</div>
+              <div class="mcr-swatch__usage">Success, progress, completed state.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#2A6075"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Teal</div>
+              <div class="mcr-swatch__hex">#2A6075</div>
+              <div class="mcr-swatch__usage">Deep accent, code backgrounds.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#FF82B2"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Pink</div>
+              <div class="mcr-swatch__hex">#FF82B2</div>
+              <div class="mcr-swatch__usage">Special actions.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#751B48"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Wine</div>
+              <div class="mcr-swatch__hex">#751B48</div>
+              <div class="mcr-swatch__usage">Error, destructive actions.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#FDF9EA;border-bottom:1px solid var(--border)"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">Ivory</div>
+              <div class="mcr-swatch__hex">#FDF9EA</div>
+              <div class="mcr-swatch__usage">Page background.</div>
+            </div>
+          </div>
+          <div class="mcr-swatch">
+            <div class="mcr-swatch__chip" style="background:#FFFFFF;border-bottom:1px solid var(--border)"></div>
+            <div class="mcr-swatch__body">
+              <div class="mcr-swatch__name">White</div>
+              <div class="mcr-swatch__hex">#FFFFFF</div>
+              <div class="mcr-swatch__usage">Card surfaces.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="--i:1">
+        <div class="mcr-sec-head">Typography</div>
+        <div class="mcr-type-sample">
+          <div class="mcr-type-sample__label">H1 — TT Commons Pro 700</div>
+          <div class="mcr-type-sample__h1">Pathways to better lives</div>
+
+          <div class="mcr-type-sample__label">H2 — TT Commons Pro 600</div>
+          <div class="mcr-type-sample__h2">Empowering young people</div>
+
+          <div class="mcr-type-sample__label">H3 — TT Commons Pro 600</div>
+          <div class="mcr-type-sample__h3">Mentor relationships</div>
+
+          <div class="mcr-type-sample__label">Body — TT Commons Pro 400</div>
+          <p class="mcr-type-sample__body">MCR Pathways is a charity that supports young people facing disadvantage through structured, one-to-one mentoring. Mentors meet weekly with their mentee throughout secondary school, building the kind of relationship that helps young people reach their full educational potential.</p>
+
+          <div class="mcr-type-sample__label">Monospace — IBM Plex Mono</div>
+          <div class="mcr-type-sample__mono">const mentor = await loadMentor(contactId);</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div><!-- /mcr-shell -->
+
+<!--
+  ============================================================
+  PROJECT DATA — edit this block on every PR merge.
+  Everything outside the delimiters is generated chrome.
+  ============================================================
+-->
+<!-- mcr-project:data:start -->
+<script type="application/json" id="mcr-project-data">
+{
+  "project": {
+    "name": "MCR Pathways Intranet",
+    "slug": "intranet",
+    "kickoffDate": "2026-06-10",
+    "summary": "Internal platform replacing BreatheHR for MCR Pathways: HR, learning and development, news feed, resources knowledge base, and office-location tracking for internal staff and school-based Pathways Coordinators.",
+    "owner": "Colin Adam",
+    "repo": "MCR-Pathways/intranet"
+  },
+  "kanban": {
+    "todo": [
+      {
+        "id": "k3",
+        "title": "Route resources image uploads through processUploadedImage()",
+        "tag": "security",
+        "note": "uploadEditorMedia() skips the EXIF/GPS strip and HEIC conversion the news-feed path already applies."
+      },
+      {
+        "id": "k4",
+        "title": "Add last_published_at to ARTICLE_SELECT",
+        "tag": "bug",
+        "note": "Column missing from the select constant, so the Last published badge never renders."
+      },
+      {
+        "id": "k5",
+        "title": "Make the Tiptap/Plate editor boundary explicit",
+        "tag": "arch",
+        "note": "See ADR-010: document the split, brand the two content_json dialects, share one URL-guard and inline-mark renderer."
+      },
+      {
+        "id": "k6",
+        "title": "Split intranet/actions.ts",
+        "tag": "code",
+        "note": "At roughly 3x the documented 800-line split threshold; seven other action files also exceed it."
+      },
+      {
+        "id": "k7",
+        "title": "Sweep startTransition calls for missing .catch()",
+        "tag": "code",
+        "note": "157 call sites across 90 components can strand loading state when a server action rejects."
+      },
+      {
+        "id": "k8",
+        "title": "Test the six untested action files and sign-in role checks",
+        "tag": "test",
+        "note": "sign-in/actions.ts uses inline role checks instead of the shared helpers and has no tests at all."
+      },
+      {
+        "id": "k9",
+        "title": "Dynamic-import editors; paginate HR lists and notifications",
+        "tag": "perf",
+        "note": "Both editor stacks ship in the main bundle; HR list pages and notifications load unbounded rows."
+      },
+      {
+        "id": "k10",
+        "title": "Button-system sweep: CTA sizes and cancel variants",
+        "tag": "ui",
+        "note": "Primary CTAs using size sm fail the 40px touch-target rule; cancel buttons should be secondary, not outline."
+      },
+      {
+        "id": "k11",
+        "title": "Remove dead dompurify dependency and stale _-scripts",
+        "tag": "chore",
+        "note": "dompurify is declared but never imported; five one-off WP-migration scripts are stale."
+      }
+    ],
+    "inProgress": [
+      {
+        "id": "k12",
+        "title": "WordPress to Resources content migration (remaining pages)",
+        "tag": "content",
+        "note": "Per-page editorial passes landing; jargon/glossary phase shipped 2026-06-05."
+      }
+    ],
+    "done": [
+      {
+        "id": "k1",
+        "title": "Drop WITH CHECK (true) policies on email_notifications",
+        "tag": "security",
+        "note": "Fixed: migration 00098 dropped the authenticated INSERT/UPDATE policies on email_notifications; applied direct to prod and verified (RLS on, SELECT-only policies remain).",
+        "completedDate": "2026-06-10"
+      },
+      {
+        "id": "k2",
+        "title": "Drop WITH CHECK (true) INSERT policy on certificates",
+        "tag": "security",
+        "note": "Fixed: migration 00098 dropped the authenticated INSERT policy on certificates; applied direct to prod and verified. Issuance trigger (SECURITY DEFINER) still writes.",
+        "completedDate": "2026-06-10"
+      },
+      {
+        "id": "k13",
+        "title": "Jargon acronyms harvested into Algolia synonyms",
+        "tag": "search",
+        "completedDate": "2026-06-05",
+        "prNumber": 333,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/333"
+      },
+      {
+        "id": "k14",
+        "title": "Jargon page migrated to glossary blocks",
+        "tag": "content",
+        "completedDate": "2026-06-05",
+        "prNumber": 331,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/331"
+      },
+      {
+        "id": "k15",
+        "title": "Glossary block primitive for Resources",
+        "tag": "ui",
+        "completedDate": "2026-06-05",
+        "prNumber": 328,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/328"
+      },
+      {
+        "id": "k16",
+        "title": "Dependabot security batches 1-3",
+        "tag": "chore",
+        "completedDate": "2026-06-05",
+        "prNumber": 330,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/330"
+      },
+      {
+        "id": "k17",
+        "title": "Native-article Algolia HTML heading unwrap fix",
+        "tag": "search",
+        "completedDate": "2026-06-03",
+        "prNumber": 323,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/323"
+      }
+    ]
+  },
+  "features": [
+    {
+      "id": "f1",
+      "title": "Comprehensive multi-agent codebase review (baseline)",
+      "date": "2026-06-10",
+      "summary": "Sixteen subagents reviewed the whole app: architecture decisions and inconsistencies (Opus), code quality, testing, performance and frontend compliance (Sonnet), and a security review of seven risk surfaces (Opus finders, Sonnet false-positive verification per the security-review methodology). Five of seven security surfaces came back clean; the two confirmed findings are both RLS INSERT policies with WITH CHECK (true) that let any authenticated user write directly via PostgREST (email queue and certificates). The review seeded the To-do column and ADRs 001-010.",
+      "decisions": [
+        "Security (high, verified 9/10): Any authenticated user can queue arbitrary emails (RLS INSERT policy WITH CHECK (TRUE) on email_notifications) - outbound phishing from the verified org domain.",
+        "Security (medium, verified 9/10): Any authenticated user can forge course/compliance completion certificates (RLS INSERT policy WITH CHECK (TRUE) on certificates).",
+        "Inconsistency (medium): Two rich-text editor stacks coexist (Tiptap for news-feed + learning, Plate for resources) - split is undocumented at the top level.",
+        "Inconsistency (medium): Two hand-rolled Tiptap-JSON-to-React renderers with diverging node and mark coverage.",
+        "Inconsistency (low): Callout styling config defined twice (Tiptap vs Plate) and already drifted.",
+        "Inconsistency (high): Image uploads strip EXIF / convert HEIC on the news-feed path but not on the resources path.",
+        "Inconsistency (low): DOMPurify is a declared dependency with zero imports (dead dependency)."
+      ],
+      "mermaid": "flowchart TD\n  Browser[Browser - staff and external PCs]\n  Vercel[Vercel - Next.js 16 App Router]\n  Proxy[Proxy src/proxy.ts - JWT app_metadata claims]\n  RSC[Server Components - read via getCurrentUser]\n  Actions[Server Actions actions.ts - all mutations]\n  API[API routes - webhooks, cron, file proxy]\n  Supabase[Supabase Postgres - RLS, SECURITY DEFINER RPCs, Vault, pg_cron]\n  Auth[Supabase Auth - Google OAuth and email OTP]\n  Google[Google Drive and Calendar via service account]\n  Algolia[Algolia - section and course search]\n  Resend[Resend - transactional email plus audit table]\n\n  Browser --> Vercel\n  Vercel --> Proxy\n  Proxy -->|reads JWT claims, fallback query| Auth\n  Proxy --> RSC\n  Browser -->|useTransition| Actions\n  RSC --> Supabase\n  Actions --> Supabase\n  Actions --> Google\n  Actions --> Algolia\n  Actions --> Resend\n  Supabase -->|pg_cron plus pg_net| API\n  API --> Google\n  API --> Resend\n  Browser -->|realtime subscriptions| Supabase"
+    },
+    {
+      "id": "f2",
+      "title": "Closed two over-permissive RLS write policies (email queue, certificates)",
+      "date": "2026-06-10",
+      "summary": "The codebase review found two RLS policies with WITH CHECK (true) for the authenticated role: email_notifications (the outbound send queue, drained by the process-emails cron and sent via Resend from the verified org domain) and certificates (compliance-training completion records). Either let any logged-in user write rows directly via PostgREST - arbitrary outbound email from a trusted sender, and forged safeguarding-training certificates. Migration 00098 drops all three policies (INSERT + UPDATE on email_notifications, INSERT on certificates). The legitimate writers bypass RLS already - the service-role client for the email queue and a SECURITY DEFINER trigger for certificates - so no authenticated write policy is needed. Verified against pg_policies: RLS stays enabled, only the correctly scoped SELECT policies remain, and the security advisors show no new errors.",
+      "decisions": [
+        "Applied direct to the Intranet production database (authorised) to close the live hole immediately, with the migration committed to the repo for parity.",
+        "No replacement policy: writers are service-role + SECURITY DEFINER, both of which bypass RLS."
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR-001",
+      "title": "Next.js App Router on Vercel with Supabase Postgres as the platform",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "A Glasgow charity of ~80 staff needed to replace BreatheHR with one app covering HR, learning, internal comms, and office-location tracking. The team is small and wanted auth, a relational database, and row-level security without standing up bespoke infrastructure. Staff already live in Google Workspace.",
+      "decision": "Build on Next.js 16 App Router (React 19, TypeScript strict, Tailwind v4, Shadcn/Radix) hosted on Vercel, with Supabase (hosted PostgreSQL) providing the database, Supabase Auth, and Row Level Security. Server Components fetch data server-side; Client Components handle UI state only.",
+      "consequences": "Fast delivery and one deployment target; built-in OAuth and magic-link flows; RLS available at the data layer. Costs: vendor lock-in on Supabase-specific features (auth triggers, RLS, Vault, pg_cron) and on Vercel platform limits (Hobby plan caps request bodies at 4 MB and crons at daily cadence, both of which have already constrained features). All business logic lives inside Next.js, so extracting a standalone backend later would be a rewrite."
+    },
+    {
+      "id": "ADR-002",
+      "title": "Server-actions-only mutation path; browser Supabase client never writes",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "Client-side Supabase mutations and auth calls were observed to hang indefinitely in this app. The team also wanted a single place to authenticate, sanitise inputs, and revalidate caches for every write.",
+      "decision": "Route every database write and auth operation through Next.js Server Actions using the server-side Supabase client (src/lib/supabase/server.ts). The browser client (src/lib/supabase/client.ts) is reserved for read-only realtime subscriptions. A service-role client (src/lib/supabase/service.ts) bypasses RLS only for system operations such as notification fan-out. Each route group owns an actions.ts that authenticates, whitelists fields, mutates, then calls revalidatePath().",
+      "consequences": "Reliable mutations, consistent auth, type-safe calls with no REST layer to maintain, and one choke point for input sanitisation. Costs: every mutation needs a Server Action even when trivial; rate-limiting cannot live in the proxy (returning non-200 from middleware during a server action throws E394 and replaces the page), so server-action rate limiting remains deferred. Multi-step writes need hand-rolled ordering and rollback, and sequencing matters when one action reads what another just wrote."
+    },
+    {
+      "id": "ADR-003",
+      "title": "Proxy auth reads JWT app_metadata claims, with a DB fallback",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "src/proxy.ts runs on every non-static request to enforce login, induction completion, and module access. Originally it queried the profiles table on each request to read user_type, status, and induction state, adding a DB round-trip to every navigation.",
+      "decision": "Sync the frequently-checked profile fields into auth.users.raw_app_meta_data via the sync_profile_claims() trigger (migration 00040), so they ride inside the JWT. The proxy reads user.app_metadata with zero DB queries on the fast path, falling back to a profiles SELECT only for pre-migration sessions whose tokens lack claims.",
+      "consequences": "The proxy is DB-free in the common case, so navigation is faster and cheaper. Costs: claims can be stale until the next token refresh (a permission or induction change is not seen until the JWT rolls over), the trigger is another piece of Supabase-coupled machinery to maintain, and the fallback branch must be kept working. Capability/admin checks that must be exact are deliberately NOT read from the JWT (see the effective-role decision)."
+    },
+    {
+      "id": "ADR-004",
+      "title": "Domain-restricted auth with internal/external staff tiers",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "Users are Glasgow City Council employees on @mcrpathways.org Google Workspace accounts. School-employed Pathways Coordinators (is_external = true) need the Learning, Intranet, and Resources modules but must never see HR or Sign-In data. New users must finish induction before reaching the app.",
+      "decision": "Restrict auth to @mcrpathways.org via Supabase Auth (Google OAuth + email OTP). Model access on two profile fields, user_type (staff / new_user) and is_external, enforced in the proxy: internalOnlyModules (/hr, /sign-in) are blocked for external staff; new users are pinned to the induction flow until induction_completed_at is set, then allowed /intranet as a landing page.",
+      "consequences": "One coarse-grained gate covers the three real audiences and keeps PC accounts out of HR data structurally. Costs: the access matrix is spread across proxy redirects, per-action auth helpers, and RLS, so adding a module or a tier means touching all three; the proxy redirect logic for the new_user-after-induction edge case is subtle and has already caused redirect-loop bugs."
+    },
+    {
+      "id": "ADR-005",
+      "title": "Typed Supabase client from generated database types",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "The schema has 70+ tables. Before types were generated, queries were littered with as any casts and the Row shapes drifted from reality, so column typos surfaced only at runtime.",
+      "decision": "Generate src/types/database.types.ts from the live schema and pass the Database generic to all three Supabase clients (server, browser, service) for compile-time query checking. Trust the generated Row types instead of defensive casts; cast only genuine ambiguities (array-or-object join results, foreign library types like Plate Value on JSONB).",
+      "consequences": "Compile-time safety on selects, inserts, and RPC names, and fewer casts to maintain. Costs: regeneration reads the live schema, so production must be at migration parity before regenerating or types silently drop for unapplied columns (currently tracked as a backlog item). Explicit string-literal SELECT constants (PROFILE_SELECT, ARTICLE_SELECT) are invisible to the type checker, so the Row type claims columns the runtime query did not fetch unless every SELECT is swept when a column is added."
+    },
+    {
+      "id": "ADR-006",
+      "title": "Google Drive as the document and media store instead of Supabase Storage",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "The organisation runs on Google Workspace and authors knowledge-base content in Google Docs. News-feed posts also needed image and document attachments. Supabase Storage was the default, but it meant a second authoring surface and a separate file store from the one staff already use.",
+      "decision": "Use a Google service account Drive as the store for both Resources documents and news-feed media. Resources articles link existing Google Docs, whose HTML is synced via Drive API webhooks, sanitised, cached in synced_html, and rendered with Tailwind prose; editing stays in Google Docs with live updates via Supabase Realtime. News-feed attachments upload to Drive under auto-created YYYY/MM folders (migration 00087 retired the Supabase Storage bucket) and are served through an authenticated /api/drive-file/[fileId] proxy after an image pipeline strips EXIF and normalises formats.",
+      "consequences": "Zero learning curve for content editors, one canonical file store, and same-origin proxied serving for CSP compliance. Costs: a hard dependency on the Drive API and a service account with domain-wide delegation; watch channels expire (~24h in practice, not the documented 7 days) and need a renewal cron; base64 images inside exported Docs HTML bloat large articles; a staging table (news_feed_media) plus a daily sweep cron is needed so composer thumbnails resolve before a post exists."
+    },
+    {
+      "id": "ADR-007",
+      "title": "Algolia for search and Resend with pg_cron for email",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "Postgres full-text search worked but could not return section-level results or deep links into long articles, and a manager directive (2026-03-18) asked for instant DocSearch-style search. Email needed to be transactional and auditable, and crons were originally split between Vercel and Supabase.",
+      "decision": "Use Algolia for Resources and Learning search: one record per article section (heading + content) plus one per published course, indexed server-side during link/sync/publish, queried via React InstantSearch behind a Cmd+K overlay. Send email through Resend immediately at the action site, log every send to email_notifications as an audit trail, and run a retry cron for failures. Consolidate all scheduled jobs onto Supabase pg_cron + pg_net (migration 00086) calling /api/cron/* routes authenticated by a Vault-stored secret.",
+      "consequences": "Section-level search with deep links, an auditable email trail, and a single scheduler with one auth mechanism. Costs: two more external service dependencies and their keys; the Resend FROM domain must be the verified mcrpathways.co.uk (silent rejection otherwise); cron jobs each write a cron_runs audit row and must track per-block failures honestly and break loops on post-send persistence drift to avoid double-sends; news-feed posts are not yet indexed (a unified feed index is deferred)."
+    },
+    {
+      "id": "ADR-008",
+      "title": "TEXT + CHECK constraints instead of Postgres ENUMs",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "Postgres ENUMs caused transaction failures when a type was referenced during trigger execution before it existed, and altering an enum's allowed values in production is awkward and lock-heavy.",
+      "decision": "Model all constrained-value columns (statuses, user_type, post_type, lesson_type, leave types) as TEXT with CHECK constraints rather than ENUMs. Keep the whitelist in the CHECK and evolve it with idempotent migrations; reserved-but-unused values (e.g. retired Tool Shed post types) stay in the CHECK list for later reuse.",
+      "consequences": "Schema evolves with a plain ALTER ... CHECK, no enum-type migration dance, and reserved slots are cheap to hold. Costs: slightly weaker DB-level guarantees than a real enum, and the application layer carries config maps (LEAVE_TYPE_CONFIG, EMAIL_TYPES) that must stay in step with the CHECK whitelist."
+    },
+    {
+      "id": "ADR-009",
+      "title": "RLS with effective-role RPCs and decoupled capability flags",
+      "date": "2026-06-10",
+      "status": "Accepted",
+      "context": "Capability checks (is HR admin, is content editor, is systems admin) are security-critical and must be exact, unlike the proxy's coarse JWT claims which can be stale. HR-data access and broadcast-comms authority are genuinely different policy concerns that should be able to change independently.",
+      "decision": "Enable RLS on user-facing tables (ownership-scoped policies, not blanket true) and route every admin/capability gate through SECURITY DEFINER functions named is_*_effective() (e.g. is_hr_admin_effective), called by the requireHRAdmin / requireContentEditor / requireSystemsAdmin server-action helpers as the single source of truth. All SECURITY DEFINER functions set search_path = '' and use auth.uid() rather than trusting passed IDs. New capabilities get their own boolean column (e.g. can_post_announcements) granted by a strictly-superior role, stripped at both the UI gate and the action whitelist.",
+      "consequences": "Authorisation is centralised, exact at mutation time, and decoupled so granting HR data access never accidentally grants broadcast power. Defence-in-depth via RLS plus action-level checks. Costs: a proliferation of small RPCs and boolean columns to keep coherent; capability checks cost a DB round-trip (unlike the JWT-based proxy gate), and every new SECURITY DEFINER function must remember search_path = '' and auth.uid() or it becomes an attack surface."
+    },
+    {
+      "id": "ADR-010",
+      "title": "Rich-text editor boundary (Tiptap vs Plate)",
+      "date": "2026-06-10",
+      "status": "Proposed",
+      "context": "The 2026-06-10 review confirmed two complete rich-text editor stacks: Tiptap v3 for news-feed posts/comments and learning lessons, Plate v52 for resources native articles. They store incompatible JSON dialects in identically named content_json columns, with two static-render strategies, two callout style maps (already drifted), and two URL-guard implementations. Nothing at the top level documents the split, and src/lib/tiptap.ts helpers silently produce wrong output if handed a Plate document.",
+      "decision": "Proposed: keep both stacks but make the boundary explicit rather than attempting a big-bang unification. Tiptap owns the short social composer surfaces (posts, comments) and lessons until their next editorial investment; Plate owns long-form resources content. Document the split in the root CLAUDE.md, introduce a discriminator or branded type so the two content_json dialects cannot cross renderers, and hoist the shared URL/colour guards and inline-mark rendering into one module.",
+      "consequences": "The split stops growing silently and a compile error replaces a silent wrong-render when a document crosses stacks. Double maintenance remains for toolbar, paste and mention features until lessons are folded onto one long-form stack. Migrating any content JSON later must go through a converter with tests."
+    }
+  ]
+}
+</script>
+<!-- mcr-project:data:end -->
+
+<!-- Mermaid -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    look: 'classic',
+    themeVariables: {
+      primaryColor: '#e8f7fc',
+      primaryBorderColor: '#2A6075',
+      primaryTextColor: '#213350',
+      secondaryColor: '#fef0de',
+      secondaryBorderColor: '#d97b1a',
+      secondaryTextColor: '#213350',
+      tertiaryColor: '#f0f8d6',
+      tertiaryBorderColor: '#8ab030',
+      tertiaryTextColor: '#213350',
+      lineColor: '#8899ae',
+      fontSize: '15px',
+      fontFamily: 'TT Commons Pro, system-ui, sans-serif',
+      noteBkgColor: '#FDF9EA',
+      noteTextColor: '#213350',
+      noteBorderColor: '#d97b1a',
+    }
+  });
+  window.__mcrMermaid = mermaid;
+</script>
+
+<!--
+  ============================================================
+  RENDERER — DOM-construction only. No innerHTML on user data.
+  Everything below builds elements with createElement + textContent
+  + setAttribute. The only places HTML is parsed are static svg
+  filters (none used here) and the inert JSON script block above.
+  ============================================================
+-->
+<script>
+(function () {
+  'use strict';
+
+  // Deterministic tag -> color class. Stable across renders.
+  var TAG_COLORS = ['blue', 'orange', 'green', 'pink', 'yellow', 'teal', 'wine', 'gray'];
+  function tagClass(tag) {
+    if (!tag) return 'mcr-tag--gray';
+    var h = 0;
+    for (var i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) >>> 0;
+    return 'mcr-tag--' + TAG_COLORS[h % TAG_COLORS.length];
+  }
+
+  function el(tag, opts) {
+    var node = document.createElement(tag);
+    if (!opts) return node;
+    if (opts.className) node.className = opts.className;
+    if (opts.text != null) node.textContent = String(opts.text);
+    if (opts.href != null) {
+      node.setAttribute('href', String(opts.href));
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+    if (opts.attrs) {
+      for (var k in opts.attrs) if (Object.prototype.hasOwnProperty.call(opts.attrs, k)) {
+        node.setAttribute(k, String(opts.attrs[k]));
+      }
+    }
+    if (opts.children) {
+      for (var i = 0; i < opts.children.length; i++) {
+        if (opts.children[i] != null) node.appendChild(opts.children[i]);
+      }
+    }
+    return node;
+  }
+
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function loadData() {
+    var node = document.getElementById('mcr-project-data');
+    if (!node) return null;
+    try { return JSON.parse(node.textContent); }
+    catch (e) { console.error('Invalid mcr-project-data JSON:', e); return null; }
+  }
+
+  function renderHeader(p) {
+    document.title = 'MCR Project — ' + (p.name || 'Untitled');
+    document.getElementById('project-name').textContent = p.name || 'Untitled project';
+    document.getElementById('project-summary').textContent = p.summary || '';
+    var vision = document.getElementById('vision-text');
+    vision.textContent = p.summary || '';
+    var meta = document.getElementById('project-meta');
+    clear(meta);
+    function metaItem(label, value, href) {
+      var span = el('span', { className: 'mcr-meta-item' });
+      span.appendChild(document.createTextNode(label));
+      var strong = el('strong');
+      if (href) {
+        var a = el('a', { text: value, href: href });
+        strong.appendChild(a);
+      } else {
+        strong.textContent = value;
+      }
+      span.appendChild(strong);
+      return span;
+    }
+    if (p.owner) meta.appendChild(metaItem('Owner', p.owner));
+    if (p.kickoffDate) meta.appendChild(metaItem('Kickoff', p.kickoffDate));
+    if (p.repo) meta.appendChild(metaItem('Repo', p.repo, 'https://github.com/' + p.repo));
+    if (p.deployment) meta.appendChild(metaItem('Live', p.deployment.replace(/^https?:\/\//, ''), p.deployment));
+  }
+
+  function buildKanbanCard(c) {
+    var titleEl = el('div', { className: 'mcr-kanban-card__title', text: c.title || '' });
+    var rowChildren = [titleEl];
+    if (c.tag) rowChildren.push(el('span', { className: 'mcr-tag ' + tagClass(c.tag), text: c.tag }));
+    var row = el('div', { className: 'mcr-kanban-card__row', children: rowChildren });
+
+    var children = [row];
+    if (c.note) children.push(el('div', { className: 'mcr-kanban-card__note', text: c.note }));
+
+    if (c.completedDate || c.prUrl) {
+      var metaEl = el('div', { className: 'mcr-kanban-card__meta' });
+      if (c.completedDate) metaEl.appendChild(document.createTextNode(c.completedDate));
+      if (c.completedDate && c.prUrl) metaEl.appendChild(document.createTextNode(' · '));
+      if (c.prUrl) {
+        metaEl.appendChild(el('a', { text: '#' + (c.prNumber != null ? c.prNumber : 'PR'), href: c.prUrl }));
+      }
+      children.push(metaEl);
+    }
+
+    return el('div', { className: 'mcr-kanban-card', children: children });
+  }
+
+  function renderKanbanColumn(items, listEl, countEl, statEl) {
+    clear(listEl);
+    var n = (items || []).length;
+    countEl.textContent = n;
+    if (statEl) statEl.textContent = n;
+    if (n === 0) {
+      listEl.appendChild(el('div', { className: 'mcr-empty', text: 'Nothing here yet.' }));
+    } else {
+      for (var i = 0; i < items.length; i++) listEl.appendChild(buildKanbanCard(items[i]));
+    }
+    return n;
+  }
+
+  function renderKanban(kanban) {
+    var todo = renderKanbanColumn(kanban.todo, document.getElementById('col-todo'), document.getElementById('col-todo-count'), document.getElementById('stat-todo'));
+    var inP = renderKanbanColumn(kanban.inProgress, document.getElementById('col-inprogress'), document.getElementById('col-inprogress-count'), document.getElementById('stat-in-progress'));
+    var done = renderKanbanColumn(kanban.done, document.getElementById('col-done'), document.getElementById('col-done-count'), document.getElementById('stat-done'));
+    document.getElementById('kanban-total').textContent = todo + inP + done;
+  }
+
+  function buildAdr(d) {
+    var statusRaw = d.status || 'Accepted';
+    var statusClass = 'mcr-adr__status mcr-adr__status--' + statusRaw.toLowerCase();
+    var head = el('div', { className: 'mcr-adr__head', children: [
+      el('span', { className: 'mcr-adr__id', text: d.id || '' }),
+      el('span', { className: 'mcr-adr__title', text: d.title || '' }),
+      el('span', { className: statusClass, text: statusRaw }),
+      el('span', { className: 'mcr-adr__date', text: d.date || '' }),
+    ]});
+
+    var children = [head];
+    function addSection(label, body) {
+      if (!body) return;
+      var sec = el('div', { className: 'mcr-adr__section', children: [
+        el('div', { className: 'mcr-adr__section-label', text: label }),
+        el('div', { className: 'mcr-adr__section-body', text: body }),
+      ]});
+      children.push(sec);
+    }
+    addSection('Context', d.context);
+    addSection('Decision', d.decision);
+    addSection('Consequences', d.consequences);
+
+    return el('div', { className: 'mcr-adr', children: children });
+  }
+
+  function renderAdrs(adrs) {
+    var wrap = document.getElementById('adr-list');
+    clear(wrap);
+    if (!adrs || adrs.length === 0) {
+      wrap.appendChild(el('div', { className: 'mcr-empty', text: 'No decisions recorded yet.' }));
+      return;
+    }
+    for (var i = 0; i < adrs.length; i++) wrap.appendChild(buildAdr(adrs[i]));
+  }
+
+  function buildFeature(f, idx) {
+    var headChildren = [
+      el('span', { className: 'mcr-feature__date', text: f.date || '' }),
+      el('h3', { className: 'mcr-feature__title', text: f.title || '' }),
+    ];
+    if (f.prUrl) {
+      var pr = el('a', {
+        className: 'mcr-feature__pr',
+        text: 'PR #' + (f.prNumber != null ? f.prNumber : ''),
+        href: f.prUrl,
+      });
+      headChildren.push(pr);
+    }
+    var head = el('div', { className: 'mcr-feature__head', children: headChildren });
+    var summary = el('p', { className: 'mcr-feature__summary', text: f.summary || '' });
+
+    var children = [head, summary];
+
+    if (f.decisions && f.decisions.length) {
+      var ul = el('ul');
+      for (var i = 0; i < f.decisions.length; i++) ul.appendChild(el('li', { text: f.decisions[i] }));
+      var dec = el('div', { className: 'mcr-feature__decisions', children: [
+        el('div', { className: 'mcr-feature__decisions-label', text: 'Decisions' }),
+        ul,
+      ]});
+      children.push(dec);
+    }
+
+    if (f.mermaid) {
+      var target = el('div', { attrs: { id: 'feat-mermaid-' + idx } });
+      var wrap = el('div', { className: 'mcr-mermaid-wrap', children: [target] });
+      children.push(wrap);
+    }
+
+    return el('article', { className: 'mcr-feature', children: children });
+  }
+
+  function renderFeatures(features) {
+    var wrap = document.getElementById('feature-list');
+    clear(wrap);
+    document.getElementById('arch-total').textContent = (features || []).length;
+    if (!features || features.length === 0) {
+      wrap.appendChild(el('div', { className: 'mcr-empty', text: 'No features documented yet — they appear here after PR merges.' }));
+      return [];
+    }
+    var sorted = features.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+    for (var i = 0; i < sorted.length; i++) wrap.appendChild(buildFeature(sorted[i], i));
+    return sorted;
+  }
+
+  async function renderFeatureDiagrams(sorted) {
+    var mermaid = window.__mcrMermaid;
+    if (!mermaid) return;
+    for (var i = 0; i < sorted.length; i++) {
+      var f = sorted[i];
+      if (!f.mermaid) continue;
+      var target = document.getElementById('feat-mermaid-' + i);
+      if (!target) continue;
+      try {
+        var rendered = await mermaid.render('feat-mermaid-svg-' + i, f.mermaid);
+        clear(target);
+        // mermaid.render returns sanitized SVG markup; parse via DOMParser
+        // and adopt the <svg> node directly — no innerHTML on the live tree.
+        var doc = new DOMParser().parseFromString(rendered.svg, 'image/svg+xml');
+        var svg = doc.documentElement;
+        if (svg && svg.nodeName.toLowerCase() === 'svg') {
+          target.appendChild(document.importNode(svg, true));
+        } else {
+          target.appendChild(el('pre', { text: 'Mermaid render returned no SVG.' }));
+        }
+      } catch (e) {
+        clear(target);
+        target.appendChild(el('pre', {
+          text: 'Mermaid render error: ' + (e && e.message ? e.message : String(e)),
+          attrs: { style: 'font-family:var(--font-mono);font-size:12px;color:var(--mcr-wine)' },
+        }));
+      }
+    }
+  }
+
+  function renderFeed(features) {
+    var feed = document.getElementById('feed');
+    clear(feed);
+    if (!features || features.length === 0) {
+      feed.appendChild(el('div', { className: 'mcr-empty', text: 'No activity yet.' }));
+      return;
+    }
+    var recent = features.slice().sort(function (a, b) {
+      return (b.date || '').localeCompare(a.date || '');
+    }).slice(0, 5);
+    for (var i = 0; i < recent.length; i++) {
+      var f = recent[i];
+      var dateText = (f.date || '') + (f.prNumber != null ? ' · PR #' + f.prNumber : '');
+      var item = el('div', { className: 'mcr-feed__item', children: [
+        el('div', { className: 'mcr-feed__date', text: dateText }),
+        el('div', { className: 'mcr-feed__title', text: f.title || '' }),
+      ]});
+      feed.appendChild(item);
+    }
+  }
+
+  function setupTabs() {
+    var tabs = document.querySelectorAll('.mcr-tabs__tab');
+    var panels = document.querySelectorAll('.mcr-panel');
+    var validNames = ['overview', 'kanban', 'architecture', 'brand'];
+
+    function activate(name) {
+      tabs.forEach(function (t) {
+        var on = t.dataset.tab === name;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(function (p) {
+        p.classList.toggle('is-active', p.dataset.panel === name);
+      });
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        var name = t.dataset.tab;
+        history.replaceState(null, '', '#' + name);
+        activate(name);
+      });
+    });
+
+    var initial = (location.hash || '').replace('#', '') || 'overview';
+    if (validNames.indexOf(initial) !== -1) activate(initial);
+
+    window.addEventListener('hashchange', function () {
+      var name = (location.hash || '').replace('#', '') || 'overview';
+      if (validNames.indexOf(name) !== -1) activate(name);
+    });
+  }
+
+  async function init() {
+    var data = loadData();
+    if (!data) return;
+    renderHeader(data.project || {});
+    renderKanban(data.kanban || {});
+    renderAdrs(data.decisions || []);
+    renderFeed(data.features || []);
+    var sortedFeatures = renderFeatures(data.features || []);
+    setupTabs();
+    // Defer mermaid render so the module has time to initialize.
+    setTimeout(function () { renderFeatureDiagrams(sortedFeatures); }, 60);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
