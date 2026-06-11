@@ -193,7 +193,7 @@ export function CommentItem({
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     onKeyDown={handleEditKeyDown}
-                    className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full resize-none rounded-md border bg-card px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     rows={2}
                     maxLength={2000}
                     disabled={isPending}

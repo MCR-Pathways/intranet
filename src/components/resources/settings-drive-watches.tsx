@@ -585,7 +585,7 @@ export function SettingsDriveWatches() {
           <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-background odd:bg-background">
+                <TableRow className="hover:bg-table-header odd:bg-table-header">
                   <TableHead>Started</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Duration</TableHead>

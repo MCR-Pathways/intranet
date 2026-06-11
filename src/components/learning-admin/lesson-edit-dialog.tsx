@@ -298,7 +298,7 @@ export function LessonEditDialog({
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Write lesson content..."
-                    className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
+                    className="flex min-h-[200px] w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
                     rows={10}
                   />
                 </div>
@@ -343,7 +343,7 @@ export function LessonEditDialog({
                     <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-card px-2 text-muted-foreground">
                       Or upload a video
                     </span>
                   </div>

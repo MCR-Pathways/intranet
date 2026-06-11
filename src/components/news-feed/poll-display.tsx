@@ -159,7 +159,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
                 "flex w-full items-center rounded-lg border px-3 py-2 text-sm transition-colors text-left",
                 isSelected
                   ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                  : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
               )}
             >
               {/* Indicator: checkbox for multi-select, radio for single */}

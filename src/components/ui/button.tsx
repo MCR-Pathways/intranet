@@ -21,7 +21,7 @@ const buttonVariants = cva(
         success:
           "bg-success text-success-foreground font-semibold tracking-tight shadow hover:bg-success/90 motion-safe:hover:-translate-y-px hover:shadow-md",
         outline:
-          "border border-input bg-background text-foreground font-medium shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-card text-foreground font-medium shadow-sm hover:bg-accent hover:text-accent-foreground",
         ghost:
           "font-medium hover:bg-accent hover:text-accent-foreground",
         link:

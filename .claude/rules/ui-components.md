@@ -63,7 +63,7 @@ These two docs are only auto-surfaced by a hook when the `frontend-design` skill
 
 **`overflow: clip` does NOT break `position: sticky`.** Unlike `overflow: hidden/scroll/auto`, `overflow: clip` does not create a scroll container. Sticky elements work inside `overflow-clip` parents. The `ARTICLE_CARD_CLASSES` constant uses `overflow-clip` intentionally for rounded-corner clipping without affecting the sticky TOC.
 
-**Use `bg-card` not `bg-background` for dialogs, modals, and form inputs.** When `--background` is grey, inputs with `bg-background` become invisible. Use `bg-card` for all elevated surfaces.
+**Use `bg-card` not `bg-background` for dialogs, modals, and form inputs.** `--background` is ivory (ADR-014); inputs with `bg-background` read tinted inside white cards and blend into the page. Use `bg-card` for all elevated surfaces. `bg-background` is reserved for canvas-level surfaces that should match the page (app shell, full-bleed calendars, sticky masks over the canvas).
 
 **Consolidate `toLocaleDateString` calls into `formatDate()` / `formatShortDate()` from `src/lib/utils.ts`.** Check for duplicates before adding new inline date formatting.
 
@@ -77,6 +77,6 @@ These two docs are only auto-surfaced by a hook when the `frontend-design` skill
 
 ## UI component conventions
 
-**All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-background odd:bg-background` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
+**All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-table-header odd:bg-table-header` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
 
 **Buttons: follow `docs/button-system.md`.** Single source of truth for variants, sizes, label casing, a11y, helpers (`TooltipButton`, `ButtonSpinner`, `DestructiveMenuItem`), and per-context patterns (Edit, kebab migration, AlertDialog footers, long labels, toggle buttons). Never use `className="h-X w-X"` on Button; an ESLint rule enforces this. Cancel uses `secondary`; destructive inline uses `ghost` or moves to kebab; primary CTAs must be `default`, `lg`, or `hero` (never `sm`).

@@ -60,7 +60,7 @@ export default async function DraftsPage() {
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-background odd:bg-background">
+              <TableRow className="hover:bg-table-header odd:bg-table-header">
                 <TableHead>Title</TableHead>
                 <TableHead className="hidden sm:table-cell">Category</TableHead>
                 <TableHead className="hidden md:table-cell">Author</TableHead>

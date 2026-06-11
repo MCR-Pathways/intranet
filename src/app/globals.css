@@ -10,14 +10,26 @@
   --mcr-light-blue: #5BC6E9;
   --mcr-orange: #F09336;
   --mcr-yellow: #F8D45B;
-  --mcr-green: #B5E046;
+  --mcr-green: #22a34b;        /* ADR-014: adopted 2026-06-11 (was #B5E046). ~3.3:1 on white — fills/large-text/icons only; green text uses --icon-fg-green. Deliberate divergence from brand lime #AFDA44 (accessible product green). */
   --mcr-teal: #2A6075;
   --mcr-pink: #DA417C; /* WCAG fix: was #FF82B2 (2.31:1 FAIL) → #DA417C (4.18:1, passes 3:1 for icons/large text) */
   --mcr-wine: #751B48;
   --mcr-ivory: #FDF9EA;
 
+  /* Home-feed surface tints (ADR-014, design-system §8). Tints derived from
+     brand hues — NOT new brand colours. Light mode only (no dark variants).
+     mcr- prefix is load-bearing: bare names (blue-50 etc.) would shadow
+     Tailwind's built-in palette used by status badges. */
+  --mcr-yellow-50: #FEF7E0;          /* kudos card fill */
+  --mcr-yellow-border: #F4E5AE;      /* kudos inner box / chip border */
+  --mcr-light-blue-50: #EAF6FC;      /* poll pill bg + 3rd-place result fill */
+  --mcr-light-blue-100: #D3EDF8;     /* poll result fill, 2nd place */
+  --mcr-light-blue-200: #A7DCF2;     /* poll result fill, lead */
+  --mcr-light-blue-border: #BFE4F4;  /* poll panel border */
+  --mcr-orange-50: #FDF1E3;          /* pinned pill bg */
+
   /* Semantic Colors - Light Mode */
-  --background: #F2F4F7;
+  --background: var(--mcr-ivory);    /* ADR-014: ivory, uniform across routes. Was #F2F4F7 (grey). */
   --foreground: var(--mcr-dark-blue);
   --card: #ffffff;
   --card-foreground: var(--mcr-dark-blue);
@@ -98,7 +110,7 @@
 
   /* Icon foreground colours — bright MCR originals for contrast on dark card backgrounds */
   --icon-fg-teal: var(--mcr-light-blue);     /* 7.55:1 on dark */
-  --icon-fg-green: var(--mcr-green);         /* 9.68:1 on dark */
+  --icon-fg-green: var(--mcr-green);         /* ~5.0:1 on dark card (re-checked for #22a34b; was 9.68:1 for the old lime) */
   --icon-fg-orange: var(--mcr-orange);       /* 6.30:1 on dark */
   --icon-fg-wine: #FF82B2;                   /* 6.41:1 on dark */
   --icon-fg-light-blue: var(--mcr-light-blue); /* 7.55:1 on dark */
@@ -149,6 +161,15 @@
   --color-mcr-pink: var(--mcr-pink);
   --color-mcr-wine: var(--mcr-wine);
   --color-mcr-ivory: var(--mcr-ivory);
+
+  /* Home-feed surface tints (ADR-014) */
+  --color-mcr-yellow-50: var(--mcr-yellow-50);
+  --color-mcr-yellow-border: var(--mcr-yellow-border);
+  --color-mcr-light-blue-50: var(--mcr-light-blue-50);
+  --color-mcr-light-blue-100: var(--mcr-light-blue-100);
+  --color-mcr-light-blue-200: var(--mcr-light-blue-200);
+  --color-mcr-light-blue-border: var(--mcr-light-blue-border);
+  --color-mcr-orange-50: var(--mcr-orange-50);
 
   /* Status Colors */
   --color-status-active: var(--status-active);
