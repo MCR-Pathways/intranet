@@ -1,6 +1,6 @@
 # MCR Pathways Intranet — Design System
 
-**Last reviewed:** 2026-03-12
+**Last reviewed:** 2026-06-11
 **Owner:** Abdulmuiz Adaranijo
 
 ---
@@ -19,17 +19,17 @@ Defined in `src/app/globals.css` `:root`:
 | `--mcr-light-blue` | `#5BC6E9` | Focus ring (dark mode only) |
 | `--mcr-orange` | `#F09336` | Sidebar induction prompt, learning warnings, kiosk accents |
 | `--mcr-yellow` | `#F8D45B` | Pending status badge (via `--status-pending`) |
-| `--mcr-green` | `#B5E046` | Icon palette (via `--icon-fg-green`) |
+| `--mcr-green` | `#22a34b` | Brand/identity green for fills + the 15%-opacity icon swatch. **Adopted 2026-06-11** (ratifies the project board's value; replaces `#B5E046`). `globals.css` still `#B5E046` — the swap + WCAG re-check land in the feed-colour PR. ~3.3:1 on white, so fills/large-text/icons only; green text keeps `--icon-fg-green` (`#4A7A00`). Deliberately diverges from the brand-guideline Light Green `#AFDA44` (an accessible product green). |
 | `--mcr-teal` | `#2A6075` | Link colour (via `--link`), avatar palette, icon palette (via `--icon-fg-teal`) |
 | `--mcr-pink` | `#DA417C` | Action buttons (via `--action`), icon palette (via `--icon-fg-pink`). **WCAG fix**: was `#FF82B2` (2.31:1 FAIL) → `#DA417C` (4.18:1, passes 3:1 for icons) |
 | `--mcr-wine` | `#751B48` | Avatar palette, icon palette (via `--icon-fg-wine`) |
-| `--mcr-ivory` | `#FDF9EA` | **Unused** — defined but zero usage in any component |
+| `--mcr-ivory` | `#FDF9EA` | **Page background** (via `--background`, uniform across routes) per ADR-014; see §8. `globals.css` still grey — the swap lands in the feed-colour PR. |
 
 ### 1.2 Semantic Colour Tokens (Light Mode)
 
 | Token | Value | Purpose |
 |-------|-------|---------|
-| `--background` | `#F2F4F7` | Page background (light grey) |
+| `--background` | `#F2F4F7` | Page background. **Moving to ivory `#FDF9EA`** (uniform across routes, ADR-014, §8); `#F2F4F7` is the revert baseline. |
 | `--foreground` | `var(--mcr-dark-blue)` | Default text colour |
 | `--card` | `#ffffff` | Card/modal surfaces |
 | `--primary` | `var(--mcr-dark-blue)` | Primary buttons, active nav, checkboxes, switches, tooltips, progress bars |
@@ -186,7 +186,7 @@ Source: MCR Pathways Brand Guidelines (Aug 2025, 40 pages)
 | Mid Blue | `#347791` | — | **Missing from codebase** |
 | Light Blue | `#5BC6E9` | `#5BC6E9` | Matches |
 | Yellow | `#F8D45B` | `#F8D45B` | Matches |
-| Light Green | `#AFDA44` | `#B5E046` | **Differs** |
+| Light Green | `#AFDA44` | `#22a34b` | **Differs (deliberate)** — codebase green adopted `#22a34b` (2026-06-11), an accessible product green, over both the brand lime `#AFDA44` and the old `#B5E046`. See §1.1. |
 | Dark Pink | `#892055` | — | **Missing from codebase** |
 | Pink | `#DA417C` | `#DA417C` | **Matches** (corrected from `#FF82B2` in brand colour refinement PR #115) |
 | Ivory | `#FFFFE3` | `#FDF9EA` | **Differs** (codebase is warmer/less green) |
@@ -296,7 +296,7 @@ Based on research across design systems and common UI colour mistakes:
 
 ### 3.8 Where MCR Intranet Differs
 
-- ~~**4 defined brand colours are completely unused**~~ — RESOLVED: teal (links, avatars, icons), wine (avatars, icons), green (icons) now used. Only ivory remains unused.
+- ~~**4 defined brand colours are completely unused**~~ — RESOLVED: teal (links, avatars, icons), wine (avatars, icons), green (icons) now used. Ivory becomes the page background (2026-06-11, ADR-014, §8).
 - **No brand colour in sidebar** — unlike Slack's distinctive approach
 - **Orange (the stated primary brand colour) barely appears** — only in induction prompt and learning module warnings
 - **Pink action token is unconventional** — most platforms use their primary colour for all actions, not a secondary brand colour
@@ -308,7 +308,7 @@ Based on research across design systems and common UI colour mistakes:
 
 ### 4.1 Colour Token Accuracy — RESOLVED
 
-**Decision (Mar 2026):** Pink corrected from `#FF82B2` to `#DA417C` (matches brand guidelines, passes WCAG 3:1 for icons/large text at 4.18:1). Green and ivory kept as-is (minor differences, no WCAG impact).
+**Decision (Mar 2026):** Pink corrected from `#FF82B2` to `#DA417C` (matches brand guidelines, passes WCAG 3:1 for icons/large text at 4.18:1). _Green and ivory kept as-is_ — **superseded 2026-06-11**: green adopted `#22a34b` (§1.1), ivory promoted to the page background (ADR-014, §8).
 
 Missing Mid Blue (#347791) and Dark Pink (#892055) remain unimplemented — no current use case identified.
 
@@ -334,18 +334,11 @@ Options B (empty states), C (orange primary), and D (retire tokens) remain open 
 
 TT Commons Pro IS the MCR brand font — using it everywhere reinforces brand identity more than using Montserrat for body.
 
-### 4.4 Page Background Colour
+### 4.4 Page Background Colour — REVERSED 2026-06-11 (now ivory)
 
-**Current**: Grey (#F2F4F7) — neutral, professional, matches GitHub/Jira.
-**Brand guidelines**: Ivory (#FFFFE3 or #FDF9EA) is in the palette.
-**Public website**: Uses ivory/cream background.
+**Decision (2026-06-11, ADR-014):** the page background moves from grey `#F2F4F7` to ivory `#FDF9EA`, uniform across every route. This reverses the earlier "keep grey" recommendation below, taken to fix the "looks dull / giving greyscale" feedback. Ivory reads as a warm *neutral* canvas, not a brand-colour wash, so it doesn't trip anti-pattern §3.6 #4 (which targets saturated brand washes on work surfaces). White cards keep a deliberate edge against it (shadow, plus the 1.5px kudos border, carry separation). Full system in §8.
 
-**Recommendation**: Keep grey. Ivory as a page background would:
-- Create a warm/vintage feel unsuitable for a data-heavy HR/productivity tool
-- Reduce contrast with white cards (ivory is closer to white than grey is)
-- Not match any top-tier productivity platform
-
-The public website's ivory background suits its emotional, charity-marketing purpose. The intranet's grey background suits its functional, daily-use purpose. This divergence is intentional and correct.
+**Earlier recommendation (Mar 2026), now superseded — kept for the record:** Keep grey. Ivory as a page background would create a warm/vintage feel, reduce contrast with white cards, and not match top-tier productivity platforms. The dullness feedback and the per-post-type accent system (§8) changed this call; the contrast point is handled by card shadows and the kudos border.
 
 ---
 
@@ -402,3 +395,49 @@ When adding a new email type to `EMAIL_TYPES` in `email-queue.ts`, also add it t
 | `public/mcr-logo-email.png` | Email logo — dark blue (Group B headers) |
 | `public/mcr-logo-email-white.png` | Email logo — white (Group A headers) |
 | `src/lib/email.ts` | Email templates, `baseTemplate()`, `EMAIL_THEME_CONFIG` |
+
+---
+
+## 8. Home-feed colour system (ADR-014)
+
+Decided 2026-06-11 to fix the "looks dull / giving greyscale" feedback. Principle: colour carries **orientation and emotion** on the feed (which post type is this?), while data stays neutral. The page is a warm ivory canvas; each post type owns exactly one accent, reusing existing brand hues per their §1.1 roles. **Light mode only** — no theme switcher is wired and these tints have no dark variants yet. Token and sweep application (`globals.css` plus the `bg-background` → `bg-card` sweep) lands in the feed-colour PR; this section is the spec.
+
+### 8.1 Canvas
+
+`--background` → ivory `#FDF9EA` (the `--mcr-ivory` token), uniform across every route. Cards stay pure white (`--card`); a shadow, plus the 1.5px border on kudos, carries card-vs-canvas separation. Surfaces that must read as elevated (inputs, switches, table stripes) move from `bg-background` to `bg-card` (sweep: ~41 sites / 30 files).
+
+### 8.2 Surface-tint ramp
+
+Tints **derived from existing brand hues** (not new brand colours). Each pairs with a WCAG-AA foreground from the on-tint set below.
+
+| Token (proposed) | Hex | Role |
+|---|---|---|
+| yellow-50 | `#FEF7E0` | Kudos card fill |
+| yellow-border | `#F4E5AE` | Kudos inner box / chip border |
+| blue-50 | `#EAF6FC` | Poll pill bg, lightest result fill |
+| blue-100 | `#D3EDF8` | Poll result fill (2nd place) |
+| blue-200 | `#A7DCF2` | Poll result fill (lead) |
+| blue-border | `#BFE4F4` | Poll panel border |
+| orange-50 | `#FDF1E3` | Pinned pill bg |
+
+**AA text/icon-on-tint** (already WCAG-fixed brand foregrounds): teal `#2A6075`, green `#4A7A00`, orange `#9E5B00`, wine `#751B48`, light-blue `#1A6E8E`, poll-lead text `#15536b`, kudos-on-yellow `#6b5407`.
+
+### 8.3 Per-post-type accent (one type, one accent)
+
+Orange and sky-blue appear nowhere else in the feed, so the accent alone is the signal.
+
+| Post type | Accent |
+|---|---|
+| Ordinary | none — plain white card (the baseline the accents read against) |
+| Pinned | orange `#F09336` 4px left spine + "Pinned" pill (bg `#FDF1E3`, text `#9E5B00`) |
+| Poll | sky-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills graded by rank (`#A7DCF2` lead, `#D3EDF8` 2nd, `#EAF6FC` 3rd+); lead text `#15536b` |
+| Kudos | pale-yellow card `#FEF7E0` + 1.5px `#F8D45B` border (the card is the accent); white message box, `#F4E5AE` border |
+| Weekly round-up | solid navy `#213350` block (not a card); yellow `#F8D45B` "WEEK n" tag + CTA |
+
+Collision rules: pin wins the spine, the type keeps its pill (a pinned poll is orange spine + Pinned pill + Poll pill, never two spines); kudos keeps its card, pinning adds only the Pinned pill.
+
+### 8.4 Rules
+
+- Accents reuse existing brand tokens (`--mcr-orange`, `--mcr-light-blue`, `--mcr-yellow`, `--mcr-dark-blue`); only the surface tints in §8.2 are new, and they are tints of those hues, not new brand colours.
+- Light mode only; revisit if a theme switcher ships.
+- The ivory background is the one place the "brand colour is an accent, not a foundation" doctrine (§3) bends — a single deliberate exception, and a warm neutral rather than a saturated wash (cf. §3.6 #4).
