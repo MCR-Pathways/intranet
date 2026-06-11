@@ -95,9 +95,9 @@ Defined in `src/app/globals.css` `:root`:
 | Surface | Pattern |
 |---------|---------|
 | Cards/tables | `bg-card shadow-md rounded-xl overflow-clip` |
-| Page background | `bg-background` (grey #F2F4F7) |
+| Page background | `bg-background` (ivory #FDF9EA per ADR-014; was grey #F2F4F7) |
 | Dialogs/modals | `bg-card` (white, not `bg-background`) |
-| Inputs | `bg-card` (white, for contrast on grey pages) |
+| Inputs | `bg-card` (white, for contrast against the ivory canvas and inside white cards) |
 | Table headers | `bg-table-header` (#E4E7EC) |
 | Primary buttons | `bg-primary text-primary-foreground` (dark blue) |
 | Sidebar active | `bg-primary text-primary-foreground` (dark blue) |
