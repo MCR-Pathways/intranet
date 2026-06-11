@@ -410,15 +410,17 @@ Decided 2026-06-11 to fix the "looks dull / giving greyscale" feedback. Principl
 
 Tints **derived from existing brand hues** (not new brand colours). Each pairs with a WCAG-AA foreground from the on-tint set below.
 
-| Token (proposed) | Hex | Role |
+Token names carry the `mcr-` prefix — bare ramp names (`blue-50` etc.) would shadow Tailwind's built-in palette, which the status badges (§1.7/§1.8) depend on. Tints of light-blue are named `light-blue-*` to stay unambiguous against `--mcr-dark-blue`.
+
+| Token | Hex | Role |
 |---|---|---|
-| yellow-50 | `#FEF7E0` | Kudos card fill |
-| yellow-border | `#F4E5AE` | Kudos inner box / chip border |
-| blue-50 | `#EAF6FC` | Poll pill bg, lightest result fill |
-| blue-100 | `#D3EDF8` | Poll result fill (2nd place) |
-| blue-200 | `#A7DCF2` | Poll result fill (lead) |
-| blue-border | `#BFE4F4` | Poll panel border |
-| orange-50 | `#FDF1E3` | Pinned pill bg |
+| `--mcr-yellow-50` | `#FEF7E0` | Kudos card fill |
+| `--mcr-yellow-border` | `#F4E5AE` | Kudos inner box / chip border |
+| `--mcr-light-blue-50` | `#EAF6FC` | Poll pill bg, lightest result fill |
+| `--mcr-light-blue-100` | `#D3EDF8` | Poll result fill (2nd place) |
+| `--mcr-light-blue-200` | `#A7DCF2` | Poll result fill (lead) |
+| `--mcr-light-blue-border` | `#BFE4F4` | Poll panel border |
+| `--mcr-orange-50` | `#FDF1E3` | Pinned pill bg |
 
 **AA text/icon-on-tint** (already WCAG-fixed brand foregrounds): teal `#2A6075`, green `#4A7A00`, orange `#9E5B00`, wine `#751B48`, light-blue `#1A6E8E`, poll-lead text `#15536b`, kudos-on-yellow `#6b5407`.
 
