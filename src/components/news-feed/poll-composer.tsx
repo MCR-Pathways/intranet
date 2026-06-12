@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, X, BarChart3, Info } from "lucide-react";
 
 export interface PollData {
   question: string;
@@ -107,14 +107,16 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
   );
 
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Poll</h4>
+    <div className="overflow-hidden rounded-[12px] border border-mcr-light-blue-border">
+      {/* Header strip — the sky-blue accent marking this as a poll panel. */}
+      <div className="flex items-center gap-2 bg-mcr-light-blue-50 px-4 py-2.5">
+        <BarChart3 className="h-4 w-4 text-icon-fg-light-blue" />
+        <span className="text-[13.5px] font-semibold text-icon-fg-light-blue">Poll</span>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          className="ml-auto text-icon-fg-light-blue hover:bg-mcr-light-blue-100 hover:text-icon-fg-light-blue"
           onClick={onRemove}
           disabled={disabled}
           aria-label="Remove poll"
@@ -124,112 +126,125 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
         </Button>
       </div>
 
-      {/* Question */}
-      <Input
-        placeholder="Ask a question..."
-        value={poll.question}
-        onChange={(e) => updateQuestion(e.target.value)}
-        maxLength={200}
-        disabled={disabled}
-        className="bg-card"
-      />
-
-      {/* Options */}
-      <div className="space-y-2">
-        {poll.options.map((option, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <Input
-              placeholder={`Option ${index + 1}`}
-              value={option}
-              onChange={(e) => updateOption(index, e.target.value)}
-              maxLength={MAX_OPTION_LENGTH}
-              disabled={disabled}
-              className="bg-card"
-            />
-            {poll.options.length > MIN_OPTIONS && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => removeOption(index)}
-                disabled={disabled}
-                aria-label={`Remove option ${index + 1}`}
-                title="Remove option"
-              >
-                <Trash2 />
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Add option button */}
-      {poll.options.length < MAX_OPTIONS && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={addOption}
+      <div className="space-y-3 p-4">
+        {/* Question */}
+        <Input
+          placeholder="Ask a question..."
+          value={poll.question}
+          onChange={(e) => updateQuestion(e.target.value)}
+          maxLength={200}
           disabled={disabled}
-        >
-          <Plus />
-          Add option
-        </Button>
-      )}
-
-      {/* Duration selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Poll duration:</span>
-        <Select value={poll.duration} onValueChange={updateDuration} disabled={disabled}>
-          <SelectTrigger className="w-36 h-8 bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DURATION_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Custom date + time picker (shown when "Custom" duration selected) */}
-      {poll.duration === "custom" && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Closes:</span>
-          <Input
-            type="date"
-            value={customDate}
-            onChange={(e) => handleCustomDateChange(e.target.value, customTime)}
-            min={minDate}
-            disabled={disabled}
-            className="h-8 w-auto bg-card"
-          />
-          <span className="text-sm text-muted-foreground">at</span>
-          <Input
-            type="time"
-            value={customTime}
-            onChange={(e) => handleCustomDateChange(customDate, e.target.value)}
-            disabled={disabled}
-            className="h-8 w-auto bg-card"
-          />
-        </div>
-      )}
-
-      {/* Multi-select toggle */}
-      <div className="flex items-center gap-2">
-        <Switch
-          id="poll-multi-select"
-          checked={poll.allowMultiple}
-          onCheckedChange={(checked: boolean) => onChange({ ...poll, allowMultiple: checked })}
-          disabled={disabled}
+          className="bg-card font-medium"
         />
-        <label htmlFor="poll-multi-select" className="text-sm text-muted-foreground cursor-pointer">
-          Allow multiple selections
-        </label>
+
+        {/* Options — numbered, each removable */}
+        <div className="space-y-2">
+          {poll.options.map((option, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="w-4 shrink-0 text-center text-xs font-bold text-muted-foreground">
+                {index + 1}
+              </span>
+              <Input
+                placeholder={`Option ${index + 1}`}
+                value={option}
+                onChange={(e) => updateOption(index, e.target.value)}
+                maxLength={MAX_OPTION_LENGTH}
+                disabled={disabled}
+                className="bg-card"
+              />
+              {poll.options.length > MIN_OPTIONS && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => removeOption(index)}
+                  disabled={disabled}
+                  aria-label={`Remove option ${index + 1}`}
+                  title="Remove option"
+                >
+                  <X />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add option — sky-blue text button */}
+        {poll.options.length < MAX_OPTIONS && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-icon-fg-light-blue hover:bg-mcr-light-blue-50 hover:text-icon-fg-light-blue"
+            onClick={addOption}
+            disabled={disabled}
+          >
+            <Plus />
+            Add option
+          </Button>
+        )}
+
+        {/* Duration selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Poll duration:</span>
+          <Select value={poll.duration} onValueChange={updateDuration} disabled={disabled}>
+            <SelectTrigger className="h-8 w-36 bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DURATION_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Custom date + time picker (shown when "Custom" duration selected) */}
+        {poll.duration === "custom" && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Closes:</span>
+            <Input
+              type="date"
+              aria-label="Poll closing date"
+              value={customDate}
+              onChange={(e) => handleCustomDateChange(e.target.value, customTime)}
+              min={minDate}
+              disabled={disabled}
+              className="h-8 w-auto bg-card"
+            />
+            <span className="text-sm text-muted-foreground">at</span>
+            <Input
+              type="time"
+              aria-label="Poll closing time"
+              value={customTime}
+              onChange={(e) => handleCustomDateChange(customDate, e.target.value)}
+              disabled={disabled}
+              className="h-8 w-auto bg-card"
+            />
+          </div>
+        )}
+
+        {/* Multi-select toggle */}
+        <div className="flex items-center gap-2">
+          <Switch
+            id="poll-multi-select"
+            checked={poll.allowMultiple}
+            onCheckedChange={(checked: boolean) => onChange({ ...poll, allowMultiple: checked })}
+            disabled={disabled}
+          />
+          <label htmlFor="poll-multi-select" className="cursor-pointer text-sm text-muted-foreground">
+            Allow multiple selections
+          </label>
+        </div>
+
+        {/* Sets the results-hidden expectation up front. */}
+        <div className="flex items-center gap-2 rounded-lg border border-mcr-light-blue-border bg-mcr-light-blue-50 px-3 py-2 text-[12.5px] text-icon-fg-light-blue">
+          <Info className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} aria-hidden="true" />
+          Results stay hidden until a person votes
+        </div>
       </div>
     </div>
   );

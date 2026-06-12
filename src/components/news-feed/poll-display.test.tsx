@@ -67,12 +67,13 @@ describe("PollDisplay", () => {
 
   it("shows total votes count", () => {
     render(<PollDisplay postId="p1" poll={makePoll()} />);
-    expect(screen.getByText("10 votes")).toBeInTheDocument();
+    // Pre-vote, the count leads the "results appear after you vote" meta line.
+    expect(screen.getByText(/10 votes so far/)).toBeInTheDocument();
   });
 
   it("shows singular 'vote' for 1 total vote", () => {
     render(<PollDisplay postId="p1" poll={makePoll({ total_votes: 1 })} />);
-    expect(screen.getByText("1 vote")).toBeInTheDocument();
+    expect(screen.getByText(/1 vote so far/)).toBeInTheDocument();
   });
 
   it("disables Vote button when no option selected", () => {
@@ -104,6 +105,63 @@ describe("PollDisplay", () => {
     expect(screen.getByText("70%")).toBeInTheDocument();
     // Vote button should not be present
     expect(screen.queryByText("Vote")).not.toBeInTheDocument();
+  });
+
+  // =============================================
+  // Lead emphasis (honest two-shade model)
+  // =============================================
+
+  const LEAD_CLASS = "text-mcr-light-blue-700";
+
+  it("emphasises only the front-runner", () => {
+    // Blue (7) leads Red (3); closed forces the results view.
+    render(<PollDisplay postId="p1" poll={makePoll({ is_closed: true })} />);
+    expect(screen.getByText("Blue")).toHaveClass(LEAD_CLASS);
+    expect(screen.getByText("Red")).not.toHaveClass(LEAD_CLASS);
+  });
+
+  it("treats tied front-runners as joint leaders", () => {
+    const poll = makePoll({
+      options: [
+        makeOption({ id: "opt-1", option_text: "Red", display_order: 1, vote_count: 5 }),
+        makeOption({ id: "opt-2", option_text: "Blue", display_order: 2, vote_count: 5 }),
+        makeOption({ id: "opt-3", option_text: "Green", display_order: 3, vote_count: 2 }),
+      ],
+      total_votes: 12,
+      is_closed: true,
+    });
+    render(<PollDisplay postId="p1" poll={poll} />);
+    expect(screen.getByText("Red")).toHaveClass(LEAD_CLASS);
+    expect(screen.getByText("Blue")).toHaveClass(LEAD_CLASS);
+    expect(screen.getByText("Green")).not.toHaveClass(LEAD_CLASS);
+  });
+
+  it("emphasises nothing on a dead heat", () => {
+    const poll = makePoll({
+      options: [
+        makeOption({ id: "opt-1", option_text: "Red", display_order: 1, vote_count: 5 }),
+        makeOption({ id: "opt-2", option_text: "Blue", display_order: 2, vote_count: 5 }),
+      ],
+      total_votes: 10,
+      is_closed: true,
+    });
+    render(<PollDisplay postId="p1" poll={poll} />);
+    expect(screen.getByText("Red")).not.toHaveClass(LEAD_CLASS);
+    expect(screen.getByText("Blue")).not.toHaveClass(LEAD_CLASS);
+  });
+
+  it("emphasises nothing when no votes are in yet", () => {
+    const poll = makePoll({
+      options: [
+        makeOption({ id: "opt-1", option_text: "Red", display_order: 1, vote_count: 0 }),
+        makeOption({ id: "opt-2", option_text: "Blue", display_order: 2, vote_count: 0 }),
+      ],
+      total_votes: 0,
+      is_closed: true,
+    });
+    render(<PollDisplay postId="p1" poll={poll} />);
+    expect(screen.getByText("Red")).not.toHaveClass(LEAD_CLASS);
+    expect(screen.getByText("Blue")).not.toHaveClass(LEAD_CLASS);
   });
 
   it("shows 'Change vote' button when user has voted and poll is open", () => {
@@ -159,7 +217,7 @@ describe("PollDisplay", () => {
   it("shows 0 votes for zero-vote poll", () => {
     const poll = makePoll({ total_votes: 0 });
     render(<PollDisplay postId="p1" poll={poll} />);
-    expect(screen.getByText("0 votes")).toBeInTheDocument();
+    expect(screen.getByText(/0 votes so far/)).toBeInTheDocument();
   });
 
   // =============================================

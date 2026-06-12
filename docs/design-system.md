@@ -418,9 +418,9 @@ Token names carry the `mcr-` prefix — bare ramp names (`blue-50` etc.) would s
 |---|---|---|
 | `--mcr-yellow-50` | `#FEF7E0` | Kudos card fill |
 | `--mcr-yellow-border` | `#F4E5AE` | Kudos inner box / chip border |
-| `--mcr-light-blue-50` | `#EAF6FC` | Poll pill bg, lightest result fill |
-| `--mcr-light-blue-100` | `#D3EDF8` | Poll result fill (2nd place) |
-| `--mcr-light-blue-200` | `#A7DCF2` | Poll result fill (lead) |
+| `--mcr-light-blue-50` | `#EAF6FC` | Poll pill bg, trailing result fill (every non-leader) |
+| `--mcr-light-blue-100` | `#D3EDF8` | Poll composer control hover |
+| `--mcr-light-blue-200` | `#A7DCF2` | Poll result fill (front-runner) |
 | `--mcr-light-blue-border` | `#BFE4F4` | Poll panel border |
 | `--mcr-orange-50` | `#FDF1E3` | Pinned pill bg |
 
@@ -434,7 +434,7 @@ Orange and light-blue appear nowhere else in the feed, so the accent alone is th
 |---|---|
 | Ordinary | none — plain white card (the baseline the accents read against) |
 | Pinned | orange `#F09336` 4px left spine + "Pinned" pill (bg `#FDF1E3`, text `#9E5B00`) |
-| Poll | light-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills graded by rank (`#A7DCF2` lead, `#D3EDF8` 2nd, `#EAF6FC` 3rd+); lead text `#15536B` |
+| Poll | light-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills are two-shade — the front-runner(s) take the lead fill `#A7DCF2` with `#15536B` text, every other option shares the flat `#EAF6FC`. A dead heat (all level, or no votes yet) emphasises nothing. Bar width always carries the exact share |
 | Kudos | pale-yellow card `#FEF7E0` + 1.5px `#F8D45B` border (the card is the accent); white message box, `#F4E5AE` border |
 | Weekly round-up | solid navy `#213350` block (not a card); yellow `#F8D45B` "WEEK n" tag + CTA |
 
@@ -445,5 +445,6 @@ Collision rules: pin wins the spine, the type keeps its pill (a pinned poll is o
 ### 8.4 Rules
 
 - Accents reuse existing brand tokens (`--mcr-orange`, `--mcr-light-blue`, `--mcr-yellow`, `--mcr-dark-blue`); only the surface tints in §8.2 are new, and they are tints of those hues, not new brand colours.
+- Poll result shading is honest, not ordinal: the dark lead fill marks a genuine front-runner — someone strictly ahead of at least one other option — so tied leaders share it and a dead heat shows none. An earlier draft graded 1st/2nd/3rd by finishing place, which painted near-ties (34/33/33) as a confident podium and faked a winner on an exact 50/50. The bar width carries the precise proportion; the shade only answers "did anything actually win?".
 - Light mode only; revisit if a theme switcher ships.
 - The ivory background is the one place the "brand colour is an accent, not a foundation" doctrine (§3) bends — a single deliberate exception, and a warm neutral rather than a saturated wash (cf. §3.6 #4).
