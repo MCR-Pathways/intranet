@@ -17,8 +17,10 @@ describe("WeeklyRoundupBanner", () => {
     expect(screen.getByText("Your Weekly Round Up")).toBeInTheDocument();
     expect(screen.getByText("8–12 Jun")).toBeInTheDocument();
     expect(screen.getByText(/New mentor cohort/)).toBeInTheDocument();
-    const cta = screen.getByRole("link", { name: /read the round up/i });
-    expect(cta).toHaveAttribute("href", "/intranet/weekly-roundup/abc-123");
+    // The whole banner is the link (large hit target); the CTA is a span.
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/intranet/weekly-roundup/abc-123");
+    expect(screen.getByText(/read the round up/i)).toBeInTheDocument();
   });
 
   it("omits the summary line when there is no summary", () => {

@@ -25,8 +25,16 @@ export function WeeklyRoundupBanner({ roundup }: WeeklyRoundupBannerProps) {
   const week = getISOWeekNumber(roundup.week_start);
   const covered = formatDateRange(roundup.week_start, roundup.week_end);
 
+  // The whole banner is the link, for a large hit target (restores the prior
+  // card-link behaviour). The CTA below is a styled, non-interactive span — a
+  // nested link would be invalid HTML — and brightens on group-hover. Focus
+  // uses the global *:focus-visible navy outline, which reads fine because the
+  // focused target is the navy block sitting on the ivory page.
   return (
-    <div className="relative flex items-center gap-4 overflow-hidden rounded-[14px] bg-mcr-dark-blue px-5 py-4 shadow-[0_1px_3px_rgba(33,51,80,0.07)]">
+    <Link
+      href={`/intranet/weekly-roundup/${roundup.id}`}
+      className="group relative flex items-center gap-4 overflow-hidden rounded-[14px] bg-mcr-dark-blue px-5 py-4 shadow-[0_1px_3px_rgba(33,51,80,0.07)]"
+    >
       {/* Quotemark line-art — bleeds off the bottom edge, behind the content. */}
       <svg
         viewBox="0 0 52 45"
@@ -69,18 +77,12 @@ export function WeeklyRoundupBanner({ roundup }: WeeklyRoundupBannerProps) {
         )}
       </div>
 
-      {/* Bespoke yellow-on-navy banner CTA. A styled Link, not the Button
-          component: there's no yellow Button variant, and overriding one would
-          fight the variant system. Focus uses the global *:focus-visible
-          outline, recoloured white because --ring is navy and would vanish on
-          this navy block. */}
-      <Link
-        href={`/intranet/weekly-roundup/${roundup.id}`}
-        className="relative inline-flex shrink-0 items-center gap-1.5 rounded-[9px] bg-mcr-yellow px-4 py-2 text-[13.5px] font-bold text-mcr-dark-blue transition-colors hover:bg-mcr-yellow/90 motion-safe:active:scale-95 focus-visible:outline-white"
-      >
+      {/* CTA — a styled span (the parent Link is the interactive element);
+          brightens when any part of the banner is hovered. */}
+      <span className="relative inline-flex shrink-0 items-center gap-1.5 rounded-[9px] bg-mcr-yellow px-4 py-2 text-[13.5px] font-bold text-mcr-dark-blue transition-colors group-hover:bg-mcr-yellow/90">
         Read the round up
         <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} aria-hidden="true" />
-      </Link>
-    </div>
+      </span>
+    </Link>
   );
 }
