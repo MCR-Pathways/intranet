@@ -16,7 +16,10 @@ export function postSpineClass({
   isKudos: boolean;
   isPoll: boolean;
 }): string | null {
-  if (isPinned && !isKudos) return "border-l-4 border-l-mcr-orange";
-  if (isPoll && !isPinned) return "border-l-4 border-l-mcr-light-blue";
+  // Kudos never takes a left spine — it carries its yellow top strip instead.
+  if (isKudos) return null;
+  // Then pin wins the spine over poll.
+  if (isPinned) return "border-l-4 border-l-mcr-orange";
+  if (isPoll) return "border-l-4 border-l-mcr-light-blue";
   return null;
 }

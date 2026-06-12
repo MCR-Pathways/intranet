@@ -28,4 +28,11 @@ describe("postSpineClass (design-system §8.3 collision rules)", () => {
   it("an unpinned kudos has no spine", () => {
     expect(postSpineClass({ isPinned: false, isKudos: true, isPoll: false })).toBeNull();
   });
+
+  it("never gives a spine to a kudos, even if it also carries a poll", () => {
+    // Kudos and poll are different post types and shouldn't co-occur, but the
+    // rule (kudos takes no spine) must hold regardless of the other flags.
+    expect(postSpineClass({ isPinned: false, isKudos: true, isPoll: true })).toBeNull();
+    expect(postSpineClass({ isPinned: true, isKudos: true, isPoll: true })).toBeNull();
+  });
 });
