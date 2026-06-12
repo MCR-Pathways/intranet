@@ -594,104 +594,123 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ## Architecture Decision Records
 
-### ADR-001: Supabase over custom backend
+> **Reconciled 2026-06-11 against live code.** This is the single canonical ADR log; the project board regenerates from it. The board's prior 1-10 and this file's prior 1-12 had drifted in numbering and content. The merge below was verified against the codebase by five read-only review passes; two claims were corrected against reality (enums in ADR-008, storage in ADR-006) and the editor decision (ADR-010) rewritten to its real state plus the migration direction.
 
-**Context:** Needed a backend with auth, database, storage, and RLS without building from scratch.
+### ADR-001: Next.js App Router on Vercel with Supabase Postgres
 
-**Decision:** Use Supabase (hosted PostgreSQL with built-in auth, storage, and Row Level Security).
+**Context:** Needed auth, database, storage, and RLS without building a backend from scratch, on a managed platform.
 
-**Consequences:** Faster development, built-in auth flows (OAuth + magic links), RLS for security. Trade-off: vendor lock-in on Supabase-specific features (RLS policies, auth triggers, storage buckets).
+**Decision:** Next.js 16 App Router (route groups under `src/app/`) on Vercel, with Supabase-hosted PostgreSQL as the backend (auth, database, storage, RLS).
 
-### ADR-002: Server Actions over API routes
+**Consequences:** Fast delivery, built-in OAuth + email OTP, RLS for security. Trade-off: vendor lock-in on Supabase-specific features (RLS, auth triggers, Vault, pg_cron).
 
-**Context:** Need a pattern for data mutations from the frontend.
+### ADR-002: Server-actions-only mutation path
 
-**Decision:** Use Next.js Server Actions for all mutations. API routes only for webhooks and external integrations.
+**Context:** Needed one reliable mutation pattern. Client-side Supabase writes hang indefinitely in this app.
 
-**Consequences:** Type-safe mutations, no REST API layer to maintain, automatic revalidation. Trade-off: all business logic lives in Next.js — harder to extract into a separate backend later.
+**Decision:** All database writes go through Next.js Server Actions (the server-side Supabase client). The browser client is used only for realtime subscriptions. API routes are reserved for webhooks, cron, file proxies, and token-authenticated endpoints (kiosk).
 
-### ADR-003: TEXT + CHECK over PostgreSQL ENUMs
+**Consequences:** Type-safe, reliable mutations with automatic revalidation. Trade-off: every mutation needs a Server Action; all logic lives in Next.js, harder to extract later.
 
-**Context:** ENUMs caused transaction failures when the type didn't exist during trigger execution and are difficult to modify in production.
+### ADR-003: Proxy auth from JWT app_metadata claims
 
-**Decision:** Use TEXT columns with CHECK constraints instead of ENUMs everywhere.
+**Context:** The proxy was querying the DB on every request to check user type and induction status.
 
-**Consequences:** Easier schema evolution, no migration issues with enum types. Trade-off: slightly less strict typing at the DB level.
+**Decision:** Store frequently-checked fields (user_type, status, induction, is_external, admin flags) in `auth.users.raw_app_meta_data` via a profiles trigger; the proxy reads them from JWT claims, with a DB fallback for pre-migration sessions.
 
-### ADR-004: Tiptap for rich text
+**Consequences:** Proxy is DB-free in the common path. Trade-off: claims can be stale until the next token refresh.
 
-**Context:** News feed needed rich text (bold, italic, links, lists) with @mention support.
+### ADR-004: Domain-restricted auth with internal/external tiers
 
-**Decision:** Use Tiptap editor with `content_json` (JSONB) storage and plain-text fallback for backward compatibility.
+**Context:** The intranet serves internal MCR staff and external school-employed Pathways Coordinators, with different module access.
 
-**Consequences:** Full rich text support with mention notifications. `TiptapRenderer` handles rendering stored JSON. Trade-off: Tiptap is a heavier dependency than a simple textarea.
+**Decision:** Sign-in restricted to `@mcrpathways.org` (enforced in `handle_new_user()`). Module access is gated in the proxy by `user_type` + `is_external`: internal staff get everything; external staff get Learning + Intranet; non-staff get Intranet only after induction.
 
-### ADR-005: JWT app_metadata for auth claims
+**Consequences:** One auth model covers both audiences. Trade-off: access rules live in the proxy and must stay in sync with sidebar gating.
 
-**Context:** Proxy was making a DB query on every request to check user type and induction status.
+### ADR-005: Typed Supabase clients from generated types
 
-**Decision:** Store frequently-checked fields in `auth.users.raw_app_meta_data` via a DB trigger on profiles. Proxy reads from JWT claims (zero DB queries).
+**Context:** Hand-typed queries drift from the schema and miss columns silently.
 
-**Consequences:** Significant performance improvement — proxy is now DB-free in the common path. Trade-off: JWT claims can be stale until the next token refresh. DB fallback exists for pre-migration sessions.
+**Decision:** All three Supabase clients (server, browser, service) pass the `Database` generic from the generated `src/types/database.types.ts` (70+ tables) for compile-time query checking.
 
-### ADR-006: TanStack Table + Shadcn for data tables
+**Consequences:** Compile-time safety on selects/inserts/updates. Trade-off: types must be regenerated after migrations, and prod migration parity confirmed first (see tech debt).
 
-**Context:** 17 tables across the app with inconsistent sorting, filtering, and pagination.
+### ADR-006: Google Drive as the document and media store (migration in progress)
 
-**Decision:** Standardise on `@tanstack/react-table` (headless) + Shadcn `<Table>` primitives. Shared `DataTable` component with `DataTableColumnHeader` and `DataTablePagination`.
+**Context:** MCR runs on Google Workspace. Storing documents and media in Drive keeps content where staff already work and lets Drive's own viewers and permissions do the heavy lifting. The direction is to move *all* document and media storage off Supabase Storage onto Drive.
 
-**Consequences:** Consistent UX across all tables, built-in sorting/filtering/pagination. All 21 data tables now use one visual pattern (`bg-card rounded-xl border border-border shadow-sm overflow-clip`). 4 content rendering tables (Google Doc, Tiptap, Plate) intentionally excluded.
+**Decision:** Google Drive is the target store for documents and uploaded media. Done so far: Google-Doc articles (linked + webhook-synced), news-feed media (the `post-attachments` Supabase bucket was retired in migration 00087), and resources media uploads.
 
-### ADR-007: CSP-compliant image proxying
+**Consequences:** Content lives where staff edit it; Drive viewers handle previews. Migration is incomplete — Learning media (`lesson-images`, `course-videos`) and HR documents (`hr-documents`) are still on Supabase Storage, tracked as tech debt to move to Drive. Trade-off: dependency on the Drive API (watch-channel renewal cron), service-account setup.
+
+### ADR-007: Algolia search, Resend email, Supabase pg_cron scheduling
+
+**Context:** Needed section-level search, transactional email, and scheduled jobs.
+
+**Decision:** Algolia for search — two indices (`resources_articles` at section level for deep-linking, `learning_courses` at course level), client-side React InstantSearch, server-side indexing on publish/link/sync/unlink. Resend for transactional email (FROM `noreply@mcrpathways.co.uk`, the verified domain). Supabase `pg_cron` + `pg_net` for all scheduled jobs under one scheduler — HTTP routes under `/api/cron/*` authenticated with `CRON_SECRET`, plus internal DB-function jobs, with a `cron_runs` audit table.
+
+**Consequences:** Strong search UX, reliable email, one scheduler. Trade-off: external service dependencies (Algolia, Resend), Vault-stored secrets for cron.
+
+### ADR-008: TEXT + CHECK for discriminators (not Postgres ENUMs)
+
+**Context:** ENUMs caused transaction failures when a type didn't exist during trigger execution and are awkward to extend in production.
+
+**Decision:** New discriminator columns use TEXT + CHECK constraints (e.g. `post_type`, `user_type`, `status`, sign-in `location`, notification `source_kind`).
+
+**Consequences:** Easy schema evolution for new columns. Caveat (verified): five enum types from the original schema predate this rule and are still live — `leave_type`, `leave_status`, `work_location`, `course_category`, `enrolment_status` (created American in migration 00004, renamed British in 00024). Converting them to TEXT + CHECK is optional cleanup, not yet done.
+
+### ADR-009: RLS with effective-role RPCs and decoupled capability flags
+
+**Context:** Authorisation must be enforced at the database, and capability (what you can *do*) must not be conflated with data-access tier (what you can *see*).
+
+**Decision:** RLS policies use ownership checks (`auth.uid()`, EXISTS subqueries) for mutations; SELECT on org-reference tables (teams, profiles, holidays) is intentionally readable to authenticated users. Effective-role RPCs (`is_hr_admin_effective()` etc.) check `status = 'active'` + the flag. Capability flags (`is_hr_admin`, `is_ld_admin`, `is_systems_admin`, `is_content_editor`, `is_line_manager`) are boolean profile columns, decoupled from `is_external`/department, grantable only by HR/systems admins via a `protect_admin_fields()` trigger. All SECURITY DEFINER functions set `search_path = ''`.
+
+**Consequences:** Defence-in-depth; capability cleanly separated from data tier. (The two `WITH CHECK (true)` INSERT holes on `email_notifications` and `certificates` found in the 2026-06-10 review have been closed.)
+
+### ADR-010: Plate as the target rich-text stack, replacing Tiptap where applicable
+
+**Context:** The app grew two rich-text stacks: Tiptap (news-feed, learning lessons) and Plate (Resources native articles). Two editors and four renderers duplicate work and drift. The direction is to standardise on Plate where applicable.
+
+**Decision:** Plate is the target editor. Current state (verified): Resources native articles use Plate (JSON via PlateStatic); Resources also has Google-Doc-linked articles (Drive-synced HTML → ArticleRenderer) and component-registry articles. Tiptap still powers news-feed posts/comments and learning lessons (`content_json`, TiptapRenderer / LessonRenderer).
+
+**Consequences:** Clear target stack. Migration incomplete — the Tiptap surfaces (news-feed, learning lessons) are tracked as tech debt to move to Plate where applicable. Callout styling is not yet unified (`CALLOUT_CONFIG` drives Tiptap + Google-Doc callouts; Plate uses `@platejs/callout` defaults), so the two can drift until consolidated on Plate. This supersedes the earlier "Google Docs over Tiptap for Resources" framing (which omitted native Plate and component articles) and folds in the historical dialog→full-page editor decision (`article-form-dialog.tsx` was deleted; articles use full-page `/new` and `/edit` routes).
+
+### ADR-011: TanStack Table + Shadcn for data tables
+
+**Context:** Tables across the app had inconsistent sorting, filtering, and pagination.
+
+**Decision:** Standardise on `@tanstack/react-table` (headless) + Shadcn `<Table>` primitives via a shared `DataTable` (with `DataTableColumnHeader` + `DataTablePagination`); uniform wrapper `bg-card rounded-xl border border-border shadow-sm overflow-clip`. Lightweight read-only tables reuse the same wrapper.
+
+**Consequences:** Consistent table UX (~24 tables on the pattern). Content-rendering tables (Google Doc / Tiptap / Plate) are intentionally excluded.
+
+### ADR-012: CSP-compliant image proxying
 
 **Context:** Enforcing `img-src 'self'` CSP broke external images (Google profile photos, OG preview images).
 
-**Decision:** Proxy external images through `/api/og-image` endpoint. New records store proxied URLs at creation; old records get render-time proxy via `proxyImageUrl()`.
+**Decision:** Proxy external images through `/api/og-image` (protocol-validated, rate-limited, SSRF-guarded). New records store proxied URLs at creation; old records get render-time proxy via `proxyImageUrl()`.
 
-**Consequences:** Full CSP compliance. Trade-off: extra request hop for images, 24hr cache needed to manage load.
+**Consequences:** Full CSP compliance. Trade-off: extra request hop; cache needed to manage load.
 
-### ADR-008: No browser Supabase mutations
+### ADR-013: Component pages via registry pattern
 
-**Context:** Client-side Supabase operations (inserts, updates, auth calls) hang indefinitely in this application.
+**Context:** Some resources (e.g. org chart) are interactive React components, not documents.
 
-**Decision:** All database writes and auth operations must go through Server Actions using the server-side Supabase client. The browser client is only used for real-time subscriptions.
+**Decision:** Component registry (`src/lib/resource-components.ts`) maps `component_name` → `{ component, getData }`. Editors manage metadata; developers register the component.
 
-**Consequences:** Reliable mutations, consistent auth handling. Trade-off: every mutation requires a Server Action, even simple ones.
+**Consequences:** Developers own the code, editors own the metadata. Org chart was the first component page (relocated from `/hr/org-chart`). Trade-off: new component pages need a code change + migration.
 
-### ADR-009: Full-page editor over dialog for articles (superseded by ADR-010)
+### ADR-014: Home-feed colour hierarchy (ivory canvas + per-post-type accents)
 
-> **Note:** This ADR was superseded by ADR-010. The Tiptap full-page editor was replaced by Google Docs integration in the Resources Redesign (PR #157).
+**Context:** Staff feedback was that the app "looks dull / giving greyscale". The feed renders every post type on the same white card against a cool-grey `#F2F4F7` background, so news, kudos, polls, pinned items, and the weekly round-up are indistinguishable at a glance. Two earlier attempts were shelved: a module-identity colour system (per-module sidebar/header hues) and a contractor "Combined Feed" proposal whose off-white background was rejected in April 2026 (the background change was a hard "no" at the time). A new design handoff supersedes both.
 
+**Decision:** Adopt the handoff as the canonical home-feed design.
+- Promote ivory `#FDF9EA` (the existing `--mcr-ivory` token) to `--background`, uniform across every route. This reverses the April 2026 background decision — made consciously here, not by drift.
+- One accent per post type, reusing existing brand hues per their documented roles: pinned = orange `#F09336` 4px left spine + "Pinned" pill; poll = light-blue `#5BC6E9` left spine + "Poll" pill + rank-graded result fills; kudos = pale-yellow `#FEF7E0` card + 1.5px `#F8D45B` border; weekly round-up = solid navy `#213350` block. Ordinary posts stay plain white as the baseline the accents read against.
+- Add a surface-tint ramp (`#FEF7E0`, `#EAF6FC`, `#A7DCF2`, `#D3EDF8`, `#BFE4F4`, `#FDF1E3`, `#F4E5AE`) as tints derived from existing brand hues, not as new brand colours. Light-mode only; documented in `docs/design-system.md`.
+- Cards stay pure white; `bg-background` surfaces that must read as elevated migrate to `bg-card`.
 
-**Context:** The original Resources module used a Dialog (modal) for creating/editing articles. Research across Notion, Confluence, GitBook, Guru, Slite, BreatheHR, CharlieHR, BambooHR, Personio, and HiBob confirmed every serious knowledge base platform uses a full-page editor, not a modal.
-
-**Decision:** Replace the article form dialog with dedicated full-page editor routes (`/new` and `/edit`). Use a fixed toolbar (Confluence-style) rather than bubble menu or slash commands, since HR admins are not tech-savvy. Reserve "new" and "edit" as forbidden article slugs to prevent route collisions.
-
-**Consequences:** Better editing experience with more screen space, Confluence-familiar toolbar for non-technical users. Trade-off: two new route files instead of a single dialog component. The dialog approach was deleted entirely (`article-form-dialog.tsx`).
-
-### ADR-010: Google Docs integration over Tiptap editor for Resources
-
-**Context:** The Tiptap article editor required content editors to learn a new tool. MCR Pathways already uses Google Workspace — staff create documents in Google Docs. Research across Guru, Tettra, Slite, and SharePoint confirmed that convert-and-store (export HTML from Google Docs) is the industry standard for organisations already on Google Workspace.
-
-**Decision:** Replace the Tiptap article editor with Google Docs integration. Content editors link existing Google Docs, which are synced via Drive API webhooks. HTML is sanitised, cached in the DB (`synced_html`), and rendered with Tailwind `prose` classes. Editing stays in Google Docs — the intranet is read-only with live updates via Supabase Realtime.
-
-**Consequences:** Zero learning curve for content editors (they already use Google Docs). Live sync via webhooks (~4-10s). Trade-offs: dependency on Google Drive API (watch channels need a daily renewal cron; see migration 00083), base64 images in exported HTML can make large docs heavy, requires Google service account setup.
-
-### ADR-011: Algolia over PostgreSQL FTS for search
-
-**Context:** Manager directive (2026-03-18). PostgreSQL full-text search works but lacks section-level results and deep linking. Algolia provides instant search with section-level indexing (DocSearch pattern).
-
-**Decision:** Use Algolia for Resources search. Section-level indexing (heading + content pairs) enables deep linking to specific sections within articles. Client-side React InstantSearch for the search UI. Indexing happens server-side during link/sync/unlink operations.
-
-**Consequences:** Superior search UX with section-level results and deep links. Trade-off: external service dependency, requires env vars for API keys, free tier sufficient for current scale.
-
-### ADR-012: Component pages via registry pattern
-
-**Context:** Some resources (e.g. org chart) are interactive React components, not documents. Needed a way for developers to create component pages that content editors can manage (metadata, category, visibility).
-
-**Decision:** Component registry pattern (`src/lib/resource-components.ts`). Maps `component_name` → `{ component, getData }`. Content editors see component pages in the tree and can manage metadata. Developers create the React component + register it.
-
-**Consequences:** Clean separation: developers own the code, editors own the metadata. Org chart relocated from `/hr/org-chart` to Resources as the first component page. Trade-off: adding new component pages requires a code change + migration.
+**Consequences:** The feed differentiates post types at a glance without colour-coding data, staying inside the "brand colour is an accent, not a foundation" doctrine (design-system §3) for everything except the background, which is the one deliberate exception. Knock-on: a `bg-background` → `bg-card` sweep (41 sites / 30 files). The tint ramp must be reconciled against the live `--mcr-*` tokens before code — the Green token alone has three values in circulation (`#B5E046` live, `#22A34B` on the project board's Brand tab, `#4B8F4B` a rejected proposal). Dark mode is unaffected for now (no theme switcher is wired) but the new tints are light-only, and that limit is recorded. Supersedes the module-identity colour work and the Direction-C kudos mockup.
 
 ---
 
@@ -701,6 +720,13 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 - **No error monitoring** — `src/lib/logger.ts` is a console stub. No Sentry/Datadog integration.
 - **No server action rate limiting** — API routes are rate-limited (PR #163), but server actions are not. Deferred to hardening phase (see `memory/rate-limiting.md`).
+
+### Migrations in progress (directional)
+
+Deliberate cross-cutting migrations toward a single target, partially done.
+
+- **Supabase Storage → Google Drive** (ADR-006). Drive is the target store for all media. Still on Supabase Storage: Learning media (`lesson-images`, `course-videos`) and HR documents (`hr-documents`). News-feed media (`post-attachments`) already moved in migration 00087. Migrate the remaining buckets to Drive and retire them.
+- **Tiptap → Plate** (ADR-010). Plate is the target editor where applicable. Still on Tiptap: news-feed posts/comments and learning lessons (`content_json`, `TiptapRenderer` / `LessonRenderer`). Migrate where it makes sense, then unify callout styling on Plate (retire the `CALLOUT_CONFIG` / `@platejs/callout` split) and collapse the four renderers.
 
 ### Medium Priority
 
