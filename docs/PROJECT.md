@@ -658,7 +658,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 **Decision:** New discriminator columns use TEXT + CHECK constraints (e.g. `post_type`, `user_type`, `status`, sign-in `location`, notification `source_kind`).
 
-**Consequences:** Easy schema evolution for new columns. Caveat (verified): five enum types from the original schema predate this rule and are still live — `leave_type`, `leave_status`, `work_location`, `course_category`, `enrollment_status`. Converting them to TEXT + CHECK is optional cleanup, not yet done.
+**Consequences:** Easy schema evolution for new columns. Caveat (verified): five enum types from the original schema predate this rule and are still live — `leave_type`, `leave_status`, `work_location`, `course_category`, `enrolment_status` (created American in migration 00004, renamed British in 00024). Converting them to TEXT + CHECK is optional cleanup, not yet done.
 
 ### ADR-009: RLS with effective-role RPCs and decoupled capability flags
 

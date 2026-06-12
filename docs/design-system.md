@@ -374,6 +374,8 @@ Email notifications use colour-coded header bars for instant recognition. Each e
 
 Colours map to intent: Wine = social, Teal = assignment, Pink = urgency, Dark Blue = HR, Orange = compliance, Green = celebration. All CTA buttons use Dark Blue regardless of header colour.
 
+The email green deliberately remains `#B5E046` while the app green moved to `#22a34b` (§1.1): emails are a separately themed surface with hardcoded hexes, and the darker green changes these three types' brightness class — likely flipping them from Group B (dark logo) to Group A (white logo). That regrouping is a tracked follow-up decision, not a silent bundle; this table documents what the emails ship today.
+
 Logo variants: `public/mcr-logo-email.png` (dark, Group B) and `public/mcr-logo-email-white.png` (white, Group A). Both displayed at 120x36.
 
 When adding a new email type to `EMAIL_TYPES` in `email-queue.ts`, also add it to `EMAIL_THEME_CONFIG` in `src/lib/email.ts`. Missing entries fall back to Dark Blue and log a warning.
@@ -410,7 +412,7 @@ Decided 2026-06-11 to fix the "looks dull / giving greyscale" feedback. Principl
 
 Tints **derived from existing brand hues** (not new brand colours). Each pairs with a WCAG-AA foreground from the on-tint set below.
 
-Token names carry the `mcr-` prefix — bare ramp names (`blue-50` etc.) would shadow Tailwind's built-in palette, which the status badges (§1.7/§1.8) depend on. Tints of light-blue are named `light-blue-*` to stay unambiguous against `--mcr-dark-blue`.
+Token names carry the `mcr-` prefix — bare ramp names (`blue-50` etc.) would shadow Tailwind's built-in palette, which the status badges (§1.7/§1.8) depend on. Tints of light-blue are named `light-blue-*` to stay unambiguous against `--mcr-dark-blue`. The scheme deliberately mixes numeric steps and a functional suffix: numbers (`-50/-100/-200`) are fill-ramp steps; `-border` marks a border tint that sits between ramp steps in lightness (`#BFE4F4`, `#F4E5AE`) — forcing it into a fake `-150` slot would imply a precision the ramp doesn't have.
 
 | Token | Hex | Role |
 |---|---|---|
