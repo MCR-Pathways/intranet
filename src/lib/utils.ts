@@ -81,6 +81,44 @@ export function formatShortDate(date: Date): string {
 }
 
 /**
+ * ISO 8601 week number (1-53) for a date-only string like "2026-06-08".
+ * Parsed as UTC so a date-only value never drifts a week across timezones;
+ * ISO weeks start Monday and week 1 is the week containing the year's first
+ * Thursday. Used for the weekly round-up banner's "Week N" tag.
+ */
+export function getISOWeekNumber(dateString: string): number {
+  const d = new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return 0; // non-date string → no "Week NaN"
+  const dayNum = d.getUTCDay() || 7; // Sunday (0) counts as 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // shift to the week's Thursday
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/**
+ * Formats an inclusive date range from two date-only strings ("2026-06-08")
+ * for the round-up's "covered days" line. Parsed at UTC noon so a date-only
+ * value never shifts. Collapses a shared month ("8–12 Jun"), and shows years
+ * only when the range straddles a year boundary ("29 Dec 2025 – 2 Jan 2026"),
+ * which keeps it unambiguous across New Year.
+ */
+export function formatDateRange(startDate: string, endDate: string): string {
+  const start = new Date(`${startDate}T12:00:00Z`);
+  const end = new Date(`${endDate}T12:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return ""; // non-date input → empty, not "Invalid Date"
+  const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", timeZone: "UTC" });
+  const month = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+
+  if (start.getUTCFullYear() !== end.getUTCFullYear()) {
+    return `${day(start)} ${month(start)} ${start.getUTCFullYear()} – ${day(end)} ${month(end)} ${end.getUTCFullYear()}`;
+  }
+  if (start.getUTCMonth() !== end.getUTCMonth()) {
+    return `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
+  }
+  return `${day(start)}–${day(end)} ${month(start)}`;
+}
+
+/**
  * Formats a byte count into a human-readable file size string.
  */
 export function formatFileSize(bytes: number): string {

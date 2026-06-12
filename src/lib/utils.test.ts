@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
+import { cn, timeAgo, formatDate, formatShortDate, formatFileSize, formatDuration, getInitials, getAvatarColour, filterAvatarUrl, getISOWeekNumber, formatDateRange } from "@/lib/utils";
 
 describe("cn utility", () => {
   it("merges class names", () => {
@@ -88,6 +88,57 @@ describe("formatShortDate", () => {
   it("handles single-digit days", () => {
     const date = new Date("2026-01-05T00:00:00");
     expect(formatShortDate(date)).toBe("5 Jan");
+  });
+});
+
+describe("getISOWeekNumber", () => {
+  it("returns week 1 for the year's first Thursday (2026-01-01)", () => {
+    expect(getISOWeekNumber("2026-01-01")).toBe(1);
+  });
+
+  it("counts a late-December date into the next ISO year's week 1 (2025-12-29)", () => {
+    // Monday 29 Dec 2025 falls in the week of Thursday 1 Jan 2026 → 2026-W01.
+    expect(getISOWeekNumber("2025-12-29")).toBe(1);
+  });
+
+  it("matches the handoff mock: 8 June 2026 is week 24", () => {
+    expect(getISOWeekNumber("2026-06-08")).toBe(24);
+  });
+
+  it("returns week 53 for a 53-week year's final Thursday (2026-12-31)", () => {
+    expect(getISOWeekNumber("2026-12-31")).toBe(53);
+  });
+
+  it("does not drift across timezones for a date-only string", () => {
+    // Parsed as UTC midnight, so the result is stable regardless of local TZ.
+    expect(getISOWeekNumber("2026-06-08")).toBe(24);
+  });
+
+  it("returns 0 for a non-date string instead of NaN", () => {
+    expect(getISOWeekNumber("not-a-date")).toBe(0);
+  });
+});
+
+describe("formatDateRange", () => {
+  it("collapses a shared month (8–12 Jun)", () => {
+    expect(formatDateRange("2026-06-08", "2026-06-12")).toBe("8–12 Jun");
+  });
+
+  it("spans two months within a year (29 Jun – 3 Jul)", () => {
+    expect(formatDateRange("2026-06-29", "2026-07-03")).toBe("29 Jun – 3 Jul");
+  });
+
+  it("shows both years across a New Year boundary (the rollover case)", () => {
+    expect(formatDateRange("2025-12-29", "2026-01-02")).toBe("29 Dec 2025 – 2 Jan 2026");
+  });
+
+  it("is timezone-stable for date-only strings", () => {
+    expect(formatDateRange("2026-06-08", "2026-06-12")).toBe("8–12 Jun");
+  });
+
+  it("returns an empty string for an unparseable input", () => {
+    expect(formatDateRange("not-a-date", "2026-06-12")).toBe("");
+    expect(formatDateRange("2026-06-08", "")).toBe("");
   });
 });
 
