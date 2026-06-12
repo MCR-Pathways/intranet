@@ -112,15 +112,25 @@ Adding extraction for other types (DOCX page count via JSZip + parsing, etc.) is
 `posts.post_type` is a `text` column with a CHECK whitelist: `news / kudos / announcement / tool_shed_postcard / tool_shed_three_two_one / tool_shed_takeover`. Default is `'news'`. The three Tool Shed slots are reserved and will be populated by W7's composer + feed-layout audit (W5 retired the standalone Tool Shed module in 00096 with zero real data to migrate; W7 builds the composer / renderer / notification path end-to-end). `'announcement'` is reserved but unused — W4b was attempted and scratched; see `memory/announcement-deferred.md`.
 
 Type-specific data hangs off the `posts` row via additional optional columns:
-- Kudos: `posts.kudos_category` (text, with a consistency CHECK — required when post_type='kudos', forbidden otherwise) + `post_kudos_recipients` join table for multi-recipient.
+- Kudos: `posts.kudos_categories` (`text[]`, 1-2 categories, ordered, "Thank you" exclusive; consistency CHECK enforces the count + exclusivity and that it's set only for kudos) + `post_kudos_recipients` join table for multi-recipient. See "Kudos Categories + Sentence Model" below.
 - Announcement (slot reserved but not built): would need a similar consistency-CHECK pattern for `announcement_expires_at`.
 
 When adding a new post type:
 1. Add the value to the `post_type` CHECK whitelist (new migration; the existing whitelist in 00095 lists current values).
-2. Decide whether type-specific data goes inline (extra column with consistency CHECK) or in a separate table (join). Kudos uses both — `kudos_category` inline, recipients in a join.
+2. Decide whether type-specific data goes inline (extra column with consistency CHECK) or in a separate table (join). Kudos uses both — `kudos_categories` (array) inline, recipients in a join.
 3. Add the type to `POST_TYPES` in `src/lib/intranet.ts` and a type-guard (`isKudosCategory`-style) if there's an enum-shaped sub-value.
 4. Branch the renderer in `PostCard` on the `post_type`. Single-signature visual accent (top strip + header badge) per the W4 design — avoid full-card chrome.
 5. Add the new source kind to all six maps in `src/lib/notifications.ts` (`NOTIFICATION_SOURCE_KINDS`, `INFORMATIONAL_SOURCE_KINDS`, `SOURCE_KIND_REASON_LABEL`, `SOURCE_KIND_ICON`, `SOURCE_KIND_ACTION_VERB`, `SOURCE_KIND_MODULE`).
+
+## Kudos Categories + Sentence Model
+
+**Kudos server logic lives in `kudos-actions.ts`, not `actions.ts`.** `createKudosPost`, `addKudosRecipients`, and the internal `fanOutKudosNotifications` were split out (PR5a) so the 2.4k-line `actions.ts` stops growing. New kudos server logic goes here.
+
+**A kudos carries 1-2 categories (`posts.kudos_categories text[]`), ordered, with "Thank you" exclusive.** The shape is enforced twice: the DB CHECK (`array_length` 1-2 plus the exclusivity clause) and `validateKudosCategories()` in `src/lib/intranet.ts` (1-2, de-duped, "Thank you" only on its own). Which-of-the-six value-validation stays in app code (`isKudosCategory`), not the CHECK — so adding a category is a code change, not a migration.
+
+**The headline is built from per-category fragments — one source of truth, three surfaces.** `KUDOS_CATEGORY_FRAGMENTS` maps each category to `{ connector, body }` ("for"/"to" + the text). `buildKudosSentenceParts(sender, recipients, categories)` returns ordered `{ text, bold }` segments — the card renders `bold` as `<strong>`; `kudosSentencePlain` flattens for plain-text surfaces; `kudosNotificationTitle` reuses the same fragments for the second-person bell copy. The compose live preview (PR5b) renders the same `buildKudosSentenceParts`, so the preview always matches the feed. A new category must supply its fragment here.
+
+**PR5a is backend-only — no visual change.** The compose dialog still picks one category (passes a 1-element array) and the card still renders `kudos_categories[0]` in the old "for [Category]" format. The flowing sentence, the To→For→Why multi-pick compose with live preview, and the tinted card all land together in PR5b.
 
 ## Dialog Reuse Pattern for Post-Type Variants
 

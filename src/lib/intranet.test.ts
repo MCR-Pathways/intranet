@@ -3,6 +3,11 @@ import {
   validateFile,
   isImageType,
   ATTACHMENT_MAX_SIZE_BYTES,
+  validateKudosCategories,
+  buildKudosSentenceParts,
+  kudosSentencePlain,
+  kudosNotificationTitle,
+  KUDOS_CATEGORIES,
 } from "@/lib/intranet";
 
 // =============================================
@@ -101,5 +106,133 @@ describe("isImageType", () => {
 
   it("returns false for unknown type", () => {
     expect(isImageType("text/plain")).toBe(false);
+  });
+});
+
+// =============================================
+// validateKudosCategories
+// =============================================
+
+describe("validateKudosCategories", () => {
+  it("rejects an empty selection", () => {
+    expect(validateKudosCategories([])).toEqual({
+      ok: false,
+      error: "Pick a category for your kudos.",
+    });
+  });
+
+  it("rejects more than two categories", () => {
+    const result = validateKudosCategories([
+      KUDOS_CATEGORIES.EXTRA_MILE,
+      KUDOS_CATEGORIES.TEAM_PLAYER,
+      KUDOS_CATEGORIES.BRIGHT_IDEA,
+    ]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects an unknown category value", () => {
+    expect(validateKudosCategories(["Not a category"]).ok).toBe(false);
+  });
+
+  it("rejects 'Thank you' combined with another category", () => {
+    const result = validateKudosCategories([
+      KUDOS_CATEGORIES.THANK_YOU,
+      KUDOS_CATEGORIES.TEAM_PLAYER,
+    ]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts 'Thank you' on its own", () => {
+    expect(validateKudosCategories([KUDOS_CATEGORIES.THANK_YOU])).toEqual({
+      ok: true,
+      categories: [KUDOS_CATEGORIES.THANK_YOU],
+    });
+  });
+
+  it("accepts a valid pair and de-duplicates", () => {
+    const result = validateKudosCategories([
+      KUDOS_CATEGORIES.EXTRA_MILE,
+      KUDOS_CATEGORIES.EXTRA_MILE,
+      KUDOS_CATEGORIES.TEAM_PLAYER,
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      categories: [KUDOS_CATEGORIES.EXTRA_MILE, KUDOS_CATEGORIES.TEAM_PLAYER],
+    });
+  });
+});
+
+// =============================================
+// Kudos sentence model
+// =============================================
+
+describe("kudosSentencePlain", () => {
+  it("one recipient, one category", () => {
+    expect(
+      kudosSentencePlain("Marc", ["Aimee"], [KUDOS_CATEGORIES.EXTRA_MILE]),
+    ).toBe("Marc sent kudos to Aimee for going the extra mile");
+  });
+
+  it("joins recipients with commas and a trailing 'and'", () => {
+    expect(
+      kudosSentencePlain(
+        "Marc",
+        ["Aimee", "Chris", "Dev"],
+        [KUDOS_CATEGORIES.TEAM_PLAYER],
+      ),
+    ).toBe("Marc sent kudos to Aimee, Chris and Dev for being a team player");
+  });
+
+  it("joins two categories with 'and', dropping the second connector", () => {
+    expect(
+      kudosSentencePlain(
+        "Marc",
+        ["Aimee"],
+        [KUDOS_CATEGORIES.EXTRA_MILE, KUDOS_CATEGORIES.TEAM_PLAYER],
+      ),
+    ).toBe(
+      "Marc sent kudos to Aimee for going the extra mile and being a team player",
+    );
+  });
+
+  it("uses the 'to' connector for Thank you", () => {
+    expect(
+      kudosSentencePlain("Marc", ["Aimee"], [KUDOS_CATEGORIES.THANK_YOU]),
+    ).toBe("Marc sent kudos to Aimee to say thank you");
+  });
+});
+
+describe("buildKudosSentenceParts", () => {
+  it("bolds the sender, recipients, and category bodies only", () => {
+    const parts = buildKudosSentenceParts(
+      "Marc",
+      ["Aimee", "Chris"],
+      [KUDOS_CATEGORIES.EXTRA_MILE],
+    );
+    const bold = parts.filter((p) => p.bold).map((p) => p.text);
+    expect(bold).toEqual(["Marc", "Aimee", "Chris", "going the extra mile"]);
+  });
+});
+
+describe("kudosNotificationTitle", () => {
+  it("phrases the title in the second person", () => {
+    expect(
+      kudosNotificationTitle("Marc", [KUDOS_CATEGORIES.EXTRA_MILE]),
+    ).toBe("Marc sent you kudos for going the extra mile");
+  });
+
+  it("covers two categories", () => {
+    expect(
+      kudosNotificationTitle("Marc", [
+        KUDOS_CATEGORIES.EXTRA_MILE,
+        KUDOS_CATEGORIES.TEAM_PLAYER,
+      ]),
+    ).toBe("Marc sent you kudos for going the extra mile and being a team player");
+  });
+
+  it("uses the 'to' connector for Thank you", () => {
+    expect(kudosNotificationTitle("Marc", [KUDOS_CATEGORIES.THANK_YOU])).toBe(
+      "Marc sent you kudos to say thank you",
+    );
   });
 });

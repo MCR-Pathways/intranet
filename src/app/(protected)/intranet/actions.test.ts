@@ -115,9 +115,11 @@ import {
   editComment,
   togglePinPost,
   fetchLinkPreview,
+} from "@/app/(protected)/intranet/actions";
+import {
   createKudosPost,
   addKudosRecipients,
-} from "@/app/(protected)/intranet/actions";
+} from "@/app/(protected)/intranet/kudos-actions";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import dns from "node:dns/promises";
@@ -1478,7 +1480,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await createKudosPost({
         message: "Massive thanks for staying late on the launch.",
-        category: "Going the extra mile",
+        categories: ["Going the extra mile"],
         recipientIds: ["user-2", "user-3"],
       });
 
@@ -1491,7 +1493,7 @@ describe("Intranet Post Actions", () => {
         author_id: "user-1",
         content: "Massive thanks for staying late on the launch.",
         post_type: "kudos",
-        kudos_category: "Going the extra mile",
+        kudos_categories: ["Going the extra mile"],
       });
       expect(mockRecipientInsert).toHaveBeenCalledWith([
         { post_id: "post-1", recipient_id: "user-2" },
@@ -1512,7 +1514,7 @@ describe("Intranet Post Actions", () => {
     it("rejects empty messages", async () => {
       const result = await createKudosPost({
         message: "   ",
-        category: "Team player",
+        categories: ["Team player"],
         recipientIds: ["user-2"],
       });
       expect(result.success).toBe(false);
@@ -1523,7 +1525,7 @@ describe("Intranet Post Actions", () => {
     it("rejects messages over the 500-character cap", async () => {
       const result = await createKudosPost({
         message: "x".repeat(501),
-        category: "Team player",
+        categories: ["Team player"],
         recipientIds: ["user-2"],
       });
       expect(result.success).toBe(false);
@@ -1533,8 +1535,7 @@ describe("Intranet Post Actions", () => {
     it("rejects unknown categories", async () => {
       const result = await createKudosPost({
         message: "Nice work",
-        // @ts-expect-error — testing runtime validation against bad input
-        category: "Awesome sauce",
+        categories: ["Awesome sauce"],
         recipientIds: ["user-2"],
       });
       expect(result.success).toBe(false);
@@ -1546,7 +1547,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await createKudosPost({
         message: "Thanks!",
-        category: "Thank you",
+        categories: ["Thank you"],
         recipientIds: ["user-1", "user-2"], // user-1 is the sender
       });
 
@@ -1561,7 +1562,7 @@ describe("Intranet Post Actions", () => {
 
       await createKudosPost({
         message: "Great teamwork",
-        category: "Team player",
+        categories: ["Team player"],
         recipientIds: ["user-2", "user-2", "user-3", "user-3"],
       });
 
@@ -1574,7 +1575,7 @@ describe("Intranet Post Actions", () => {
     it("rejects when recipient list is empty after dedup + drop-self", async () => {
       const result = await createKudosPost({
         message: "Wait who is this for",
-        category: "Thank you",
+        categories: ["Thank you"],
         recipientIds: ["user-1"], // sender only
       });
       expect(result.success).toBe(false);
@@ -1585,7 +1586,7 @@ describe("Intranet Post Actions", () => {
       const recipientIds = Array.from({ length: 11 }, (_, i) => `user-${i + 2}`);
       const result = await createKudosPost({
         message: "Big thanks to everyone",
-        category: "Going the extra mile",
+        categories: ["Going the extra mile"],
         recipientIds,
       });
       expect(result.success).toBe(false);
@@ -1601,7 +1602,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await createKudosPost({
         message: "Nice work",
-        category: "Bright idea",
+        categories: ["Bright idea"],
         recipientIds: ["user-2"],
       });
 
@@ -1621,7 +1622,7 @@ describe("Intranet Post Actions", () => {
 
       const result = await createKudosPost({
         message: "Anonymous kudos",
-        category: "Thank you",
+        categories: ["Thank you"],
         recipientIds: ["user-2"],
       });
       expect(result).toEqual({ success: false, error: "Not authenticated" });
@@ -1637,7 +1638,7 @@ describe("Intranet Post Actions", () => {
     /**
      * addKudosRecipients runs two reads + one write:
      *   1. posts.select(...).eq("id", postId).single()    → post row
-     *      (now includes kudos_category — single round-trip)
+     *      (now includes kudos_categories — single round-trip)
      *   2. post_kudos_recipients.select.eq                → existing recipients
      *   3. post_kudos_recipients.insert(newRows)          → write
      */
@@ -1645,14 +1646,14 @@ describe("Intranet Post Actions", () => {
       postType?: string;
       authorId?: string;
       existing?: string[];
-      kudosCategory?: string | null;
+      kudosCategories?: string[] | null;
       insertResult?: { error: unknown };
     } = {}) {
       const {
         postType = "kudos",
         authorId = "user-1",
         existing = [],
-        kudosCategory = "Team player",
+        kudosCategories = ["Team player"],
         insertResult = { error: null },
       } = opts;
 
@@ -1662,7 +1663,7 @@ describe("Intranet Post Actions", () => {
           author_id: authorId,
           post_type: postType,
           content: "kudos message",
-          kudos_category: kudosCategory,
+          kudos_categories: kudosCategories,
         },
         error: null,
       });

@@ -2569,7 +2569,7 @@ export type Database = {
           id: string
           is_pinned: boolean
           is_weekly_roundup: boolean
-          kudos_category: string | null
+          kudos_categories: string[] | null
           poll_allow_multiple: boolean
           poll_closes_at: string | null
           poll_question: string | null
@@ -2585,7 +2585,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_weekly_roundup?: boolean
-          kudos_category?: string | null
+          kudos_categories?: string[] | null
           poll_allow_multiple?: boolean
           poll_closes_at?: string | null
           poll_question?: string | null
@@ -2601,7 +2601,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_weekly_roundup?: boolean
-          kudos_category?: string | null
+          kudos_categories?: string[] | null
           poll_allow_multiple?: boolean
           poll_closes_at?: string | null
           poll_question?: string | null
