@@ -56,7 +56,10 @@ export function WeeklyRoundupBanner({ roundup }: WeeklyRoundupBannerProps) {
           </span>
         </div>
         {roundup.summary ? (
-          <p className="mt-1 truncate text-[13px] text-white/70">
+          <p
+            className="mt-1 truncate text-[13px] text-white/70"
+            title={`${covered} · ${roundup.summary}`}
+          >
             <span className="font-semibold text-white/90">{covered}</span>
             {" · "}
             {roundup.summary}
@@ -68,10 +71,12 @@ export function WeeklyRoundupBanner({ roundup }: WeeklyRoundupBannerProps) {
 
       {/* Bespoke yellow-on-navy banner CTA. A styled Link, not the Button
           component: there's no yellow Button variant, and overriding one would
-          fight the variant system. Keeps the app's tap-scale + focus-ring. */}
+          fight the variant system. Focus uses the global *:focus-visible
+          outline, recoloured white because --ring is navy and would vanish on
+          this navy block. */}
       <Link
         href={`/intranet/weekly-roundup/${roundup.id}`}
-        className="relative inline-flex shrink-0 items-center gap-1.5 rounded-[9px] bg-mcr-yellow px-4 py-2 text-[13.5px] font-bold text-mcr-dark-blue transition-colors hover:bg-mcr-yellow/90 motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-mcr-dark-blue"
+        className="relative inline-flex shrink-0 items-center gap-1.5 rounded-[9px] bg-mcr-yellow px-4 py-2 text-[13.5px] font-bold text-mcr-dark-blue transition-colors hover:bg-mcr-yellow/90 motion-safe:active:scale-95 focus-visible:outline-white"
       >
         Read the round up
         <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} aria-hidden="true" />
