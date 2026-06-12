@@ -113,6 +113,10 @@ describe("getISOWeekNumber", () => {
     // Parsed as UTC midnight, so the result is stable regardless of local TZ.
     expect(getISOWeekNumber("2026-06-08")).toBe(24);
   });
+
+  it("returns 0 for a non-date string instead of NaN", () => {
+    expect(getISOWeekNumber("not-a-date")).toBe(0);
+  });
 });
 
 describe("formatDateRange", () => {
@@ -130,6 +134,11 @@ describe("formatDateRange", () => {
 
   it("is timezone-stable for date-only strings", () => {
     expect(formatDateRange("2026-06-08", "2026-06-12")).toBe("8–12 Jun");
+  });
+
+  it("returns an empty string for an unparseable input", () => {
+    expect(formatDateRange("not-a-date", "2026-06-12")).toBe("");
+    expect(formatDateRange("2026-06-08", "")).toBe("");
   });
 });
 

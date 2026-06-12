@@ -88,6 +88,7 @@ export function formatShortDate(date: Date): string {
  */
 export function getISOWeekNumber(dateString: string): number {
   const d = new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return 0; // non-date string → no "Week NaN"
   const dayNum = d.getUTCDay() || 7; // Sunday (0) counts as 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum); // shift to the week's Thursday
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -104,6 +105,7 @@ export function getISOWeekNumber(dateString: string): number {
 export function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(`${startDate}T12:00:00Z`);
   const end = new Date(`${endDate}T12:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return ""; // non-date input → empty, not "Invalid Date"
   const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", timeZone: "UTC" });
   const month = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 
