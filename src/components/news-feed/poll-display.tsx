@@ -144,6 +144,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
                       "truncate",
                       isLead ? "font-semibold text-mcr-light-blue-700" : "text-foreground"
                     )}
+                    title={option.option_text}
                   >
                     {option.option_text}
                   </span>
