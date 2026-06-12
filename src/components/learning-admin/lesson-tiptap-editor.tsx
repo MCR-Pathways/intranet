@@ -432,6 +432,7 @@ function ColourPicker({
               )}
               style={c.value ? { backgroundColor: c.value } : undefined}
               title={c.label}
+              aria-label={c.label}
               onClick={() => onSelect(c.value)}
             />
           ))}

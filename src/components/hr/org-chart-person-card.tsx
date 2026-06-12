@@ -162,6 +162,7 @@ export function OrgChartPersonCard({
                 : "bg-card text-muted-foreground border-border hover:bg-muted",
             )}
             aria-label={isCollapsed ? `Expand ${directReportCount} direct reports` : "Collapse team"}
+            title={isCollapsed ? `Expand ${directReportCount} direct reports` : "Collapse team"}
           >
             {isCollapsed ? (
               <>
