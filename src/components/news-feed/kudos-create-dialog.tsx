@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Award, Loader2, X, Search, Lock } from "lucide-react";
+import { Award, Loader2, X, Search, Lock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -33,6 +33,8 @@ import {
   KUDOS_CATEGORY_ORDER,
   KUDOS_MAX_RECIPIENTS,
   KUDOS_MESSAGE_MAX_LENGTH,
+  KUDOS_MAX_CATEGORIES,
+  isExclusiveKudosCategory,
   type KudosCategory,
 } from "@/lib/intranet";
 import { editPost } from "@/app/(protected)/intranet/actions";
@@ -41,6 +43,7 @@ import {
   addKudosRecipients,
 } from "@/app/(protected)/intranet/kudos-actions";
 import type { MentionUser } from "./mention-list";
+import { KudosSentence } from "./kudos-sentence";
 
 /**
  * In edit mode, the dialog opens populated with these fields. Category
@@ -57,7 +60,7 @@ import type { MentionUser } from "./mention-list";
 export interface KudosEditTarget {
   postId: string;
   message: string;
-  category: KudosCategory;
+  categories: KudosCategory[];
   existingRecipients: MentionUser[];
 }
 
@@ -80,7 +83,7 @@ export function KudosCreateDialog({
 }: KudosCreateDialogProps) {
   const isEditMode = !!editTarget;
 
-  const [category, setCategory] = useState<KudosCategory | null>(null);
+  const [categories, setCategories] = useState<KudosCategory[]>([]);
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   // Immutable in edit mode — drives the "no remove button on this chip"
   // visual. Empty in create mode (every recipient is removable).
@@ -103,13 +106,13 @@ export function KudosCreateDialog({
       // Re-hydrate from the original target — same state the dialog
       // started with — so re-opening lands clean rather than blank.
       const existingIds = editTarget.existingRecipients.map((r) => r.id);
-      setCategory(editTarget.category);
+      setCategories(editTarget.categories);
       setRecipientIds(existingIds);
       setLockedRecipientIds(existingIds);
       setOriginalMessage(editTarget.message);
       setMessage(editTarget.message);
     } else {
-      setCategory(null);
+      setCategories([]);
       setRecipientIds([]);
       setLockedRecipientIds([]);
       setOriginalMessage("");
@@ -163,6 +166,12 @@ export function KudosCreateDialog({
     [recipientIds, recipientById],
   );
 
+  // The sender's own name, for the live preview (the feed shows it too).
+  const senderName = useMemo(
+    () => staff.find((u) => u.id === currentUserId)?.label ?? "You",
+    [staff, currentUserId],
+  );
+
   // Search results: filter by query (case-insensitive label match), exclude
   // already-selected. Cap at 50 to avoid scroll-list-of-the-whole-org.
   const searchResults = useMemo(() => {
@@ -193,7 +202,7 @@ export function KudosCreateDialog({
       return messageChanged || hasNewRecipients;
     }
     return (
-      category !== null ||
+      categories.length > 0 ||
       recipientIds.length > 0 ||
       message.trim().length > 0
     );
@@ -201,7 +210,7 @@ export function KudosCreateDialog({
     isEditMode,
     messageChanged,
     hasNewRecipients,
-    category,
+    categories,
     recipientIds,
     message,
   ]);
@@ -218,7 +227,7 @@ export function KudosCreateDialog({
       (!messageChanged && !hasNewRecipients)
     : // Create mode: every field is required
       isPending ||
-      !category ||
+      categories.length === 0 ||
       recipientIds.length === 0 ||
       !message.trim() ||
       charsOver;
@@ -266,8 +275,20 @@ export function KudosCreateDialog({
     [lockedRecipientIds],
   );
 
+  // Toggle a category. Up to 2; "Thank you" is exclusive — picking it clears
+  // the rest, and picking any other clears it.
+  const toggleCategory = useCallback((c: KudosCategory) => {
+    setCategories((prev) => {
+      if (prev.includes(c)) return prev.filter((x) => x !== c);
+      if (isExclusiveKudosCategory(c)) return [c];
+      const next = prev.filter((x) => !isExclusiveKudosCategory(x));
+      if (next.length >= KUDOS_MAX_CATEGORIES) return next;
+      return [...next, c];
+    });
+  }, []);
+
   const handleSubmit = useCallback(() => {
-    if (isSubmitDisabled || !category) return;
+    if (isSubmitDisabled || categories.length === 0) return;
     startTransition(async () => {
       // Wrap the server-action call so a network-layer throw (the
       // underlying fetch failing rather than the action returning an
@@ -316,9 +337,7 @@ export function KudosCreateDialog({
         } else {
           const result = await createKudosPost({
             message: message.trim(),
-            // PR5a writes a single-element array; the multi-pick compose
-            // (PR5b) will pass 1-2 here.
-            categories: [category],
+            categories,
             recipientIds,
           });
           if (result.success) {
@@ -349,7 +368,7 @@ export function KudosCreateDialog({
     messageChanged,
     hasNewRecipients,
     newRecipientIds,
-    category,
+    categories,
     message,
     recipientIds,
     onOpenChange,
@@ -394,50 +413,6 @@ export function KudosCreateDialog({
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-            {/* Category — picker in create mode; static locked chip in
-                edit mode (recognition category is part of the original
-                kudos and rewriting it would change what was recognised). */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">For…</p>
-              {isEditMode ? (
-                <div className="flex flex-wrap gap-2">
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-full border border-mcr-yellow bg-mcr-yellow/15 px-3 py-1.5 text-sm font-medium text-foreground"
-                    aria-label={`Category: ${category} (locked)`}
-                  >
-                    {category}
-                    <Lock
-                      className="h-3 w-3 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {KUDOS_CATEGORY_ORDER.map((c) => {
-                    const selected = category === c;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setCategory(c)}
-                        disabled={isPending}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                          "motion-safe:active:scale-95",
-                          selected
-                            ? "border-mcr-yellow bg-mcr-yellow/15 text-foreground font-medium"
-                            : "border-border bg-card text-muted-foreground hover:bg-muted",
-                        )}
-                      >
-                        {c}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
             {/* Recipient picker — selected chips + search input. In
                 edit mode existing recipients are locked (no × button)
                 — kudos is add-only post-publish. */}
@@ -585,6 +560,62 @@ export function KudosCreateDialog({
               </div>
             </div>
 
+            {/* For — category pills. Multi-select up to 2; "Thank you" is
+                exclusive (picking it clears the rest, and any other clears it).
+                Locked to static chips in edit mode. */}
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-medium">For…</p>
+                {!isEditMode && (
+                  <p className="text-xs text-muted-foreground">Pick 1 or 2</p>
+                )}
+              </div>
+              {isEditMode ? (
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((c) => (
+                    <span
+                      key={c}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#e3bd2d] bg-mcr-yellow px-3 py-1.5 text-sm font-medium text-mcr-dark-blue"
+                      aria-label={`Category: ${c} (locked)`}
+                    >
+                      {c}
+                      <Lock className="h-3 w-3 opacity-60" aria-hidden="true" />
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {KUDOS_CATEGORY_ORDER.map((c) => {
+                    const selected = categories.includes(c);
+                    const atCap =
+                      categories.length >= KUDOS_MAX_CATEGORIES &&
+                      !categories.some(isExclusiveKudosCategory);
+                    const blocked =
+                      !selected && atCap && !isExclusiveKudosCategory(c);
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => toggleCategory(c)}
+                        disabled={isPending || blocked}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                          "motion-safe:active:scale-95",
+                          selected
+                            ? "border-[#e3bd2d] bg-mcr-yellow font-medium text-mcr-dark-blue"
+                            : "border-border bg-card text-muted-foreground hover:bg-muted",
+                          blocked && "cursor-not-allowed opacity-40 hover:bg-card",
+                        )}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Message body */}
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
@@ -616,6 +647,25 @@ export function KudosCreateDialog({
                 )}
               />
             </div>
+
+            {/* Live preview — the exact sentence the feed will render, so
+                there are no surprises after posting. */}
+            {categories.length > 0 && recipientIds.length > 0 && (
+              <div className="flex items-start gap-2 rounded-[10px] border border-mcr-yellow-border bg-mcr-yellow-50 px-3 py-2.5">
+                <Award
+                  className="mt-0.5 h-4 w-4 shrink-0 text-mcr-dark-blue"
+                  aria-hidden="true"
+                />
+                <p className="text-[13px] leading-snug text-muted-foreground">
+                  <span className="text-muted-foreground/70">Will appear as: </span>
+                  <KudosSentence
+                    senderName={senderName}
+                    recipientNames={selectedRecipients.map((u) => u.label)}
+                    categories={categories}
+                  />
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

@@ -435,7 +435,7 @@ Orange and light-blue appear nowhere else in the feed, so the accent alone is th
 | Ordinary | none — plain white card (the baseline the accents read against) |
 | Pinned | orange `#F09336` 4px left spine + "Pinned" pill (bg `#FDF1E3`, text `#9E5B00`) |
 | Poll | light-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills are two-shade — the front-runner(s) take the lead fill `#A7DCF2` with `#15536B` text, every other option shares the flat `#EAF6FC`. A dead heat (all level, or no votes yet) emphasises nothing. Bar width always carries the exact share |
-| Kudos | pale-yellow card `#FEF7E0` + 1.5px `#F8D45B` border (the card is the accent); white message box, `#F4E5AE` border |
+| Kudos | pale-yellow card `#FEF7E0` + 1.5px `#F8D45B` border (the card is the accent); 40px solid-`#F8D45B` award chip + a flowing sentence headline ("Marc sent kudos to Aimee and Chris for going the extra mile" — sender, recipients, fragment bodies bold), no recipient avatars; white message box, `#F4E5AE` border. Compose reorders To→For→Why with a live preview; categories are 1-2, "Thank you" exclusive (see intranet CLAUDE.md for the fragment model) |
 | Weekly round-up | solid navy `#213350` block (not a card); yellow `#F8D45B` "WEEK n" tag + CTA |
 
 The hexes above resolve to tokens: tints are the §8.2 `--mcr-*-NN` set; the brand hues are the `--mcr-*` brand tokens listed in §8.4.

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { KudosSentence } from "./kudos-sentence";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,7 @@ import {
   KudosCreateDialog,
   type KudosEditTarget,
 } from "./kudos-create-dialog";
-import { isKudosCategory } from "@/lib/intranet";
+import { isKudosCategory, type KudosCategory } from "@/lib/intranet";
 import type { MentionUser } from "./mention-list";
 import type {
   PostWithRelations,
@@ -226,8 +226,8 @@ export function PostCard({
   // revalidatePath delivers a fresh post prop with a new content
   // and/or recipient list — those changes flow through here).
   const kudosEditTarget = useMemo<KudosEditTarget | undefined>(() => {
-    // Edit mode still locks a single category until the multi-pick compose
-    // lands (PR5b); the first of the 1-2 stored categories drives it.
+    // Edit mode locks the 1-2 categories as static chips; the guard just
+    // confirms there's at least one valid category before opening the dialog.
     const firstCategory = post.kudos_categories?.[0];
     if (!isKudos || !isAuthor || !isKudosCategory(firstCategory)) {
       return undefined;
@@ -235,7 +235,7 @@ export function PostCard({
     return {
       postId: post.id,
       message: post.content,
-      category: firstCategory,
+      categories: (post.kudos_categories ?? []) as KudosCategory[],
       // Map PostAuthor → MentionUser so the dialog's chip renderer
       // reads the same shape whether the recipient came from the live
       // mention list or this locked-from-the-record fallback.
@@ -261,12 +261,10 @@ export function PostCard({
         id={`post-${post.id}`}
         className={cn(
           post.is_weekly_roundup && "border-primary/30 bg-primary/5",
-          // Kudos cards lead with a yellow strip (top border) — single
-          // signature accent, sized to read but not to dominate. Per
-          // W4 design: restraint over flair; the strip says "this is
-          // celebration" without a colour-coded category-per-card
-          // explosion.
-          isKudos && "border-t-4 border-t-mcr-yellow",
+          // Kudos cards are fully tinted (design-system §8.3): pale-yellow
+          // fill + a 1.5px yellow border — the card itself is the accent, no
+          // spine. The white message box inside keeps the content legible.
+          isKudos && "border-[1.5px] border-mcr-yellow bg-mcr-yellow-50",
           // Left spine: pinned (orange) wins over poll (sky-blue); kudos keeps
           // its top strip and takes none. See postSpineClass for the §8.3 matrix.
           postSpineClass({ isPinned: post.is_pinned, isKudos, isPoll }),
@@ -279,9 +277,8 @@ export function PostCard({
               {isKudos ? (
                 <KudosHeader
                   senderName={displayName}
-                  senderAvatarUrl={post.author.avatar_url}
                   recipients={kudosRecipients}
-                  category={post.kudos_categories?.[0] ?? null}
+                  categories={(post.kudos_categories ?? []) as KudosCategory[]}
                   createdAt={post.created_at}
                   edited={post.updated_at !== post.created_at}
                 />
@@ -409,8 +406,15 @@ export function PostCard({
               </div>
             </div>
 
-            {/* Content */}
-            <TiptapRenderer json={post.content_json as Record<string, unknown> | null} fallback={post.content} />
+            {/* Content — kudos posts wrap it in a white message box so the
+                message reads cleanly against the tinted card (§8.3). */}
+            {isKudos ? (
+              <div className="rounded-[10px] border border-mcr-yellow-border bg-card px-4 py-3">
+                <TiptapRenderer json={post.content_json as Record<string, unknown> | null} fallback={post.content} />
+              </div>
+            ) : (
+              <TiptapRenderer json={post.content_json as Record<string, unknown> | null} fallback={post.content} />
+            )}
 
             {/* Attachments */}
             <AttachmentDisplay attachments={post.attachments} />
@@ -497,151 +501,48 @@ export function PostCard({
 }
 
 // ─── Kudos header ────────────────────────────────────────────────────
-// Replaces the standard avatar/name/timestamp header for kudos posts.
-// Reads "[Sender] sent kudos to [Recipients] for [Category]" — sender
-// avatar leads, recipient names are the focus (recipients are the
-// reason the post exists; the sender is incidental). Avatar stack on
-// the recipient side at >=3 to keep names from sprawling.
+// Replaces the standard avatar/name/timestamp header for kudos posts with the
+// flowing sentence (design-system §8.3): a solid-yellow award chip, then
+// "[Sender] sent kudos to [Recipients] for [fragments]" with names + fragment
+// bodies bold. No avatars — the sentence names everyone.
 
 interface KudosHeaderProps {
   senderName: string;
-  senderAvatarUrl: string | null;
   recipients: PostAuthor[];
-  category: string | null;
+  categories: KudosCategory[];
   createdAt: string;
   edited: boolean;
 }
 
 function KudosHeader({
   senderName,
-  senderAvatarUrl,
   recipients,
-  category,
+  categories,
   createdAt,
   edited,
 }: KudosHeaderProps) {
-  // Recipient list copy. 1-2: full names. 3+: first 2 + "and N others".
-  // Tooltip on the "others" string reveals the rest. Avatar stack
-  // shows up to 3 face circles; "+N" overflow when more.
   const recipientNames = recipients.map(
     (r) => r.preferred_name || r.full_name || "Someone",
   );
-  const visibleAvatars = recipients.slice(0, 3);
-  const overflowAvatarCount = Math.max(0, recipients.length - 3);
-
-  let recipientLine: React.ReactNode;
-  if (recipientNames.length === 0) {
-    recipientLine = <span className="text-muted-foreground">no one</span>;
-  } else if (recipientNames.length === 1) {
-    recipientLine = (
-      <strong className="text-foreground">{recipientNames[0]}</strong>
-    );
-  } else if (recipientNames.length === 2) {
-    recipientLine = (
-      <>
-        <strong className="text-foreground">{recipientNames[0]}</strong> and{" "}
-        <strong className="text-foreground">{recipientNames[1]}</strong>
-      </>
-    );
-  } else {
-    const extra = recipientNames.length - 2;
-    const extraLabel = extra === 1 ? "1 other" : `${extra} others`;
-    recipientLine = (
-      <>
-        <strong className="text-foreground">{recipientNames[0]}</strong>,{" "}
-        <strong className="text-foreground">{recipientNames[1]}</strong> and{" "}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="text-foreground font-semibold underline decoration-dotted underline-offset-2 hover:decoration-solid"
-            >
-              {extraLabel}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{recipientNames.slice(2).join(", ")}</TooltipContent>
-        </Tooltip>
-      </>
-    );
-  }
 
   return (
     <div className="flex items-start gap-3 flex-1 min-w-0">
-      {/* Award icon block — yellow accent matching the top strip,
-          says "kudos" at a glance before the eye reaches the words. */}
+      {/* Award chip — solid yellow, navy icon. */}
       <span
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-mcr-yellow/20 text-foreground"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-mcr-yellow text-mcr-dark-blue"
         aria-hidden="true"
       >
         <Award className="h-5 w-5" strokeWidth={2} />
       </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm leading-snug text-muted-foreground">
-          <strong className="text-foreground">{senderName}</strong> sent kudos to{" "}
-          {recipientLine}
-          {category && (
-            <>
-              {" "}
-              for <strong className="text-foreground">{category}</strong>
-            </>
-          )}
-        </p>
-
-        {/* Avatar stack — three max visible, plus +N overflow. Recipient
-            avatars (not sender's) because recipients are the reason
-            the post exists. Sender's name is in the line above. */}
-        {recipients.length > 0 && (
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex -space-x-2">
-              {visibleAvatars.map((r) => {
-                const name = r.preferred_name || r.full_name || "Someone";
-                return (
-                  <Avatar
-                    key={r.id}
-                    className="h-7 w-7 border-2 border-card"
-                  >
-                    <AvatarImage
-                      src={filterAvatarUrl(r.avatar_url)}
-                      alt={name}
-                    />
-                    <AvatarFallback
-                      className={cn(
-                        getAvatarColour(name).bg,
-                        getAvatarColour(name).fg,
-                        "text-[10px]",
-                      )}
-                    >
-                      {getInitials(name)}
-                    </AvatarFallback>
-                  </Avatar>
-                );
-              })}
-              {overflowAvatarCount > 0 && (
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground">
-                  +{overflowAvatarCount}
-                </span>
-              )}
-            </div>
-            <Avatar className="h-6 w-6 ml-auto opacity-60">
-              <AvatarImage
-                src={filterAvatarUrl(senderAvatarUrl)}
-                alt={senderName}
-              />
-              <AvatarFallback
-                className={cn(
-                  getAvatarColour(senderName).bg,
-                  getAvatarColour(senderName).fg,
-                  "text-[9px]",
-                )}
-              >
-                {getInitials(senderName)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        )}
-
-        <p className="text-xs text-muted-foreground/70 mt-1.5">
+        <KudosSentence
+          senderName={senderName}
+          recipientNames={recipientNames}
+          categories={categories}
+          className="text-[14.5px] leading-snug text-muted-foreground"
+        />
+        <p className="text-xs text-muted-foreground/70 mt-1">
           {timeAgo(createdAt)}
           {edited && <span className="ml-1">(edited)</span>}
         </p>
