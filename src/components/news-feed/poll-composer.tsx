@@ -131,7 +131,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
         onChange={(e) => updateQuestion(e.target.value)}
         maxLength={200}
         disabled={disabled}
-        className="bg-background"
+        className="bg-card"
       />
 
       {/* Options */}
@@ -144,7 +144,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
               onChange={(e) => updateOption(index, e.target.value)}
               maxLength={MAX_OPTION_LENGTH}
               disabled={disabled}
-              className="bg-background"
+              className="bg-card"
             />
             {poll.options.length > MIN_OPTIONS && (
               <Button
@@ -183,7 +183,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Poll duration:</span>
         <Select value={poll.duration} onValueChange={updateDuration} disabled={disabled}>
-          <SelectTrigger className="w-36 h-8 bg-background">
+          <SelectTrigger className="w-36 h-8 bg-card">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

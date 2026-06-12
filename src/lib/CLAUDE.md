@@ -50,7 +50,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
   <Table>
     <TableHeader>
-      <TableRow className="hover:bg-background odd:bg-background">
+      <TableRow className="hover:bg-table-header odd:bg-table-header">
         <TableHead>Title</TableHead>
         <TableHead>Category</TableHead>
       </TableRow>
@@ -70,7 +70,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 - Wrapper: `bg-card rounded-xl border border-border shadow-sm overflow-clip` — same as the DataTable component. Crisp border edge with subtle shadow
 - Use default `TableHead` styling (no overrides) — `bg-table-header`, `h-12`, `font-semibold`
 - Use default `TableCell` styling (no overrides) — `px-4 py-3`
-- Zebra striping is built in: `TableRow` has `odd:bg-muted/50`. Header rows need `hover:bg-background odd:bg-background` to reset the inherited stripe and hover
+- Zebra striping is built in: `TableRow` has `odd:bg-muted/50`. Header rows need `hover:bg-table-header odd:bg-table-header` to reset the inherited stripe and hover (pinned to the header-band token — `bg-background` would leak ivory into white cards since ADR-014)
 - Clickable rows: put a `<Link>` in the title cell, not `onClick` on the row
 
 **Use `group/row` + `group-odd/row` for sticky column backgrounds.** Sticky cells need an explicit background to cover content that scrolls underneath. Use `bg-card` as the base (covers even rows), then add `group-odd/row:bg-muted/50` and `group-hover/row:bg-muted` to sync with row state. Put `className="group/row"` on the `<TableRow>`. See `team-schedule-grid.tsx` for the full pattern.
@@ -83,7 +83,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 - `default` (primary, navy fill) — routine actions: Save, Close, generic Submit. One primary CTA per view.
 - `success` (green fill) — high-stakes positive confirmations: Publish, Approve, Submit Leave Request. Use when the action has a meaningful positive outcome beyond "OK".
 - `destructive` (red fill) — irreversible or high-impact negative actions: Delete, Remove, Unlink. Always behind a confirmation dialog.
-- `outline` + `bg-card` — secondary navigation on grey `bg-background` pages: Bookmarks, Drafts, filter controls. Without `bg-card`, outline buttons are invisible on grey (the variant uses `bg-background` as fill).
+- `outline` — secondary navigation: Bookmarks, Drafts, filter controls. The variant fills `bg-card` natively (since ADR-014's ivory sweep), so the old explicit `bg-card` override at call sites is redundant — harmless where it remains, unnecessary on new ones.
 - `ghost` — utility actions that should recede: Settings cog, kebab triggers, toolbar icons.
 - `action` (pink fill) — reserved for special brand actions.
 
@@ -107,7 +107,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 ## Tab Patterns
 
-**Use Shadcn v4 `variant="line"` pattern for underline tabs on grey backgrounds.** Default pill tabs have near-zero contrast on `bg-background`. Line tabs with underline indicators work on any background. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs.
+**Use Shadcn v4 `variant="line"` pattern for underline tabs directly on the page background.** Default pill tabs sat near-invisible on the old grey `bg-background`; since ADR-014 the active pill fills `bg-card` (white on the muted track), which helps, but line tabs still read better directly on the ivory canvas. For nested tabs, use `variant="line"` on outer tabs and `variant="default"` (pill) on inner tabs.
 
 ## Sidebar Navigation
 

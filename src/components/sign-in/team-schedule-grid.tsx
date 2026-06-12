@@ -140,7 +140,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-background odd:bg-background">
+            <TableRow className="hover:bg-table-header odd:bg-table-header">
               <TableHead className="min-w-[180px] sticky left-0 z-20 border-r border-border">
                 <span className="text-xs font-medium uppercase tracking-wide">
                   Team Member

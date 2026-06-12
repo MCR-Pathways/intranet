@@ -196,7 +196,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
             type="date"
             value={dateRange.start}
             onChange={(e) => handleDateChange(e.target.value, dateRange.end)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-sm"
           />
           <label htmlFor="report-end" className="text-sm text-muted-foreground">
             to
@@ -206,7 +206,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
             type="date"
             value={dateRange.end}
             onChange={(e) => handleDateChange(dateRange.start, e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-card px-3 py-1.5 text-sm"
           />
         </div>
         <Button
@@ -252,7 +252,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
             <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-background odd:bg-background">
+                  <TableRow className="hover:bg-table-header odd:bg-table-header">
                     <TableHead>Name</TableHead>
                     {Object.entries(LOCATION_CONFIG).map(([key, config]) => (
                       <TableHead key={key} className="text-center">

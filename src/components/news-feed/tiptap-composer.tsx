@@ -210,7 +210,7 @@ export function TiptapComposer({
         "text-sm",
         borderless
           ? "bg-transparent"
-          : "rounded-lg border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring",
+          : "rounded-lg border border-input bg-card px-3 py-2 focus-within:ring-2 focus-within:ring-ring",
         disabled && "opacity-50 cursor-not-allowed",
         // Tiptap placeholder styling
         "[&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground",

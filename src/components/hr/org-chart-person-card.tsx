@@ -138,7 +138,7 @@ export function OrgChartPersonCard({
                 e.stopPropagation();
                 onFocus(personId);
               }}
-              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted"
+              className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border bg-card shadow-sm transition-colors hover:bg-muted"
               title="Focus on this person's team"
               aria-label={`Focus on ${name}'s team`}
             >
@@ -159,9 +159,10 @@ export function OrgChartPersonCard({
               "mt-1 flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-medium shadow-sm transition-all duration-200 hover:shadow-md",
               isCollapsed
                 ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                : "bg-background text-muted-foreground border-border hover:bg-muted",
+                : "bg-card text-muted-foreground border-border hover:bg-muted",
             )}
             aria-label={isCollapsed ? `Expand ${directReportCount} direct reports` : "Collapse team"}
+            title={isCollapsed ? `Expand ${directReportCount} direct reports` : "Collapse team"}
           >
             {isCollapsed ? (
               <>

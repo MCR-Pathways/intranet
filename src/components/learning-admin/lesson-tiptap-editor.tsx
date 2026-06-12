@@ -428,10 +428,11 @@ function ColourPicker({
               type="button"
               className={cn(
                 "h-6 w-6 rounded border border-border hover:scale-110 transition-transform",
-                !c.value && "bg-background relative after:content-[''] after:absolute after:inset-0 after:border-t after:border-destructive after:rotate-45 after:origin-center"
+                !c.value && "bg-card relative after:content-[''] after:absolute after:inset-0 after:border-t after:border-destructive after:rotate-45 after:origin-center"
               )}
               style={c.value ? { backgroundColor: c.value } : undefined}
               title={c.label}
+              aria-label={c.label}
               onClick={() => onSelect(c.value)}
             />
           ))}

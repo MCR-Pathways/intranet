@@ -30,7 +30,7 @@ shadcn's assigned role for dismissal / retreat actions. Pale blue-grey fill `#E8
 **Why:** cleaner than our earlier outline-for-Cancel convention. Secondary has its own fill, reads clearly as "alternative button" next to a solid primary, and doesn't need the `bg-card` override hack outline required on grey pages.
 
 ### `outline` — prominent secondary on coloured backgrounds
-Navigate-to-edit-route, filter toggles, Export/Download (unless it's the page's primary action), Review course (on completed state). 1px border on `bg-background` fill.
+Navigate-to-edit-route, filter toggles, Export/Download (unless it's the page's primary action), Review course (on completed state). 1px border on `bg-card` (white) fill — changed from `bg-background` in the ADR-014 ivory sweep, which also retired the per-call-site `bg-card` override hack.
 
 **Why:** shadcn's assigned role is "on coloured backgrounds (cards, headers, sections)". Placement-driven. Outlines pop on solid-colour areas where a secondary fill would blend in.
 
@@ -120,7 +120,7 @@ Don't add `focus-visible:ring-*` classes on Button. The global `*:focus-visible 
 | `default` (navy / lightened navy) | 11.4:1 AAA | ~3.4:1 UI (was 1.41:1 fail) |
 | `success` (`#15803d`) | 5.83:1 AA body | 3.4:1 UI |
 | `destructive` (wine / lightened wine) | 10.46:1 AAA | ~4.4:1 AA body (was 1.83:1 fail) |
-| `outline` on `bg-background` | Requires `bg-card` to render visibly on grey pages | n/a |
+| `outline` (fills `bg-card` since ADR-014) | White fill renders visibly on the ivory canvas and flush on cards | n/a |
 
 ## Loading states
 

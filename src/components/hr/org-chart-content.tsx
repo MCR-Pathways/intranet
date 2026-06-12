@@ -531,6 +531,7 @@ export function OrgChartContent({
                   onClick={handleClearSearch}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Clear search"
+                  title="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -690,9 +691,10 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="bg-background/90 backdrop-blur-sm shadow-sm"
+            className="bg-card/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomIn}
             aria-label="Zoom in"
+            title="Zoom in"
           >
             <ZoomIn />
           </Button>
@@ -700,9 +702,10 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="bg-background/90 backdrop-blur-sm shadow-sm"
+            className="bg-card/90 backdrop-blur-sm shadow-sm"
             onClick={handleZoomOut}
             aria-label="Zoom out"
+            title="Zoom out"
           >
             <ZoomOut />
           </Button>
@@ -710,9 +713,10 @@ export function OrgChartContent({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="bg-background/90 backdrop-blur-sm shadow-sm"
+            className="bg-card/90 backdrop-blur-sm shadow-sm"
             onClick={handleFitToScreen}
             aria-label="Fit to screen"
+            title="Fit to screen"
           >
             <Maximize />
           </Button>
