@@ -44,10 +44,10 @@ ALTER TABLE public.posts
     (
       post_type = 'kudos'
       AND kudos_categories IS NOT NULL
-      AND array_length(kudos_categories, 1) BETWEEN 1 AND 2
+      AND cardinality(kudos_categories) BETWEEN 1 AND 2
       AND NOT (
         'Thank you' = ANY (kudos_categories)
-        AND array_length(kudos_categories, 1) > 1
+        AND cardinality(kudos_categories) > 1
       )
     )
     OR (

@@ -282,12 +282,23 @@ async function fanOutKudosNotifications(args: {
     sourceId: postId,
   }));
 
-  const { error } = await createNotifications(rows);
-  if (error) {
-    logger.warn("Failed to fan out kudos notifications", {
+  try {
+    const { error } = await createNotifications(rows);
+    if (error) {
+      logger.warn("Failed to fan out kudos notifications", {
+        postId,
+        recipientCount: recipientIds.length,
+        error: error.message,
+      });
+    }
+  } catch (err) {
+    // Non-critical follow-up — a network throw here must not fail a kudos
+    // that is already written (root CLAUDE.md: wrap non-critical follow-up
+    // operations in try/catch).
+    logger.warn("Kudos notification fan-out threw", {
       postId,
       recipientCount: recipientIds.length,
-      error: error.message,
+      error: err,
     });
   }
 }

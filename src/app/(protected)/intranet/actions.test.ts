@@ -1613,6 +1613,21 @@ describe("Intranet Post Actions", () => {
       expect(mockCreateNotifications).not.toHaveBeenCalled();
     });
 
+    it("still succeeds when the notification fan-out throws", async () => {
+      wireKudosInserts();
+      mockCreateNotifications.mockRejectedValueOnce(new Error("network down"));
+
+      const result = await createKudosPost({
+        message: "Thanks team",
+        categories: ["Team player"],
+        recipientIds: ["user-2"],
+      });
+
+      // Post + recipients are written; a notification throw must not surface
+      // as a failed kudos.
+      expect(result.success).toBe(true);
+    });
+
     it("returns auth error when not signed in", async () => {
       vi.mocked(getCurrentUser).mockResolvedValue({
         supabase: mockSupabase,
