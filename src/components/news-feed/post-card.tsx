@@ -226,13 +226,16 @@ export function PostCard({
   // revalidatePath delivers a fresh post prop with a new content
   // and/or recipient list — those changes flow through here).
   const kudosEditTarget = useMemo<KudosEditTarget | undefined>(() => {
-    if (!isKudos || !isAuthor || !isKudosCategory(post.kudos_category)) {
+    // Edit mode still locks a single category until the multi-pick compose
+    // lands (PR5b); the first of the 1-2 stored categories drives it.
+    const firstCategory = post.kudos_categories?.[0];
+    if (!isKudos || !isAuthor || !isKudosCategory(firstCategory)) {
       return undefined;
     }
     return {
       postId: post.id,
       message: post.content,
-      category: post.kudos_category,
+      category: firstCategory,
       // Map PostAuthor → MentionUser so the dialog's chip renderer
       // reads the same shape whether the recipient came from the live
       // mention list or this locked-from-the-record fallback.
@@ -248,7 +251,7 @@ export function PostCard({
     isAuthor,
     post.id,
     post.content,
-    post.kudos_category,
+    post.kudos_categories,
     kudosRecipients,
   ]);
 
@@ -278,7 +281,7 @@ export function PostCard({
                   senderName={displayName}
                   senderAvatarUrl={post.author.avatar_url}
                   recipients={kudosRecipients}
-                  category={post.kudos_category}
+                  category={post.kudos_categories?.[0] ?? null}
                   createdAt={post.created_at}
                   edited={post.updated_at !== post.created_at}
                 />

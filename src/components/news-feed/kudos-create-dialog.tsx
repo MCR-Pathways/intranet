@@ -35,11 +35,11 @@ import {
   KUDOS_MESSAGE_MAX_LENGTH,
   type KudosCategory,
 } from "@/lib/intranet";
+import { editPost } from "@/app/(protected)/intranet/actions";
 import {
   createKudosPost,
-  editPost,
   addKudosRecipients,
-} from "@/app/(protected)/intranet/actions";
+} from "@/app/(protected)/intranet/kudos-actions";
 import type { MentionUser } from "./mention-list";
 
 /**
@@ -316,7 +316,9 @@ export function KudosCreateDialog({
         } else {
           const result = await createKudosPost({
             message: message.trim(),
-            category,
+            // PR5a writes a single-element array; the multi-pick compose
+            // (PR5b) will pass 1-2 here.
+            categories: [category],
             recipientIds,
           });
           if (result.success) {

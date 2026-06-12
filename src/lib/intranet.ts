@@ -138,3 +138,140 @@ export const KUDOS_MAX_RECIPIENTS = 10;
 
 /** Cap on the kudos message body. Short forces specificity. */
 export const KUDOS_MESSAGE_MAX_LENGTH = 500;
+
+/** Up to two categories per kudos — focused recognition, not a checklist. */
+export const KUDOS_MAX_CATEGORIES = 2;
+
+/**
+ * "Thank you" is exclusive: it reads with its own connector ("to say thank
+ * you", not "for …"), so it never pairs with another category.
+ */
+export const KUDOS_EXCLUSIVE_CATEGORY: KudosCategory = KUDOS_CATEGORIES.THANK_YOU;
+
+export function isExclusiveKudosCategory(category: string): boolean {
+  return category === KUDOS_EXCLUSIVE_CATEGORY;
+}
+
+/**
+ * Each category carries a sentence fragment the feed renders. The connector
+ * ("for" / "to") leads the first fragment; a second fragment joins with "and"
+ * and drops its connector. Since "Thank you" (the only "to") is exclusive, the
+ * connector always comes from the first — and, for "Thank you", only — category.
+ * A new category must supply its own fragment here.
+ */
+export const KUDOS_CATEGORY_FRAGMENTS: Record<
+  KudosCategory,
+  { connector: string; body: string }
+> = {
+  [KUDOS_CATEGORIES.EXTRA_MILE]: { connector: "for", body: "going the extra mile" },
+  [KUDOS_CATEGORIES.TEAM_PLAYER]: { connector: "for", body: "being a team player" },
+  [KUDOS_CATEGORIES.BRIGHT_IDEA]: { connector: "for", body: "sharing a bright idea" },
+  [KUDOS_CATEGORIES.CAME_THROUGH]: { connector: "for", body: "coming through" },
+  [KUDOS_CATEGORIES.ALWAYS_THERE]: { connector: "for", body: "always being there" },
+  [KUDOS_CATEGORIES.THANK_YOU]: { connector: "to", body: "say thank you" },
+};
+
+/**
+ * Validate a kudos category selection: 1-2 valid categories, de-duplicated,
+ * with "Thank you" only ever on its own. Returns the cleaned list or a
+ * user-facing error. The DB CHECK enforces the same shape as defence-in-depth.
+ */
+export function validateKudosCategories(
+  categories: unknown,
+): { ok: true; categories: KudosCategory[] } | { ok: false; error: string } {
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return { ok: false, error: "Pick a category for your kudos." };
+  }
+  const unique = Array.from(new Set(categories));
+  if (unique.length > KUDOS_MAX_CATEGORIES) {
+    return { ok: false, error: `Pick up to ${KUDOS_MAX_CATEGORIES} categories.` };
+  }
+  if (!unique.every(isKudosCategory)) {
+    return { ok: false, error: "Pick a valid category for your kudos." };
+  }
+  const valid = unique as KudosCategory[];
+  if (valid.length > 1 && valid.some(isExclusiveKudosCategory)) {
+    return {
+      ok: false,
+      error: `"${KUDOS_EXCLUSIVE_CATEGORY}" can't be combined with another category.`,
+    };
+  }
+  return { ok: true, categories: valid };
+}
+
+/** A run of sentence text; `bold` marks the parts the feed renders <strong>. */
+export interface KudosSentenceSegment {
+  text: string;
+  bold?: boolean;
+}
+
+/**
+ * The kudos headline as ordered segments — bold marks the sender, recipients,
+ * and the category bodies. Recipients join with ", " and "and" before the
+ * last; a second category joins with "and" after the lead connector. The feed
+ * renders the bold segments as <strong>; plain-text surfaces flatten via
+ * `kudosSentencePlain`.
+ *
+ * e.g. **Marc** sent kudos to **Aimee** and **Chris** for **going the extra
+ * mile** and **being a team player**
+ */
+export function buildKudosSentenceParts(
+  senderName: string,
+  recipientNames: string[],
+  categories: KudosCategory[],
+): KudosSentenceSegment[] {
+  const segments: KudosSentenceSegment[] = [{ text: senderName, bold: true }];
+  segments.push({ text: " sent kudos to " });
+
+  recipientNames.forEach((name, i) => {
+    if (i > 0) {
+      segments.push({ text: i === recipientNames.length - 1 ? " and " : ", " });
+    }
+    segments.push({ text: name, bold: true });
+  });
+
+  // Look fragments up defensively: a category deprecated from KUDOS_CATEGORIES
+  // could still sit in an old DB row, and we'd rather drop the fragment than
+  // throw while rendering the card.
+  const [first, second] = categories;
+  const lead = first ? KUDOS_CATEGORY_FRAGMENTS[first] : undefined;
+  if (lead) {
+    segments.push({ text: ` ${lead.connector} ` });
+    segments.push({ text: lead.body, bold: true });
+    const secondFragment = second ? KUDOS_CATEGORY_FRAGMENTS[second] : undefined;
+    if (secondFragment) {
+      segments.push({ text: " and " });
+      segments.push({ text: secondFragment.body, bold: true });
+    }
+  }
+  return segments;
+}
+
+/** Flatten the headline to plain text (aria-labels, logs). */
+export function kudosSentencePlain(
+  senderName: string,
+  recipientNames: string[],
+  categories: KudosCategory[],
+): string {
+  return buildKudosSentenceParts(senderName, recipientNames, categories)
+    .map((s) => s.text)
+    .join("");
+}
+
+/**
+ * Notification title (second person, recipient's view): "Marc sent you kudos
+ * for going the extra mile and being a team player" / "…to say thank you".
+ * Reuses the fragment connector + body so it tracks the feed wording.
+ */
+export function kudosNotificationTitle(
+  senderName: string,
+  categories: KudosCategory[],
+): string {
+  const [first, second] = categories;
+  const lead = first ? KUDOS_CATEGORY_FRAGMENTS[first] : undefined;
+  const secondFragment = second ? KUDOS_CATEGORY_FRAGMENTS[second] : undefined;
+  const tail = lead
+    ? ` ${lead.connector} ${lead.body}${secondFragment ? ` and ${secondFragment.body}` : ""}`
+    : "";
+  return `${senderName} sent you kudos${tail}`;
+}
