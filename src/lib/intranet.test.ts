@@ -8,6 +8,7 @@ import {
   kudosSentencePlain,
   kudosNotificationTitle,
   KUDOS_CATEGORIES,
+  type KudosCategory,
 } from "@/lib/intranet";
 
 // =============================================
@@ -211,6 +212,15 @@ describe("buildKudosSentenceParts", () => {
     );
     const bold = parts.filter((p) => p.bold).map((p) => p.text);
     expect(bold).toEqual(["Marc", "Aimee", "Chris", "going the extra mile"]);
+  });
+
+  it("drops an unknown category instead of throwing (deprecation drift)", () => {
+    expect(
+      kudosSentencePlain("Marc", ["Aimee"], ["Ghost" as KudosCategory]),
+    ).toBe("Marc sent kudos to Aimee");
+    expect(kudosNotificationTitle("Marc", ["Ghost" as KudosCategory])).toBe(
+      "Marc sent you kudos",
+    );
   });
 });
 

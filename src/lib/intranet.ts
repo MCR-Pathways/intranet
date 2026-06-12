@@ -230,14 +230,18 @@ export function buildKudosSentenceParts(
     segments.push({ text: name, bold: true });
   });
 
+  // Look fragments up defensively: a category deprecated from KUDOS_CATEGORIES
+  // could still sit in an old DB row, and we'd rather drop the fragment than
+  // throw while rendering the card.
   const [first, second] = categories;
-  if (first) {
-    const lead = KUDOS_CATEGORY_FRAGMENTS[first];
+  const lead = first ? KUDOS_CATEGORY_FRAGMENTS[first] : undefined;
+  if (lead) {
     segments.push({ text: ` ${lead.connector} ` });
     segments.push({ text: lead.body, bold: true });
-    if (second) {
+    const secondFragment = second ? KUDOS_CATEGORY_FRAGMENTS[second] : undefined;
+    if (secondFragment) {
       segments.push({ text: " and " });
-      segments.push({ text: KUDOS_CATEGORY_FRAGMENTS[second].body, bold: true });
+      segments.push({ text: secondFragment.body, bold: true });
     }
   }
   return segments;
@@ -264,11 +268,10 @@ export function kudosNotificationTitle(
   categories: KudosCategory[],
 ): string {
   const [first, second] = categories;
-  const lead = first ? KUDOS_CATEGORY_FRAGMENTS[first] : null;
+  const lead = first ? KUDOS_CATEGORY_FRAGMENTS[first] : undefined;
+  const secondFragment = second ? KUDOS_CATEGORY_FRAGMENTS[second] : undefined;
   const tail = lead
-    ? ` ${lead.connector} ${lead.body}${
-        second ? ` and ${KUDOS_CATEGORY_FRAGMENTS[second].body}` : ""
-      }`
+    ? ` ${lead.connector} ${lead.body}${secondFragment ? ` and ${secondFragment.body}` : ""}`
     : "";
   return `${senderName} sent you kudos${tail}`;
 }
