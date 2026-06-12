@@ -24,6 +24,7 @@ import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
 import { PollDisplay } from "./poll-display";
 import { PostTypePill } from "./post-type-pill";
+import { postSpineClass } from "./post-accents";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
 import { ClosePollDialog } from "./close-poll-dialog";
@@ -263,9 +264,9 @@ export function PostCard({
           // celebration" without a colour-coded category-per-card
           // explosion.
           isKudos && "border-t-4 border-t-mcr-yellow",
-          // Poll cards carry a sky-blue left spine (design-system §8.3); the
-          // "Poll" pill in the header completes the signal.
-          isPoll && "border-l-4 border-l-mcr-light-blue",
+          // Left spine: pinned (orange) wins over poll (sky-blue); kudos keeps
+          // its top strip and takes none. See postSpineClass for the §8.3 matrix.
+          postSpineClass({ isPinned: post.is_pinned, isKudos, isPoll }),
         )}
       >
         <CardContent className="pt-6">
@@ -295,10 +296,9 @@ export function PostCard({
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{displayName}</p>
-                    {/* Pinned status moved to a corner Pin icon (top-right
-                        of card, next to the kebab) per W4 design — frees
-                        the inline-badge slot for content-type semantics
-                        like Round Up. */}
+                    {/* Pinned status shows as a "Pinned" pill in the top-right
+                        cluster (design-system §8.3); this inline slot stays for
+                        content-type semantics like Round Up. */}
                     {post.is_weekly_roundup && (
                       <Badge variant="default" className="text-xs gap-1 py-0">
                         <Sparkles className="h-3 w-3" />
@@ -321,25 +321,12 @@ export function PostCard({
               </div>
               )}
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                {/* Signature pills (design-system §8.3): pinned then poll, so a
+                    pinned poll reads "Pinned · Poll". These are status, not
+                    controls — the unpin action lives in the kebab below. */}
+                {post.is_pinned && <PostTypePill type="pinned" />}
                 {isPoll && <PostTypePill type="poll" />}
-                {/* Corner Pin icon — top-right next to the kebab. Decorative;
-                    the unpin action lives in the kebab menu below. Pattern
-                    matches LinkedIn / Reddit / Teams / Instagram corner-pin
-                    convention; tooltip carries "Pinned" for screen readers. */}
-                {post.is_pinned && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className="inline-flex h-9 w-9 items-center justify-center text-primary"
-                        aria-label="Pinned"
-                      >
-                        <Pin className="h-4 w-4" fill="currentColor" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">Pinned</TooltipContent>
-                  </Tooltip>
-                )}
               {showKebab && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
