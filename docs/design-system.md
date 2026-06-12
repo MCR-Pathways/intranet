@@ -19,7 +19,7 @@ Defined in `src/app/globals.css` `:root`:
 | `--mcr-light-blue` | `#5BC6E9` | Focus ring (dark mode only) |
 | `--mcr-orange` | `#F09336` | Sidebar induction prompt, learning warnings, kiosk accents |
 | `--mcr-yellow` | `#F8D45B` | Pending status badge (via `--status-pending`) |
-| `--mcr-green` | `#22a34b` | Brand/identity green for fills + the 15%-opacity icon swatch. **Adopted 2026-06-11** (ratifies the project board's value; replaces `#B5E046`). `globals.css` still `#B5E046` — the swap + WCAG re-check land in the feed-colour PR. ~3.3:1 on white, so fills/large-text/icons only; green text keeps `--icon-fg-green` (`#4A7A00`). Deliberately diverges from the brand-guideline Light Green `#AFDA44` (an accessible product green). |
+| `--mcr-green` | `#22A34B` | Brand/identity green for fills + the 15%-opacity icon swatch. **Adopted 2026-06-11** (ratifies the project board's value; replaces `#B5E046`). `globals.css` still `#B5E046` — the swap + WCAG re-check land in the feed-colour PR. ~3.3:1 on white, so fills/large-text/icons only; green text keeps `--icon-fg-green` (`#4A7A00`). Deliberately diverges from the brand-guideline Light Green `#AFDA44` (an accessible product green). |
 | `--mcr-teal` | `#2A6075` | Link colour (via `--link`), avatar palette, icon palette (via `--icon-fg-teal`) |
 | `--mcr-pink` | `#DA417C` | Action buttons (via `--action`), icon palette (via `--icon-fg-pink`). **WCAG fix**: was `#FF82B2` (2.31:1 FAIL) → `#DA417C` (4.18:1, passes 3:1 for icons) |
 | `--mcr-wine` | `#751B48` | Avatar palette, icon palette (via `--icon-fg-wine`) |
@@ -186,7 +186,7 @@ Source: MCR Pathways Brand Guidelines (Aug 2025, 40 pages)
 | Mid Blue | `#347791` | — | **Missing from codebase** |
 | Light Blue | `#5BC6E9` | `#5BC6E9` | Matches |
 | Yellow | `#F8D45B` | `#F8D45B` | Matches |
-| Light Green | `#AFDA44` | `#22a34b` | **Differs (deliberate)** — codebase green adopted `#22a34b` (2026-06-11), an accessible product green, over both the brand lime `#AFDA44` and the old `#B5E046`. See §1.1. |
+| Light Green | `#AFDA44` | `#22A34B` | **Differs (deliberate)** — codebase green adopted `#22A34B` (2026-06-11), an accessible product green, over both the brand lime `#AFDA44` and the old `#B5E046`. See §1.1. |
 | Dark Pink | `#892055` | — | **Missing from codebase** |
 | Pink | `#DA417C` | `#DA417C` | **Matches** (corrected from `#FF82B2` in brand colour refinement PR #115) |
 | Ivory | `#FFFFE3` | `#FDF9EA` | **Differs** (codebase is warmer/less green) |
@@ -308,7 +308,7 @@ Based on research across design systems and common UI colour mistakes:
 
 ### 4.1 Colour Token Accuracy — RESOLVED
 
-**Decision (Mar 2026):** Pink corrected from `#FF82B2` to `#DA417C` (matches brand guidelines, passes WCAG 3:1 for icons/large text at 4.18:1). _Green and ivory kept as-is_ — **superseded 2026-06-11**: green adopted `#22a34b` (§1.1), ivory promoted to the page background (ADR-014, §8).
+**Decision (Mar 2026):** Pink corrected from `#FF82B2` to `#DA417C` (matches brand guidelines, passes WCAG 3:1 for icons/large text at 4.18:1). _Green and ivory kept as-is_ — **superseded 2026-06-11**: green adopted `#22A34B` (§1.1), ivory promoted to the page background (ADR-014, §8).
 
 Missing Mid Blue (#347791) and Dark Pink (#892055) remain unimplemented — no current use case identified.
 
@@ -374,7 +374,7 @@ Email notifications use colour-coded header bars for instant recognition. Each e
 
 Colours map to intent: Wine = social, Teal = assignment, Pink = urgency, Dark Blue = HR, Orange = compliance, Green = celebration. All CTA buttons use Dark Blue regardless of header colour.
 
-The email green deliberately remains `#B5E046` while the app green moved to `#22a34b` (§1.1): emails are a separately themed surface with hardcoded hexes, and the darker green changes these three types' brightness class — likely flipping them from Group B (dark logo) to Group A (white logo). That regrouping is a tracked follow-up decision, not a silent bundle; this table documents what the emails ship today.
+The email green deliberately remains `#B5E046` while the app green moved to `#22A34B` (§1.1): emails are a separately themed surface with hardcoded hexes, and the darker green changes these three types' brightness class — likely flipping them from Group B (dark logo) to Group A (white logo). That regrouping is a tracked follow-up decision, not a silent bundle; this table documents what the emails ship today.
 
 Logo variants: `public/mcr-logo-email.png` (dark, Group B) and `public/mcr-logo-email-white.png` (white, Group A). Both displayed at 120x36.
 
@@ -424,19 +424,21 @@ Token names carry the `mcr-` prefix — bare ramp names (`blue-50` etc.) would s
 | `--mcr-light-blue-border` | `#BFE4F4` | Poll panel border |
 | `--mcr-orange-50` | `#FDF1E3` | Pinned pill bg |
 
-**AA text/icon-on-tint** (already WCAG-fixed brand foregrounds): teal `#2A6075`, green `#4A7A00`, orange `#9E5B00`, wine `#751B48`, light-blue `#1A6E8E`, poll-lead text `#15536b`, kudos-on-yellow `#6b5407`.
+**AA text/icon-on-tint** (already WCAG-fixed brand foregrounds): teal `#2A6075`, green `#4A7A00`, orange `#9E5B00`, wine `#751B48`, light-blue `#1A6E8E`, poll-lead text `#15536B`, kudos-on-yellow `#6B5407`.
 
 ### 8.3 Per-post-type accent (one type, one accent)
 
-Orange and sky-blue appear nowhere else in the feed, so the accent alone is the signal.
+Orange and light-blue appear nowhere else in the feed, so the accent alone is the signal.
 
 | Post type | Accent |
 |---|---|
 | Ordinary | none — plain white card (the baseline the accents read against) |
 | Pinned | orange `#F09336` 4px left spine + "Pinned" pill (bg `#FDF1E3`, text `#9E5B00`) |
-| Poll | sky-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills graded by rank (`#A7DCF2` lead, `#D3EDF8` 2nd, `#EAF6FC` 3rd+); lead text `#15536b` |
+| Poll | light-blue `#5BC6E9` 4px left spine + "Poll" pill (bg `#EAF6FC`, text `#1A6E8E`); result fills graded by rank (`#A7DCF2` lead, `#D3EDF8` 2nd, `#EAF6FC` 3rd+); lead text `#15536B` |
 | Kudos | pale-yellow card `#FEF7E0` + 1.5px `#F8D45B` border (the card is the accent); white message box, `#F4E5AE` border |
 | Weekly round-up | solid navy `#213350` block (not a card); yellow `#F8D45B` "WEEK n" tag + CTA |
+
+The hexes above resolve to tokens: tints are the §8.2 `--mcr-*-NN` set; the brand hues are the `--mcr-*` brand tokens listed in §8.4.
 
 Collision rules: pin wins the spine, the type keeps its pill (a pinned poll is orange spine + Pinned pill + Poll pill, never two spines); kudos keeps its card, pinning adds only the Pinned pill.
 
