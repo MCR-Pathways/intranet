@@ -12,13 +12,11 @@ interface PollDisplayProps {
   poll: PostPoll;
 }
 
-// Result-bar fills graded by vote rank (design-system §8.3): lead darkest, then
-// fading; 3rd place and below share the lightest tint.
-const RANK_FILLS = [
-  "bg-mcr-light-blue-200",
-  "bg-mcr-light-blue-100",
-  "bg-mcr-light-blue-50",
-];
+// Honest two-shade result fills (design-system §8.3): the front-runner(s) take
+// the dark lead fill, every other option shares the flat light fill. The bar
+// width still encodes each option's exact share — only the shade is binary.
+const LEAD_FILL = "bg-mcr-light-blue-200";
+const TRAIL_FILL = "bg-mcr-light-blue-50";
 
 export function PollDisplay({ postId, poll }: PollDisplayProps) {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -80,17 +78,22 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
     });
   }, []);
 
-  // Rows render in display order; the fill grades by vote standing, so rank
-  // independently. Ties break by display order through the stable sort.
+  // Rows always render in the author's display order; lead shading is computed
+  // separately from the vote counts (see leadIds).
   const sortedOptions = useMemo(
     () => [...poll.options].sort((a, b) => a.display_order - b.display_order),
     [poll.options]
   );
-  const rankById = useMemo(() => {
-    const byVotes = [...poll.options].sort(
-      (a, b) => b.vote_count - a.vote_count || a.display_order - b.display_order
+  // The front-runner(s): the option(s) with the most votes, but only when at
+  // least one other option trails them. An all-square poll (including no votes
+  // yet) has no front-runner, so nothing is emphasised.
+  const leadIds = useMemo(() => {
+    const maxVotes = Math.max(0, ...poll.options.map((o) => o.vote_count));
+    const hasTrailer = poll.options.some((o) => o.vote_count < maxVotes);
+    if (maxVotes === 0 || !hasTrailer) return new Set<string>();
+    return new Set(
+      poll.options.filter((o) => o.vote_count === maxVotes).map((o) => o.id)
     );
-    return new Map(byVotes.map((o, i) => [o.id, i]));
   }, [poll.options]);
 
   const hasSelection = poll.allow_multiple
@@ -119,8 +122,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
           const isUserVote = votedOptionIds.has(option.id);
 
           if (showResults) {
-            const rank = rankById.get(option.id) ?? 0;
-            const isLead = rank === 0;
+            const isLead = leadIds.has(option.id);
             return (
               <div
                 key={option.id}
@@ -129,7 +131,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
                 <div
                   className={cn(
                     "absolute inset-y-0 left-0 transition-all duration-500",
-                    RANK_FILLS[Math.min(rank, RANK_FILLS.length - 1)]
+                    isLead ? LEAD_FILL : TRAIL_FILL
                   )}
                   style={{ width: `${percentage}%` }}
                 />
