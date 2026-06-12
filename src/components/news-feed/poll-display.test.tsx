@@ -67,12 +67,13 @@ describe("PollDisplay", () => {
 
   it("shows total votes count", () => {
     render(<PollDisplay postId="p1" poll={makePoll()} />);
-    expect(screen.getByText("10 votes")).toBeInTheDocument();
+    // Pre-vote, the count leads the "results appear after you vote" meta line.
+    expect(screen.getByText(/10 votes so far/)).toBeInTheDocument();
   });
 
   it("shows singular 'vote' for 1 total vote", () => {
     render(<PollDisplay postId="p1" poll={makePoll({ total_votes: 1 })} />);
-    expect(screen.getByText("1 vote")).toBeInTheDocument();
+    expect(screen.getByText(/1 vote so far/)).toBeInTheDocument();
   });
 
   it("disables Vote button when no option selected", () => {
@@ -159,7 +160,7 @@ describe("PollDisplay", () => {
   it("shows 0 votes for zero-vote poll", () => {
     const poll = makePoll({ total_votes: 0 });
     render(<PollDisplay postId="p1" poll={poll} />);
-    expect(screen.getByText("0 votes")).toBeInTheDocument();
+    expect(screen.getByText(/0 votes so far/)).toBeInTheDocument();
   });
 
   // =============================================

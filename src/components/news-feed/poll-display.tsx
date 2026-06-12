@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Check, Clock, Loader2, BarChart3 } from "lucide-react";
+import { Check, Clock, Loader2 } from "lucide-react";
 import { votePoll, removeVote } from "@/app/(protected)/intranet/actions";
 import type { PostPoll } from "@/types/database.types";
 
@@ -12,10 +12,16 @@ interface PollDisplayProps {
   poll: PostPoll;
 }
 
+// Result-bar fills graded by vote rank (design-system §8.3): lead darkest, then
+// fading; 3rd place and below share the lightest tint.
+const RANK_FILLS = [
+  "bg-mcr-light-blue-200",
+  "bg-mcr-light-blue-100",
+  "bg-mcr-light-blue-50",
+];
+
 export function PollDisplay({ postId, poll }: PollDisplayProps) {
-  // Single-select state
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
-  // Multi-select state
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
 
@@ -74,11 +80,18 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
     });
   }, []);
 
-  // Sort options by display_order
+  // Rows render in display order; the fill grades by vote standing, so rank
+  // independently. Ties break by display order through the stable sort.
   const sortedOptions = useMemo(
     () => [...poll.options].sort((a, b) => a.display_order - b.display_order),
     [poll.options]
   );
+  const rankById = useMemo(() => {
+    const byVotes = [...poll.options].sort(
+      (a, b) => b.vote_count - a.vote_count || a.display_order - b.display_order
+    );
+    return new Map(byVotes.map((o, i) => [o.id, i]));
+  }, [poll.options]);
 
   const hasSelection = poll.allow_multiple
     ? selectedOptionIds.size > 0
@@ -86,21 +99,17 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
 
   const voteLabel = poll.allow_multiple ? "voter" : "vote";
   const voteLabelPlural = poll.allow_multiple ? "voters" : "votes";
+  const totalLabel = `${poll.total_votes} ${poll.total_votes === 1 ? voteLabel : voteLabelPlural}`;
 
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-      {/* Question */}
-      <div className="flex items-center gap-2">
-        <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
-        <p className="text-sm font-medium">{poll.question}</p>
-      </div>
+    <div className="space-y-3">
+      {/* Question — the chart icon lives on the "Poll" pill in the header. */}
+      <p className="text-base font-semibold tracking-[-0.01em]">{poll.question}</p>
 
-      {/* Multi-select hint */}
       {poll.allow_multiple && !showResults && (
-        <p className="text-xs text-muted-foreground -mt-1">Select all that apply</p>
+        <p className="-mt-1 text-xs text-muted-foreground">Select all that apply</p>
       )}
 
-      {/* Options */}
       <div className="space-y-2">
         {sortedOptions.map((option) => {
           const percentage =
@@ -110,35 +119,45 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
           const isUserVote = votedOptionIds.has(option.id);
 
           if (showResults) {
-            // Results view — horizontal bars
+            const rank = rankById.get(option.id) ?? 0;
+            const isLead = rank === 0;
             return (
-              <div key={option.id} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className={cn("flex items-center gap-1.5", isUserVote && "font-medium")}>
-                    {isUserVote && <Check className="h-3.5 w-3.5 text-primary" />}
+              <div
+                key={option.id}
+                className="relative overflow-hidden rounded-[9px] border border-border bg-card"
+              >
+                <div
+                  className={cn(
+                    "absolute inset-y-0 left-0 transition-all duration-500",
+                    RANK_FILLS[Math.min(rank, RANK_FILLS.length - 1)]
+                  )}
+                  style={{ width: `${percentage}%` }}
+                />
+                <div className="relative flex items-center gap-1.5 px-3 py-2 text-[13.5px]">
+                  {isUserVote && (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-mcr-light-blue-700" strokeWidth={2.6} />
+                  )}
+                  <span
+                    className={cn(
+                      "truncate",
+                      isLead ? "font-semibold text-mcr-light-blue-700" : "text-foreground"
+                    )}
+                  >
                     {option.option_text}
                   </span>
-                  <span className="text-muted-foreground tabular-nums">{percentage}%</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-primary/10">
-                  <div
+                  <span
                     className={cn(
-                      "h-full rounded-full transition-all duration-500",
-                      isUserVote ? "bg-primary" : "bg-primary/40"
+                      "ml-auto shrink-0 tabular-nums",
+                      isLead ? "font-semibold text-mcr-light-blue-700" : "text-muted-foreground"
                     )}
-                    style={{ width: `${percentage}%` }}
-                  />
+                  >
+                    {percentage}%
+                  </span>
                 </div>
-                {poll.allow_multiple && (
-                  <p className="text-xs text-muted-foreground">
-                    {option.vote_count} of {poll.total_votes} {voteLabelPlural}
-                  </p>
-                )}
               </div>
             );
           }
 
-          // Voting view
           const isSelected = poll.allow_multiple
             ? selectedOptionIds.has(option.id)
             : selectedOptionId === option.id;
@@ -156,41 +175,35 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
                 }
               }}
               className={cn(
-                "flex w-full items-center rounded-lg border px-3 py-2 text-sm transition-colors text-left",
+                "flex w-full items-center gap-3 rounded-[9px] border px-3 py-2 text-left text-[13.5px] transition-colors",
                 isSelected
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
+                  ? "border-mcr-light-blue bg-mcr-light-blue-50"
+                  : "border-border bg-card hover:border-mcr-light-blue/60 hover:bg-mcr-light-blue-50/50"
               )}
             >
-              {/* Indicator: checkbox for multi-select, radio for single */}
-              <div
+              {/* checkbox for multi-select, radio for single */}
+              <span
                 className={cn(
-                  "mr-3 h-4 w-4 shrink-0 border-2 transition-colors flex items-center justify-center",
+                  "flex h-4 w-4 shrink-0 items-center justify-center border-[1.5px] transition-colors",
                   poll.allow_multiple ? "rounded-sm" : "rounded-full",
-                  isSelected
-                    ? "border-primary bg-primary"
-                    : "border-muted-foreground/40"
+                  isSelected ? "border-icon-fg-light-blue bg-icon-fg-light-blue" : "border-muted-foreground/40"
                 )}
               >
-                {isSelected && (
-                  poll.allow_multiple
-                    ? <Check className="h-3 w-3 text-white" />
-                    : <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                )}
-              </div>
+                {isSelected &&
+                  (poll.allow_multiple ? (
+                    <Check className="h-3 w-3 text-white" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  ))}
+              </span>
               {option.option_text}
             </button>
           );
         })}
       </div>
 
-      {/* Vote button (when not yet voted and poll is open) */}
       {!showResults && !poll.is_closed && (
-        <Button
-          size="sm"
-          onClick={handleVote}
-          disabled={!hasSelection || isPending}
-        >
+        <Button size="sm" onClick={handleVote} disabled={!hasSelection || isPending}>
           {isPending ? (
             <>
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -202,11 +215,10 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
         </Button>
       )}
 
-      {/* Footer: total votes + time remaining + change vote */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
           <span>
-            {poll.total_votes} {poll.total_votes === 1 ? voteLabel : voteLabelPlural}
+            {showResults ? totalLabel : `${totalLabel} so far · results appear after you vote`}
           </span>
           {timeRemaining && (
             <span className="flex items-center gap-1">
@@ -220,7 +232,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
             type="button"
             onClick={handleChangeVote}
             disabled={isPending}
-            className="text-primary hover:underline disabled:opacity-50"
+            className="font-medium text-icon-fg-light-blue hover:underline disabled:opacity-50"
           >
             {poll.allow_multiple ? "Change selections" : "Change vote"}
           </button>

@@ -26,6 +26,7 @@
   --mcr-light-blue-100: #D3EDF8;     /* poll result fill, 2nd place */
   --mcr-light-blue-200: #A7DCF2;     /* poll result fill, lead */
   --mcr-light-blue-border: #BFE4F4;  /* poll panel border */
+  --mcr-light-blue-700: #15536B;     /* poll lead-row text — AA (4.7:1) on the -200 lead fill, where -light-blue (#1A6E8E) fails */
   --mcr-orange-50: #FDF1E3;          /* pinned pill bg */
 
   /* Semantic Colors - Light Mode */
@@ -169,6 +170,7 @@
   --color-mcr-light-blue-100: var(--mcr-light-blue-100);
   --color-mcr-light-blue-200: var(--mcr-light-blue-200);
   --color-mcr-light-blue-border: var(--mcr-light-blue-border);
+  --color-mcr-light-blue-700: var(--mcr-light-blue-700);
   --color-mcr-orange-50: var(--mcr-orange-50);
 
   /* Status Colors */

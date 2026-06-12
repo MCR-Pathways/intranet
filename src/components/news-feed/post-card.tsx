@@ -23,6 +23,7 @@ import { AttachmentDisplay } from "./attachment-display";
 import { ReactionBar } from "./reaction-bar";
 import { CommentSection } from "./comment-section";
 import { PollDisplay } from "./poll-display";
+import { PostTypePill } from "./post-type-pill";
 import { PostEditDialog } from "./post-edit-dialog";
 import { PostDeleteDialog } from "./post-delete-dialog";
 import { ClosePollDialog } from "./close-poll-dialog";
@@ -209,6 +210,7 @@ export function PostCard({
     post.author.preferred_name || post.author.full_name || "User";
 
   const isKudos = post.post_type === POST_TYPES.KUDOS;
+  const isPoll = !!post.poll;
   // Stable reference for the recipients array so downstream useMemo
   // deps don't churn — `post.kudos_recipients ?? []` would otherwise
   // hand back a fresh empty literal on every render.
@@ -261,6 +263,9 @@ export function PostCard({
           // celebration" without a colour-coded category-per-card
           // explosion.
           isKudos && "border-t-4 border-t-mcr-yellow",
+          // Poll cards carry a sky-blue left spine (design-system §8.3); the
+          // "Poll" pill in the header completes the signal.
+          isPoll && "border-l-4 border-l-mcr-light-blue",
         )}
       >
         <CardContent className="pt-6">
@@ -317,6 +322,7 @@ export function PostCard({
               )}
 
               <div className="flex items-center gap-1">
+                {isPoll && <PostTypePill type="poll" />}
                 {/* Corner Pin icon — top-right next to the kebab. Decorative;
                     the unpin action lives in the kebab menu below. Pattern
                     matches LinkedIn / Reddit / Teams / Instagram corner-pin
