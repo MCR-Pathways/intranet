@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, X, BarChart3, Check } from "lucide-react";
+import { Plus, X, BarChart3, Info } from "lucide-react";
 
 export interface PollData {
   question: string;
@@ -208,6 +208,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
             <span className="text-sm text-muted-foreground">Closes:</span>
             <Input
               type="date"
+              aria-label="Poll closing date"
               value={customDate}
               onChange={(e) => handleCustomDateChange(e.target.value, customTime)}
               min={minDate}
@@ -217,6 +218,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
             <span className="text-sm text-muted-foreground">at</span>
             <Input
               type="time"
+              aria-label="Poll closing time"
               value={customTime}
               onChange={(e) => handleCustomDateChange(customDate, e.target.value)}
               disabled={disabled}
@@ -240,7 +242,7 @@ export function PollComposer({ poll, onChange, onRemove, disabled }: PollCompose
 
         {/* Sets the results-hidden expectation up front. */}
         <div className="flex items-center gap-2 rounded-lg border border-mcr-light-blue-border bg-mcr-light-blue-50 px-3 py-2 text-[12.5px] text-icon-fg-light-blue">
-          <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
+          <Info className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} aria-hidden="true" />
           Results stay hidden until a person votes
         </div>
       </div>
