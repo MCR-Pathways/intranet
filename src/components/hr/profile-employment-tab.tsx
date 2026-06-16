@@ -37,7 +37,7 @@ export function ProfileEmploymentTab({ employmentHistory }: ProfileEmploymentTab
             {employmentHistory.map((entry) => {
               const config = EMPLOYMENT_EVENT_CONFIG[entry.event_type] ?? {
                 label: entry.event_type,
-                colour: "text-gray-600",
+                colour: "text-muted-foreground",
               };
 
               return (

@@ -210,7 +210,7 @@ export function TeamCalendar({ initialMembers }: TeamCalendarProps) {
                         <p className="text-sm font-medium truncate">{member.name}</p>
                       </div>
                       {member.location ? (
-                        <span className={`text-xs font-medium ${locConfig?.textClass ?? "text-gray-500"}`}>
+                        <span className={`text-xs font-medium ${locConfig?.textClass ?? "text-muted-foreground"}`}>
                           {getLocationLabel(member.location, member.otherLocation)}
                         </span>
                       ) : (

@@ -134,7 +134,7 @@ export function LocationPickerDialog({
                   "rounded-lg p-4 flex flex-col items-center gap-2 transition-all duration-150",
                   isSelected
                     ? `${config.bgClass} ${config.textClass} ring-2 ring-primary shadow-sm`
-                    : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
                 )}
               >
                 <loc.icon className="h-6 w-6" />

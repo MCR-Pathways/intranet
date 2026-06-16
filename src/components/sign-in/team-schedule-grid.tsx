@@ -226,7 +226,7 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                       )}
                     >
                       {isEmpty ? (
-                        <span className="inline-flex items-center justify-center border border-dashed border-gray-200 rounded-md px-2 py-1 text-xs text-gray-300">
+                        <span className="inline-flex items-center justify-center border border-dashed border-border rounded-md px-2 py-1 text-xs text-muted-foreground/60">
                           —
                         </span>
                       ) : hasSplitDay ? (

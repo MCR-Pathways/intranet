@@ -64,3 +64,17 @@ Status key: 🔴 confirmed issue · 🟡 candidate (needs visual) · 🟢 checke
 **P3 — design-debt the audit surfaced (separable, genuine improvements):**
 - **E · Induction empty-state component** — collapse 9 dashed-grey placeholders into one branded empty state (§6). Highest-value cleanup.
 - **F · Shared `StatusBanner`/pill** (Learning 4× + preview banner); org-chart deliberate pass (recede vs surface, token connectors); delete dead code (`ResourceSearch`, `ArticleRenderer`); drop redundant `bg-card` overrides on outline buttons.
+
+---
+
+## P2-C delivery notes (sign-in + HR surface greys)
+
+**🟢 SHIPPED (P2-C).** Token mapping for the raw greys that a `:root` re-tune can't reach (utility classes bypass tokens): empty/not-set fills `bg-gray-50`/`bg-slate-100` → `bg-muted`; hover-deepen → `bg-accent`; dashed dividers + empty-cell borders `border-gray-200/300` → `border-border`; faint label text `text-gray-400` → `text-muted-foreground`; faint icons `text-gray-300` → `text-muted-foreground/60` (kept lighter than the label); dark config fallbacks `text-gray-600/700` → `text-muted-foreground`/`text-foreground`. Sites: `lib/sign-in.ts` (NOT_SET_CONFIG + "Other"), `day-cell`, `default-week-editor`, `location-picker-dialog`, `team-schedule-grid`, `day-detail-panel`, `team-calendar`, plus HR `profile-employment-tab` fallback. The `.hex` config fields are unused (no consumers) and untouched.
+
+**Compliance "Missing" dot** `bg-gray-300` → `bg-gray-400` at both the dot and its legend: this is a §1.7 *status* dot (siblings `amber-500`/`red-500`), so it stays on the Tailwind status ramp — just bumped one step for weight parity and to hold on white/ivory. Not a surface-token swap.
+
+**Deliberately NOT in P2-C:**
+- **Org-chart connectors** (`org-chart-content.tsx:734` `<style>` `stroke:#94a3b8`, `org-chart-person-card.tsx:56` `deptColour ?? "#94a3b8"`). A blind swap to `var(--border)` risks invisible 2px connectors on the chart panel; stroke weight needs a visual call. → **P3-F** (the org-chart deliberate pass), where recede-vs-surface is decided together.
+- **`border-0` config badges** (F2 follow-up). The grep found **9** sites, not the 1 the audit assumed (`absence-dashboard`, `profile-absence-tab`, `flexible-working-detail` ×3, `flexible-working-dashboard`, `onboarding-*` ×3), all `{config.bgColour} {config.colour} border-0`. Fixing them means adding a `borderColour` to several config maps in `hr.ts` then dropping `border-0` — a config-schema change with its own review surface. → **own follow-up PR**, not folded into the surface sweep.
+- **`certificates.ts`** greys (`#9ca3af`/`#d1d5db`) render the certificate PDF, not an on-ivory UI surface. Out of scope.
+- **`kiosk-checkin`** `text-gray-400` is the search icon/placeholder *inside a white input* on the kiosk's own dark full-screen theme — correct in context, left alone.

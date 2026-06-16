@@ -196,10 +196,10 @@ export function DayDetailPanel({
                   return (
                     <div
                       key={leave.id}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 ${config?.bgColour ?? "bg-gray-50"}`}
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 ${config?.bgColour ?? "bg-muted"}`}
                     >
-                      <div className={`h-2 w-2 rounded-full ${leave.status === "pending" ? "bg-amber-400" : (config?.colour ?? "text-gray-600").replace("text-", "bg-")}`} />
-                      <span className={`text-sm font-medium ${config?.colour ?? "text-gray-700"}`}>
+                      <div className={`h-2 w-2 rounded-full ${leave.status === "pending" ? "bg-amber-400" : (config?.colour ?? "text-muted-foreground").replace("text-", "bg-")}`} />
+                      <span className={`text-sm font-medium ${config?.colour ?? "text-foreground"}`}>
                         {config?.label ?? leave.leave_type}
                       </span>
                       {leave.status === "pending" && (
@@ -255,7 +255,7 @@ export function DayDetailPanel({
                     )}
                     <span className="truncate flex-1">{member.name}</span>
                     {member.location ? (
-                      <span className={`text-xs ${locConfig?.textClass ?? "text-gray-500"}`}>
+                      <span className={`text-xs ${locConfig?.textClass ?? "text-muted-foreground"}`}>
                         {getLocationLabel(member.location, member.otherLocation)}
                       </span>
                     ) : (
