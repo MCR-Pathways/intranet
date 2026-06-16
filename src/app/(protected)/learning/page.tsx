@@ -191,7 +191,7 @@ export default async function LearningPage() {
       {/* Continue Learning hero */}
       {resumeEnrolment && resumeLessonHref && (
         <Link href={resumeLessonHref} className="block">
-          <Card className="border-primary/20 bg-primary/5 transition-shadow hover:shadow-md cursor-pointer">
+          <Card className="border-primary/20 bg-primary/5 transition-shadow hover:shadow-lg cursor-pointer">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-primary/10 shrink-0">

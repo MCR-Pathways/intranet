@@ -224,7 +224,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card) => (
-          <Card key={card.label} className="transition-shadow hover:shadow-md">
+          <Card key={card.label} className="transition-shadow hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.label}

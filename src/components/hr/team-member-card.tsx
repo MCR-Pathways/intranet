@@ -92,7 +92,7 @@ export function TeamMemberCard({ member, leaveInfo, anniversaryInfo, showActions
     : null;
 
   return (
-    <Card className="relative transition-shadow hover:shadow-md">
+    <Card className="relative transition-shadow hover:shadow-lg">
       <CardHeader className="flex flex-row items-start gap-3 pb-2">
         <div className="relative shrink-0">
           <Avatar className="h-10 w-10">

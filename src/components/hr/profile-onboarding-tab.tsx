@@ -85,7 +85,7 @@ export function ProfileOnboardingTab({
                   key={checklist.id}
                   href={`/hr/onboarding/${checklist.id}`}
                 >
-                  <Card className="px-4 py-3 transition-shadow hover:shadow-md cursor-pointer opacity-70">
+                  <Card className="px-4 py-3 transition-shadow hover:shadow-lg cursor-pointer opacity-70">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

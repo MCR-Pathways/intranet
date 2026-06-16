@@ -164,7 +164,7 @@ function OnboardingRow({ checklist }: { checklist: OnboardingChecklistWithProgre
   return (
     <Link href={`/hr/onboarding/${checklist.id}`}>
       <Card className={cn(
-        "flex items-center gap-4 px-4 py-3 transition-shadow hover:shadow-md cursor-pointer",
+        "flex items-center gap-4 px-4 py-3 transition-shadow hover:shadow-lg cursor-pointer",
         !isActive && "opacity-70",
       )}>
         {/* Avatar */}

@@ -71,7 +71,7 @@ function StatCard({
 }: StatCardProps) {
   return (
     <Link href={href}>
-      <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
+      <Card className="transition-shadow hover:shadow-lg cursor-pointer h-full">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className={`h-4 w-4 ${iconColour}`} />
@@ -100,7 +100,7 @@ interface QuickActionProps {
 function QuickActionCard({ title, description, href, icon: Icon, isAdmin }: QuickActionProps) {
   return (
     <Link href={href}>
-      <Card className={cn("transition-shadow hover:shadow-md cursor-pointer h-full", isAdmin && "border-primary/20")}>
+      <Card className={cn("transition-shadow hover:shadow-lg cursor-pointer h-full", isAdmin && "border-primary/20")}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className={cn("h-4 w-4", isAdmin ? "text-primary" : "text-muted-foreground")} />
