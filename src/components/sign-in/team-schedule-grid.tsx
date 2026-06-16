@@ -119,6 +119,8 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           onClick={() => navigateWeek(-1)}
           disabled={weekOffset <= MIN_WEEK_OFFSET}
           type="button"
+          aria-label="Previous week"
+          title="Previous week"
         >
           <ChevronLeft />
         </Button>
@@ -129,6 +131,8 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
           onClick={() => navigateWeek(1)}
           disabled={weekOffset >= MAX_WEEK_OFFSET}
           type="button"
+          aria-label="Next week"
+          title="Next week"
         >
           <ChevronRight />
         </Button>
