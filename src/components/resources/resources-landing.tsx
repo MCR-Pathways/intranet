@@ -87,7 +87,7 @@ export function ResourcesLanding({
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Recently Updated
           </h2>
-          <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+          <div className="bg-card rounded-xl border border-border shadow-md overflow-clip">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-table-header odd:bg-table-header">

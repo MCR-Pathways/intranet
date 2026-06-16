@@ -77,6 +77,6 @@ These two docs are only auto-surfaced by a hook when the `frontend-design` skill
 
 ## UI component conventions
 
-**All data tables use `bg-card rounded-xl border border-border shadow-sm overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-table-header odd:bg-table-header` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
+**All data tables use `bg-card rounded-xl border border-border shadow-md overflow-clip` wrapper.** DataTable (TanStack) has this built in. Lightweight tables use Shadcn Table primitives with the same wrapper. Add `hover:bg-table-header odd:bg-table-header` on header `TableRow`. See `src/lib/CLAUDE.md` for code example.
 
 **Buttons: follow `docs/button-system.md`.** Single source of truth for variants, sizes, label casing, a11y, helpers (`TooltipButton`, `ButtonSpinner`, `DestructiveMenuItem`), and per-context patterns (Edit, kebab migration, AlertDialog footers, long labels, toggle buttons). Never use `className="h-X w-X"` on Button; an ESLint rule enforces this. Cancel uses `secondary`; destructive inline uses `ghost` or moves to kebab; primary CTAs must be `default`, `lg`, or `hero` (never `sm`).

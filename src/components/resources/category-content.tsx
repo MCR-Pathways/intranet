@@ -48,7 +48,7 @@ export function CategoryContent({
     baseIcon === Folder && hasContent ? FolderOpen : baseIcon;
 
   return (
-    <div className="bg-card border border-border shadow-sm rounded-xl overflow-clip">
+    <div className="bg-card border border-border shadow-md rounded-xl overflow-clip">
       {/* Padded top section: breadcrumb + category header */}
       <div className="p-5 md:p-6 space-y-4">
         {/* Breadcrumbs — no "Home", starts from Resources */}

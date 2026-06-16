@@ -78,3 +78,15 @@ Status key: 🔴 confirmed issue · 🟡 candidate (needs visual) · 🟢 checke
 - **`border-0` config badges** (F2 follow-up). The grep found **9** sites, not the 1 the audit assumed (`absence-dashboard`, `profile-absence-tab`, `flexible-working-detail` ×3, `flexible-working-dashboard`, `onboarding-*` ×3), all `{config.bgColour} {config.colour} border-0`. Fixing them means adding a `borderColour` to several config maps in `hr.ts` then dropping `border-0` — a config-schema change with its own review surface. → **own follow-up PR**, not folded into the surface sweep.
 - **`certificates.ts`** greys (`#9ca3af`/`#d1d5db`) render the certificate PDF, not an on-ivory UI surface. Out of scope.
 - **`kiosk-checkin`** `text-gray-400` is the search icon/placeholder *inside a white input* on the kiosk's own dark full-screen theme — correct in context, left alone.
+
+---
+
+## P2-D delivery notes (card separation on ivory)
+
+**🟢 SHIPPED (P2-D).** Colin's call (shown the live preview first): bump card/table resting shadows `shadow-sm` → `shadow-md` so white cards lift off the ivory — measured `0 1px 2px` @5% → `0 4px 6px` + `0 2px 4px` @10%. Delivers ADR-014's "shadow carries separation" intent; before, the 1px border was doing the separating alone and the shadow was decorative. Applied to the `Card` + `DataTable` primitives (cascade widely), the inline `bg-card … shadow-sm overflow-clip` table/card wrappers, and the two learning course cards (base `md`, hover `md`→`lg` so they still rise on hover). design-system §1.6 already specified `shadow-md`; aligned the code + the `ui-components.md` / `lib/CLAUDE.md` wrapper strings to it.
+
+**NOT bumped (deliberately left `shadow-sm`):** buttons (`bg-primary`/`success` variants), the bell unread badge, comment-count pills, Plate floating mini-controls, the org-chart floating toolbar, day-cell "today" ring + hover, selected-state rings, hover-only affordances — none are resting card surfaces.
+
+**Documented exception — the article card.** `ARTICLE_CARD_CLASSES` (resources article view) deliberately stays `shadow-sm`: it's a large reading surface where `shadow-md` reads as a heavy slab (a prior "soft-retreat" decision, guarded by `article-constants.test.ts`). The bump's rationale is canvas separation; the article card's is recede-on-a-big-surface, which wins here. The sed initially caught it; reverted and the divergence is now recorded in the constant's comment.
+
+**Side panels `bg-background` → `bg-card`.** The sign-in `day-detail-panel` + `team-calendar` side panels were ivory-on-ivory (didn't separate from the calendar canvas); now white `bg-card` panels with their existing `border-l`, reading as elevated.

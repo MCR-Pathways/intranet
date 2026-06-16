@@ -172,7 +172,7 @@ export function TeamCalendar({ initialMembers }: TeamCalendarProps) {
 
         {/* Day detail sidebar — shows who's where */}
         {selectedDate && (
-          <div className="border-l bg-background w-full lg:w-80 flex-shrink-0 overflow-y-auto">
+          <div className="border-l bg-card w-full lg:w-80 flex-shrink-0 overflow-y-auto">
             <div className="px-4 py-3 border-b">
               <h4 className="text-sm font-semibold">
                 {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB", {

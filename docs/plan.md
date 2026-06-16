@@ -163,13 +163,26 @@ Uniform ivory canvas (`--background` #FDF9EA) replacing the cool grey, with per-
 - [x] **P1-A** — Warm the neutral tokens (`--border/--input/--muted/--secondary/--accent/--table-header`) toward ivory. PR #343.
 - [x] **P1-B** — Tonal badge borders so pills read on stripe/ivory. PR #343.
 - [x] **P2-C** — Raw-grey → token sweep across sign-in + HR surfaces (utility classes the token re-tune couldn't reach). PR #344.
-- [ ] **P2-D** — Card separation: reconcile `shadow-sm` (code) vs `shadow-md` (design-system §3) on cards against ivory; `bg-background` side panels (sign-in `day-detail-panel`, `team-calendar`, calendar wrapper boxes) → `bg-card`.
+- [x] **P2-D** — Card separation: bumped card/table resting shadows `shadow-sm` → `shadow-md` (design-system §1.6) so cards lift off ivory; sign-in `day-detail-panel` + `team-calendar` side panels `bg-background` → `bg-card`. Article card keeps `shadow-sm` (documented soft-retreat exception). PR #345.
 - [ ] **P3-E** — Induction empty-state component: collapse the 9 near-identical dashed-grey placeholder pages into one branded empty state.
 - [ ] **P3-F** — Shared `StatusBanner`/pill (Learning 4× + preview banner); org-chart deliberate pass (recede-vs-surface + token the `#94a3b8` connectors — deferred from P2-C because the 2px stroke weight needs a visual call); delete dead code (`ResourceSearch`, `ArticleRenderer`); drop redundant `bg-card` overrides on outline buttons.
 - [ ] **P2-C-b** — `border-0` config badges wash-out: 9 HR sites (`absence-dashboard`, `profile-absence-tab`, `flexible-working-*` ×4, `onboarding-*` ×3) render `{config.bgColour} {config.colour} border-0`, opting out of P1-B's tonal border so they still wash out on striped/tinted surfaces. Fix: add a `borderColour` to the config maps in `src/lib/hr.ts`, drop `border-0`. Re-scoped out of P2-C (9 sites + a config-schema change, wider than the audit's 1-site assumption).
 
-**Spun off — general a11y, surfaced from the P2-C review (not a colour issue):**
-- [ ] **`title` on truncated text.** Gemini flagged a `truncate` span with no `title` on `day-cell.tsx`; it's systemic — `truncate`/`line-clamp` in 51 files, ~60 lines with no `title`, so truncated content (long "Other" locations, names, article titles) has no hover-readable full text. Sweep all sites, prioritising variable-length/user-authored strings over fixed short labels; pair with a custom ESLint rule (sibling to `mcr-button/no-custom-button-sizing`) flagging `truncate` without `title`/`aria-label`. **Trigger:** bundle with the icon-button a11y label sweep — one a11y pass and one ESLint rule covering both.
+### Code hygiene & enforcement backlog
+
+Cross-cutting patterns the colour-rework reviews (#344/#345) surfaced. Grouped on purpose: some are **finite** (fix the N sites once), some are **drift-prone** (new code reintroduces them unless enforced). Drift-prone ones get a sweep **and** a guard — a custom rule in `eslint-rules/` (the `mcr-button` plugin precedent) or a tsconfig flag — so the fix sticks instead of becoming whack-a-mole.
+
+**Drift-prone → fix + enforce:**
+- [ ] **a11y enforcement** (one pass, two rules): (a) `title` on truncated text — `truncate`/`line-clamp` in 51 files, ~60 lines with no `title`, so truncated content (long "Other" locations, names, article titles) has no hover-readable full text; (b) accessible labels on icon-only buttons. Sweep both (prioritise variable-length/user-authored strings) and add two `eslint-rules/` rules: flag `truncate`/`line-clamp` without `title`/`aria-label`, and flag icon-only buttons without a label. Highest-value enforcement work.
+- [ ] **Undefended static-map access** (latent `TypeError`): `categoryConfig[dbKey].prop` and similar throw if a DB key drifts from a local config map. Known sites: `learning/courses/[id]/page.tsx:219` (`config.icon`), `course-management-table.tsx:109` (`config.badgeVariant`/`.label`) — add `?.` + fallback (default icon; `?? "secondary"` / raw category), matching `course-card`/`enrolled-course-card`/`actions.ts`. The class-wide fix is **`noUncheckedIndexedAccess: true`** in tsconfig — the compiler then flags every `map[key]` as `T | undefined`. Highest leverage, biggest blast radius (surfaces every existing unguarded index access at once); count the fallout first, then a dedicated hardening PR. (The `enrolled-course-card` instance is already fixed — PR #345.)
+
+**Drift-prone but low-value → sweep when convenient, no rule:**
+- [ ] **`transition-all` → targeted transitions** (27 sites): mostly harmless when no layout props animate on hover, and a rule would be noisy (many legit uses). Sweep to `transition` or `transition-[box-shadow,border-color]` per site — NOT `transition-colors transition-shadow` (two `transition-property` utilities conflict; one silently wins, dropping the other).
+
+**Finite → just fix (no rule):**
+- [ ] **border-0 config badges** (9 HR sites) — the **P2-C-b** item in the Colour rework section above. A `src/lib/hr.ts` config change, can't really regress.
+
+**Sequencing:** after the colour-rework audit finishes (P3-E/F). Then the a11y enforcement PR is the highest-value piece; `noUncheckedIndexedAccess` is its own scoped hardening sprint; the finite cleanups land whenever.
 
 ### HR Phase 3
 - [ ] Surveys & pulse checks
@@ -223,6 +236,7 @@ Uniform ivory canvas (`--background` #FDF9EA) replacing the cool grey, with per-
 - [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
 - [x] Tool Shed card & feed UX overhaul (PR #185): format accent borders, event title redesign, 3-2-1 violet→emerald, search_text column, end-of-feed indicator, filter transitions
 - [ ] Tool Shed dialog & draft UX (PR 2, planned): partial draft saves, character counters, unsaved changes warning, draft toggle discovery
+- Defensive `categoryConfig` access (learning) → moved to **Code hygiene & enforcement backlog** (undefended static-map access).
 
 ---
 

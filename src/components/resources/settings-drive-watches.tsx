@@ -582,7 +582,7 @@ export function SettingsDriveWatches() {
             No renewal runs recorded. Next scheduled run is nightly at 03:00 UTC.
           </div>
         ) : (
-          <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+          <div className="bg-card rounded-xl border border-border shadow-md overflow-clip">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-table-header odd:bg-table-header">

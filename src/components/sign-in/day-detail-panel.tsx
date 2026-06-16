@@ -100,7 +100,7 @@ export function DayDetailPanel({
         : null;
 
   return (
-    <div className="border-l bg-background w-full lg:w-96 flex-shrink-0 flex flex-col overflow-y-auto">
+    <div className="border-l bg-card w-full lg:w-96 flex-shrink-0 flex flex-col overflow-y-auto">
       {/* Header */}
       <div className="flex items-start justify-between px-4 py-3 border-b">
         <div>

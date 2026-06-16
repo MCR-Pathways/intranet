@@ -44,7 +44,7 @@ export function CategoryGrid({ categories, canEdit = false, heading }: CategoryG
           return (
             <div
               key={cat.id}
-              className="group/card relative rounded-xl border border-border bg-card overflow-hidden shadow-sm transition-all hover:border-foreground/20 hover:shadow-md"
+              className="group/card relative rounded-xl border border-border bg-card overflow-hidden shadow-md transition-all hover:border-foreground/20 hover:shadow-lg"
             >
               <Link
                 href={`/resources/${cat.slugPath}`}

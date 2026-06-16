@@ -49,7 +49,7 @@ export default async function DraftsPage() {
       </div>
 
       {drafts.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border shadow-sm px-6 py-12 text-center">
+        <div className="bg-card rounded-xl border border-border shadow-md px-6 py-12 text-center">
           <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm text-foreground font-medium">No drafts</p>
           <p className="text-sm text-muted-foreground mt-1">
@@ -57,7 +57,7 @@ export default async function DraftsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+        <div className="bg-card rounded-xl border border-border shadow-md overflow-clip">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-table-header odd:bg-table-header">
