@@ -5,6 +5,8 @@ import noCustomButtonSizing, {
   noIconSizingInsideButton,
   noRedundantBgCardOnOutline,
 } from "./eslint-rules/no-custom-button-sizing.mjs";
+import { noTruncateWithoutTitle } from "./eslint-rules/a11y-rules.mjs";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -16,6 +18,11 @@ const eslintConfig = defineConfig([
           "no-custom-button-sizing": noCustomButtonSizing,
           "no-icon-sizing-inside-button": noIconSizingInsideButton,
           "no-bg-card-on-outline": noRedundantBgCardOnOutline,
+        },
+      },
+      "mcr-a11y": {
+        rules: {
+          "no-truncate-without-title": noTruncateWithoutTitle,
         },
       },
     },
@@ -49,7 +56,25 @@ const eslintConfig = defineConfig([
       // multi-line JSX a single-line grep misses. Error from day one (the
       // P3-F sweep cleared all existing instances).
       "mcr-button/no-bg-card-on-outline": "error",
+      // Truncated text (truncate / line-clamp-N) without a `title` is
+      // unreadable on hover for sighted users. Starts as `warn` while the
+      // existing sites are swept; promote to `error` once clear (the
+      // no-icon-sizing-inside-button playbook). See .claude/rules/ui-components.md.
+      "mcr-a11y/no-truncate-without-title": "warn",
     },
+  },
+  {
+    // Belts-and-braces a11y: enable the FULL jsx-a11y recommended set (34
+    // rules), not just the 6 Next core-web-vitals turns on. The plugin is
+    // already registered by Next, so we only set severities here — re-declaring
+    // the plugin silently no-ops the rules. All `warn` while the existing
+    // violations are swept (jsx-a11y + the custom truncate rule), then promoted
+    // to `error`. eslint-plugin-jsx-a11y is a direct devDependency so this
+    // doesn't rely on Next pulling it in transitively.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: Object.fromEntries(
+      Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, "warn"]),
+    ),
   },
   {
     // CLI scripts legitimately use console.log
