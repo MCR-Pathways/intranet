@@ -5,6 +5,7 @@ import noCustomButtonSizing, {
   noIconSizingInsideButton,
   noRedundantBgCardOnOutline,
 } from "./eslint-rules/no-custom-button-sizing.mjs";
+import { noTruncateWithoutTitle } from "./eslint-rules/a11y-rules.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -16,6 +17,11 @@ const eslintConfig = defineConfig([
           "no-custom-button-sizing": noCustomButtonSizing,
           "no-icon-sizing-inside-button": noIconSizingInsideButton,
           "no-bg-card-on-outline": noRedundantBgCardOnOutline,
+        },
+      },
+      "mcr-a11y": {
+        rules: {
+          "no-truncate-without-title": noTruncateWithoutTitle,
         },
       },
     },
@@ -49,6 +55,11 @@ const eslintConfig = defineConfig([
       // multi-line JSX a single-line grep misses. Error from day one (the
       // P3-F sweep cleared all existing instances).
       "mcr-button/no-bg-card-on-outline": "error",
+      // Truncated text (truncate / line-clamp-N) without a `title` is
+      // unreadable on hover for sighted users. Starts as `warn` while the
+      // existing sites are swept; promote to `error` once clear (the
+      // no-icon-sizing-inside-button playbook). See .claude/rules/ui-components.md.
+      "mcr-a11y/no-truncate-without-title": "warn",
     },
   },
   {

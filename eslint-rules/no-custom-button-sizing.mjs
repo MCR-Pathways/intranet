@@ -322,3 +322,5 @@ const noRedundantBgCardOnOutline = {
 // Default export keeps the existing rule registration working unchanged.
 export default noCustomButtonSizing;
 export { noIconSizingInsideButton, noRedundantBgCardOnOutline };
+// Shared AST helpers, reused by the a11y rules (eslint-rules/a11y-rules.mjs).
+export { getClassNameAttr, extractStringsFromValue };
