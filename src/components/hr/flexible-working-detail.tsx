@@ -457,12 +457,7 @@ export function FlexibleWorkingDetail({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Outcome</p>
                 <Badge
-                  variant="outline"
-                  className={cn(
-                    appeal.outcome === "upheld"
-                      ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-green-50 text-green-700 border-green-200",
-                  )}
+                  variant={appeal.outcome === "upheld" ? "destructive" : "success"}
                 >
                   {appeal.outcome === "upheld" ? "Original Decision Upheld" : "Decision Overturned"}
                 </Badge>

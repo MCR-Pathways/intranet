@@ -883,10 +883,10 @@ export const ONBOARDING_ASSIGNEE_CONFIG: Record<OnboardingAssigneeRole, { label:
   other: { label: "Other", colour: "text-slate-700", bgColour: "bg-slate-50", borderColour: "border-slate-200" },
 };
 
-export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; colour: string; bgColour: string; borderColour: string; badgeVariant: "default" | "success" | "muted" }> = {
-  active: { label: "Active", colour: "text-blue-700", bgColour: "bg-blue-50", borderColour: "border-blue-200", badgeVariant: "default" },
-  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", borderColour: "border-green-200", badgeVariant: "success" },
-  cancelled: { label: "Cancelled", colour: "text-slate-700", bgColour: "bg-slate-50", borderColour: "border-slate-200", badgeVariant: "muted" },
+export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; badgeVariant: "default" | "success" | "muted" }> = {
+  active: { label: "Active", badgeVariant: "default" },
+  completed: { label: "Completed", badgeVariant: "success" },
+  cancelled: { label: "Cancelled", badgeVariant: "muted" },
 };
 
 export const ONBOARDING_SECTIONS: OnboardingSection[] = [
