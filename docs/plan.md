@@ -223,6 +223,7 @@ Uniform ivory canvas (`--background` #FDF9EA) replacing the cool grey, with per-
 - [x] Tool Shed popular tags DB aggregation (moved to PostgreSQL RPC — migration 00070)
 - [x] Tool Shed card & feed UX overhaul (PR #185): format accent borders, event title redesign, 3-2-1 violet→emerald, search_text column, end-of-feed indicator, filter transitions
 - [ ] Tool Shed dialog & draft UX (PR 2, planned): partial draft saves, character counters, unsaved changes warning, draft toggle discovery
+- [ ] Defensive `categoryConfig` access (learning): `learning/courses/[id]/page.tsx:219` (`config.icon`) and `course-management-table.tsx:109` (`config.badgeVariant`/`.label`) read the category map without optional chaining — a `TypeError` if a DB `course.category` drifts from the local map. Add `?.` + fallback (a default icon; `?? "secondary"` / `?? raw category`), matching `course-card` / `enrolled-course-card` / `actions.ts`. Surfaced by Gemini on #345 (the flagged `enrolled-course-card` instance is fixed; these two are in untouched files).
 
 ---
 
