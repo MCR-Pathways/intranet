@@ -141,6 +141,8 @@ Badges use **subtle/tonal fills** — light coloured background (`-50`) with dar
 | `outline` | `text-foreground` + border | Minimal (Cancelled, Withdrawn, visibility labels) |
 | `muted` | `bg-muted text-muted-foreground` | Very low emphasis (Staff, Draft in some contexts) |
 
+The `Classes` column lists each variant's fill and text, which vary per variant. The border is uniform, so it's stated once here rather than repeated in every cell: tonal variants carry their matching `-200` (e.g. `default` → `border-blue-200`), the neutral `secondary`/`outline`/`muted` carry `border-border`.
+
 **HR config-driven badges** (defined in `src/lib/hr.ts`) apply tonal colours via className overrides on the Badge component: `bgColour: "bg-{colour}-50"` + `colour: "text-{colour}-700"`. These bypass the variant system but follow the same tonal pattern.
 
 **Rules:**
