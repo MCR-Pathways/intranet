@@ -1,5 +1,7 @@
 import { getInductionItemStatus } from "@/components/induction/induction-page-wrapper";
 import { InductionItemPage } from "@/components/induction/induction-item-page";
+import { InductionPlaceholder } from "@/components/induction/induction-placeholder";
+import { Laptop } from "lucide-react";
 
 export default async function ITSetupPage() {
   const { isCompleted } = await getInductionItemStatus("it_setup");
@@ -13,29 +15,26 @@ export default async function ITSetupPage() {
       category="IT Setup"
       isCompleted={isCompleted}
     >
-      <div className="prose prose-sm max-w-none">
-        <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <h3 className="text-lg font-semibold mb-2">IT Account Setup</h3>
-          <p className="text-muted-foreground mb-4">
-            Please ensure the following IT accounts are set up and working
-            correctly. Contact IT support if you need help.
-          </p>
-          <div className="space-y-3 text-left text-sm text-muted-foreground max-w-md mx-auto">
-            <p>Checklist:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>MCR Pathways email account is active</li>
-              <li>Google Workspace access (Drive, Calendar, Meet)</li>
-              <li>Intranet login is working (you&apos;re here!)</li>
-              <li>Any team-specific tools or platforms</li>
-              <li>VPN access if required for your role</li>
-            </ul>
-            <p className="mt-4 text-xs">
-              If you need IT support, contact:{" "}
-              <span className="font-medium">it@mcrpathways.org</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      <InductionPlaceholder
+        icon={Laptop}
+        accent="light-blue"
+        heading="IT Account Setup"
+        intro="Please ensure the following IT accounts are set up and working correctly. Contact IT support if you need help."
+        listLabel="Checklist:"
+        items={[
+          "MCR Pathways email account is active",
+          "Google Workspace access (Drive, Calendar, Meet)",
+          "Intranet login is working (you're here!)",
+          "Any team-specific tools or platforms",
+          "VPN access if required for your role",
+        ]}
+        note={
+          <>
+            If you need IT support, contact:{" "}
+            <span className="font-medium">it@mcrpathways.org</span>
+          </>
+        }
+      />
     </InductionItemPage>
   );
 }

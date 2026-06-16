@@ -1,5 +1,7 @@
 import { getInductionItemStatus } from "@/components/induction/induction-page-wrapper";
 import { InductionItemPage } from "@/components/induction/induction-item-page";
+import { InductionPlaceholder } from "@/components/induction/induction-placeholder";
+import { HardHat } from "lucide-react";
 
 export default async function HealthSafetyPage() {
   const { isCompleted } = await getInductionItemStatus("health_safety");
@@ -13,28 +15,21 @@ export default async function HealthSafetyPage() {
       category="Compliance Training"
       isCompleted={isCompleted}
     >
-      <div className="prose prose-sm max-w-none">
-        <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <h3 className="text-lg font-semibold mb-2">
-            Health &amp; Safety Training
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            Course content will be available here soon. This mandatory training
-            will cover health and safety practices at MCR Pathways.
-          </p>
-          <div className="space-y-3 text-left text-sm text-muted-foreground max-w-md mx-auto">
-            <p>This course will cover:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Workplace hazards and risks</li>
-              <li>Fire safety and evacuation procedures</li>
-              <li>First aid awareness</li>
-              <li>Display screen equipment (DSE)</li>
-              <li>Reporting incidents and near misses</li>
-              <li>Working from home safely</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      <InductionPlaceholder
+        icon={HardHat}
+        accent="wine"
+        heading="Health & Safety Training"
+        intro="Course content will be available here soon. This mandatory training will cover health and safety practices at MCR Pathways."
+        listLabel="This course will cover:"
+        items={[
+          "Workplace hazards and risks",
+          "Fire safety and evacuation procedures",
+          "First aid awareness",
+          "Display screen equipment (DSE)",
+          "Reporting incidents and near misses",
+          "Working from home safely",
+        ]}
+      />
     </InductionItemPage>
   );
 }

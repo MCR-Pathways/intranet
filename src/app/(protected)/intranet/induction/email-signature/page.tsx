@@ -1,5 +1,7 @@
 import { getInductionItemStatus } from "@/components/induction/induction-page-wrapper";
 import { InductionItemPage } from "@/components/induction/induction-item-page";
+import { InductionPlaceholder } from "@/components/induction/induction-placeholder";
+import { Mail } from "lucide-react";
 
 export default async function EmailSignaturePage() {
   const { isCompleted } = await getInductionItemStatus("email_signature");
@@ -13,31 +15,22 @@ export default async function EmailSignaturePage() {
       category="IT Setup"
       isCompleted={isCompleted}
     >
-      <div className="prose prose-sm max-w-none">
-        <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <h3 className="text-lg font-semibold mb-2">Email Signature Setup</h3>
-          <p className="text-muted-foreground mb-4">
-            Please set up your MCR Pathways email signature using the template
-            below. Instructions for adding this to your Gmail account will be
-            provided.
-          </p>
-          <div className="space-y-3 text-left text-sm text-muted-foreground max-w-md mx-auto">
-            <p>Your email signature should include:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Your full name</li>
-              <li>Your job title</li>
-              <li>MCR Pathways</li>
-              <li>Your contact phone number</li>
-              <li>The MCR Pathways logo</li>
-              <li>Standard disclaimer text</li>
-            </ul>
-            <p className="mt-4 text-xs">
-              Email signature template and instructions will be provided here
-              soon.
-            </p>
-          </div>
-        </div>
-      </div>
+      <InductionPlaceholder
+        icon={Mail}
+        accent="pink"
+        heading="Email Signature Setup"
+        intro="Please set up your MCR Pathways email signature using the template below. Instructions for adding this to your Gmail account will be provided."
+        listLabel="Your email signature should include:"
+        items={[
+          "Your full name",
+          "Your job title",
+          "MCR Pathways",
+          "Your contact phone number",
+          "The MCR Pathways logo",
+          "Standard disclaimer text",
+        ]}
+        note="Email signature template and instructions will be provided here soon."
+      />
     </InductionItemPage>
   );
 }
