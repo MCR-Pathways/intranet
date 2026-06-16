@@ -1238,5 +1238,5 @@ export async function fetchAllCategoriesAction(): Promise<CategoryWithChildren[]
 
 // ─── Search ─────────────────────────────────────────────────────────────────
 // Full-text search is handled client-side via Algolia React InstantSearch.
-// See src/components/resources/resource-search.tsx and src/lib/algolia.ts.
+// See src/components/layout/global-search.tsx (Cmd+K) and src/lib/algolia.ts.
 // Indexing happens server-side in drive-actions.ts (link/sync/unlink).

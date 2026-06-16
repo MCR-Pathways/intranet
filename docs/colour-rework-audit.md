@@ -90,3 +90,15 @@ Status key: 🔴 confirmed issue · 🟡 candidate (needs visual) · 🟢 checke
 **Documented exception — the article card.** `ARTICLE_CARD_CLASSES` (resources article view) deliberately stays `shadow-sm`: it's a large reading surface where `shadow-md` reads as a heavy slab (a prior "soft-retreat" decision, guarded by `article-constants.test.ts`). The bump's rationale is canvas separation; the article card's is recede-on-a-big-surface, which wins here. The sed initially caught it; reverted and the divergence is now recorded in the constant's comment.
 
 **Side panels `bg-background` → `bg-card`.** The sign-in `day-detail-panel` + `team-calendar` side panels were ivory-on-ivory (didn't separate from the calendar canvas); now white `bg-card` panels with their existing `border-l`, reading as elevated.
+
+---
+
+## P3-F notes (cleanup + decomposition)
+
+P3-F split into three because the pieces are unrelated:
+
+**🟢 SHIPPED (P3-F cleanup).** Deleted verified-dead code — `ArticleRenderer` (388-line Tiptap-JSON renderer, superseded by the Plate static renderer per ADR-010; zero refs) and `ResourceSearch` (180-line per-module Algolia search, superseded by the Cmd+K global search; only a stale comment in `resources/actions.ts` referenced it) plus its test; repointed that comment at `global-search.tsx`. Dropped **10** redundant `bg-card` overrides on `outline` buttons across 6 files (the variant fills `bg-card` natively since ADR-014): `native-article-editor` ×2, `resource-header-actions` ×2, `glossary-filter` ×1, `people-calendar` ×2, `team-schedule-grid` ×2, `plate-glossary-elements` ×1. The first grep pass found 6; the AST ESLint rule `no-bg-card-on-outline` (added to enforce this) caught the other 4 the grep missed — including a multi-line case 7 lines below the `variant` attr.
+
+**Org-chart pass — DROPPED.** Colin is rebuilding the org chart, so the deferred `#94a3b8` connector swap (`org-chart-content:734`, `org-chart-person-card:56`) and the `bg-muted/30` chart panel (`org-chart-content:661`) fold into that rebuild rather than a standalone fix. See `memory/org-chart-rebuild.md`.
+
+**StatusBanner — split to its own track.** The audit's "Learning 4× duplicated status pills → extract StatusBanner" needs discovery first (a first grep didn't surface the 4×; `preview-mode-banner.tsx` is used in 3 places, not dead). Extract only if the duplication is real.

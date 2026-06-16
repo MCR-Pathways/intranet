@@ -214,21 +214,18 @@ export function NativeArticleEditor({
             <Save />
             Save
           </Button>
-          {/* View article: navigation away from the editor. Outline needs
-              `bg-card` so it renders visibly on the grey editor surround
-              (per the doc's Contrast reference). */}
-          <Button variant="outline" className="bg-card" asChild>
+          {/* View article: navigation away from the editor — outline. */}
+          <Button variant="outline" asChild>
             <Link href={`/resources/article/${article.slug}`}>
               View article
             </Link>
           </Button>
           {/* Publish: green `success` per the doc ("Publish (article,
               course, post)"). Unpublish is a step-back, not a commit
-              forward, so outline + bg-card matching View article. */}
+              forward, so outline matching View article. */}
           {isPublished ? (
             <Button
               variant="outline"
-              className="bg-card"
               onClick={() => setPublishOpen(true)}
               disabled={isPublishPending}
             >
