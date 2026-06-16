@@ -8,19 +8,22 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        // Tonal badges carry a subtle -200 border so the pill outline reads
+        // even where the pale -50 fill matches the surface (zebra stripes,
+        // ivory canvas) — see docs/colour-rework-audit.md F2.
         default:
-          "border-transparent bg-blue-50 text-blue-700",
+          "border-blue-200 bg-blue-50 text-blue-700",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground",
+          "border-border bg-secondary text-secondary-foreground",
         destructive:
-          "border-transparent bg-red-50 text-red-700",
-        outline: "text-foreground",
+          "border-red-200 bg-red-50 text-red-700",
+        outline: "border-border text-foreground",
         success:
-          "border-transparent bg-green-50 text-green-700",
+          "border-green-200 bg-green-50 text-green-700",
         warning:
-          "border-transparent bg-amber-50 text-amber-700",
+          "border-amber-200 bg-amber-50 text-amber-700",
         muted:
-          "border-transparent bg-muted text-muted-foreground",
+          "border-border bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {

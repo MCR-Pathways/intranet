@@ -38,23 +38,25 @@
   --popover-foreground: var(--mcr-dark-blue);
   --primary: var(--mcr-dark-blue);
   --primary-foreground: #ffffff;
-  --secondary: #E8ECF0;
+  /* Neutrals warmed to harmonise with the ivory canvas (ADR-014 follow-up,
+     docs/colour-rework-audit.md F1) — were cool blue-greys from the grey era. */
+  --secondary: #EBE7DD;
   --secondary-foreground: var(--mcr-dark-blue);
-  --accent: #E2E8F0;
+  --accent: #E7E2D7;
   --accent-foreground: var(--mcr-dark-blue);
   /* Link colour — underlines MUST remain (link-to-body contrast 1.83:1 fails 3:1 without underline per WCAG SC 1.4.1) */
   --link: var(--mcr-teal); /* #2A6075, 6.93:1 on white */
-  --muted: #F0F2F5;
+  --muted: #F3F0E7;
   --muted-foreground: #6b7280;
   /* Destructive = MCR wine. Brand-aligned, 10.46:1 white foreground contrast (AAA). Replaces Tailwind red-500. */
   --destructive: var(--mcr-wine); /* #751B48 */
   --destructive-foreground: #ffffff;
   --success: #15803d;
   --success-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
+  --border: #E5E0D5;
+  --input: #E5E0D5;
   --ring: var(--mcr-dark-blue);
-  --table-header: #E4E7EC;
+  --table-header: #E9E4D9;
 
   /* Icon foreground colours — darkened variants for contrast on white card backgrounds */
   --icon-fg-teal: var(--mcr-teal);     /* 6.93:1 on white */
