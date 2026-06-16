@@ -8,10 +8,12 @@
  *   carrying the full text. AST-based, so it catches multi-line JSX a grep
  *   misses (the lesson from PR #347).
  *
- *   Flags an element whose className contains `truncate` or `line-clamp-{n}`
- *   and has no `title` (or `aria-label`/`aria-labelledby`) attribute. Not
- *   autofixable — the title value is the runtime text, which the rule can't
- *   synthesise. Severity `warn` while existing sites are swept, then `error`.
+ *   Flags an element whose className contains `truncate`, `line-clamp-{n}`,
+ *   or an arbitrary `line-clamp-[…]`, and carries no usable `title` (or
+ *   `aria-label`/`aria-labelledby`). Empty, `{null}`/`{undefined}`, and bare
+ *   boolean values don't count: they give no tooltip. Not autofixable, since
+ *   the title is the runtime text the rule can't synthesise. Severity `warn`
+ *   while existing sites are swept, then `error`.
  *   See `.claude/rules/ui-components.md`.
  */
 
@@ -20,7 +22,7 @@ import {
   extractStringsFromValue,
 } from "./no-custom-button-sizing.mjs";
 
-const TRUNCATE_TOKEN_RE = /^(truncate|line-clamp-\d+)$/;
+const TRUNCATE_TOKEN_RE = /^(truncate|line-clamp-(?:\d+|\[.+\]))$/;
 
 function findTruncateClass(str) {
   for (const cls of str.split(/\s+/)) {
@@ -29,10 +31,42 @@ function findTruncateClass(str) {
   return null;
 }
 
+// A string literal counts only when it's non-empty after trimming. Direct JSX
+// attribute literals are always strings; the typeof guard also handles numeric
+// literals that appear inside an expression container (e.g. `title={42}`).
+function isNonEmptyLiteral(node) {
+  if (!node || node.type !== "Literal") return false;
+  return typeof node.value === "string"
+    ? node.value.trim().length > 0
+    : node.value != null;
+}
+
+// True only when the attribute carries a value that could actually name the
+// element. Boolean shorthand (`<div title>`), empty/whitespace strings, and
+// `{null}`/`{undefined}`/`{}` give no tooltip or accessible name, so they don't
+// satisfy the rule. Any other expression (`title={fullText}`, a template, a
+// ternary) counts — the rule can't prove it empty at lint time and shouldn't
+// guess.
+function hasMeaningfulValue(value) {
+  if (value == null) return false; // boolean shorthand: <div title>
+  if (value.type === "Literal") return isNonEmptyLiteral(value); // title="" / "x"
+  if (value.type === "JSXExpressionContainer") {
+    const expr = value.expression;
+    if (!expr || expr.type === "JSXEmptyExpression") return false; // title={}
+    if (expr.type === "Literal") return isNonEmptyLiteral(expr); // {""} {null} {42}
+    if (expr.type === "Identifier" && expr.name === "undefined") return false;
+    return true;
+  }
+  return true;
+}
+
 function hasAttr(openingElement, names) {
   return Boolean(
     openingElement.attributes?.some(
-      (a) => a.type === "JSXAttribute" && names.includes(a.name?.name),
+      (a) =>
+        a.type === "JSXAttribute" &&
+        names.includes(a.name?.name) &&
+        hasMeaningfulValue(a.value),
     ),
   );
 }
