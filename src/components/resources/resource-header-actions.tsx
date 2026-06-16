@@ -35,7 +35,7 @@ export function ResourceHeaderActions({
     <>
       <div className="flex items-center gap-2">
         {/* Bookmarks — all users */}
-        <Button variant="outline" size="sm" className="bg-card" asChild>
+        <Button variant="outline" size="sm" asChild>
           <Link href="/resources/bookmarks">
             <Bookmark aria-hidden="true" />
             Bookmarks
@@ -46,7 +46,7 @@ export function ResourceHeaderActions({
         {canEdit && (
           <>
             {draftCount > 0 && (
-              <Button variant="outline" size="sm" className="bg-card" asChild>
+              <Button variant="outline" size="sm" asChild>
                 <Link
                   href="/resources/drafts"
                   aria-label={`${draftCount} draft${draftCount === 1 ? "" : "s"} in progress`}

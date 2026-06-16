@@ -225,7 +225,7 @@ export function GlossaryFilter({
             type="button"
             variant="outline"
             size="sm"
-            className="mt-3 bg-card"
+            className="mt-3"
             onClick={() => {
               onQueryChange("");
               inputRef.current?.focus();

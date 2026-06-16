@@ -217,7 +217,7 @@ export function NativeArticleEditor({
           {/* View article: navigation away from the editor. Outline needs
               `bg-card` so it renders visibly on the grey editor surround
               (per the doc's Contrast reference). */}
-          <Button variant="outline" className="bg-card" asChild>
+          <Button variant="outline" asChild>
             <Link href={`/resources/article/${article.slug}`}>
               View article
             </Link>
