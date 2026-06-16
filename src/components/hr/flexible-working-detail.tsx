@@ -203,7 +203,7 @@ export function FlexibleWorkingDetail({
           <div className="flex items-center justify-between">
             <CardTitle>Request Summary</CardTitle>
             {statusConfig && (
-              <Badge className={cn(statusConfig.bgColour, statusConfig.colour, "border-0")}>
+              <Badge className={cn(statusConfig.bgColour, statusConfig.colour, statusConfig.borderColour)}>
                 {statusConfig.label}
               </Badge>
             )}
@@ -355,7 +355,7 @@ export function FlexibleWorkingDetail({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Outcome</p>
                 {statusConfig && (
-                  <Badge className={cn(statusConfig.bgColour, statusConfig.colour, "border-0")}>
+                  <Badge className={cn(statusConfig.bgColour, statusConfig.colour, statusConfig.borderColour)}>
                     {statusConfig.label}
                   </Badge>
                 )}
@@ -459,8 +459,9 @@ export function FlexibleWorkingDetail({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "border-0",
-                    appeal.outcome === "upheld" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700",
+                    appeal.outcome === "upheld"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-green-50 text-green-700 border-green-200",
                   )}
                 >
                   {appeal.outcome === "upheld" ? "Original Decision Upheld" : "Decision Overturned"}

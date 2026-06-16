@@ -315,9 +315,10 @@ export function OnboardingChecklistContent({
                     <Badge
                       variant="secondary"
                       className={cn(
-                        "text-xs border-0 shrink-0",
+                        "text-xs shrink-0",
                         ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour,
                         ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].bgColour,
+                        ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].borderColour,
                       )}
                     >
                       {ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].label}

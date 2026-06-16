@@ -219,9 +219,10 @@ function OnboardingRow({ checklist }: { checklist: OnboardingChecklistWithProgre
         <Badge
           variant="secondary"
           className={cn(
-            "shrink-0 border-0",
+            "shrink-0",
             statusConfig?.colour,
             statusConfig?.bgColour,
+            statusConfig?.borderColour,
           )}
         >
           {statusConfig?.label ?? checklist.status}

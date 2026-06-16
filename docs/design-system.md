@@ -127,7 +127,7 @@ This is consistent with industry practice — semantic status colours should be 
 
 ### 1.8 Badge Design Pattern (Tonal Pills)
 
-Badges use **subtle/tonal fills** — light coloured background (`-50`) with darker text (`-700`) **plus a subtle `-200` tonal border**. This is the industry standard used by Atlassian (Lozenge), Stripe, Shopify (Polaris), and Material Design 3. Solid fills are NOT used — they create visual noise in dense table views. The `-200` border (added 2026-06-16, audit F2) lets the pill outline read where the pale `-50` fill matches the surface — zebra-striped rows and the ivory canvas — without resorting to a solid fill. Config-driven badges that set `border-0` opt out and will still wash out; give them a `border-{colour}-200` if they sit on striped/tinted surfaces.
+Badges use **subtle/tonal fills** — light coloured background (`-50`) with darker text (`-700`) **plus a subtle `-200` tonal border**. This is the industry standard used by Atlassian (Lozenge), Stripe, Shopify (Polaris), and Material Design 3. Solid fills are NOT used — they create visual noise in dense table views. The `-200` border (added 2026-06-16, audit F2) lets the pill outline read where the pale `-50` fill matches the surface — zebra-striped rows and the ivory canvas — without resorting to a solid fill. Config-driven badges (`src/lib/hr.ts`) rendered via the `cn(config.bgColour, config.colour, …)` className pattern carry a `borderColour` (`border-{colour}-200`) in their config so they keep the tonal outline too — never `border-0`, which makes them wash out on striped/tinted surfaces (P2-C-b).
 
 **Core badge variants** (`src/components/ui/badge.tsx`):
 
