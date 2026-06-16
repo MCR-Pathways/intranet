@@ -62,6 +62,8 @@ Learn more, View details, error-boundary "Go home". MCR teal `#2A6075`, always u
 
 **Why:** size drift creates three problems. (1) The design system loses a single source of truth. (2) Per-variant SVG sizing breaks when size is bypassed (the icon stays default 16px regardless). (3) Future design changes need to chase every custom className instead of updating the variant table.
 
+**Never put `bg-card` on an `outline` Button.** The `outline` variant fills `bg-card` natively (ADR-014), so `className="bg-card"` on it is dead weight. An ESLint rule (`no-bg-card-on-outline`, autofixable) catches it — including multi-line JSX where the class sits far from the `variant` attribute, which a hand-grep misses. `bg-card/90` (frosted floating controls) and `bg-card` on inputs/dialogs are left alone.
+
 ## Button vs Link
 
 - Click changes the URL → `<Button asChild><Link href={...}>...</Link></Button>`. Add `prefetch={false}` on row actions and kebab items to avoid hammering the server.

@@ -3,6 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import noCustomButtonSizing, {
   noIconSizingInsideButton,
+  noRedundantBgCardOnOutline,
 } from "./eslint-rules/no-custom-button-sizing.mjs";
 
 const eslintConfig = defineConfig([
@@ -14,6 +15,7 @@ const eslintConfig = defineConfig([
         rules: {
           "no-custom-button-sizing": noCustomButtonSizing,
           "no-icon-sizing-inside-button": noIconSizingInsideButton,
+          "no-bg-card-on-outline": noRedundantBgCardOnOutline,
         },
       },
     },
@@ -42,6 +44,11 @@ const eslintConfig = defineConfig([
       // the codebase had ~130 existing violations; promoted to `error` after
       // the sweep cleared them all via the rule's autofix.
       "mcr-button/no-icon-sizing-inside-button": "error",
+      // Redundant `bg-card` on a variant="outline" Button — the outline
+      // variant fills bg-card natively (ADR-014). AST-based, so it catches
+      // multi-line JSX a single-line grep misses. Error from day one (the
+      // P3-F sweep cleared all existing instances).
+      "mcr-button/no-bg-card-on-outline": "error",
     },
   },
   {

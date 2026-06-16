@@ -224,6 +224,101 @@ const noIconSizingInsideButton = {
   },
 };
 
+// =============================================
+// RULE 3: no-bg-card-on-outline-button
+//   The `outline` Button variant fills bg-card natively (ADR-014), so an
+//   explicit `bg-card` token on a variant="outline" Button is redundant dead
+//   weight. AST-based, so it catches single-line AND multi-line JSX (the kind
+//   a single-line grep misses). Matches the exact `bg-card` token only —
+//   `bg-card/90` (frosted floating controls) and bg-card on inputs/dialogs are
+//   left alone. Severity: error (0 violations after the P3-F sweep).
+//   See docs/button-system.md.
+// =============================================
+
+/** True if this opening element has a literal variant="outline". */
+function hasOutlineVariant(openingElement) {
+  if (!openingElement?.attributes) return false;
+  for (const attr of openingElement.attributes) {
+    if (attr.type !== "JSXAttribute") continue;
+    if (attr.name?.name !== "variant") continue;
+    const v = attr.value;
+    if (v?.type === "Literal" && v.value === "outline") return true;
+    if (
+      v?.type === "JSXExpressionContainer" &&
+      v.expression?.type === "Literal" &&
+      v.expression.value === "outline"
+    ) {
+      return true;
+    }
+    return false; // variant present but dynamic / non-outline — don't flag
+  }
+  return false; // no variant attr → default variant, not outline
+}
+
+const noRedundantBgCardOnOutline = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description:
+        "Disallow the redundant `bg-card` className token on outline Buttons — the outline variant fills bg-card natively (ADR-014).",
+    },
+    schema: [],
+    fixable: "code",
+    messages: {
+      redundantBgCard:
+        '`bg-card` is redundant on a variant="outline" {{ component }} — the outline variant fills bg-card natively (ADR-014). Remove it. See docs/button-system.md.',
+    },
+  },
+  create(context) {
+    return {
+      JSXOpeningElement(node) {
+        const nameNode = node.name;
+        if (nameNode.type !== "JSXIdentifier") return;
+        if (!BUTTON_COMPONENTS.has(nameNode.name)) return;
+        if (!hasOutlineVariant(node)) return;
+
+        const classNameAttr = getClassNameAttr(node);
+        if (!classNameAttr) return;
+        const strings = extractStringsFromValue(classNameAttr.value);
+        const hasBgCard = strings.some((s) =>
+          s.split(/\s+/).includes("bg-card"),
+        );
+        if (!hasBgCard) return;
+
+        context.report({
+          node: classNameAttr,
+          messageId: "redundantBgCard",
+          data: { component: nameNode.name },
+          // Autofix only for plain string-literal classNames: drop the
+          // `bg-card` token, keep the rest; remove the attribute if empty.
+          fix(fixer) {
+            const valueNode = classNameAttr.value;
+            if (
+              !valueNode ||
+              valueNode.type !== "Literal" ||
+              typeof valueNode.value !== "string"
+            ) {
+              return null;
+            }
+            const kept = valueNode.value
+              .split(/\s+/)
+              .filter((t) => t && t !== "bg-card");
+            if (kept.length === 0) {
+              const sourceCode = context.sourceCode ?? context.getSourceCode();
+              const before = sourceCode.getTokenBefore(classNameAttr);
+              const start = before
+                ? before.range[1]
+                : classNameAttr.range[0];
+              return fixer.removeRange([start, classNameAttr.range[1]]);
+            }
+            return fixer.replaceText(valueNode, JSON.stringify(kept.join(" ")));
+          },
+        });
+      },
+    };
+  },
+};
+
 // Default export keeps the existing rule registration working unchanged.
 export default noCustomButtonSizing;
-export { noIconSizingInsideButton };
+export { noIconSizingInsideButton, noRedundantBgCardOnOutline };
