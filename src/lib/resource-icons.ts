@@ -172,7 +172,7 @@ export interface IconColour {
 }
 
 /** 8 preset colour swatches using MCR brand colours with WCAG-compliant foregrounds. */
-export const ICON_COLOURS: IconColour[] = [
+export const ICON_COLOURS = [
   { key: "default", label: "Default", bg: "bg-primary/10", fg: "text-primary" },
   { key: "grey", label: "Grey", bg: "bg-muted", fg: "text-muted-foreground" },
   { key: "teal", label: "Teal", bg: "bg-mcr-teal/15 dark:bg-mcr-teal/15", fg: "text-icon-fg-teal" },
@@ -181,7 +181,10 @@ export const ICON_COLOURS: IconColour[] = [
   { key: "wine", label: "Wine", bg: "bg-mcr-wine/15 dark:bg-mcr-wine/15", fg: "text-icon-fg-wine" },
   { key: "light-blue", label: "Light Blue", bg: "bg-mcr-light-blue/15 dark:bg-mcr-light-blue/15", fg: "text-icon-fg-light-blue" },
   { key: "pink", label: "Pink", bg: "bg-mcr-pink/15 dark:bg-mcr-pink/15", fg: "text-icon-fg-pink" },
-];
+] as const satisfies readonly IconColour[];
+
+/** Valid colour keys — derived from ICON_COLOURS, so it can't drift. */
+export type IconColourKey = (typeof ICON_COLOURS)[number]["key"];
 
 /** Maps old Tailwind-based colour keys to new MCR brand keys. */
 const LEGACY_COLOUR_KEY_MAP: Record<string, string> = {
