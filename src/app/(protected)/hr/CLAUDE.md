@@ -8,7 +8,7 @@ User management, profile, leave, absence, assets, compliance, key dates, departm
 
 **59 components** in `src/components/hr/` (flat structure). Consider grouping by feature as Phase 3 grows.
 
-**Config-driven badges** in `src/lib/hr.ts` (938 lines). Status configs (`LEAVE_TYPE_CONFIG`, `RTW_STATUS_CONFIG`, `LEAVING_STATUS_CONFIG`, `ONBOARDING_STATUS_CONFIG`) use `badgeVariant` prop mapping to semantic Badge variants. For non-standard colours, use `<Badge className={cn(config.bgColour, config.colour, "border-0")}>`.
+**Config-driven badges** in `src/lib/hr.ts` (938 lines). Status configs (`LEAVE_TYPE_CONFIG`, `RTW_STATUS_CONFIG`, `LEAVING_STATUS_CONFIG`, `ONBOARDING_STATUS_CONFIG`) use `badgeVariant` prop mapping to semantic Badge variants. For non-standard colours, use `<Badge className={cn(config.bgColour, config.colour, config.borderColour)}>` — the config carries a `borderColour` (`border-{colour}-200`) so the tonal pill outline reads on striped/ivory surfaces (P2-C-b). Never `border-0`.
 
 ## Patterns
 

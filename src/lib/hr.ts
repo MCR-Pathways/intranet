@@ -226,10 +226,10 @@ export type SicknessCategory = keyof typeof SICKNESS_CATEGORY_CONFIG;
 // =============================================
 
 export const ABSENCE_TYPE_CONFIG = {
-  sick_self_certified: { label: "Sick (Self-Certified)", colour: "text-amber-700", bgColour: "bg-amber-50" },
-  sick_fit_note: { label: "Sick (Fit Note)", colour: "text-orange-700", bgColour: "bg-orange-50" },
-  unauthorised: { label: "Unauthorised", colour: "text-red-700", bgColour: "bg-red-50" },
-  other: { label: "Other", colour: "text-gray-700", bgColour: "bg-gray-50" },
+  sick_self_certified: { label: "Sick (Self-Certified)", colour: "text-amber-700", bgColour: "bg-amber-50", borderColour: "border-amber-200" },
+  sick_fit_note: { label: "Sick (Fit Note)", colour: "text-orange-700", bgColour: "bg-orange-50", borderColour: "border-orange-200" },
+  unauthorised: { label: "Unauthorised", colour: "text-red-700", bgColour: "bg-red-50", borderColour: "border-red-200" },
+  other: { label: "Other", colour: "text-gray-700", bgColour: "bg-gray-50", borderColour: "border-gray-200" },
 } as const;
 
 export type AbsenceType = keyof typeof ABSENCE_TYPE_CONFIG;
@@ -796,15 +796,15 @@ export type FWRRequestType = keyof typeof FWR_REQUEST_TYPE_CONFIG;
 
 /** Status config with display colours for flexible working requests. */
 export const FWR_STATUS_CONFIG = {
-  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", dotColour: "bg-blue-500" },
-  under_review: { label: "Under Review", colour: "text-amber-700", bgColour: "bg-amber-50", dotColour: "bg-amber-500" },
-  approved: { label: "Approved", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
-  approved_trial: { label: "Trial Period", colour: "text-teal-700", bgColour: "bg-teal-50", dotColour: "bg-teal-500" },
-  rejected: { label: "Rejected", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
-  withdrawn: { label: "Withdrawn", colour: "text-gray-700", bgColour: "bg-gray-50", dotColour: "bg-gray-500" },
-  appealed: { label: "Appealed", colour: "text-purple-700", bgColour: "bg-purple-50", dotColour: "bg-purple-500" },
-  appeal_upheld: { label: "Appeal Upheld", colour: "text-red-700", bgColour: "bg-red-50", dotColour: "bg-red-500" },
-  appeal_overturned: { label: "Appeal Overturned", colour: "text-green-700", bgColour: "bg-green-50", dotColour: "bg-green-500" },
+  submitted: { label: "Submitted", colour: "text-blue-700", bgColour: "bg-blue-50", borderColour: "border-blue-200", dotColour: "bg-blue-500" },
+  under_review: { label: "Under Review", colour: "text-amber-700", bgColour: "bg-amber-50", borderColour: "border-amber-200", dotColour: "bg-amber-500" },
+  approved: { label: "Approved", colour: "text-green-700", bgColour: "bg-green-50", borderColour: "border-green-200", dotColour: "bg-green-500" },
+  approved_trial: { label: "Trial Period", colour: "text-teal-700", bgColour: "bg-teal-50", borderColour: "border-teal-200", dotColour: "bg-teal-500" },
+  rejected: { label: "Rejected", colour: "text-red-700", bgColour: "bg-red-50", borderColour: "border-red-200", dotColour: "bg-red-500" },
+  withdrawn: { label: "Withdrawn", colour: "text-gray-700", bgColour: "bg-gray-50", borderColour: "border-gray-200", dotColour: "bg-gray-500" },
+  appealed: { label: "Appealed", colour: "text-purple-700", bgColour: "bg-purple-50", borderColour: "border-purple-200", dotColour: "bg-purple-500" },
+  appeal_upheld: { label: "Appeal Upheld", colour: "text-red-700", bgColour: "bg-red-50", borderColour: "border-red-200", dotColour: "bg-red-500" },
+  appeal_overturned: { label: "Appeal Overturned", colour: "text-green-700", bgColour: "bg-green-50", borderColour: "border-green-200", dotColour: "bg-green-500" },
 } as const;
 
 export type FWRStatus = keyof typeof FWR_STATUS_CONFIG;
@@ -876,17 +876,17 @@ export const ONBOARDING_SECTION_CONFIG: Record<OnboardingSection, { label: strin
   general: { label: "General", order: 4 },
 };
 
-export const ONBOARDING_ASSIGNEE_CONFIG: Record<OnboardingAssigneeRole, { label: string; colour: string; bgColour: string }> = {
-  hr_admin: { label: "HR Admin", colour: "text-purple-700", bgColour: "bg-purple-50" },
-  line_manager: { label: "Line Manager", colour: "text-blue-700", bgColour: "bg-blue-50" },
-  employee: { label: "Employee", colour: "text-green-700", bgColour: "bg-green-50" },
-  other: { label: "Other", colour: "text-slate-700", bgColour: "bg-slate-50" },
+export const ONBOARDING_ASSIGNEE_CONFIG: Record<OnboardingAssigneeRole, { label: string; colour: string; bgColour: string; borderColour: string }> = {
+  hr_admin: { label: "HR Admin", colour: "text-purple-700", bgColour: "bg-purple-50", borderColour: "border-purple-200" },
+  line_manager: { label: "Line Manager", colour: "text-blue-700", bgColour: "bg-blue-50", borderColour: "border-blue-200" },
+  employee: { label: "Employee", colour: "text-green-700", bgColour: "bg-green-50", borderColour: "border-green-200" },
+  other: { label: "Other", colour: "text-slate-700", bgColour: "bg-slate-50", borderColour: "border-slate-200" },
 };
 
-export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; colour: string; bgColour: string; badgeVariant: "default" | "success" | "muted" }> = {
-  active: { label: "Active", colour: "text-blue-700", bgColour: "bg-blue-50", badgeVariant: "default" },
-  completed: { label: "Completed", colour: "text-green-700", bgColour: "bg-green-50", badgeVariant: "success" },
-  cancelled: { label: "Cancelled", colour: "text-slate-700", bgColour: "bg-slate-50", badgeVariant: "muted" },
+export const ONBOARDING_STATUS_CONFIG: Record<string, { label: string; badgeVariant: "default" | "success" | "muted" }> = {
+  active: { label: "Active", badgeVariant: "default" },
+  completed: { label: "Completed", badgeVariant: "success" },
+  cancelled: { label: "Cancelled", badgeVariant: "muted" },
 };
 
 export const ONBOARDING_SECTIONS: OnboardingSection[] = [

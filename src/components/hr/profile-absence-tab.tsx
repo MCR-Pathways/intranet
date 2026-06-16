@@ -148,7 +148,7 @@ export function ProfileAbsenceTab({
         return (
           <div>
             {typeConfig ? (
-              <Badge className={`${typeConfig.bgColour} ${typeConfig.colour} border-0`}>
+              <Badge className={`${typeConfig.bgColour} ${typeConfig.colour} ${typeConfig.borderColour}`}>
                 {typeConfig.label}
               </Badge>
             ) : (
