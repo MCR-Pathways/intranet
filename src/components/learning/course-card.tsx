@@ -37,7 +37,7 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
   return (
     <Link href={`/learning/courses/${course.id}`}>
       <Card
-        className={`border-l-4 ${config?.borderColor ?? "border-l-muted"} shadow-sm overflow-clip rounded-xl transition-shadow hover:shadow-md cursor-pointer h-full flex flex-col relative`}
+        className={`border-l-4 ${config?.borderColor ?? "border-l-muted"} shadow-md overflow-clip rounded-xl transition-shadow hover:shadow-lg cursor-pointer h-full flex flex-col relative`}
       >
         {/* Enrolment status indicator */}
         {enrolment?.status === "completed" && (

@@ -126,7 +126,7 @@ export function DataTable<TData, TValue>({
       )}
 
       {/* Table card */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip">
+      <div className="bg-card rounded-xl border border-border shadow-md overflow-clip">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

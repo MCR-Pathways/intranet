@@ -1,6 +1,6 @@
 export default function CategoryLoading() {
   return (
-    <div className="bg-card border border-border shadow-sm rounded-xl overflow-clip animate-pulse">
+    <div className="bg-card border border-border shadow-md rounded-xl overflow-clip animate-pulse">
       {/* Padded top section */}
       <div className="p-5 md:p-6 space-y-4">
         {/* Breadcrumbs skeleton */}

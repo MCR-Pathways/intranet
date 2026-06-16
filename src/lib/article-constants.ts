@@ -19,11 +19,13 @@ export const ARTICLE_PROSE_CLASSES =
 
 /** Card wrapper classes for article detail views.
  *
- * Soft-retreat shape: matches the canonical data-table wrapper
- * (`bg-card rounded-xl border border-border shadow-sm overflow-clip`).
- * Drops the previous `shadow-md` + inline `minHeight: calc(100vh - 14rem)`
- * that forced a tall white slab on short content. Tightened padding +
- * rhythm so the header doesn't dominate the visible area. */
+ * Soft-retreat shape: deliberately keeps `shadow-sm` even though the canonical
+ * card/table wrapper moved to `shadow-md` (ADR-014 P2-D, for separation on the
+ * ivory canvas). On this large reading surface `shadow-md` reads as a heavy
+ * slab — the same "tall white slab" the earlier `minHeight` removal fixed — so
+ * the article card recedes with the lighter shadow. Tightened padding + rhythm
+ * so the header doesn't dominate the visible area. The article-constants test
+ * guards this divergence. */
 export const ARTICLE_CARD_CLASSES =
   "bg-card border border-border shadow-sm rounded-xl overflow-clip p-5 md:p-6 space-y-4";
 

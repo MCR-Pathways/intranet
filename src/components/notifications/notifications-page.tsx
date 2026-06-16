@@ -291,7 +291,7 @@ export function NotificationsPage({
       )}
 
       {/* Row list / loading / empty state */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-clip mt-3">
+      <div className="bg-card rounded-xl border border-border shadow-md overflow-clip mt-3">
         {isLoading ? (
           <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             Loading…

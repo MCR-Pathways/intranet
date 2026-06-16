@@ -38,7 +38,7 @@ export function EnrolledCourseCard({ enrolment, now }: EnrolledCourseCardProps) 
   return (
     <Link href={`/learning/courses/${course.id}`}>
       <Card
-        className={`border-l-4 ${config.borderColor} shadow-sm overflow-clip rounded-xl transition-shadow hover:shadow-md cursor-pointer h-full`}
+        className={`border-l-4 ${config.borderColor} shadow-md overflow-clip rounded-xl transition-shadow hover:shadow-lg cursor-pointer h-full`}
       >
         <CardHeader className="pb-3">
           <CardTitle className="text-[15px] font-semibold line-clamp-2">
