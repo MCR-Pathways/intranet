@@ -156,6 +156,21 @@ W6 re-audit → W2 → W7 → W8.
 
 W4 is shipped; W4b is deferred; W5 shipped as the cleanup-only retirement. W6 needs the fresh audit (write down what survives now that the bell took half the candidates). W2 lands with a clear right-rail purpose. W7 then does the substantive composer + layout audit that the original sequencing had as a small modal redesign — now the proper "every post type is first-class" workstream that pulls in the Tool Shed runway (schema column, renderer, notifications) since none of that should pre-commit shape before W7's research phase.
 
+### Colour rework (ADR-014)
+
+Uniform ivory canvas (`--background` #FDF9EA) replacing the cool grey, with per-post-type feed accents, plus the surface-layer remediation the first sweep deferred. Full audit + token mapping in [docs/colour-rework-audit.md](./colour-rework-audit.md).
+
+- [x] **P1-A** — Warm the neutral tokens (`--border/--input/--muted/--secondary/--accent/--table-header`) toward ivory. PR #343.
+- [x] **P1-B** — Tonal badge borders so pills read on stripe/ivory. PR #343.
+- [x] **P2-C** — Raw-grey → token sweep across sign-in + HR surfaces (utility classes the token re-tune couldn't reach). PR #344.
+- [ ] **P2-D** — Card separation: reconcile `shadow-sm` (code) vs `shadow-md` (design-system §3) on cards against ivory; `bg-background` side panels (sign-in `day-detail-panel`, `team-calendar`, calendar wrapper boxes) → `bg-card`.
+- [ ] **P3-E** — Induction empty-state component: collapse the 9 near-identical dashed-grey placeholder pages into one branded empty state.
+- [ ] **P3-F** — Shared `StatusBanner`/pill (Learning 4× + preview banner); org-chart deliberate pass (recede-vs-surface + token the `#94a3b8` connectors — deferred from P2-C because the 2px stroke weight needs a visual call); delete dead code (`ResourceSearch`, `ArticleRenderer`); drop redundant `bg-card` overrides on outline buttons.
+- [ ] **P2-C-b** — `border-0` config badges wash-out: 9 HR sites (`absence-dashboard`, `profile-absence-tab`, `flexible-working-*` ×4, `onboarding-*` ×3) render `{config.bgColour} {config.colour} border-0`, opting out of P1-B's tonal border so they still wash out on striped/tinted surfaces. Fix: add a `borderColour` to the config maps in `src/lib/hr.ts`, drop `border-0`. Re-scoped out of P2-C (9 sites + a config-schema change, wider than the audit's 1-site assumption).
+
+**Spun off — general a11y, surfaced from the P2-C review (not a colour issue):**
+- [ ] **`title` on truncated text.** Gemini flagged a `truncate` span with no `title` on `day-cell.tsx`; it's systemic — `truncate`/`line-clamp` in 51 files, ~60 lines with no `title`, so truncated content (long "Other" locations, names, article titles) has no hover-readable full text. Sweep all sites, prioritising variable-length/user-authored strings over fixed short labels; pair with a custom ESLint rule (sibling to `mcr-button/no-custom-button-sizing`) flagging `truncate` without `title`/`aria-label`. **Trigger:** bundle with the icon-button a11y label sweep — one a11y pass and one ESLint rule covering both.
+
 ### HR Phase 3
 - [ ] Surveys & pulse checks
 - [ ] DEI / equality monitoring
