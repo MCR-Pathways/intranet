@@ -1,14 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import { Clock } from "lucide-react";
 
-import { resolveIconColour } from "@/lib/resource-icons";
+import { resolveIconColour, type IconColourKey } from "@/lib/resource-icons";
 import { cn } from "@/lib/utils";
 
 interface InductionPlaceholderProps {
   /** Lucide icon for the step (e.g. BookOpen for the welcome pack). */
   icon: LucideIcon;
   /** ICON_COLOURS key for the accent swatch (teal/green/orange/wine/pink/light-blue/default). */
-  accent?: string;
+  accent?: IconColourKey;
   heading: string;
   /** Intro paragraph — what this step is about. */
   intro: string;
@@ -72,7 +72,7 @@ export function InductionPlaceholder({
             </li>
           ))}
         </ul>
-        {note && <p className="mt-3 text-xs text-muted-foreground">{note}</p>}
+        {note && <div className="mt-3 text-xs text-muted-foreground">{note}</div>}
       </div>
     </div>
   );
