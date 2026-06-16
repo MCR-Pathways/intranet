@@ -62,9 +62,9 @@ export function InductionPlaceholder({
           {listLabel}
         </p>
         <ul className="mt-2 space-y-1.5">
-          {items.map((item, i) => (
+          {items.map((item) => (
             <li
-              key={i}
+              key={item}
               className="flex items-start gap-2.5 text-sm text-foreground/80"
             >
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
