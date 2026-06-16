@@ -34,8 +34,8 @@ Defined in `src/app/globals.css` `:root`:
 | `--card` | `#ffffff` | Card/modal surfaces |
 | `--primary` | `var(--mcr-dark-blue)` | Primary buttons, active nav, checkboxes, switches, tooltips, progress bars |
 | `--primary-foreground` | `#ffffff` | Text on primary backgrounds |
-| `--secondary` | `#E8ECF0` | Secondary buttons |
-| `--accent` | `#E2E8F0` | Hover/focus highlights |
+| `--secondary` | `#EBE7DD` | Secondary buttons (warm — ivory-harmonised) |
+| `--accent` | `#E7E2D7` | Hover/focus highlights (warm) |
 | `--action` | `var(--mcr-pink)` | Special action buttons (pink) |
 | `--link` | `var(--mcr-teal)` | Link text colour (#2A6075, 6.93:1 on white). Underlines MUST remain (link-to-body 1.83:1 fails 3:1) |
 | `--icon-fg-teal` | `var(--mcr-teal)` | Icon foreground — teal (6.93:1 on white) |
@@ -44,15 +44,17 @@ Defined in `src/app/globals.css` `:root`:
 | `--icon-fg-wine` | `var(--mcr-wine)` | Icon foreground — wine (10.46:1 on white) |
 | `--icon-fg-light-blue` | `#1A6E8E` | Icon foreground — darkened light blue (5.73:1 on white) |
 | `--icon-fg-pink` | `var(--mcr-pink)` | Icon foreground — pink (4.18:1 on white, passes 3:1 for icons) |
-| `--muted` | `#F0F2F5` | Muted backgrounds |
+| `--muted` | `#F3F0E7` | Muted backgrounds (warm) |
 | `--muted-foreground` | `#6b7280` | Secondary text |
 | `--destructive` | `#ef4444` | Delete/error actions |
-| `--border` | `#e5e7eb` | Default borders |
+| `--border` | `#E5E0D5` | Default borders (warm; `--input` matches) |
 | `--ring` | `var(--mcr-dark-blue)` | Focus outlines |
-| `--table-header` | `#E4E7EC` | Table header backgrounds |
+| `--table-header` | `#E9E4D9` | Table header backgrounds (warm) |
 | `--status-active` | `#22c55e` | Active/success status |
 | `--status-pending` | `var(--mcr-yellow)` | Pending status |
 | `--status-inactive` | `#9ca3af` | Inactive/disabled status |
+
+The surface neutrals (`--secondary`, `--accent`, `--muted`, `--border`/`--input`, `--table-header`) were warmed 2026-06-16 to harmonise with the ivory canvas — an ADR-014 follow-up; they were cool blue-greys from the grey-canvas era, which read cold against warm ivory (docs/colour-rework-audit.md F1). Keep them low-saturation **warm** greys, not beige. Distinct from the Tailwind `gray/*` ramps the status badges (§1.7/1.8) use.
 
 ### 1.3 Semantic Colour Tokens (Dark Mode)
 
@@ -98,7 +100,7 @@ Defined in `src/app/globals.css` `:root`:
 | Page background | `bg-background` (ivory #FDF9EA per ADR-014; was grey #F2F4F7) |
 | Dialogs/modals | `bg-card` (white, not `bg-background`) |
 | Inputs | `bg-card` (white, for contrast against the ivory canvas and inside white cards) |
-| Table headers | `bg-table-header` (#E4E7EC) |
+| Table headers | `bg-table-header` (#E9E4D9, warm) |
 | Primary buttons | `bg-primary text-primary-foreground` (dark blue) |
 | Sidebar active | `bg-primary text-primary-foreground` (dark blue) |
 | Tab bar (line) | `border-b` underline variant with `hover:text-foreground` |
