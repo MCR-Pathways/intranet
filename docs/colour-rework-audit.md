@@ -32,6 +32,8 @@ Status key: 🔴 confirmed issue · 🟡 candidate (needs visual) · 🟢 checke
 
 **Recommendation.** Give the badge variants a subtle tonal **border** (the `border-transparent` slot → e.g. `border-{colour}-600/20`) so the pill *outline* defines the shape on white, stripe, and ivory alike — keeps the soft-tonal §1.8 look, avoids the "noisy solid fill" the convention rejected. One change in the badge variant classes.
 
+**🟢 SHIPPED (P1-B).** `badge.tsx` variants `border-transparent` → tonal `-200` (coloured) / `border-border` (neutral). Verified on hr/users — Active pills hold their shape on striped + white + warm-band rows. `settings-drive-watches` override badges already set explicit borders (fine). **Follow-up:** HR config-driven badges (`absence-dashboard:149` `border-0` + `typeConfig.bgColour/colour` from `hr.ts`) opt out of the border → still wash out; add a `borderColour` to the leave/type config and drop `border-0`. Folded into P2-C.
+
 ## Raw-colour offenders (token bypass) ⚪
 - `bg-white` (4 files), `bg-(gray|slate|zinc|neutral)-50..200` (5 files) — hardcoded cool surfaces that bypass the token system; if warmed neutrals are adopted, these won't follow. Enumerate + check.
 
