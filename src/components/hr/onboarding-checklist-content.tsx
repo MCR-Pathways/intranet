@@ -313,7 +313,6 @@ export function OnboardingChecklistContent({
 
                     {/* Assignee role badge */}
                     <Badge
-                      variant="secondary"
                       className={cn(
                         "text-xs shrink-0",
                         ONBOARDING_ASSIGNEE_CONFIG[item.assignee_role].colour,
