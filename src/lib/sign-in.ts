@@ -106,8 +106,8 @@ export const LOCATION_CONFIG: Record<
     label: "Other",
     shortLabel: "Other",
     icon: MapPin,
-    bgClass: "bg-slate-100",
-    textClass: "text-slate-600",
+    bgClass: "bg-muted",
+    textClass: "text-muted-foreground",
     hex: "#475569",
   },
   on_leave: {
@@ -125,8 +125,8 @@ export const NOT_SET_CONFIG = {
   label: "Not set",
   shortLabel: "—",
   icon: CircleDashed,
-  bgClass: "bg-gray-50",
-  textClass: "text-gray-400",
+  bgClass: "bg-muted",
+  textClass: "text-muted-foreground",
   hex: "#9ca3af",
 };
 

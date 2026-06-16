@@ -232,7 +232,7 @@ export function DefaultWeekEditor({
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium",
                       isEmpty
-                        ? "bg-gray-50 text-gray-400"
+                        ? "bg-muted text-muted-foreground"
                         : `${config.bgClass} ${config.textClass}`
                     )}
                   >
@@ -284,7 +284,7 @@ export function DefaultWeekEditor({
                         className={cn(
                           "h-9 w-48 text-xs",
                           isEmpty
-                            ? "border-dashed border-gray-300 text-gray-400"
+                            ? "border-dashed border-border text-muted-foreground"
                             : `${config.bgClass} ${config.textClass} border-transparent`
                         )}
                       >

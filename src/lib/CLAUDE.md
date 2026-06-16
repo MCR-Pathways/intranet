@@ -10,7 +10,7 @@ Always consult `docs/design-system.md` before doing anything colour-related — 
 
 **Apply CSS token fixes to ALL theme modes.** Review every theme block (`:root`, `.dark`, `@theme inline`) for the same coupling pattern.
 
-**Use `--table-header` design token for table header backgrounds.** `--muted` and `--background` are nearly identical — headers using `bg-muted` blend into the page. `--table-header` (#E4E7EC light / hsl(210, 30%, 18%) dark) provides clear contrast.
+**Use `--table-header` design token for table header backgrounds.** `--muted` and `--background` are nearly identical — headers using `bg-muted` blend into the page. `--table-header` (#E9E4D9 warm light, per ADR-014's P1-A re-tune / hsl(210, 30%, 18%) dark) provides clear contrast.
 
 **Filter Google default avatars at the component level, not the database.** Use `filterAvatarUrl()` from `src/lib/utils.ts` on all `AvatarImage src` props. Returns `undefined` for `googleusercontent.com` URLs, letting the brand-coloured `AvatarFallback` render.
 

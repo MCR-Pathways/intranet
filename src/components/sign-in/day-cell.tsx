@@ -59,7 +59,7 @@ export function DayCell({ schedule, onClick }: DayCellProps) {
           onClick={() => !past && onClick(date, "morning")}
         />
 
-        <div className="border-t border-dashed border-gray-300" />
+        <div className="border-t border-dashed border-border" />
 
         {/* Afternoon half */}
         <SplitHalf
@@ -86,7 +86,7 @@ export function DayCell({ schedule, onClick }: DayCellProps) {
         today && "ring-2 ring-primary shadow-sm",
         past && "opacity-50 cursor-default",
         isLeave && "cursor-default opacity-90",
-        isEmpty && !past && "border-2 border-dashed border-gray-200 hover:border-primary/40 hover:bg-gray-100/50 cursor-pointer",
+        isEmpty && !past && "border-2 border-dashed border-border hover:border-primary/40 hover:bg-accent cursor-pointer",
         !isEmpty && !past && !isLeave && "hover:ring-2 hover:ring-primary/30 hover:shadow-sm cursor-pointer",
         isEmpty ? NOT_SET_CONFIG.bgClass : config.bgClass,
         isEmpty ? NOT_SET_CONFIG.textClass : config.textClass
@@ -102,8 +102,8 @@ export function DayCell({ schedule, onClick }: DayCellProps) {
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-1">
-        <config.icon className={cn("h-6 w-6", isEmpty && "text-gray-300")} />
-        <span className={cn("text-sm font-medium text-center", isEmpty && "text-gray-400")}>
+        <config.icon className={cn("h-6 w-6", isEmpty && "text-muted-foreground/60")} />
+        <span className={cn("text-sm font-medium text-center", isEmpty && "text-muted-foreground")}>
           {isEmpty ? "Tap to set" : config.label === "Other" && fullDay?.other_location ? fullDay.other_location : config.label}
         </span>
       </div>
@@ -145,16 +145,16 @@ function SplitHalf({
       disabled={past || isLeave}
       className={cn(
         "flex-1 px-3 py-2 flex items-center gap-2 transition-colors w-full text-left",
-        isEmpty ? "bg-gray-50 text-gray-400" : `${config.bgClass} ${config.textClass}`,
+        isEmpty ? "bg-muted text-muted-foreground" : `${config.bgClass} ${config.textClass}`,
         !past && !isLeave && !isEmpty && "hover:brightness-95 cursor-pointer",
-        !past && !isLeave && isEmpty && "hover:bg-gray-100 cursor-pointer",
+        !past && !isLeave && isEmpty && "hover:bg-accent cursor-pointer",
         (past || isLeave) && "cursor-default"
       )}
     >
       <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium w-6">
         {label}
       </span>
-      <config.icon className={cn("h-4 w-4", isEmpty && "text-gray-300")} />
+      <config.icon className={cn("h-4 w-4", isEmpty && "text-muted-foreground/60")} />
       <span className="text-xs font-medium truncate">
         {isEmpty ? "—" : config.label === "Other" && entry?.other_location ? entry.other_location : config.shortLabel}
       </span>

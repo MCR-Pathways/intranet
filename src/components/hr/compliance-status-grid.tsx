@@ -44,7 +44,7 @@ function StatusDot({
 }) {
   const config =
     status === "missing"
-      ? { label: "Missing", dotColour: "bg-gray-300" }
+      ? { label: "Missing", dotColour: "bg-gray-400" }
       : COMPLIANCE_STATUS_CONFIG[status] ?? COMPLIANCE_STATUS_CONFIG.not_applicable;
 
   return (
@@ -166,7 +166,7 @@ export function ComplianceStatusGrid({
             Expired
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />
+            <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
             Missing
           </div>
         </div>
