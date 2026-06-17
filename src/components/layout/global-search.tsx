@@ -91,6 +91,21 @@ function removeRecentSearch(query: string) {
   }
 }
 
+// Algolia snippet values are HTML (Algolia's <mark> tags plus entity-escaped
+// text). dangerouslySetInnerHTML decodes the entities when rendering, but a raw
+// title attribute would show them literally, so strip the tags and decode the
+// common entities for the hover tooltip. Decode &amp; LAST so an escaped entity
+// like &amp;lt; doesn't double-decode into <.
+function snippetToPlainText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function GlobalSearch() {
@@ -439,9 +454,9 @@ function GlobalSearchInner() {
                           ?.value && (
                           <p
                             className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
-                            title={(
-                              hit._snippetResult!.content as { value: string }
-                            ).value.replace(/<[^>]*>/g, "")}
+                            title={snippetToPlainText(
+                              (hit._snippetResult!.content as { value: string }).value
+                            )}
                             dangerouslySetInnerHTML={{
                               __html: (hit._snippetResult!.content as { value: string }).value,
                             }}

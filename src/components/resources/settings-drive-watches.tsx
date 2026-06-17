@@ -404,11 +404,10 @@ export function SettingsDriveWatches() {
               <TooltipTrigger asChild>
                 <Link
                   href={`/resources/article/${article.slug}`}
-                  className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
-                  title={article.title}
+                  className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch]"
                 >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate" title={article.title}>{article.title}</span>
+                  <span className="min-w-0 truncate" title={article.title}>{article.title}</span>
                 </Link>
               </TooltipTrigger>
               <TooltipContent>{article.title}</TooltipContent>
