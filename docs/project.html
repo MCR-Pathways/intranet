@@ -1014,6 +1014,12 @@
         "title": "Remove dead dompurify dependency and stale _-scripts",
         "tag": "chore",
         "note": "dompurify is declared but never imported; five one-off WP-migration scripts are stale."
+      },
+      {
+        "id": "k20",
+        "title": "Sweep 143 a11y warnings to zero, promote each rule to error",
+        "tag": "a11y",
+        "note": "74 no-truncate-without-title, 18 control-has-associated-label, 15 no-autofocus, 11 no-static-element-interactions, 8 click-events-have-key-events, plus 17 across label/tabindex/media/iframe. Batch by rule, promote each to error as its slice clears."
       }
     ],
     "inProgress": [
@@ -1031,6 +1037,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k19",
+        "title": "Accessibility enforcement foundation (jsx-a11y + custom truncate rule)",
+        "tag": "a11y",
+        "note": "Full eslint-plugin-jsx-a11y recommended set plus a custom mcr-a11y/no-truncate-without-title AST rule, all at warn (0 errors, 143 warnings). npm run lint:a11y reports the live count; first RuleTester coverage for a custom rule.",
+        "completedDate": "2026-06-16",
+        "prNumber": 349,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/349"
+      },
       {
         "id": "k1",
         "title": "Drop WITH CHECK (true) policies on email_notifications",
@@ -1205,6 +1220,15 @@
       "context": "The 2026-06-10 review confirmed two complete rich-text editor stacks: Tiptap v3 for news-feed posts/comments and learning lessons, Plate v52 for resources native articles. They store incompatible JSON dialects in identically named content_json columns, with two static-render strategies, two callout style maps (already drifted), and two URL-guard implementations. Nothing at the top level documents the split, and src/lib/tiptap.ts helpers silently produce wrong output if handed a Plate document.",
       "decision": "Proposed: keep both stacks but make the boundary explicit rather than attempting a big-bang unification. Tiptap owns the short social composer surfaces (posts, comments) and lessons until their next editorial investment; Plate owns long-form resources content. Document the split in the root CLAUDE.md, introduce a discriminator or branded type so the two content_json dialects cannot cross renderers, and hoist the shared URL/colour guards and inline-mark rendering into one module.",
       "consequences": "The split stops growing silently and a compile error replaces a silent wrong-render when a document crosses stacks. Double maintenance remains for toolbar, paste and mention features until lessons are folded onto one long-form stack. Migrating any content JSON later must go through a converter with tests."
+    },
+    {
+      "id": "ADR-011",
+      "title": "Accessibility enforced in ESLint: full jsx-a11y set plus custom AST rules, swept warn-to-error",
+      "date": "2026-06-16",
+      "status": "Accepted",
+      "context": "Next's core-web-vitals config only enabled 6 of eslint-plugin-jsx-a11y's rules, so most a11y regressions (unlabelled controls, autofocus, static-element click handlers, captionless media) shipped unchecked. One gap had no jsx-a11y rule at all: CSS truncation (truncate / line-clamp-N) hides text from sighted users with no title to read the full string on hover. Turning everything on as error at once would have failed CI on 143 existing violations.",
+      "decision": "Enable the full eslint-plugin-jsx-a11y recommended set (34 rules) as a direct devDependency, and add a custom mcr-a11y/no-truncate-without-title rule for the truncation gap. Custom rules are AST-based rather than grep, so they catch multi-line JSX a single-line grep misses. Everything lands at warn; npm run lint:a11y surfaces the live count on every run; each rule is promoted to error as its slice of the backlog is swept to zero (the no-icon-sizing-inside-button playbook).",
+      "consequences": "New a11y regressions surface immediately and the existing 143-warning debt is tracked by the tooling itself, so banking the foundation before the sweep cannot lose the work; each rule becomes a hard gate once its slice is clean. Costs: a window where a11y issues are warnings rather than errors until each slice is swept, and custom rules need their own RuleTester coverage (now in place) plus the prove-it-fires discipline, since a registered-but-broken rule passes silently."
     }
   ]
 }
