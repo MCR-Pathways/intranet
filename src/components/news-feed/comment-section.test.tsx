@@ -42,7 +42,6 @@ vi.mock("./tiptap-composer", () => ({
     [key: string]: unknown;
   }) => (
     <input
-      aria-label="Comment composer"
       placeholder={placeholder}
       disabled={disabled}
       onChange={(e) =>

@@ -332,7 +332,6 @@ function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
             preload="metadata"
             playsInline
             className="h-full w-full"
-            aria-label="Embedded video"
           />
         ) : (
           <iframe

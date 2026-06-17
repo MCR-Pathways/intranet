@@ -1017,9 +1017,9 @@
       },
       {
         "id": "k20",
-        "title": "Sweep 143 a11y warnings to zero, promote each rule to error",
+        "title": "Sweep the remaining 38 jsx-a11y warnings to zero, promote each rule to error",
         "tag": "a11y",
-        "note": "74 no-truncate-without-title, 18 control-has-associated-label, 15 no-autofocus, 11 no-static-element-interactions, 8 click-events-have-key-events, plus 17 across label/tabindex/media/iframe. Batch by rule, promote each to error as its slice clears."
+        "note": "Real backlog after the config correction (ADR-012): 15 no-autofocus, 8 no-static-element-interactions, 8 click-events-have-key-events, 3 label-has-associated-control, 2 media-has-caption, 1 iframe-has-title, 1 no-noninteractive-tabindex. truncate (74) and control-has-associated-label both cleared. Batch by rule, promote each to error as its slice clears."
       }
     ],
     "inProgress": [
@@ -1041,7 +1041,7 @@
         "id": "k19",
         "title": "Accessibility enforcement foundation (jsx-a11y + custom truncate rule)",
         "tag": "a11y",
-        "note": "Full eslint-plugin-jsx-a11y recommended set plus a custom mcr-a11y/no-truncate-without-title AST rule, all at warn (0 errors, 143 warnings). npm run lint:a11y reports the live count; first RuleTester coverage for a custom rule.",
+        "note": "jsx-a11y recommended set + a custom mcr-a11y/no-truncate-without-title AST rule. NB: the initial config mis-applied the recommended set (stripped rule options, force-enabled off-by-default rules), inflating the baseline and creating false positives — corrected in ADR-012. npm run lint:a11y reports the live count; first RuleTester coverage for a custom rule.",
         "completedDate": "2026-06-16",
         "prNumber": 349,
         "prUrl": "https://github.com/MCR-Pathways/intranet/pull/349"
@@ -1225,10 +1225,19 @@
       "id": "ADR-011",
       "title": "Accessibility enforced in ESLint: full jsx-a11y set plus custom AST rules, swept warn-to-error",
       "date": "2026-06-16",
-      "status": "Accepted",
+      "status": "Superseded by ADR-012",
       "context": "Next's core-web-vitals config only enabled 6 of eslint-plugin-jsx-a11y's rules, so most a11y regressions (unlabelled controls, autofocus, static-element click handlers, captionless media) shipped unchecked. One gap had no jsx-a11y rule at all: CSS truncation (truncate / line-clamp-N) hides text from sighted users with no title to read the full string on hover. Turning everything on as error at once would have failed CI on 143 existing violations.",
       "decision": "Enable the full eslint-plugin-jsx-a11y recommended set (34 rules) as a direct devDependency, and add a custom mcr-a11y/no-truncate-without-title rule for the truncation gap. Custom rules are AST-based rather than grep, so they catch multi-line JSX a single-line grep misses. Everything lands at warn; npm run lint:a11y surfaces the live count on every run; each rule is promoted to error as its slice of the backlog is swept to zero (the no-icon-sizing-inside-button playbook).",
       "consequences": "New a11y regressions surface immediately and the existing 143-warning debt is tracked by the tooling itself, so banking the foundation before the sweep cannot lose the work; each rule becomes a hard gate once its slice is clean. Costs: a window where a11y issues are warnings rather than errors until each slice is swept, and custom rules need their own RuleTester coverage (now in place) plus the prove-it-fires discipline, since a registered-but-broken rule passes silently."
+    },
+    {
+      "id": "ADR-012",
+      "title": "Correct the jsx-a11y config: apply the recommended ruleset properly",
+      "date": "2026-06-17",
+      "status": "Accepted",
+      "context": "ADR-011's config mapped Object.keys(jsxA11y.flatConfigs.recommended.rules) to 'warn'. That stripped each rule's recommended options (e.g. control-has-associated-label's ignoreElements, which excludes input/textarea/video) AND force-enabled rules the recommended set deliberately turns off (control-has-associated-label; the deprecated label-has-for). It cut both ways: false positives on form inputs that inflated the baseline (the '143' was never real, and the control-has-associated-label slice was ~16 of 18 phantom), and 24 genuinely-important error-rules silently downgraded to warn, so a future missing alt, broken ARIA role, or lang-less <html> would not have failed CI. A severity-only override after a config spread re-strips the options — the same bug in a new place.",
+      "decision": "Build the jsx-a11y rules from the recommended config with options preserved (reusing Next's plugin registration to avoid the re-registration no-op): off-by-default rules stay off; already-clean rules go to error now (24 of them, a real gate); rules with a remaining violation backlog stay at warn until each slice is swept, then promote; control-has-associated-label is re-enabled deliberately WITH its options (so it ignores form inputs and flags only genuine nameless controls like icon-only buttons). Every override respecifies [severity, ...recommendedOptions]. See buildA11yRules() in eslint.config.mjs.",
+      "consequences": "Real baseline: 74 truncate (cleared, #351) + 38 jsx-a11y warnings to sweep, with 24 rules plus control-has-associated-label and the truncate rule already enforced at error. The phantom fixes from the control-has-associated-label slice were unwound. Lesson: applying a plugin's 'recommended' set means spreading its config object, not mapping its rule keys to a severity — the keys discard both the options and the per-rule on/off intent."
     }
   ]
 }

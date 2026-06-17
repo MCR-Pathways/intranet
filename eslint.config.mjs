@@ -8,6 +8,53 @@ import noCustomButtonSizing, {
 import { noTruncateWithoutTitle } from "./eslint-rules/a11y-rules.mjs";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
+// ── jsx-a11y rule policy (ADR-012) ────────────────────────────────────────────
+// Apply the recommended ruleset PROPERLY, reusing Next's plugin registration
+// (re-registering the plugin silently no-ops the rules). An earlier version did
+// `Object.keys(recommended.rules) → "warn"`, which stripped each rule's
+// recommended options (e.g. control-has-associated-label's `ignoreElements`) and
+// force-enabled off-by-default rules — inflating the sweep with false positives
+// while downgrading 24 already-clean error-rules to warn. CRITICAL: a
+// severity-only override replaces a rule's options, so every override below
+// respecifies `[severity, ...recommendedOptions]`.
+const A11Y_RECOMMENDED = jsxA11y.flatConfigs.recommended.rules;
+const a11yOpts = (rule) => {
+  const cfg = A11Y_RECOMMENDED[rule];
+  return Array.isArray(cfg) ? cfg.slice(1) : [];
+};
+// Rules with a remaining violation backlog: held at `warn` until each slice is
+// swept to zero, then promoted to `error`. Everything else recommended-on is
+// already clean and goes straight to `error`.
+const A11Y_SWEEP_AT_WARN = new Set([
+  "jsx-a11y/no-autofocus",
+  "jsx-a11y/click-events-have-key-events",
+  "jsx-a11y/no-static-element-interactions",
+  "jsx-a11y/label-has-associated-control",
+  "jsx-a11y/media-has-caption",
+  "jsx-a11y/iframe-has-title",
+  "jsx-a11y/no-noninteractive-tabindex",
+]);
+function buildA11yRules() {
+  const rules = {};
+  for (const [rule, cfg] of Object.entries(A11Y_RECOMMENDED)) {
+    // Off-by-default rules stay off (label-has-for is deprecated;
+    // anchor-ambiguous-text; control-has-associated-label is re-enabled below).
+    if ((Array.isArray(cfg) ? cfg[0] : cfg) === "off") continue;
+    rules[rule] = [
+      A11Y_SWEEP_AT_WARN.has(rule) ? "warn" : "error",
+      ...a11yOpts(rule),
+    ];
+  }
+  // Deliberately enable control-has-associated-label (off in recommended) WITH
+  // its options: with them it ignores form inputs (input/textarea/video) and
+  // flags only genuine nameless controls, e.g. icon-only buttons.
+  rules["jsx-a11y/control-has-associated-label"] = [
+    "error",
+    ...a11yOpts("jsx-a11y/control-has-associated-label"),
+  ];
+  return rules;
+}
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -64,24 +111,11 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Belts-and-braces a11y: enable the FULL jsx-a11y recommended set (34
-    // rules), not just the 6 Next core-web-vitals turns on. The plugin is
-    // already registered by Next, so we only set severities here — re-declaring
-    // the plugin silently no-ops the rules. All `warn` while the existing
-    // violations are swept (jsx-a11y + the custom truncate rule), then promoted
-    // to `error`. eslint-plugin-jsx-a11y is a direct devDependency so this
-    // doesn't rely on Next pulling it in transitively.
+    // jsx-a11y enforcement, built by buildA11yRules() above (ADR-012):
+    // recommended options preserved, already-clean rules at `error`, backlog
+    // rules at `warn` until swept, control-has-associated-label on with options.
     files: ["src/**/*.{ts,tsx}"],
-    rules: {
-      ...Object.fromEntries(
-        Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, "warn"]),
-      ),
-      // Promoted to `error` as each slice clears its violations. Inputs that are
-      // already labelled via <label htmlFor> (which this rule doesn't follow)
-      // carry a scoped eslint-disable with a reason rather than a redundant
-      // aria-label. See .claude/rules/ui-components.md.
-      "jsx-a11y/control-has-associated-label": "error",
-    },
+    rules: buildA11yRules(),
   },
   {
     // CLI scripts legitimately use console.log

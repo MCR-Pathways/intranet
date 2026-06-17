@@ -176,7 +176,6 @@ function DepartmentFormDialog({
           <div className="grid gap-2">
             <Label htmlFor="dept-colour">Colour</Label>
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line jsx-a11y/control-has-associated-label -- labelled via <Label htmlFor="dept-colour"> above */}
               <input
                 type="color"
                 id="dept-colour"

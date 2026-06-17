@@ -104,7 +104,6 @@ export function LessonImageManager({
           accept="image/png,image/jpeg,image/gif,image/webp"
           className="hidden"
           onChange={handleUpload}
-          aria-label="Upload lesson image"
         />
       </div>
 

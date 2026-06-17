@@ -227,7 +227,6 @@ export function ComplianceUploadDialog({
                 accept=".pdf,.jpg,.jpeg,.png,.docx"
                 onChange={handleFileChange}
                 className="hidden"
-                aria-label="Upload compliance document"
               />
             </div>
 
