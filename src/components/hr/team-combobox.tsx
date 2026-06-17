@@ -53,7 +53,7 @@ export function TeamCombobox({
           className="w-full justify-between font-normal"
           disabled={disabled}
         >
-          <span className="truncate">
+          <span className="truncate" title={selectedTeam ? selectedTeam.name : placeholder}>
             {selectedTeam ? selectedTeam.name : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">

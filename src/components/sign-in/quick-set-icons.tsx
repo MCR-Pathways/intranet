@@ -81,7 +81,7 @@ export function QuickSetIcons({
             )}
           >
             <Icon className="h-5 w-5" />
-            <span className="truncate w-full text-center">{config?.shortLabel ?? loc.name}</span>
+            <span className="truncate w-full text-center" title={config?.shortLabel ?? loc.name}>{config?.shortLabel ?? loc.name}</span>
           </button>
         );
       })}

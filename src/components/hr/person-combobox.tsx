@@ -61,7 +61,10 @@ export function PersonCombobox({
           className="w-full justify-between font-normal"
           disabled={disabled}
         >
-          <span className="truncate">
+          <span
+            className="truncate"
+            title={selectedPerson ? selectedPerson.full_name : placeholder}
+          >
             {selectedPerson ? selectedPerson.full_name : placeholder}
           </span>
           <div className="flex items-center gap-1 shrink-0">
@@ -100,9 +103,12 @@ export function PersonCombobox({
                     )}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{person.full_name}</p>
+                    <p className="text-sm font-medium truncate" title={person.full_name}>{person.full_name}</p>
                     {person.job_title && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p
+                        className="text-xs text-muted-foreground truncate"
+                        title={person.job_title}
+                      >
                         {person.job_title}
                       </p>
                     )}

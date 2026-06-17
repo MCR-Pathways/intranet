@@ -155,7 +155,7 @@ function SplitHalf({
         {label}
       </span>
       <config.icon className={cn("h-4 w-4", isEmpty && "text-muted-foreground/60")} />
-      <span className="text-xs font-medium truncate">
+      <span className="text-xs font-medium truncate" title={isEmpty ? "—" : config.label === "Other" && entry?.other_location ? entry.other_location : config.shortLabel}>
         {isEmpty ? "—" : config.label === "Other" && entry?.other_location ? entry.other_location : config.shortLabel}
       </span>
       {entry?.confirmed && <CheckCircle2 className="h-3 w-3 text-emerald-600 ml-auto flex-shrink-0" />}

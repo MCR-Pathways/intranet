@@ -102,7 +102,7 @@ export function AttachmentDisplay({ attachments }: AttachmentDisplayProps) {
                     <FileIcon className={cn("h-5 w-5", fileType.fgClass)} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{filename}</p>
+                    <p className="text-sm font-medium truncate" title={filename}>{filename}</p>
                     <p className="text-xs text-muted-foreground">{meta}</p>
                   </div>
                 </button>

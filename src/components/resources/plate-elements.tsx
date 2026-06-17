@@ -890,7 +890,7 @@ export function FileElement({ children, element, ...props }: PlateElementProps) 
       >
         <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{name ?? "File"}</p>
+          <p className="text-sm font-medium truncate" title={name ?? "File"}>{name ?? "File"}</p>
           {size != null && <p className="text-xs text-muted-foreground">{formatFileSize(size)}</p>}
         </div>
         <a

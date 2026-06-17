@@ -310,7 +310,10 @@ function GlobalSearchInner() {
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
                             <FileText className="h-4 w-4" />
                           </div>
-                          <span className="flex-1 truncate font-medium">
+                          <span
+                            className="flex-1 truncate font-medium"
+                            title={item.title}
+                          >
                             {item.title}
                           </span>
                         </CommandPrimitive.Item>
@@ -410,7 +413,14 @@ function GlobalSearchInner() {
                         <FileText className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">
+                        <p
+                          className="truncate font-medium"
+                          title={
+                            hit.sectionHeading
+                              ? `${hit.title} › ${hit.sectionHeading}`
+                              : hit.title
+                          }
+                        >
                           {hit.title}
                           {hit.sectionHeading && (
                             <span className="font-normal text-muted-foreground">
@@ -419,13 +429,19 @@ function GlobalSearchInner() {
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p
+                          className="text-xs text-muted-foreground truncate"
+                          title={hit.categoryName}
+                        >
                           {hit.categoryName}
                         </p>
                         {(hit._snippetResult?.content as { value?: string } | undefined)
                           ?.value && (
                           <p
                             className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1 [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                            title={(
+                              hit._snippetResult!.content as { value: string }
+                            ).value.replace(/<[^>]*>/g, "")}
                             dangerouslySetInnerHTML={{
                               __html: (hit._snippetResult!.content as { value: string }).value,
                             }}
@@ -456,8 +472,16 @@ function GlobalSearchInner() {
                         <GraduationCap className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{hit.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="truncate font-medium" title={hit.title}>{hit.title}</p>
+                        <p
+                          className="text-xs text-muted-foreground truncate"
+                          title={
+                            hit.categoryLabel +
+                            (hit.duration != null
+                              ? ` · ${formatDuration(hit.duration)}`
+                              : "")
+                          }
+                        >
                           {hit.categoryLabel}
                           {hit.duration != null &&
                             ` · ${formatDuration(hit.duration)}`}

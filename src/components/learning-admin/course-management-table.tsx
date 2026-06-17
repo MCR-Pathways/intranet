@@ -93,7 +93,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
               {course.title}
             </Link>
             {course.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1" title={course.description}>
                 {course.description}
               </p>
             )}

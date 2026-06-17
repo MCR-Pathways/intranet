@@ -29,7 +29,7 @@ function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
               {item.label}
             </Link>
           ) : (
-            <span className="text-foreground font-medium truncate">
+            <span className="text-foreground font-medium truncate" title={item.label}>
               {item.label}
             </span>
           )}

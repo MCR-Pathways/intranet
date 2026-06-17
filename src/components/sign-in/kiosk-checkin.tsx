@@ -323,11 +323,11 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
 
               {/* Info */}
               <div className="min-w-0 flex-1">
-                <p className="text-white font-semibold truncate">
+                <p className="text-white font-semibold truncate" title={person.fullName}>
                   {person.fullName}
                 </p>
                 {person.jobTitle && (
-                  <p className="text-white/60 text-sm truncate">
+                  <p className="text-white/60 text-sm truncate" title={person.jobTitle}>
                     {person.jobTitle}
                   </p>
                 )}

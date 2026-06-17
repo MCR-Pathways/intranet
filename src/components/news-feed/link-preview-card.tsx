@@ -56,16 +56,19 @@ export function LinkPreviewCard({
         )}
         <div className="flex min-w-0 flex-1 flex-col justify-center p-3">
           {title && (
-            <p className="font-medium text-sm line-clamp-1">{title}</p>
+            <p className="font-medium text-sm line-clamp-1" title={title}>{title}</p>
           )}
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+            <p
+              className="text-xs text-muted-foreground mt-0.5 line-clamp-1"
+              title={description}
+            >
               {description}
             </p>
           )}
           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
             <ExternalLink className="h-3 w-3 shrink-0" />
-            <span className="truncate">{displayHostname}</span>
+            <span className="truncate" title={displayHostname}>{displayHostname}</span>
           </div>
         </div>
       </a>
@@ -92,16 +95,19 @@ export function LinkPreviewCard({
       )}
       <div className="p-3">
         {title && (
-          <p className="font-medium text-sm line-clamp-2">{title}</p>
+          <p className="font-medium text-sm line-clamp-2" title={title}>{title}</p>
         )}
         {description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+          <p
+            className="text-xs text-muted-foreground mt-1 line-clamp-2"
+            title={description}
+          >
             {description}
           </p>
         )}
         <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
           <ExternalLink className="h-3 w-3" />
-          <span className="truncate">
+          <span className="truncate" title={displayHostname}>
             {displayHostname}
           </span>
         </div>

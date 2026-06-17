@@ -213,7 +213,7 @@ function CategoryRow({
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">{category.name}</div>
+        <div className="text-sm font-medium truncate" title={category.name}>{category.name}</div>
         <div className="text-xs text-muted-foreground">
           {category.article_count} {category.article_count === 1 ? "article" : "articles"}
         </div>

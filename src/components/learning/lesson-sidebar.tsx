@@ -85,7 +85,10 @@ function LessonRow({
         )}
       />
       <div className="flex-1 min-w-0">
-        <p className="line-clamp-2 font-medium leading-tight">
+        <p
+          className="line-clamp-2 font-medium leading-tight"
+          title={`${index + 1}. ${lesson.title}`}
+        >
           {index + 1}. {lesson.title}
         </p>
       </div>
@@ -169,7 +172,7 @@ export function LessonSidebar({
             Back to Course
           </Link>
         </Button>
-        <h2 className="line-clamp-2 text-sm font-bold">{courseTitle}</h2>
+        <h2 className="line-clamp-2 text-sm font-bold" title={courseTitle}>{courseTitle}</h2>
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
@@ -198,7 +201,7 @@ export function LessonSidebar({
                 <div key={group.section.id} className={cn(groupIdx > 0 && "mt-3")}>
                   {/* Section header */}
                   <div className="flex items-center justify-between px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate" title={group.section.title}>
                       {group.section.title}
                     </p>
                     <span className="text-xs text-muted-foreground tabular-nums shrink-0 ml-2">

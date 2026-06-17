@@ -345,7 +345,7 @@ function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProp
           onClick={onClick}
           className="text-left w-full"
         >
-          <p className="font-medium text-sm leading-tight line-clamp-1">
+          <p className="font-medium text-sm leading-tight line-clamp-1" title={row.title}>
             {row.title}
           </p>
           {/* Message only renders when it carries content. State rows
@@ -353,7 +353,7 @@ function InboxRowItem({ row, onClick, onClear, onAfterAction }: InboxRowItemProp
               rows keep their detail text (e.g. "John approved your
               leave for 3-5 March"). */}
           {row.message && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" title={row.message}>
               {row.message}
             </p>
           )}

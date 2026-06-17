@@ -192,7 +192,7 @@ export function ComplianceUploadDialog({
               {selectedFile ? (
                 <div className="flex items-center gap-2 rounded-md border p-3">
                   <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate flex-1">{selectedFile.name}</span>
+                  <span className="text-sm truncate flex-1" title={selectedFile.name}>{selectedFile.name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">
                     {(selectedFile.size / 1024).toFixed(0)} KB
                   </span>

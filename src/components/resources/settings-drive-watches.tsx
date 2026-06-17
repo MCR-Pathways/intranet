@@ -405,9 +405,10 @@ export function SettingsDriveWatches() {
                 <Link
                   href={`/resources/article/${article.slug}`}
                   className="inline-flex items-center gap-1.5 font-medium hover:underline max-w-[32ch] truncate"
+                  title={article.title}
                 >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{article.title}</span>
+                  <span className="truncate" title={article.title}>{article.title}</span>
                 </Link>
               </TooltipTrigger>
               <TooltipContent>{article.title}</TooltipContent>
@@ -608,7 +609,7 @@ export function SettingsDriveWatches() {
                       {run.error ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="truncate block text-destructive">
+                            <span className="truncate block text-destructive" title={run.error}>
                               {run.error}
                             </span>
                           </TooltipTrigger>

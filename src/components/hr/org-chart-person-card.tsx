@@ -105,9 +105,9 @@ export function OrgChartPersonCard({
 
           {/* Info */}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold leading-tight truncate">{name}</p>
+            <p className="text-sm font-semibold leading-tight truncate" title={name}>{name}</p>
             {jobTitle && (
-              <p className="text-xs text-muted-foreground leading-snug line-clamp-2 mt-0.5">
+              <p className="text-xs text-muted-foreground leading-snug line-clamp-2 mt-0.5" title={jobTitle}>
                 {jobTitle}
               </p>
             )}

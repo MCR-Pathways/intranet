@@ -325,6 +325,7 @@ export function UserTable({
                 <Link
                   href={`/hr/users/${profile.id}`}
                   className="font-medium hover:underline truncate"
+                  title={profile.full_name}
                 >
                   {profile.full_name}
                 </Link>
@@ -335,7 +336,10 @@ export function UserTable({
                   <GraduationCap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">
+              <p
+                className="text-xs text-muted-foreground truncate"
+                title={profile.email}
+              >
                 {profile.email}
               </p>
             </div>

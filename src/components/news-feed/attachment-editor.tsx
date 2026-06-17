@@ -293,7 +293,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
                     <FileIcon className={cn("h-5 w-5", fileType.fgClass)} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
+                    <p className="truncate text-sm font-medium" title={att.file_name}>
                       {att.file_name}
                     </p>
                     <p className="text-xs text-muted-foreground">{meta}</p>

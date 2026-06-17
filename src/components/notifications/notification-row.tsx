@@ -140,7 +140,7 @@ export function NotificationRow({ row, tab, onAfterAction }: NotificationRowProp
             )}
           </p>
           {row.message && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" title={row.message}>
               {row.message}
             </p>
           )}

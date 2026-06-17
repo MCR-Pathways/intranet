@@ -198,11 +198,11 @@ export function TeamScheduleGrid({ initialMembers }: TeamScheduleGridProps) {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p className="text-sm font-medium truncate" title={member.preferred_name || member.full_name}>
                         {member.preferred_name || member.full_name}
                       </p>
                       {member.job_title && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground line-clamp-1" title={member.job_title}>
                           {member.job_title}
                         </p>
                       )}

@@ -41,7 +41,7 @@ export function EnrolledCourseCard({ enrolment, now }: EnrolledCourseCardProps) 
         className={`border-l-4 ${config?.borderColor ?? "border-l-muted"} shadow-md overflow-clip rounded-xl transition-shadow hover:shadow-lg cursor-pointer h-full`}
       >
         <CardHeader className="pb-3">
-          <CardTitle className="text-[15px] font-semibold line-clamp-2">
+          <CardTitle className="text-[15px] font-semibold line-clamp-2" title={course.title}>
             {course.title}
           </CardTitle>
           {dueStatus && (

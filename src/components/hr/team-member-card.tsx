@@ -113,9 +113,9 @@ export function TeamMemberCard({ member, leaveInfo, anniversaryInfo, showActions
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight truncate">{displayName}</p>
+          <p className="text-sm font-semibold leading-tight truncate" title={displayName}>{displayName}</p>
           {member.job_title && (
-            <p className="text-xs text-muted-foreground truncate">{member.job_title}</p>
+            <p className="text-xs text-muted-foreground truncate" title={member.job_title}>{member.job_title}</p>
           )}
           {member.is_external && (
             <span className="inline-block mt-0.5 rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">

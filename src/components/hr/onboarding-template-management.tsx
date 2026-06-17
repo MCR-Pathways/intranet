@@ -306,13 +306,13 @@ export function OnboardingTemplateManagement({
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{template.name}</span>
+                      <span className="font-medium truncate" title={template.name}>{template.name}</span>
                       <Badge variant={template.is_active ? "success" : "muted"}>
                         {template.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                     {template.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate" title={template.description}>
                         {template.description}
                       </p>
                     )}
@@ -649,9 +649,9 @@ function TemplateItemsList({
                 className="flex items-center gap-3 rounded-md px-3 py-2 bg-muted"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.title}</p>
+                  <p className="text-sm font-medium truncate" title={item.title}>{item.title}</p>
                   {item.description && (
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate" title={item.description}>
                       {item.description}
                     </p>
                   )}
