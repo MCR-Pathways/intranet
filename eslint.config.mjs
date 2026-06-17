@@ -72,9 +72,16 @@ const eslintConfig = defineConfig([
     // to `error`. eslint-plugin-jsx-a11y is a direct devDependency so this
     // doesn't rely on Next pulling it in transitively.
     files: ["src/**/*.{ts,tsx}"],
-    rules: Object.fromEntries(
-      Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, "warn"]),
-    ),
+    rules: {
+      ...Object.fromEntries(
+        Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, "warn"]),
+      ),
+      // Promoted to `error` as each slice clears its violations. Inputs that are
+      // already labelled via <label htmlFor> (which this rule doesn't follow)
+      // carry a scoped eslint-disable with a reason rather than a redundant
+      // aria-label. See .claude/rules/ui-components.md.
+      "jsx-a11y/control-has-associated-label": "error",
+    },
   },
   {
     // CLI scripts legitimately use console.log

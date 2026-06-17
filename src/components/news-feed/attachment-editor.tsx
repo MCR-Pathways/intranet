@@ -321,6 +321,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
           accept={acceptImages}
           multiple
           className="hidden"
+          aria-label="Upload images"
           onChange={(e) => {
             handleFileUpload(e.target.files, "image");
             if (e.target) e.target.value = "";
@@ -332,6 +333,7 @@ export const AttachmentEditor = forwardRef<AttachmentEditorHandle, AttachmentEdi
           accept={acceptDocs}
           multiple
           className="hidden"
+          aria-label="Upload documents"
           onChange={(e) => {
             handleFileUpload(e.target.files, "document");
             if (e.target) e.target.value = "";

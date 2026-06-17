@@ -286,6 +286,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search your name..."
+            aria-label="Search your name"
             className="w-full h-16 text-xl px-6 pl-16 rounded-2xl bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-mcr-orange/50"
           />
         </div>

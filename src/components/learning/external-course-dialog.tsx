@@ -173,7 +173,9 @@ export function ExternalCourseDialog({ mode, course }: ExternalCourseDialogProps
             />
             <datalist id="provider-suggestions">
               {PROVIDER_SUGGESTIONS.map((p) => (
-                <option key={p} value={p} />
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
             </datalist>
           </div>

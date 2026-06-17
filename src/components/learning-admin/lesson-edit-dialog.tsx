@@ -293,6 +293,7 @@ export function LessonEditDialog({
               <>
                 <div className="grid gap-2">
                   <Label htmlFor="lesson_content">Content</Label>
+                  {/* eslint-disable-next-line jsx-a11y/control-has-associated-label -- labelled via <Label htmlFor="lesson_content"> above */}
                   <textarea
                     id="lesson_content"
                     value={content}
@@ -373,6 +374,7 @@ export function LessonEditDialog({
                       accept="video/mp4,video/webm,video/ogg,video/quicktime"
                       className="hidden"
                       onChange={handleVideoUpload}
+                      aria-label="Upload video file"
                     />
                     {(uploadedFileName || videoStoragePath) && (
                       <div className="flex items-center gap-2 text-sm text-green-600">

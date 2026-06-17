@@ -69,6 +69,7 @@ export function VideoPlayer({
                 controls
                 className="h-full w-full"
                 onEnded={handleVideoEnded}
+                aria-label="Lesson video"
               />
             ) : hasExternalVideo && getEmbedUrl(videoUrl) ? (
               <iframe

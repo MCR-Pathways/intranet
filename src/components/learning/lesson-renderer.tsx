@@ -180,6 +180,7 @@ function RenderNode({
             checked={checked}
             disabled
             className="mt-1 h-4 w-4 rounded border-border"
+            aria-label={checked ? "Completed task" : "Incomplete task"}
           />
           <div className="flex-1 min-w-0">
             {node.content?.map((child, i) => (

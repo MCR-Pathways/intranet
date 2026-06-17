@@ -191,6 +191,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
           <label htmlFor="report-start" className="text-sm text-muted-foreground">
             From
           </label>
+          {/* eslint-disable-next-line jsx-a11y/control-has-associated-label -- labelled via <label htmlFor="report-start"> above */}
           <input
             id="report-start"
             type="date"
@@ -201,6 +202,7 @@ export function ReportsPanel({ initialMembers }: ReportsPanelProps) {
           <label htmlFor="report-end" className="text-sm text-muted-foreground">
             to
           </label>
+          {/* eslint-disable-next-line jsx-a11y/control-has-associated-label -- labelled via <label htmlFor="report-end"> above */}
           <input
             id="report-end"
             type="date"
