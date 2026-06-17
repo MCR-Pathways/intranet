@@ -156,7 +156,7 @@ export function IconPickerPopover({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              aria-label={`Select ${name} icon`}
+                              aria-label={`Select ${entry.label} icon`}
                               className={cn(
                                 "flex h-8 w-8 items-center justify-center rounded-md transition-colors",
                                 isSelected
