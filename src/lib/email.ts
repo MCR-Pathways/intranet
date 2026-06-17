@@ -56,12 +56,15 @@ export const EMAIL_THEME_CONFIG: Record<string, EmailTheme> = {
   course_overdue_manager: { accent: "#DA417C", logoVariant: "light" },
   leave_decision: { accent: "#213350", logoVariant: "light" },
   stale_leave_reminder: { accent: "#213350", logoVariant: "light" },
+  // Celebration green: moved from the old bright lime (#B5E046) to the darker
+  // brand green #22A34B (matches the app's --mcr-green, ADR-014 §1.1). As a dark
+  // header it takes the white logo, so these three regrouped from B to A.
+  certificate_earned: { accent: "#22A34B", logoVariant: "light" },
+  course_completed: { accent: "#22A34B", logoVariant: "light" },
+  welcome: { accent: "#22A34B", logoVariant: "light" },
   // Group B — bright headers, dark blue logo
   compliance_expiry: { accent: "#F09336", logoVariant: "dark" },
   key_date_reminder: { accent: "#F09336", logoVariant: "dark" },
-  certificate_earned: { accent: "#B5E046", logoVariant: "dark" },
-  course_completed: { accent: "#B5E046", logoVariant: "dark" },
-  welcome: { accent: "#B5E046", logoVariant: "dark" },
 };
 
 const DEFAULT_THEME: EmailTheme = { accent: "#213350", logoVariant: "light" };
