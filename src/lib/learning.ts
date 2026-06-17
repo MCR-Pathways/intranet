@@ -80,11 +80,12 @@ export const DEFAULT_CATEGORY_CONFIG: CategoryConfig = {
 export function getCategoryConfig(
   category: string | null | undefined,
 ): CategoryConfig {
-  if (!category) return DEFAULT_CATEGORY_CONFIG;
-  return (
-    (categoryConfig as Record<string, CategoryConfig>)[category] ??
-    DEFAULT_CATEGORY_CONFIG
-  );
+  // Object.hasOwn guards against inherited Object.prototype keys (e.g.
+  // "toString", "constructor") returning a function instead of undefined.
+  if (!category || !Object.hasOwn(categoryConfig, category)) {
+    return DEFAULT_CATEGORY_CONFIG;
+  }
+  return categoryConfig[category as CourseCategory];
 }
 
 // ─── Lesson Type Config ─────────────────────────────────────────────────────
