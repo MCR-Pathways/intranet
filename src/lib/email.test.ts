@@ -38,14 +38,14 @@ describe("EMAIL_THEME_CONFIG", () => {
   });
 
   it("Group A types use light logo variant", () => {
-    const groupA = ["mention", "course_assigned", "course_overdue_digest", "course_overdue_manager", "leave_decision", "stale_leave_reminder"];
+    const groupA = ["mention", "course_assigned", "course_overdue_digest", "course_overdue_manager", "leave_decision", "stale_leave_reminder", "certificate_earned", "course_completed", "welcome"];
     for (const type of groupA) {
       expect(EMAIL_THEME_CONFIG[type].logoVariant).toBe("light");
     }
   });
 
   it("Group B types use dark logo variant", () => {
-    const groupB = ["compliance_expiry", "key_date_reminder", "certificate_earned", "course_completed", "welcome"];
+    const groupB = ["compliance_expiry", "key_date_reminder"];
     for (const type of groupB) {
       expect(EMAIL_THEME_CONFIG[type].logoVariant).toBe("dark");
     }
@@ -69,10 +69,10 @@ describe("baseTemplate", () => {
     expect(html).toContain("mcr-logo-email-white.png");
   });
 
-  it("applies correct accent colour for a Group B type", () => {
+  it("applies the regrouped Green accent + white logo (was Group B)", () => {
     const html = baseTemplate("Test", "<p>Body</p>", { emailType: "certificate_earned" });
-    expect(html).toContain("background: #B5E046");
-    expect(html).toContain("mcr-logo-email.png");
+    expect(html).toContain("background: #22A34B");
+    expect(html).toContain("mcr-logo-email-white.png");
   });
 
   it("uses white logo for Group A types", () => {
@@ -160,7 +160,7 @@ describe("buildWelcomeEmail", () => {
 
   it("uses Green theme", () => {
     const { html } = buildWelcomeEmail("Jamie");
-    expect(html).toContain("background: #B5E046");
+    expect(html).toContain("background: #22A34B");
   });
 
   it("escapes HTML in name", () => {
@@ -180,7 +180,7 @@ describe("buildCourseAssignedEmail", () => {
 describe("buildCertificateEarnedEmail", () => {
   it("uses Green theme", () => {
     const { html } = buildCertificateEarnedEmail("Jamie", "Test Course", "CERT-001", "https://example.com");
-    expect(html).toContain("background: #B5E046");
+    expect(html).toContain("background: #22A34B");
   });
 
   it("includes personalised congratulatory heading", () => {
@@ -198,7 +198,7 @@ describe("buildCertificateEarnedEmail", () => {
 describe("buildCourseCompletedEmail", () => {
   it("uses Green theme", () => {
     const { html } = buildCourseCompletedEmail("Jamie", "Test Course", "https://example.com");
-    expect(html).toContain("background: #B5E046");
+    expect(html).toContain("background: #22A34B");
   });
 
   it("includes personalised heading", () => {

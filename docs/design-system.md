@@ -374,11 +374,11 @@ Email notifications use colour-coded header bars for instant recognition. Each e
 | Colour | Hex | Email Types |
 |--------|-----|-------------|
 | Orange | `#F09336` | `compliance_expiry`, `key_date_reminder` |
-| Green | `#B5E046` | `certificate_earned`, `course_completed`, `welcome` |
+| Green | `#22A34B` | `certificate_earned`, `course_completed`, `welcome` |
 
 Colours map to intent: Wine = social, Teal = assignment, Pink = urgency, Dark Blue = HR, Orange = compliance, Green = celebration. All CTA buttons use Dark Blue regardless of header colour.
 
-The email green deliberately remains `#B5E046` while the app green moved to `#22A34B` (§1.1): emails are a separately themed surface with hardcoded hexes, and the darker green changes these three types' brightness class — likely flipping them from Group B (dark logo) to Group A (white logo). That regrouping is a tracked follow-up decision, not a silent bundle; this table documents what the emails ship today.
+The email green moved from `#B5E046` to `#22A34B` (matching the app green, §1.1; ADR-014). Because `#22A34B` is a dark header, the three green types regrouped from Group B (dark logo) to Group A (white logo) — the predicted brightness-class flip, made explicitly here rather than left silent. Verified in `email.test.ts`.
 
 Logo variants: `public/mcr-logo-email.png` (dark, Group B) and `public/mcr-logo-email-white.png` (white, Group A). Both displayed at 120x36.
 
