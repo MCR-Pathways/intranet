@@ -72,12 +72,19 @@ export const DEFAULT_CATEGORY_CONFIG: CategoryConfig = {
 
 /**
  * Look up a course-category's display config, falling back to a neutral default
- * for any value not in `categoryConfig`. Guards against enum/config drift: the
- * type says every `CourseCategory` is a key, but the DB column can outrun this
- * map. Prefer this over a bare `categoryConfig[category]`.
+ * for any value not in `categoryConfig`. Accepts any string (or null/undefined)
+ * so callers needn't cast `CourseCategory` and external/loose categories resolve
+ * safely. Guards against enum/config drift: the DB column can outrun this map.
+ * Prefer this over a bare `categoryConfig[category]`.
  */
-export function getCategoryConfig(category: CourseCategory): CategoryConfig {
-  return categoryConfig[category] ?? DEFAULT_CATEGORY_CONFIG;
+export function getCategoryConfig(
+  category: string | null | undefined,
+): CategoryConfig {
+  if (!category) return DEFAULT_CATEGORY_CONFIG;
+  return (
+    (categoryConfig as Record<string, CategoryConfig>)[category] ??
+    DEFAULT_CATEGORY_CONFIG
+  );
 }
 
 // ─── Lesson Type Config ─────────────────────────────────────────────────────

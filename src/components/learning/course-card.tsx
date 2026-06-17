@@ -14,7 +14,6 @@ import type { CourseEnrolment } from "@/types/database.types";
 import type { AlgoliaCourseRecord } from "@/lib/algolia";
 import { formatDuration } from "@/lib/utils";
 import { getCategoryConfig } from "@/lib/learning";
-import type { CourseCategory } from "@/types/database.types";
 
 interface CourseCardProps {
   course: {
@@ -31,7 +30,7 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, enrolment }: CourseCardProps) {
-  const config = getCategoryConfig(course.category as CourseCategory);
+  const config = getCategoryConfig(course.category);
   const Icon = config.icon;
 
   return (
