@@ -74,7 +74,7 @@ export function ExternalCourseCard({ course }: ExternalCourseCardProps) {
             </div>
 
             {course.notes && (
-              <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{course.notes}</p>
+              <p className="mt-2 text-sm text-muted-foreground line-clamp-2" title={course.notes}>{course.notes}</p>
             )}
 
             {course.certificate_url && (

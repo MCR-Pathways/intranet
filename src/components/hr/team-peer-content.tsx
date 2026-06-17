@@ -59,9 +59,9 @@ export function TeamPeerContent({
                 <AvatarFallback className={cn(getAvatarColour(manager.full_name).bg, getAvatarColour(manager.full_name).fg)}>{getInitials(manager.full_name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">{manager.full_name}</p>
+                <p className="text-sm font-semibold truncate" title={manager.full_name}>{manager.full_name}</p>
                 {manager.job_title && (
-                  <p className="text-xs text-muted-foreground truncate">{manager.job_title}</p>
+                  <p className="text-xs text-muted-foreground truncate" title={manager.job_title}>{manager.job_title}</p>
                 )}
               </div>
             </CardContent>

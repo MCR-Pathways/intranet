@@ -177,6 +177,7 @@ export function SectionAccordion({
                           ? "text-muted-foreground/40"
                           : "text-muted-foreground"
                       )}
+                      title={section.description}
                     >
                       {section.description}
                     </p>

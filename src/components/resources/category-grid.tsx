@@ -69,7 +69,7 @@ export function CategoryGrid({ categories, canEdit = false, heading }: CategoryG
 
                   {/* Description (if populated) */}
                   {cat.description && (
-                    <p className="text-[13px] text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="text-[13px] text-muted-foreground leading-relaxed line-clamp-2" title={cat.description}>
                       {cat.description}
                     </p>
                   )}

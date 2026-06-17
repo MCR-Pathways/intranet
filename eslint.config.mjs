@@ -56,11 +56,11 @@ const eslintConfig = defineConfig([
       // multi-line JSX a single-line grep misses. Error from day one (the
       // P3-F sweep cleared all existing instances).
       "mcr-button/no-bg-card-on-outline": "error",
-      // Truncated text (truncate / line-clamp-N) without a `title` is
-      // unreadable on hover for sighted users. Starts as `warn` while the
-      // existing sites are swept; promote to `error` once clear (the
-      // no-icon-sizing-inside-button playbook). See .claude/rules/ui-components.md.
-      "mcr-a11y/no-truncate-without-title": "warn",
+      // Truncated text (truncate / line-clamp-N / line-clamp-[..]) without a
+      // `title` is unreadable on hover for sighted users. `error` since the
+      // sweep cleared all 74 existing sites (the no-icon-sizing-inside-button
+      // playbook). See .claude/rules/ui-components.md.
+      "mcr-a11y/no-truncate-without-title": "error",
     },
   },
   {

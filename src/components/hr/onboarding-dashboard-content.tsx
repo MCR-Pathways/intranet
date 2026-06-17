@@ -178,16 +178,19 @@ function OnboardingRow({ checklist }: { checklist: OnboardingChecklistWithProgre
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm truncate">{checklist.employee_name}</span>
+            <span className="font-medium text-sm truncate" title={checklist.employee_name}>{checklist.employee_name}</span>
             {checklist.employee_job_title && (
-              <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+              <span
+                className="text-xs text-muted-foreground truncate hidden sm:inline"
+                title={checklist.employee_job_title}
+              >
                 · {checklist.employee_job_title}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             {checklist.template_name && (
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate" title={checklist.template_name}>
                 {checklist.template_name}
               </span>
             )}

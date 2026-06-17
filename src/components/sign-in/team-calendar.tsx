@@ -207,7 +207,7 @@ export function TeamCalendar({ initialMembers }: TeamCalendarProps) {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{member.name}</p>
+                        <p className="text-sm font-medium truncate" title={member.name}>{member.name}</p>
                       </div>
                       {member.location ? (
                         <span className={`text-xs font-medium ${locConfig?.textClass ?? "text-muted-foreground"}`}>

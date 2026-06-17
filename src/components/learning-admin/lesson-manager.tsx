@@ -368,7 +368,7 @@ function SortableLessonRow({
         <TypeIcon className={`h-3.5 w-3.5 ${typeConfig.color}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
+        <p className="text-sm font-medium truncate" title={lesson.title}>
           {lesson.title}
         </p>
         <p className="text-xs text-muted-foreground">

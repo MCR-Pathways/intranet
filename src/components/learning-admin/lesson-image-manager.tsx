@@ -138,7 +138,7 @@ export function LessonImageManager({
                   Delete
                 </Button>
               </div>
-              <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1.5 py-0.5 truncate">
+              <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1.5 py-0.5 truncate" title={img.file_name}>
                 {img.file_name}
               </p>
             </div>

@@ -201,7 +201,7 @@ export default async function LearningPage() {
                   <p className="text-sm font-medium text-primary mb-0.5">
                     Continue where you left off
                   </p>
-                  <p className="font-semibold truncate">
+                  <p className="font-semibold truncate" title={resumeEnrolment.course.title}>
                     {resumeEnrolment.course.title}
                   </p>
                   <div className="flex items-center gap-3 mt-2">

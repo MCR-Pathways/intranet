@@ -95,9 +95,9 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{item.label}</p>
+              <p className="truncate text-sm font-medium" title={item.label}>{item.label}</p>
               {item.job_title && (
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground" title={item.job_title}>
                   {item.job_title}
                 </p>
               )}

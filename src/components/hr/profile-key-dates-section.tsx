@@ -86,7 +86,7 @@ export function ProfileKeyDatesSection({
                     <Badge variant="outline" className="shrink-0">
                       {TYPE_LABELS[kd.date_type] ?? kd.date_type}
                     </Badge>
-                    <span className="truncate">{kd.title}</span>
+                    <span className="truncate" title={kd.title}>{kd.title}</span>
                     <span className={`text-xs whitespace-nowrap ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                       {formatHRDate(kd.due_date)}
                     </span>

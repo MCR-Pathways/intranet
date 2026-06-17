@@ -253,7 +253,7 @@ export function DayDetailPanel({
                         {getInitials(member.name)}
                       </div>
                     )}
-                    <span className="truncate flex-1">{member.name}</span>
+                    <span className="truncate flex-1" title={member.name}>{member.name}</span>
                     {member.location ? (
                       <span className={`text-xs ${locConfig?.textClass ?? "text-muted-foreground"}`}>
                         {getLocationLabel(member.location, member.otherLocation)}

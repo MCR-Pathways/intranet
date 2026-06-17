@@ -63,7 +63,10 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
           <div className="pr-16">
             <div className="flex items-center gap-2">
               {Icon && <Icon className={`h-5 w-5 ${config.color} shrink-0`} />}
-              <CardTitle className="text-[15px] font-semibold line-clamp-2">
+              <CardTitle
+                className="text-[15px] font-semibold line-clamp-2"
+                title={course.title}
+              >
                 {course.title}
               </CardTitle>
             </div>
@@ -75,7 +78,10 @@ export function CourseCard({ course, enrolment }: CourseCardProps) {
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col">
-          <CardDescription className="line-clamp-2 mb-4 flex-1">
+          <CardDescription
+            className="line-clamp-2 mb-4 flex-1"
+            title={course.description ?? undefined}
+          >
             {course.description}
           </CardDescription>
           <div className="flex items-center justify-between text-sm text-muted-foreground">

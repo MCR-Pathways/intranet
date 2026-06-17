@@ -80,7 +80,7 @@ export default async function DraftsPage() {
                         className="inline-flex items-center gap-2 hover:underline underline-offset-4"
                       >
                         <FileEdit className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{d.title}</span>
+                        <span className="truncate" title={d.title}>{d.title}</span>
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden sm:table-cell">

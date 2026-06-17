@@ -74,7 +74,7 @@ export function MoreInSection({
               )}
             >
               <FileText className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{article.title}</span>
+              <span className="truncate" title={article.title}>{article.title}</span>
               {isCurrent && (
                 <span className="ml-auto text-[10px] text-muted-foreground font-normal shrink-0">
                   Current

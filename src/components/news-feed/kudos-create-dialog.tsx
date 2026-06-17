@@ -538,9 +538,9 @@ export function KudosCreateDialog({
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{u.label}</p>
+                          <p className="font-medium truncate" title={u.label}>{u.label}</p>
                           {u.job_title && (
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-xs text-muted-foreground truncate" title={u.job_title}>
                               {u.job_title}
                             </p>
                           )}

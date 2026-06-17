@@ -527,11 +527,11 @@ function SortableSectionRow({
                 />
               ) : (
                 <>
-                  <p className="text-sm font-medium truncate">
+                  <p className="text-sm font-medium truncate" title={section.title}>
                     {section.title}
                   </p>
                   {section.description && (
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate" title={section.description}>
                       {section.description}
                     </p>
                   )}
