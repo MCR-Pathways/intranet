@@ -638,6 +638,7 @@ export function KudosCreateDialog({
                 placeholder="Say what they did and why it mattered…"
                 disabled={isPending}
                 rows={4}
+                aria-label="Why this kudos"
                 className={cn(
                   "w-full resize-none rounded-md border border-input bg-card px-3 py-2 text-sm",
                   "placeholder:text-muted-foreground",

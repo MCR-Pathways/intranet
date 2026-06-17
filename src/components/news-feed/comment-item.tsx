@@ -197,6 +197,7 @@ export function CommentItem({
                     rows={2}
                     maxLength={2000}
                     disabled={isPending}
+                    aria-label="Edit comment"
                   />
                   <div className="flex items-center gap-1">
                     <Button
