@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatDuration } from "@/lib/utils";
-import { categoryConfig } from "@/lib/learning";
+import { getCategoryConfig } from "@/lib/learning";
 import type { Course } from "@/types/database.types";
 
 interface CourseManagementTableProps {
@@ -105,7 +105,7 @@ export function CourseManagementTable({ courses }: CourseManagementTableProps) {
       accessorKey: "category",
       header: "Category",
       cell: ({ row }) => {
-        const config = categoryConfig[row.original.category];
+        const config = getCategoryConfig(row.original.category);
         return <Badge variant={config.badgeVariant}>{config.label}</Badge>;
       },
       enableSorting: false,

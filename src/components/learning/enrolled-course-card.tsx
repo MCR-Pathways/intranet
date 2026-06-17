@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, AlertTriangle } from "lucide-react";
 import type { EnrolmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { categoryConfig } from "@/lib/learning";
+import { getCategoryConfig } from "@/lib/learning";
 
 interface EnrolledCourseCardProps {
   enrolment: EnrolmentWithCourse;
@@ -16,7 +16,7 @@ interface EnrolledCourseCardProps {
 
 export function EnrolledCourseCard({ enrolment, now }: EnrolledCourseCardProps) {
   const { course } = enrolment;
-  const config = categoryConfig[course.category];
+  const config = getCategoryConfig(course.category);
   const isCompleted = enrolment.status === "completed";
 
   // Calculate due date status using server-provided timestamp to avoid hydration mismatches

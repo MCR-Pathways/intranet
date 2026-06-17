@@ -20,7 +20,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { categoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
+import { getCategoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
 import { SectionAccordion } from "@/components/learning/section-accordion";
@@ -215,7 +215,7 @@ export default async function CourseDetailPage({
     return firstIncomplete?.id ?? lessons[0].id;
   })();
 
-  const config = categoryConfig[course.category];
+  const config = getCategoryConfig(course.category);
   const Icon = config.icon;
 
   const isCompleted = enrolment?.status === "completed";
