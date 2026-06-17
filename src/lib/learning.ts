@@ -58,6 +58,28 @@ export const categoryConfig: Record<CourseCategory, CategoryConfig> = {
   },
 };
 
+// Neutral fallback for a course_category not present in `categoryConfig` — e.g. a
+// new enum value added in the DB before this map is updated. Keeps the UI from
+// crashing on an undefended `categoryConfig[category]` lookup.
+export const DEFAULT_CATEGORY_CONFIG: CategoryConfig = {
+  label: "Other",
+  icon: Circle,
+  color: "text-muted-foreground",
+  bgColor: "bg-muted",
+  borderColor: "border-l-muted-foreground",
+  badgeVariant: "secondary",
+};
+
+/**
+ * Look up a course-category's display config, falling back to a neutral default
+ * for any value not in `categoryConfig`. Guards against enum/config drift: the
+ * type says every `CourseCategory` is a key, but the DB column can outrun this
+ * map. Prefer this over a bare `categoryConfig[category]`.
+ */
+export function getCategoryConfig(category: CourseCategory): CategoryConfig {
+  return categoryConfig[category] ?? DEFAULT_CATEGORY_CONFIG;
+}
+
 // ─── Lesson Type Config ─────────────────────────────────────────────────────
 
 export type LessonType = "video" | "text" | "slides" | "rich_text";
