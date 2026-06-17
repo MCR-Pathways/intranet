@@ -39,7 +39,10 @@ function buildA11yRules() {
   for (const [rule, cfg] of Object.entries(A11Y_RECOMMENDED)) {
     // Off-by-default rules stay off (label-has-for is deprecated;
     // anchor-ambiguous-text; control-has-associated-label is re-enabled below).
-    if ((Array.isArray(cfg) ? cfg[0] : cfg) === "off") continue;
+    // Match both string ("off") and numeric (0) disabled severities, so a rule
+    // disabled numerically can't be accidentally force-enabled to `error`.
+    const severity = Array.isArray(cfg) ? cfg[0] : cfg;
+    if (severity === "off" || severity === 0) continue;
     rules[rule] = [
       A11Y_SWEEP_AT_WARN.has(rule) ? "warn" : "error",
       ...a11yOpts(rule),
