@@ -714,6 +714,16 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 ---
 
+### ADR-015: Accessibility enforced in ESLint (full jsx-a11y set + a custom truncate rule, swept warn-to-error)
+
+**Context:** Next's `core-web-vitals` config enabled only 6 of `eslint-plugin-jsx-a11y`'s rules, so most a11y regressions — unlabelled controls, autofocus, static-element click handlers, captionless media — shipped unchecked. One gap had no jsx-a11y rule at all: CSS truncation (`truncate` / `line-clamp-N`) hides text from sighted users with no `title` to read the full string on hover. Turning the whole recommended set on as `error` at once would have failed CI on a backlog of existing violations.
+
+**Decision:** Enable the full `eslint-plugin-jsx-a11y` recommended set as a direct devDependency, plus a custom AST rule `mcr-a11y/no-truncate-without-title` for the truncation gap (AST-based, so it catches multi-line JSX a single-line grep misses). Build the rules from the recommended config with options preserved (`buildA11yRules()` in `eslint.config.mjs`): off-by-default rules stay off, already-clean rules go to `error` immediately, and each rule with a remaining backlog stays at `warn` until its slice is swept to zero, then promotes. An earlier version mapped `Object.keys(recommended.rules)` to `"warn"`, which stripped each rule's recommended options and force-enabled off-by-default rules, inflating the baseline with false positives and silently downgrading two dozen important error-rules; corrected to spread the recommended config object rather than map its keys.
+
+**Consequences:** New a11y regressions fail CI; the backlog was cleared in slices to zero warnings, each rule promoted to `error` as its slice cleared, so the whole recommended set is now a hard gate. The sweep was capability-first — a clickable `<div>` file-dropzone became a real `<button>`, an accordion header got `role="button"` + keyboard activation, the mobile menu got Escape-to-close — with justified suppressions only where an element is genuinely non-interactive or the autofocus is intentional focus-on-open (the ARIA APG pattern for data-entry dialogs). One real gap has no markup fix and is tracked as a feature backlog: captions on author-uploaded video (no `.vtt` upload flow yet). Custom rules need their own RuleTester coverage and a prove-it-fires discipline, since a registered-but-broken rule passes silently.
+
+---
+
 ## Known Issues & Technical Debt
 
 ### High Priority
