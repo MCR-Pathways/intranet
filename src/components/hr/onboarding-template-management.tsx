@@ -289,37 +289,50 @@ export function OnboardingTemplateManagement({
           {templates.map((template) => {
             const isExpanded = expandedTemplateId === template.id;
             const items = templateItemsMap[template.id] ?? [];
+            const toggleExpanded = () =>
+              setExpandedTemplateId(isExpanded ? null : template.id);
 
             return (
               <Card key={template.id} className="overflow-hidden">
                 {/* Template header */}
-                <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() =>
-                    setExpandedTemplateId(isExpanded ? null : template.id)
-                  }
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate" title={template.name}>{template.name}</span>
-                      <Badge variant={template.is_active ? "success" : "muted"}>
-                        {template.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    {template.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5 truncate" title={template.description}>
-                        {template.description}
-                      </p>
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors">
+                  {/* Disclosure trigger covers the label area; the kebab menu is a
+                      sibling so an interactive control isn't nested inside another. */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    className="flex flex-1 items-center gap-3 min-w-0 cursor-pointer"
+                    onClick={toggleExpanded}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleExpanded();
+                      }
+                    }}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate" title={template.name}>{template.name}</span>
+                        <Badge variant={template.is_active ? "success" : "muted"}>
+                          {template.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mt-0.5 truncate" title={template.description}>
+                          {template.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      {template.item_count ?? items.length} item{(template.item_count ?? items.length) !== 1 ? "s" : ""}
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground shrink-0">
-                    {template.item_count ?? items.length} item{(template.item_count ?? items.length) !== 1 ? "s" : ""}
-                  </span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

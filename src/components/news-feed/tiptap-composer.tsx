@@ -205,6 +205,7 @@ export function TiptapComposer({
   }, [editor, isEmpty, focus]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click-to-focus convenience; the inner Tiptap contenteditable is the keyboard-accessible control, reachable by tab
     <div
       className={cn(
         "text-sm",

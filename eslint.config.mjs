@@ -27,8 +27,6 @@ const a11yOpts = (rule) => {
 // already clean and goes straight to `error`.
 const A11Y_SWEEP_AT_WARN = new Set([
   "jsx-a11y/no-autofocus",
-  "jsx-a11y/click-events-have-key-events",
-  "jsx-a11y/no-static-element-interactions",
   "jsx-a11y/media-has-caption",
 ]);
 function buildA11yRules() {

@@ -555,6 +555,7 @@ function SortableSectionRow({
                 </Badge>
               )}
             </div>
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- event-containment wrapper: stopPropagation keeps action-button clicks from toggling the row; the inner buttons are keyboard-accessible */}
             <div
               className="flex items-center gap-1 shrink-0"
               onClick={(e) => e.stopPropagation()}
