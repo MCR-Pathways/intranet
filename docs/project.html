@@ -1014,12 +1014,6 @@
         "title": "Remove dead dompurify dependency and stale _-scripts",
         "tag": "chore",
         "note": "dompurify is declared but never imported; five one-off WP-migration scripts are stale."
-      },
-      {
-        "id": "k20",
-        "title": "Sweep the remaining 38 jsx-a11y warnings to zero, promote each rule to error",
-        "tag": "a11y",
-        "note": "Real backlog after the config correction (ADR-012): 15 no-autofocus, 8 no-static-element-interactions, 8 click-events-have-key-events, 3 label-has-associated-control, 2 media-has-caption, 1 iframe-has-title, 1 no-noninteractive-tabindex. truncate (74) and control-has-associated-label both cleared. Batch by rule, promote each to error as its slice clears."
       }
     ],
     "inProgress": [
@@ -1037,6 +1031,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k20",
+        "title": "Complete the jsx-a11y warn-to-error sweep (whole recommended set now at error)",
+        "tag": "a11y",
+        "note": "All four slices cleared and merged: iframe-title / label-association / tabindex (#355), no-static-element-interactions + click-events (#356), no-autofocus x15 (#357), media-has-caption x2 (#358). Resolved by capability where one was missing — a clickable div file-dropzone became a real button, an accordion header got role=button + Enter/Space, the mobile menu got Escape-to-close — and by justified disables where the element is genuinely non-interactive (stopPropagation wrappers) or the autofocus is intentional focus-on-open (dialogs/popovers/inline forms, the ARIA APG pattern). The one real gap with no markup fix, captions on author-uploaded video, is logged as the Video captions backlog rather than faked with an empty track. A11Y_SWEEP_AT_WARN is now empty; 0 warnings.",
+        "completedDate": "2026-06-18",
+        "prNumber": 358,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/358"
+      },
       {
         "id": "k19",
         "title": "Accessibility enforcement foundation (jsx-a11y + custom truncate rule)",
