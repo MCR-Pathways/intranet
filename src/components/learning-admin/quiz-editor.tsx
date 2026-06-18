@@ -524,6 +524,7 @@ export function QuizEditor({ lessonId, courseId, lessonTitle, questions }: QuizE
                 onChange={(e) => setNewQuestionText(e.target.value)}
                 placeholder="Enter your question..."
                 className="mt-1"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the field when the user opens this inline add form
                 autoFocus
               />
             </div>

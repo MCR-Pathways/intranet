@@ -192,6 +192,7 @@ export function VideoEmbedDialog({
             placeholder="https://www.youtube.com/watch?v=..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field when this data-entry dialog opens (ARIA APG pattern)
             autoFocus
           />
 

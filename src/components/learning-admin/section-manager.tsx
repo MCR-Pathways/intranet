@@ -442,6 +442,7 @@ function SortableSectionRow({
               id={`edit_title_${section.id}`}
               value={editTitle}
               onChange={(e) => onEditTitleChange(e.target.value)}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the field when the user opens this inline editor
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Escape") onCancelEdit();

@@ -141,6 +141,7 @@ export function CategoryFormDialog({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Policies"
                 required
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field when this data-entry dialog opens (ARIA APG pattern)
                 autoFocus
               />
             </div>

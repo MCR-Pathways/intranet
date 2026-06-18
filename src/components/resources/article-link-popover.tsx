@@ -92,6 +92,7 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
               onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="Search articles..."
               className="pl-9 h-9"
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the search field when the user opens this popover
               autoFocus
             />
           </div>

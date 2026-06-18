@@ -164,6 +164,7 @@ export function LocationPickerDialog({
               value={otherText}
               onChange={(e) => setOtherText(e.target.value)}
               maxLength={200}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the text box when the user selects 'Other'
               autoFocus
             />
           </div>

@@ -26,7 +26,6 @@ const a11yOpts = (rule) => {
 // swept to zero, then promoted to `error`. Everything else recommended-on is
 // already clean and goes straight to `error`.
 const A11Y_SWEEP_AT_WARN = new Set([
-  "jsx-a11y/no-autofocus",
   "jsx-a11y/media-has-caption",
 ]);
 function buildA11yRules() {

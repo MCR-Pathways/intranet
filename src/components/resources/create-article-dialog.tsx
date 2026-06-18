@@ -189,6 +189,7 @@ export function CreateArticleDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Jargon Buster"
               maxLength={200}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field when this data-entry dialog opens (ARIA APG pattern)
               autoFocus
             />
           </div>

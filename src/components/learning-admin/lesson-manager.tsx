@@ -213,6 +213,7 @@ export function LessonManager({ courseId, sectionId, lessons, lessonImagesMap = 
                 onChange={(e) => setAddTitle(e.target.value)}
                 placeholder="Lesson title..."
                 className="flex-1 h-8 text-sm"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the field when the user opens this inline add form
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {

@@ -213,6 +213,7 @@ export function CommentSection({
                         disabled={isPending}
                         resetKey={replyResetKey}
                         minimal
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the reply editor when the user opens the reply form
                         autoFocus
                       />
                     </div>

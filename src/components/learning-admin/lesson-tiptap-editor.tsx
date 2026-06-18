@@ -493,6 +493,7 @@ function LinkPopover({ editor }: { editor: Editor }) {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://..."
             className="h-8 text-sm"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the input when the user opens this link popover
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -550,6 +551,7 @@ function ImagePopover({ editor }: { editor: Editor }) {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Image URL..."
             className="h-8 text-sm"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the input when the user opens this image popover
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") {
