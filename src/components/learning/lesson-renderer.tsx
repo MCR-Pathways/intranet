@@ -272,6 +272,7 @@ function RenderNode({
           <div className="relative w-full aspect-video my-4 rounded-lg overflow-hidden bg-black">
             <iframe
               src={src}
+              title="Embedded video"
               className="absolute inset-0 w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
