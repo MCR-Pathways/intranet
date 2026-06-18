@@ -289,7 +289,7 @@ export default async function CourseDetailPage({
                 <AlertTriangle className="h-5 w-5" />
                 <div className="text-sm">
                   <p className="font-medium">Overdue</p>
-                  <p>This course was due {daysUntilDue === 0 ? "today" : `${Math.abs(daysUntilDue)} days ago`}</p>
+                  <p>This course was due {daysUntilDue === 0 ? "today" : `${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? "" : "s"} ago`}</p>
                 </div>
               </div>
             )}
@@ -298,7 +298,7 @@ export default async function CourseDetailPage({
                 <AlertTriangle className="h-5 w-5" />
                 <div className="text-sm">
                   <p className="font-medium">Due Soon</p>
-                  <p>Complete within {daysUntilDue} days</p>
+                  <p>Complete within {daysUntilDue} day{daysUntilDue === 1 ? "" : "s"}</p>
                 </div>
               </div>
             )}

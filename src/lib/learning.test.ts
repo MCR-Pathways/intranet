@@ -123,5 +123,7 @@ describe("getDueStatus", () => {
     expect(getDueStatus(hoursFromNow(49), now).daysUntilDue).toBe(3);
     // sub-day overdue normalises to a clean 0 (not -0), so the UI shows "due today"
     expect(getDueStatus(hoursFromNow(-5), now).daysUntilDue).toBe(0);
+    // ~1.5 days overdue → -1, which the UI renders as the singular "1 day ago"
+    expect(getDueStatus(hoursFromNow(-36), now).daysUntilDue).toBe(-1);
   });
 });
