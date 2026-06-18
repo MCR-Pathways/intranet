@@ -36,7 +36,7 @@ export function DayCell({ schedule, onClick }: DayCellProps) {
     return (
       <div
         className={cn(
-          "rounded-xl min-h-[140px] transition-all duration-200 overflow-hidden flex flex-col",
+          "rounded-xl min-h-[140px] transition duration-200 overflow-hidden flex flex-col",
           today && "ring-2 ring-primary shadow-sm",
           past && "opacity-50"
         )}
@@ -82,7 +82,7 @@ export function DayCell({ schedule, onClick }: DayCellProps) {
       onClick={() => !past && !isLeave && onClick(date, "full_day")}
       disabled={past || isLeave}
       className={cn(
-        "rounded-xl p-4 min-h-[140px] transition-all duration-200 text-left flex flex-col w-full",
+        "rounded-xl p-4 min-h-[140px] transition duration-200 text-left flex flex-col w-full",
         today && "ring-2 ring-primary shadow-sm",
         past && "opacity-50 cursor-default",
         isLeave && "cursor-default opacity-90",

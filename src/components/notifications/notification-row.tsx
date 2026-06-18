@@ -338,7 +338,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           onClick={handleOtherSave}
           disabled={!otherText.trim() || isPending}
           aria-busy={isPending}
-          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 disabled:pointer-events-none"
+          className="rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50 disabled:pointer-events-none"
         >
           Save
         </button>
@@ -350,7 +350,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
           }}
           disabled={isPending}
           aria-busy={isPending}
-          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition"
         >
           Cancel
         </button>
@@ -391,7 +391,7 @@ function PickerButton({
       onClick={onClick}
       disabled={disabled}
       aria-busy={disabled}
-      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all disabled:opacity-50 disabled:pointer-events-none"
+      className="rounded-md border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition disabled:opacity-50 disabled:pointer-events-none"
     >
       {children}
     </button>

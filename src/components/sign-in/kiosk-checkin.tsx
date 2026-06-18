@@ -300,7 +300,7 @@ export function KioskCheckin({ staff: initialStaff, token }: KioskCheckinProps) 
               onClick={() => handleSelectPerson(person)}
               disabled={person.confirmed}
               className={cn(
-                "rounded-xl p-4 min-h-[80px] text-left transition-all flex items-center gap-3",
+                "rounded-xl p-4 min-h-[80px] text-left transition flex items-center gap-3",
                 person.confirmed
                   ? "bg-emerald-900/30 cursor-default"
                   : person.scheduled

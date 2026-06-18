@@ -245,7 +245,7 @@ export function SectionQuizPlayer({
                             : handleSelectSingle(q.id, opt.id)
                         }
                         className={cn(
-                          "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
+                          "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition",
                           // Before submission
                           !showReview &&
                             isSelected &&

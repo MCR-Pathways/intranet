@@ -72,7 +72,7 @@ export function QuickSetIcons({
             onClick={() => handleSelect(loc.id)}
             disabled={disabled}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-lg p-3 text-xs font-medium transition-all",
+              "flex flex-col items-center gap-1 rounded-lg p-3 text-xs font-medium transition",
               isSelected
                 ? `${config?.bgClass} ${config?.textClass} ring-2 ring-primary`
                 : "bg-muted/50 text-muted-foreground hover:bg-muted",
