@@ -63,6 +63,7 @@ export function VideoPlayer({
         <CardContent className="p-0">
           <div className="aspect-video bg-black">
             {hasUploadedVideo ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption -- author-uploaded lesson video, no caption file; no VTT-upload flow exists yet (deferred: "Video captions" in docs/plan.md)
               <video
                 ref={videoRef}
                 src={storagePublicUrl}

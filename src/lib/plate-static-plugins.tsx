@@ -326,6 +326,7 @@ function MediaEmbedStatic({ children, element, ...props }: SlateElementProps) {
     <SlateElement element={element} {...props}>
       <div className="not-prose my-4 aspect-video w-full overflow-hidden rounded-lg bg-muted">
         {isLocalVideo ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption -- MCR-hosted author-uploaded video, no caption file; no VTT-upload flow exists yet (deferred: "Video captions" in docs/plan.md)
           <video
             src={url}
             controls
