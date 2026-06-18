@@ -208,18 +208,19 @@ export function ComplianceUploadDialog({
                   </Button>
                 </div>
               ) : (
-                <div
-                  className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 cursor-pointer hover:bg-muted/50 transition-colors"
+                <button
+                  type="button"
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
+                  <span className="block text-sm text-muted-foreground">
                     Click to select a file
-                  </p>
-                  <p className="text-xs text-muted-foreground">
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
                     PDF, JPEG, PNG, or DOCX (max 10MB)
-                  </p>
-                </div>
+                  </span>
+                </button>
               )}
               <input
                 ref={fileInputRef}

@@ -482,6 +482,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
 
   if (type === "office_arrival_unconfirmed") {
     return (
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- stopPropagation container that keeps the Radix dropdown open; the inner PickerButtons are keyboard-accessible
       <div
         className="mt-1.5 flex flex-wrap items-center gap-1.5"
         // Radix DropdownMenu treats certain interior pointer events as
@@ -509,6 +510,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
 
   if (mode === "other-input") {
     return (
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- stopPropagation container that keeps the Radix dropdown open; the inner Input and Save/Cancel buttons are keyboard-accessible
       <div
         className="mt-1.5 flex items-center gap-1.5"
         onClick={(e) => e.stopPropagation()}
@@ -557,6 +559,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- stopPropagation container that keeps the Radix dropdown open; the inner PickerButtons are keyboard-accessible
     <div
       className="mt-1.5 flex flex-wrap items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}

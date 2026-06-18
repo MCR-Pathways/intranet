@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore } from "react";
+import { useState, useCallback, useSyncExternalStore, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Header } from "./header";
@@ -70,6 +70,18 @@ export function AppLayout({ children, user, profile, initialInboxRows }: AppLayo
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isCollapsed = useSyncExternalStore(subscribeSidebar, getSidebarSnapshot, getSidebarServerSnapshot);
 
+  // Close the mobile menu on Escape. The backdrop click is mouse-only, so this
+  // is the keyboard route out — without it there's no way to dismiss the menu
+  // short of selecting a nav item.
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isMobileMenuOpen]);
+
   // Centre-column width for the current route. Exposed via the
   // `--centre-column` CSS variable so page content can match a
   // constrained width. Source of truth: src/lib/layout.ts.
@@ -114,7 +126,11 @@ export function AppLayout({ children, user, profile, initialInboxRows }: AppLayo
         {/* Mobile sidebar overlay */}
         {isMobileMenuOpen && (
           <>
+            {/* Decorative scrim, hidden from the a11y tree. Click-to-close is a mouse
+                convenience; keyboard users dismiss with Escape (see effect above) or by
+                choosing a nav item. aria-hidden keeps it out of the interaction surface. */}
             <div
+              aria-hidden="true"
               className="fixed inset-0 z-40 bg-black/50 md:hidden"
               onClick={() => setIsMobileMenuOpen(false)}
             />
