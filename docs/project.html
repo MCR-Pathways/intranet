@@ -1225,6 +1225,42 @@
       "consequences": "The split stops growing silently and a compile error replaces a silent wrong-render when a document crosses stacks. Double maintenance remains for toolbar, paste and mention features until lessons are folded onto one long-form stack. Migrating any content JSON later must go through a converter with tests."
     },
     {
+      "id": "ADR-011",
+      "title": "TanStack Table + Shadcn for data tables",
+      "date": "2026-06-12",
+      "status": "Accepted",
+      "context": "Tables across the app had inconsistent sorting, filtering, and pagination.",
+      "decision": "Standardise on @tanstack/react-table (headless) plus Shadcn Table primitives via a shared DataTable (with DataTableColumnHeader and DataTablePagination); uniform wrapper bg-card rounded-xl border border-border shadow-sm overflow-clip. Lightweight read-only tables reuse the same wrapper.",
+      "consequences": "Consistent table UX across ~24 tables on the pattern. Content-rendering tables (Google Doc / Tiptap / Plate) are intentionally excluded."
+    },
+    {
+      "id": "ADR-012",
+      "title": "CSP-compliant image proxying",
+      "date": "2026-06-12",
+      "status": "Accepted",
+      "context": "Enforcing an img-src 'self' Content-Security-Policy broke external images (Google profile photos, OG preview images).",
+      "decision": "Proxy external images through /api/og-image (protocol-validated, rate-limited, SSRF-guarded). New records store proxied URLs at creation; old records get a render-time proxy via proxyImageUrl().",
+      "consequences": "Full CSP compliance. Trade-off: an extra request hop, so a cache is needed to manage load."
+    },
+    {
+      "id": "ADR-013",
+      "title": "Component pages via registry pattern",
+      "date": "2026-06-12",
+      "status": "Accepted",
+      "context": "Some resources (e.g. the org chart) are interactive React components, not documents.",
+      "decision": "A component registry (src/lib/resource-components.ts) maps component_name to { component, getData }. Editors manage the metadata; developers register the component.",
+      "consequences": "Developers own the code, editors own the metadata. The org chart was the first component page (relocated from /hr/org-chart). Trade-off: each new component page needs a code change plus a migration."
+    },
+    {
+      "id": "ADR-014",
+      "title": "Home-feed colour hierarchy (ivory canvas + per-post-type accents)",
+      "date": "2026-06-12",
+      "status": "Accepted",
+      "context": "Staff feedback was that the app looked dull / 'giving greyscale': the feed rendered every post type on the same white card against a cool-grey #F2F4F7 background, so news, kudos, polls, pinned items and the weekly round-up were indistinguishable at a glance. Two earlier attempts were shelved — a module-identity colour system and a contractor 'Combined Feed' whose off-white background was rejected in April 2026. A new design handoff superseded both.",
+      "decision": "Adopt the handoff as the canonical home-feed design: promote ivory #FDF9EA to --background uniformly across every route (consciously reversing the April 2026 background decision); one accent per post type reusing existing brand hues (pinned = orange #F09336 spine + pill, poll = light-blue #5BC6E9 spine + pill + rank-graded fills, kudos = pale-yellow #FEF7E0 card + #F8D45B border, weekly round-up = solid navy #213350 block), with ordinary posts staying plain white; add a light-mode-only surface-tint ramp derived from brand hues, documented in docs/design-system.md. Cards stay pure white; bg-background surfaces that must read as elevated migrate to bg-card.",
+      "consequences": "The feed differentiates post types at a glance without colour-coding data, staying inside the 'brand colour is an accent, not a foundation' doctrine for everything except the background, the one deliberate exception. Knock-on: a bg-background → bg-card sweep (41 sites / 30 files). Dark mode is unaffected (no theme switcher wired) and the new tints are light-only. Supersedes the module-identity colour work and the Direction-C kudos mockup."
+    },
+    {
       "id": "ADR-015",
       "title": "Accessibility enforced in ESLint (full jsx-a11y set + a custom truncate rule, swept warn-to-error)",
       "date": "2026-06-18",
