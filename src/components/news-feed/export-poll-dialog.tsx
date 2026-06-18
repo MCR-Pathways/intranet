@@ -133,6 +133,8 @@ export function ExportPollDialog({
                 id={`export-include-summary-${postId}`}
                 checked={includeSummary}
                 onCheckedChange={(checked) => setIncludeSummary(checked === true)}
+                disabled={isPending}
+                aria-busy={isPending}
               />
               <Label htmlFor={`export-include-summary-${postId}`} className="font-normal cursor-pointer">
                 Summary (options, vote counts, percentages)
@@ -143,6 +145,8 @@ export function ExportPollDialog({
                 id={`export-include-individual-${postId}`}
                 checked={includeIndividual}
                 onCheckedChange={(checked) => setIncludeIndividual(checked === true)}
+                disabled={isPending}
+                aria-busy={isPending}
               />
               <Label htmlFor={`export-include-individual-${postId}`} className="font-normal cursor-pointer">
                 Individual responses (voter name, choice, timestamp)
@@ -153,6 +157,8 @@ export function ExportPollDialog({
                 id={`export-include-metadata-${postId}`}
                 checked={includeMetadata}
                 onCheckedChange={(checked) => setIncludeMetadata(checked === true)}
+                disabled={isPending}
+                aria-busy={isPending}
               />
               <Label htmlFor={`export-include-metadata-${postId}`} className="font-normal cursor-pointer">
                 Poll metadata (created date, closed date, author)
