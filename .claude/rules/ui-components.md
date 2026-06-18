@@ -43,6 +43,8 @@ These two docs are only auto-surfaced by a hook when the `frontend-design` skill
 
 **Use `createElement()` for dynamic Lucide icons to satisfy React Compiler.** `createElement(resolveIcon(name), props)` avoids the `react-hooks/static-components` lint violation.
 
+**`react-hooks/purity` flags `Date.now()` in render, but not `new Date().getTime()`.** The React Compiler's purity rule rejects `Date.now()` as impure. **In a server component** (renders once per request, with no client-side memoisation of the render) reading the clock inline is genuinely fine, and `new Date().getTime()` is the same value without tripping the rule — it targets the `Date.now` identifier; the `Date` constructor passes. Use it only for that server-side read, e.g. `getDueStatus(new Date(dueDate), new Date().getTime())` in the course-detail page. **Do NOT reach for `new Date().getTime()` to silence the rule in a client component.** There the impurity is real: the Compiler memoises, so reading the clock in render breaks idempotency and can render stale UI — the lint is correct, and the fix is to pass a server-provided `now` as a prop (see the date-calc rule below), not to hide the read behind an un-flagged form.
+
 **Use `suppressHydrationWarning` for platform-specific rendering.** Values depending on `navigator.platform` differ between server and client.
 
 **Pass server timestamps to client components for date calculations.** `new Date()` inside a `"use client"` component can differ between server render and client hydration (e.g. crossing midnight changes due-date status). Pass `Date.now()` from the server component as a prop.
