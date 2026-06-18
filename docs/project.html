@@ -1226,7 +1226,7 @@
     },
     {
       "id": "ADR-015",
-      "title": "Accessibility enforced in ESLint: full jsx-a11y set plus a custom truncate rule, swept warn-to-error",
+      "title": "Accessibility enforced in ESLint (full jsx-a11y set + a custom truncate rule, swept warn-to-error)",
       "date": "2026-06-18",
       "status": "Accepted",
       "context": "Next's core-web-vitals config only enabled 6 of eslint-plugin-jsx-a11y's rules, so most a11y regressions (unlabelled controls, autofocus, static-element click handlers, captionless media) shipped unchecked. One gap had no jsx-a11y rule at all: CSS truncation (truncate / line-clamp-N) hides text from sighted users with no title to read the full string on hover. Turning the whole recommended set on as error at once would have failed CI on the existing backlog.",
