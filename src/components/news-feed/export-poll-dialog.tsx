@@ -130,31 +130,31 @@ export function ExportPollDialog({
           <div className="space-y-3">
             <div className="flex items-center gap-2.5">
               <Checkbox
-                id="export-include-summary"
+                id={`export-include-summary-${postId}`}
                 checked={includeSummary}
                 onCheckedChange={(checked) => setIncludeSummary(checked === true)}
               />
-              <Label htmlFor="export-include-summary" className="font-normal cursor-pointer">
+              <Label htmlFor={`export-include-summary-${postId}`} className="font-normal cursor-pointer">
                 Summary (options, vote counts, percentages)
               </Label>
             </div>
             <div className="flex items-center gap-2.5">
               <Checkbox
-                id="export-include-individual"
+                id={`export-include-individual-${postId}`}
                 checked={includeIndividual}
                 onCheckedChange={(checked) => setIncludeIndividual(checked === true)}
               />
-              <Label htmlFor="export-include-individual" className="font-normal cursor-pointer">
+              <Label htmlFor={`export-include-individual-${postId}`} className="font-normal cursor-pointer">
                 Individual responses (voter name, choice, timestamp)
               </Label>
             </div>
             <div className="flex items-center gap-2.5">
               <Checkbox
-                id="export-include-metadata"
+                id={`export-include-metadata-${postId}`}
                 checked={includeMetadata}
                 onCheckedChange={(checked) => setIncludeMetadata(checked === true)}
               />
-              <Label htmlFor="export-include-metadata" className="font-normal cursor-pointer">
+              <Label htmlFor={`export-include-metadata-${postId}`} className="font-normal cursor-pointer">
                 Poll metadata (created date, closed date, author)
               </Label>
             </div>
