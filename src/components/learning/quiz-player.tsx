@@ -176,7 +176,7 @@ export function QuizPlayer({
                             : handleSelectSingle(q.id, opt.id)
                         }
                         className={cn(
-                          "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition-all",
+                          "flex w-full items-center justify-between rounded-lg border-2 p-4 text-left transition",
                           !showResult && isSelected &&
                             "border-primary bg-primary/5 text-primary",
                           !showResult && !isSelected &&

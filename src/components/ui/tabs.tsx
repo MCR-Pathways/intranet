@@ -45,7 +45,7 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Base styles (both variants)
-      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       // Default variant (pill on muted bg)
       "group-data-[variant=default]:rounded-md group-data-[variant=default]:ring-offset-background group-data-[variant=default]:hover:text-foreground group-data-[variant=default]:data-[state=active]:bg-card group-data-[variant=default]:data-[state=active]:text-foreground group-data-[variant=default]:data-[state=active]:shadow-sm",
       // Line variant (underline indicator)

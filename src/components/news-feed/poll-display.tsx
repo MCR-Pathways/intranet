@@ -130,7 +130,7 @@ export function PollDisplay({ postId, poll }: PollDisplayProps) {
               >
                 <div
                   className={cn(
-                    "absolute inset-y-0 left-0 transition-all duration-500",
+                    "absolute inset-y-0 left-0 transition-[width] duration-500",
                     isLead ? LEAD_FILL : TRAIL_FILL
                   )}
                   style={{ width: `${percentage}%` }}

@@ -238,7 +238,7 @@ export default async function LessonPage({
       {/* Course progress bar — thin, fixed at top */}
       <div className="h-1 w-full bg-muted shrink-0">
         <div
-          className="h-full bg-primary transition-all duration-500"
+          className="h-full bg-primary transition-[width] duration-500"
           style={{ width: `${progressPercent}%` }}
         />
       </div>

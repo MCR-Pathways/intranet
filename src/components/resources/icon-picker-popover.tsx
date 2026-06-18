@@ -200,7 +200,7 @@ function ColourSwatch({
         <button
           type="button"
           className={cn(
-            "flex h-6 w-6 items-center justify-center rounded-full transition-all",
+            "flex h-6 w-6 items-center justify-center rounded-full transition",
             colour.bg,
             selected && "ring-2 ring-primary ring-offset-2 ring-offset-background"
           )}

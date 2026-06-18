@@ -61,7 +61,7 @@ export function OrgChartPersonCard({
         {/* Main card */}
         <div
           className={cn(
-            "group relative flex items-center gap-3 rounded-xl border bg-card px-4 py-3 min-w-[260px] cursor-pointer transition-all duration-200",
+            "group relative flex items-center gap-3 rounded-xl border bg-card px-4 py-3 min-w-[260px] cursor-pointer transition duration-200",
             "hover:shadow-lg hover:-translate-y-0.5",
             isExternal && "bg-sky-50/80 border-sky-200",
             isHighlighted && "ring-2 ring-primary ring-offset-2 shadow-lg",
@@ -156,7 +156,7 @@ export function OrgChartPersonCard({
               onToggleExpand();
             }}
             className={cn(
-              "mt-1 flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-medium shadow-sm transition-all duration-200 hover:shadow-md",
+              "mt-1 flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-medium shadow-sm transition duration-200 hover:shadow-md",
               isCollapsed
                 ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                 : "bg-card text-muted-foreground border-border hover:bg-muted",

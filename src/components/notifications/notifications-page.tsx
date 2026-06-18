@@ -339,7 +339,7 @@ export function NotificationsPage({
               onClick={handleClearAll}
               disabled={isPending}
               aria-busy={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition"
             >
               Clear
             </AlertDialogAction>
