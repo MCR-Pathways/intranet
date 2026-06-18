@@ -680,7 +680,7 @@ Client-side React InstantSearch. Section-level indexing (DocSearch pattern) for 
 
 **Context:** Tables across the app had inconsistent sorting, filtering, and pagination.
 
-**Decision:** Standardise on `@tanstack/react-table` (headless) + Shadcn `<Table>` primitives via a shared `DataTable` (with `DataTableColumnHeader` + `DataTablePagination`); uniform wrapper `bg-card rounded-xl border border-border shadow-sm overflow-clip`. Lightweight read-only tables reuse the same wrapper.
+**Decision:** Standardise on `@tanstack/react-table` (headless) + Shadcn `<Table>` primitives via a shared `DataTable` (with `DataTableColumnHeader` + `DataTablePagination`); uniform wrapper `bg-card rounded-xl border border-border shadow-md overflow-clip`. Lightweight read-only tables reuse the same wrapper.
 
 **Consequences:** Consistent table UX (~24 tables on the pattern). Content-rendering tables (Google Doc / Tiptap / Plate) are intentionally excluded.
 
