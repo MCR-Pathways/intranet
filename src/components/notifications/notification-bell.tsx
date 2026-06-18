@@ -516,6 +516,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
         onClick={(e) => e.stopPropagation()}
       >
         <Input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the text box when the user selects 'Other'
           autoFocus
           value={otherText}
           onChange={(e) => setOtherText(e.target.value)}

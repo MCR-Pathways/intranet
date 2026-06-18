@@ -314,6 +314,7 @@ function WorkingLocationPicker({ type, onAfterAction }: WorkingLocationPickerPro
     return (
       <div className="mt-1.5 flex items-center gap-1.5">
         <Input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the text box when the user selects 'Other'
           autoFocus
           value={otherText}
           onChange={(e) => setOtherText(e.target.value)}
