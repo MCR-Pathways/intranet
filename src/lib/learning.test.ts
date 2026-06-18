@@ -121,5 +121,7 @@ describe("getDueStatus", () => {
   it("reports daysUntilDue as a ceil'd whole-day count for display", () => {
     expect(getDueStatus(hoursFromNow(72), now).daysUntilDue).toBe(3);
     expect(getDueStatus(hoursFromNow(49), now).daysUntilDue).toBe(3);
+    // sub-day overdue normalises to a clean 0 (not -0), so the UI shows "due today"
+    expect(getDueStatus(hoursFromNow(-5), now).daysUntilDue).toBe(0);
   });
 });

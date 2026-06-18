@@ -282,7 +282,8 @@ export type DueStatus = "overdue" | "due_soon" | null;
  * overdue by under a day: `Math.ceil` of a small negative returns `-0`, and
  * `-0 < 0` is false, so it slips into "due_soon".
  *
- * `daysUntilDue` is the ceil'd whole-day count, for display ("due in N days").
+ * `daysUntilDue` is the ceil'd whole-day count for display; the sub-day overdue gap
+ * normalises to 0 (not `-0`), so a caller can show "due today" for the 0 case.
  * Callers pass a server-provided `now` so a client component stays hydration-safe.
  */
 export function getDueStatus(
@@ -290,7 +291,8 @@ export function getDueStatus(
   now: number,
 ): { status: DueStatus; daysUntilDue: number } {
   const diffMs = dueDate.getTime() - now;
-  const daysUntilDue = Math.ceil(diffMs / 86_400_000);
+  // `|| 0` collapses Math.ceil's `-0` (a sub-day overdue gap) to a clean 0.
+  const daysUntilDue = Math.ceil(diffMs / 86_400_000) || 0;
   if (diffMs < 0) return { status: "overdue", daysUntilDue };
   if (daysUntilDue <= 7) return { status: "due_soon", daysUntilDue };
   return { status: null, daysUntilDue };

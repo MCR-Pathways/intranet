@@ -289,7 +289,7 @@ export default async function CourseDetailPage({
                 <AlertTriangle className="h-5 w-5" />
                 <div className="text-sm">
                   <p className="font-medium">Overdue</p>
-                  <p>This course was due {Math.abs(daysUntilDue)} days ago</p>
+                  <p>This course was due {daysUntilDue === 0 ? "today" : `${Math.abs(daysUntilDue)} days ago`}</p>
                 </div>
               </div>
             )}
