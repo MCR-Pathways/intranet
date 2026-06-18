@@ -23,11 +23,11 @@ const a11yOpts = (rule) => {
   return Array.isArray(cfg) ? cfg.slice(1) : [];
 };
 // Rules with a remaining violation backlog: held at `warn` until each slice is
-// swept to zero, then promoted to `error`. Everything else recommended-on is
-// already clean and goes straight to `error`.
-const A11Y_SWEEP_AT_WARN = new Set([
-  "jsx-a11y/media-has-caption",
-]);
+// swept to zero, then promoted to `error`. Empty now — the jsx-a11y sweep is
+// complete and the whole recommended set is enforced at `error`. To hold a new
+// backlog at `warn` while it's being swept, add the rule here, then remove it
+// once the slice is clear.
+const A11Y_SWEEP_AT_WARN = new Set([]);
 function buildA11yRules() {
   const rules = {};
   for (const [rule, cfg] of Object.entries(A11Y_RECOMMENDED)) {
