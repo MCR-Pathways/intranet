@@ -29,10 +29,7 @@ const A11Y_SWEEP_AT_WARN = new Set([
   "jsx-a11y/no-autofocus",
   "jsx-a11y/click-events-have-key-events",
   "jsx-a11y/no-static-element-interactions",
-  "jsx-a11y/label-has-associated-control",
   "jsx-a11y/media-has-caption",
-  "jsx-a11y/iframe-has-title",
-  "jsx-a11y/no-noninteractive-tabindex",
 ]);
 function buildA11yRules() {
   const rules = {};

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Loader2, Download, FileText, FileSpreadsheet, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -127,27 +128,36 @@ export function ExportPollDialog({
         <div className="space-y-2">
           <p className="text-sm font-medium">Include in export</p>
           <div className="space-y-3">
-            <label className="flex items-center gap-2.5 cursor-pointer">
+            <div className="flex items-center gap-2.5">
               <Checkbox
+                id="export-include-summary"
                 checked={includeSummary}
                 onCheckedChange={(checked) => setIncludeSummary(checked === true)}
               />
-              <span className="text-sm">Summary (options, vote counts, percentages)</span>
-            </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
+              <Label htmlFor="export-include-summary" className="font-normal cursor-pointer">
+                Summary (options, vote counts, percentages)
+              </Label>
+            </div>
+            <div className="flex items-center gap-2.5">
               <Checkbox
+                id="export-include-individual"
                 checked={includeIndividual}
                 onCheckedChange={(checked) => setIncludeIndividual(checked === true)}
               />
-              <span className="text-sm">Individual responses (voter name, choice, timestamp)</span>
-            </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
+              <Label htmlFor="export-include-individual" className="font-normal cursor-pointer">
+                Individual responses (voter name, choice, timestamp)
+              </Label>
+            </div>
+            <div className="flex items-center gap-2.5">
               <Checkbox
+                id="export-include-metadata"
                 checked={includeMetadata}
                 onCheckedChange={(checked) => setIncludeMetadata(checked === true)}
               />
-              <span className="text-sm">Poll metadata (created date, closed date, author)</span>
-            </label>
+              <Label htmlFor="export-include-metadata" className="font-normal cursor-pointer">
+                Poll metadata (created date, closed date, author)
+              </Label>
+            </div>
           </div>
         </div>
 

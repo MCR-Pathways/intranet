@@ -74,8 +74,14 @@ export const TooltipButton = React.forwardRef<
          * the button is unavailable. The user's `className` is forwarded
          * so layout classes like `w-full` apply to the outer box (the
          * span claims the width), not just the inner button which would
-         * otherwise fill an inline-flex parent.
+         * otherwise fill an inline-flex parent. tabIndex={0} makes the span
+         * a focusable proxy so keyboard users can reach the tooltip — the
+         * disabled button itself is removed from the tab order, so without
+         * this the tooltip would be unreachable by keyboard. This is the
+         * WAI-recommended pattern for tooltips on disabled controls, hence
+         * the deliberate suppression of no-noninteractive-tabindex.
          */}
+        {/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- intentional focusable proxy for the disabled-button tooltip, see comment above */}
         <span
           tabIndex={0}
           className={cn(
@@ -96,6 +102,7 @@ export const TooltipButton = React.forwardRef<
             {children}
           </Button>
         </span>
+        {/* eslint-enable jsx-a11y/no-noninteractive-tabindex */}
       </TooltipTrigger>
       <TooltipContent side="top">{reason}</TooltipContent>
     </Tooltip>
