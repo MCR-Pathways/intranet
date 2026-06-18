@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, AlertTriangle } from "lucide-react";
 import type { EnrolmentWithCourse } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { getCategoryConfig } from "@/lib/learning";
+import { getCategoryConfig, getDueStatus } from "@/lib/learning";
 
 interface EnrolledCourseCardProps {
   enrolment: EnrolmentWithCourse;
@@ -19,21 +19,11 @@ export function EnrolledCourseCard({ enrolment, now }: EnrolledCourseCardProps) 
   const config = getCategoryConfig(course.category);
   const isCompleted = enrolment.status === "completed";
 
-  // Calculate due date status using server-provided timestamp to avoid hydration mismatches
-  let dueStatus: "overdue" | "due_soon" | null = null;
-  let daysUntilDue: number | null = null;
-
-  if (enrolment.due_date && !isCompleted) {
-    const dueDate = new Date(enrolment.due_date);
-    daysUntilDue = Math.ceil(
-      (dueDate.getTime() - now) / (1000 * 60 * 60 * 24)
-    );
-    if (daysUntilDue < 0) {
-      dueStatus = "overdue";
-    } else if (daysUntilDue <= 7) {
-      dueStatus = "due_soon";
-    }
-  }
+  // Due-date status (server-provided `now` keeps this hydration-safe).
+  const { status: dueStatus, daysUntilDue } =
+    enrolment.due_date && !isCompleted
+      ? getDueStatus(new Date(enrolment.due_date), now)
+      : { status: null, daysUntilDue: 0 };
 
   return (
     <Link href={`/learning/courses/${course.id}`}>

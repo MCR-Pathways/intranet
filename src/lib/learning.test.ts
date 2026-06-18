@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getLockedLessonIds } from "@/lib/learning";
+import { getLockedLessonIds, getDueStatus } from "@/lib/learning";
 
 describe("getLockedLessonIds", () => {
   it("returns empty set when no lessons", () => {
@@ -85,5 +85,41 @@ describe("getLockedLessonIds", () => {
     const result = getLockedLessonIds(lessons, []);
     expect(result.has("l1")).toBe(false);
     expect(result.has("l2")).toBe(true);
+  });
+});
+
+describe("getDueStatus", () => {
+  const now = Date.parse("2026-06-18T12:00:00Z");
+  const hoursFromNow = (h: number) => new Date(now + h * 60 * 60 * 1000);
+
+  it("classifies a course overdue by under a day as overdue, not due_soon", () => {
+    // Regression: Math.ceil of a small negative is -0, and -0 < 0 is false, so
+    // the old `daysUntilDue < 0` check let a just-overdue course slip into due_soon.
+    expect(getDueStatus(hoursFromNow(-1), now).status).toBe("overdue");
+    expect(getDueStatus(hoursFromNow(-23), now).status).toBe("overdue");
+  });
+
+  it("classifies a course overdue by more than a day as overdue", () => {
+    expect(getDueStatus(hoursFromNow(-25), now).status).toBe("overdue");
+    expect(getDueStatus(hoursFromNow(-240), now).status).toBe("overdue");
+  });
+
+  it("classifies a course due within 7 days as due_soon", () => {
+    expect(getDueStatus(hoursFromNow(24), now).status).toBe("due_soon");
+    expect(getDueStatus(hoursFromNow(7 * 24), now).status).toBe("due_soon");
+  });
+
+  it("treats the due moment itself as due_soon, not overdue", () => {
+    expect(getDueStatus(hoursFromNow(0), now).status).toBe("due_soon");
+  });
+
+  it("returns null status when more than 7 days out", () => {
+    expect(getDueStatus(hoursFromNow(8 * 24), now).status).toBeNull();
+    expect(getDueStatus(hoursFromNow(30 * 24), now).status).toBeNull();
+  });
+
+  it("reports daysUntilDue as a ceil'd whole-day count for display", () => {
+    expect(getDueStatus(hoursFromNow(72), now).daysUntilDue).toBe(3);
+    expect(getDueStatus(hoursFromNow(49), now).daysUntilDue).toBe(3);
   });
 });

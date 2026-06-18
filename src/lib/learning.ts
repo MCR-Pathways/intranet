@@ -269,3 +269,29 @@ export function getPreviewMode(
 
   return { isPreview: true, searchParamString: "?preview=true" };
 }
+
+// ─── Due-date status ─────────────────────────────────────────────────────────
+
+export type DueStatus = "overdue" | "due_soon" | null;
+
+/**
+ * Classify a course due date relative to `now` (ms since epoch).
+ *
+ * Overdue is decided on the raw timestamp — any moment past the due date is
+ * overdue. Deriving it from the ceil'd day count instead misclassifies a course
+ * overdue by under a day: `Math.ceil` of a small negative returns `-0`, and
+ * `-0 < 0` is false, so it slips into "due_soon".
+ *
+ * `daysUntilDue` is the ceil'd whole-day count, for display ("due in N days").
+ * Callers pass a server-provided `now` so a client component stays hydration-safe.
+ */
+export function getDueStatus(
+  dueDate: Date,
+  now: number,
+): { status: DueStatus; daysUntilDue: number } {
+  const diffMs = dueDate.getTime() - now;
+  const daysUntilDue = Math.ceil(diffMs / 86_400_000);
+  if (diffMs < 0) return { status: "overdue", daysUntilDue };
+  if (daysUntilDue <= 7) return { status: "due_soon", daysUntilDue };
+  return { status: null, daysUntilDue };
+}

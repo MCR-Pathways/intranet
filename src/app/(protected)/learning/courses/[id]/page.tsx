@@ -20,7 +20,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.types";
 import { formatDuration } from "@/lib/utils";
-import { getCategoryConfig, getLockedLessonIds, getLockedSectionIds } from "@/lib/learning";
+import { getCategoryConfig, getLockedLessonIds, getLockedSectionIds, getDueStatus } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
 import { LessonList } from "./lesson-list";
 import { SectionAccordion } from "@/components/learning/section-accordion";
@@ -222,23 +222,11 @@ export default async function CourseDetailPage({
   const isInProgress = enrolment?.status === "in_progress";
   const showCelebration = resolvedSearchParams.completed === "true" && isCompleted;
 
-  // Calculate due date status
-  let dueStatus: "overdue" | "due_soon" | "on_track" | null = null;
-  let daysUntilDue: number | null = null;
-
-  if (enrolment?.due_date && !isCompleted) {
-    const dueDate = new Date(enrolment.due_date);
-    const today = new Date();
-    daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysUntilDue < 0) {
-      dueStatus = "overdue";
-    } else if (daysUntilDue <= 7) {
-      dueStatus = "due_soon";
-    } else {
-      dueStatus = "on_track";
-    }
-  }
+  // Due-date status (server component, so the time read runs once on the server)
+  const { status: dueStatus, daysUntilDue } =
+    enrolment?.due_date && !isCompleted
+      ? getDueStatus(new Date(enrolment.due_date), new Date().getTime())
+      : { status: null, daysUntilDue: 0 };
 
   return (
     <div className="space-y-6">
@@ -301,7 +289,7 @@ export default async function CourseDetailPage({
                 <AlertTriangle className="h-5 w-5" />
                 <div className="text-sm">
                   <p className="font-medium">Overdue</p>
-                  <p>This course was due {Math.abs(daysUntilDue!)} days ago</p>
+                  <p>This course was due {Math.abs(daysUntilDue)} days ago</p>
                 </div>
               </div>
             )}
@@ -381,7 +369,8 @@ export default async function CourseDetailPage({
                   <span>{course.passing_score}% to pass</span>
                 </div>
               )}
-              {enrolment?.due_date && !isCompleted && dueStatus === "on_track" && (
+              {/* On track: has a due date, not completed, and no overdue/due-soon warning (getDueStatus returns null past 7 days). */}
+              {enrolment?.due_date && !isCompleted && dueStatus === null && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span>Due {formatDate(enrolment.due_date)}</span>
