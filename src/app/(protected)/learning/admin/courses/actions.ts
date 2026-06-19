@@ -1425,3 +1425,44 @@ export async function autoSaveLessonContent(
   // Intentionally NO revalidatePath() — auto-save must not cause page flicker
   return { success: true, savedAt: new Date().toISOString() };
 }
+
+// ===========================================
+// HUB COURSE RECONCILIATION (manual trigger)
+// ===========================================
+
+/**
+ * Manually trigger the hub-course reconciliation that the daily cron also
+ * runs. Calls the authenticated cron route with the shared CRON_SECRET so the
+ * sync logic lives in exactly one place (the route + `reconcileHubCourses`).
+ */
+export async function manualReconcileHubCourses() {
+  await requireLDAdmin();
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const cronSecret = process.env.CRON_SECRET?.trim();
+
+  if (!baseUrl || !cronSecret) {
+    logger.error("Manual hub-course reconcile misconfigured", {
+      hasBaseUrl: Boolean(baseUrl),
+      hasCronSecret: Boolean(cronSecret),
+    });
+    throw new Error("Reconciliation is not configured");
+  }
+
+  const response = await fetch(`${baseUrl}/api/cron/reconcile-hub-courses`, {
+    headers: { Authorization: `Bearer ${cronSecret}` },
+  });
+
+  if (!response.ok) {
+    logger.error("Manual hub-course reconcile request failed", {
+      status: response.status,
+    });
+    throw new Error("Reconciliation failed");
+  }
+
+  const result = await response.json();
+
+  revalidatePath("/learning/admin/courses");
+  revalidatePath("/learning/courses");
+  return { success: true, result };
+}
