@@ -52,7 +52,7 @@ import { revalidatePath } from "next/cache";
 /**
  * Wire the `from` dispatcher.
  *  - "courses":           .select().eq().single() → mockCoursesSingle
- *  - "course_enrolments": .select().eq().eq().single() → mockEnrolmentSingle
+ *  - "course_enrolments": .select().eq().eq().maybeSingle() → mockEnrolmentSingle
  *                         .update().eq().eq()          → mockEnrolmentUpdateEq2
  *                         .insert()                    → mockEnrolmentInsert
  */
@@ -72,7 +72,7 @@ function wireFrom() {
     if (table === "course_enrolments") {
       return {
         select: () => ({
-          eq: () => ({ eq: () => ({ single: mockEnrolmentSingle }) }),
+          eq: () => ({ eq: () => ({ maybeSingle: mockEnrolmentSingle }) }),
         }),
         update: mockEnrolmentUpdate,
         insert: mockEnrolmentInsert,

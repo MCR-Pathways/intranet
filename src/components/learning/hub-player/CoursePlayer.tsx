@@ -91,7 +91,13 @@ export function CoursePlayer({ content, storageKey, onComplete }: Props) {
   const total = sections.length;
   const key = storageKey ?? `mcr-course-${content.collection.id}`;
 
-  const [sec, setSec] = useState(() => readInitial(key, total));
+  // Start at 0 on both server and client, then restore saved progress after
+  // mount. Reading localStorage in the initialiser would diverge between the
+  // SSR render (always 0) and the client (a saved index) and trip a hydration
+  // mismatch for returning learners. isLoaded gates the persist effect so the
+  // initial 0 doesn't overwrite saved progress before it's restored.
+  const [sec, setSec] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number; guard: boolean } | null>(null);
 
@@ -101,13 +107,26 @@ export function CoursePlayer({ content, storageKey, onComplete }: Props) {
   // while the learner sits on the final step).
   const completedFired = useRef(false);
 
+  // Restore saved progress one frame after mount — not in the initialiser,
+  // which would read localStorage during SSR (always 0) and mismatch the
+  // client. Deferring into rAF also keeps setState out of the effect body,
+  // satisfying react-hooks/set-state-in-effect.
   useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      setSec(readInitial(key, total));
+      setIsLoaded(true);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [key, total]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
     try {
       localStorage.setItem(key, String(sec));
     } catch {
       /* localStorage unavailable — progress simply won't persist */
     }
-  }, [key, sec]);
+  }, [key, sec, isLoaded]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;

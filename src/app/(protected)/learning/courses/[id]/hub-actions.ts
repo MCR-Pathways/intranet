@@ -31,7 +31,7 @@ export async function ensureHubEnrolment(courseId: string): Promise<void> {
     .select("id, status")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     // Enrolment already present (in_progress or completed) — leave it alone.
@@ -94,7 +94,7 @@ export async function completeHubCourse(
     .select("id, status")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
-    .single();
+    .maybeSingle();
 
   // Already completed: idempotent no-op. Don't re-stamp completed_at or re-send
   // the certificate email (sendCompletionEmails has no server-side dedup, so an
