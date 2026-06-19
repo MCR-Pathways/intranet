@@ -188,6 +188,81 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* === Hub course player theme (ported from mcr-resources) === */
+  /* Registers the mcr-* utility classes the ported learner course player
+     relies on (tailwind.config.ts: flat brand colours, mcr-db/lb/or/yl/gn/tl/pk/wn
+     scales, shadow-brutal/lift/float/overlay, animate-course-reveal). All tokens
+     are namespaced under mcr-*/course-/tt-commons-pro so nothing collides with
+     the existing intranet tokens above. Flat brand colours reuse the intranet's
+     own --mcr-* variables (the WCAG-adjusted ADR-014 values), keeping one source
+     of truth; --color-mcr-teal and --color-mcr-ivory are already defined above so
+     are not redeclared here. The numbered scales have no intranet equivalent, so
+     their HSL values are ported verbatim from the source config. */
+
+  /* Flat brand colours (hyphen-free, e.g. text-mcr-darkblue) */
+  --color-mcr-darkblue: var(--mcr-dark-blue);
+  --color-mcr-lightblue: var(--mcr-light-blue);
+  --color-mcr-orange: var(--mcr-orange);
+  --color-mcr-yellow: var(--mcr-yellow);
+  --color-mcr-green: var(--mcr-green);
+  --color-mcr-pink: var(--mcr-pink);
+  --color-mcr-wine: var(--mcr-wine);
+
+  /* Dark-blue scale (mcr-db-*) */
+  --color-mcr-db-50: hsl(51 25% 90%);
+  --color-mcr-db-100: hsl(60 8% 82%);
+  --color-mcr-db-200: hsl(160 2% 72%);
+  --color-mcr-db-300: hsl(212 7% 57%);
+  --color-mcr-db-400: hsl(215 18% 37%);
+  --color-mcr-db-500: hsl(216 43% 22%);
+  --color-mcr-db-600: hsl(217 43% 19%);
+  --color-mcr-db-700: hsl(218 43% 16%);
+
+  /* Tinted pill pairs (mcr-{lb,or,yl,gn,tl,pk,wn}-{50,700}) */
+  --color-mcr-lb-50: hsl(195 80% 94%);
+  --color-mcr-lb-700: hsl(196 60% 30%);
+  --color-mcr-or-50: hsl(28 95% 93%);
+  --color-mcr-or-700: hsl(18 78% 38%);
+  --color-mcr-yl-50: hsl(46 95% 90%);
+  --color-mcr-yl-700: hsl(35 85% 38%);
+  --color-mcr-gn-50: hsl(80 70% 92%);
+  --color-mcr-gn-700: hsl(95 55% 28%);
+  --color-mcr-tl-50: hsl(195 35% 91%);
+  --color-mcr-tl-700: hsl(200 48% 22%);
+  --color-mcr-pk-50: hsl(335 100% 95%);
+  --color-mcr-pk-700: hsl(333 45% 35%);
+  --color-mcr-wn-50: hsl(335 45% 93%);
+  --color-mcr-wn-700: hsl(322 53% 25%);
+
+  /* Brutalist + elevation shadows (shadow-brutal/-sm/-lg, shadow-lift/float/overlay).
+     The source's brutal shadows used hsl(var(--brutalist-shadow)); the intranet has
+     no such variable, so they resolve against the brand dark-blue foreground. */
+  --shadow-brutal: 4px 4px 0 0 var(--mcr-dark-blue);
+  --shadow-brutal-sm: 2px 2px 0 0 var(--mcr-dark-blue);
+  --shadow-brutal-lg: 6px 6px 0 0 var(--mcr-dark-blue);
+  --shadow-lift: 0 1px 3px rgba(33, 51, 80, 0.08);
+  --shadow-float: 0 4px 12px rgba(33, 51, 80, 0.10);
+  --shadow-overlay: 0 8px 24px rgba(33, 51, 80, 0.14);
+
+  /* Course block reveal — slide only, no opacity fade, so a backgrounded tab
+     never freezes content invisible at opacity 0 (animate-course-reveal). */
+  --animate-course-reveal: course-reveal 0.25s ease-out;
+
+  /* Course player font family. The player markup expects a `tt-commons-pro`
+     family; map it onto the intranet's existing font stack. */
+  --font-tt-commons-pro: "tt-commons-pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Keyframes for animate-course-reveal (Tailwind v4 needs the @keyframes defined
+   alongside the --animate-* token). */
+@keyframes course-reveal {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 /* Base Styles */

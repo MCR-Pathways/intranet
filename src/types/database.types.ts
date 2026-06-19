@@ -786,6 +786,8 @@ export type Database = {
           is_required: boolean | null
           issue_certificate: boolean
           passing_score: number | null
+          source: string
+          source_course_id: string | null
           status: "draft" | "published"
           thumbnail_url: string | null
           title: string
@@ -807,6 +809,8 @@ export type Database = {
           is_required?: boolean | null
           issue_certificate?: boolean
           passing_score?: number | null
+          source?: string
+          source_course_id?: string | null
           status?: "draft" | "published"
           thumbnail_url?: string | null
           title: string
@@ -828,6 +832,8 @@ export type Database = {
           is_required?: boolean | null
           issue_certificate?: boolean
           passing_score?: number | null
+          source?: string
+          source_course_id?: string | null
           status?: "draft" | "published"
           thumbnail_url?: string | null
           title?: string

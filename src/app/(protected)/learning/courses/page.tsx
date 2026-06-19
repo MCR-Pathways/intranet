@@ -25,7 +25,7 @@ export default async function CourseCatalogPage({
     supabase
       .from("courses")
       .select(
-        "id, title, description, category, duration_minutes, is_required, is_active, status, updated_at"
+        "id, title, description, category, duration_minutes, is_required, is_active, status, updated_at, source, source_course_id"
       )
       .eq("is_active", true)
       .eq("status", "published")

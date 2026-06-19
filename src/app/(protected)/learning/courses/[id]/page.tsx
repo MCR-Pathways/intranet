@@ -60,7 +60,7 @@ export default async function CourseDetailPage({
   // Fetch course details — preview mode bypasses published+active filters
   let query = supabase
     .from("courses")
-    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, issue_certificate, created_by, updated_by, created_at, updated_at")
+    .select("id, title, description, category, duration_minutes, is_required, thumbnail_url, content_url, passing_score, due_days_from_start, is_active, status, issue_certificate, created_by, updated_by, created_at, updated_at, source, source_course_id")
     .eq("id", id);
 
   if (!isPreview) {
