@@ -43,7 +43,8 @@ Two existing intranet facts shape the design:
 
 - An author in Sparky can explicitly choose to publish a course to the intranet.
 - Published "hub" courses appear in the intranet Learning catalogue alongside native courses
-  and behave natively (assignment, required flags, due dates, reporting).
+  and behave natively **from day one** — assignable, can be marked required, carry due dates,
+  and appear in reporting exactly like native courses.
 - The course body renders **faithfully** — all ~16 Sparky `content_item` component types
   (section headers, video, text, multiple-choice / multi-select / yes-no / ordering quizzes,
   flashcards, card carousels, interactive tiles, accordions, scenario decks, feature lists,
@@ -110,8 +111,9 @@ Postgres cannot cross-write between separate projects, so the intranet pulls.
   `category` (mapped from `target_audience`/settings, default a `hub` category),
   `source='hub'`, `is_active=true`. Courses no longer destined for the intranet (or
   un-published) are set `is_active=false` (hidden) — **completions/certificates are retained**.
-  - Trigger: a manual **"Refresh hub courses"** LD-admin action; optionally a daily cron
-    (`pg_cron` or a Vercel cron route) for hands-off freshness.
+  - Trigger: a **daily cron** (following the intranet's existing cron pattern — see
+    `00093_sweep_cleared_notifications_cron`) for hands-off freshness, **plus** a manual
+    **"Refresh hub courses"** LD-admin action for on-demand sync.
 - **No body content is copied.** Only shell metadata is synced; `content_items` are read live.
 
 ### Part 3 — Intranet Learning module: render + complete
@@ -192,16 +194,18 @@ needs extending — the bridge and schema are unaffected.
 - **E2E (Playwright):** staff opens a hub course, completes it, sees the certificate; un-publish
   hides it from the catalogue but the certificate remains.
 
-## Open questions for planning
+## Resolved planning decisions (2026-06-19 review)
 
-1. **Category mapping** — which `course_category` enum value(s) do hub courses map to (a new
-   `hub`/`training` category, or reuse `compliance`/`upskilling`)? Confirm the enum values.
-2. **Reconciliation cadence** — manual admin action only for v1, or also a daily cron?
-   (Recommend: ship manual first, add cron if drift is a problem.)
-3. **Player port surface area** — confirm which component types are in active use so the first
-   port covers them; rarer types can follow.
-4. **Assignment/required semantics** — should hub courses be assignable/required like native
-   courses from day one, or read-only-catalogue first?
+1. **Category mapping** — confirm the `course_category` values at build time (the intranet uses
+   TEXT + CHECK, not a Postgres ENUM, per CLAUDE.md) and map hub courses to the closest
+   existing value, defaulting deterministically. Add a new allowed value only if none fits.
+2. **Reconciliation cadence** — **daily cron** via the intranet's existing pattern
+   (Supabase `pg_cron` → `/api/cron/*` route, authenticated with `CRON_SECRET`), plus a manual
+   "Refresh hub courses" admin action for on-demand sync.
+3. **Player port surface area** — port **all** Sparky component types so any published course
+   renders faithfully from day one; unknown/future types fall back to a safe block.
+4. **Assignment/required semantics** — hub courses are **assignable and can be marked required
+   from day one**, behaving like native courses in assignment, due dates, and reporting.
 
 ## Affected files (approximate)
 
