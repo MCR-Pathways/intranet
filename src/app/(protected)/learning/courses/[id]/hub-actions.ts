@@ -91,10 +91,18 @@ export async function completeHubCourse(
 
   const { data: existing } = await supabase
     .from("course_enrolments")
-    .select("id")
+    .select("id, status")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
     .single();
+
+  // Already completed: idempotent no-op. Don't re-stamp completed_at or re-send
+  // the certificate email (sendCompletionEmails has no server-side dedup, so an
+  // unconditional re-send would deliver a duplicate). The certificate trigger
+  // also only issues on the false→true transition.
+  if (existing && existing.status === "completed") {
+    return { success: true, error: null };
+  }
 
   if (existing) {
     const { error } = await supabase

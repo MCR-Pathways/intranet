@@ -88,7 +88,9 @@ function QuizStepper({
         {onComplete && (
           <button
             type="button"
-            onClick={() => onComplete(score)}
+            onClick={() =>
+              onComplete(total > 0 ? Math.round((score / total) * 100) : undefined)
+            }
             className="mt-2 flex h-11 items-center gap-1.5 rounded-full bg-mcr-darkblue px-6 text-sm font-semibold text-white"
           >
             Continue

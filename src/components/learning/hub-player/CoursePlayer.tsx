@@ -121,20 +121,29 @@ export function CoursePlayer({ content, storageKey, onComplete }: Props) {
   // drive the forward-nav button without assuming a fixed course shape.
   const hasForward = sec < total - 1;
   const nextIsCompletion = sections[sec + 1]?.layout === 'completion';
-  // The completion step is the completion-layout section, or the final section
-  // when the course has no dedicated completion screen.
-  const atFinalStep = isComplete || (!hasForward && total > 0);
-
-  // Fire onComplete once when the learner reaches the final step.
-  useEffect(() => {
-    if (atFinalStep && !completedFired.current) {
-      completedFired.current = true;
-      onComplete?.(lastScore.current);
-    }
-  }, [atFinalStep, onComplete]);
+  // Fire onComplete exactly once, only on a genuine user-initiated arrival at
+  // the end — never from mount or a localStorage restore (which would record a
+  // completion, and issue a certificate, without the learner finishing).
+  function fireComplete() {
+    if (completedFired.current) return;
+    completedFired.current = true;
+    onComplete?.(lastScore.current);
+  }
 
   function go(i: number) {
-    if (i >= 0 && i < total) setSec(i);
+    if (i < 0 || i >= total) return;
+    setSec(i);
+    // Completion = the learner navigated to the completion screen, or to the
+    // final section when it is not a quiz. A quiz-final section completes via
+    // the quiz's own onComplete, after every question has been answered.
+    const dest = sections[i];
+    if (
+      dest &&
+      (dest.layout === 'completion' ||
+        (i === total - 1 && dest.layout !== 'quiz'))
+    ) {
+      fireComplete();
+    }
   }
 
   function onTouchStart(e: React.TouchEvent) {
@@ -203,7 +212,12 @@ export function CoursePlayer({ content, storageKey, onComplete }: Props) {
             section={section}
             onComplete={(score) => {
               lastScore.current = score;
-              if (hasForward) go(sec + 1);
+              if (hasForward) {
+                go(sec + 1);
+              } else {
+                // Quiz is the final section: finishing it completes the course.
+                fireComplete();
+              }
             }}
           />
         ) : (

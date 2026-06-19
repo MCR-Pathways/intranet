@@ -45,7 +45,15 @@ export interface IntranetHubCourse {
  * 'intranet'. Returns [] (and logs) on error.
  */
 export async function listIntranetHubCourses(): Promise<IntranetHubCourse[]> {
-  const supabase = createChatClient();
+  let supabase: ReturnType<typeof createChatClient>;
+  try {
+    supabase = createChatClient();
+  } catch (err) {
+    logger.error("Chat client unavailable for hub course listing", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
 
   const { data, error } = await supabase
     .from("content_collections")
@@ -73,7 +81,16 @@ export async function listIntranetHubCourses(): Promise<IntranetHubCourse[]> {
 export async function getHubCourseContent(
   sourceCourseId: string,
 ): Promise<LoadedContent | null> {
-  const supabase = createChatClient();
+  let supabase: ReturnType<typeof createChatClient>;
+  try {
+    supabase = createChatClient();
+  } catch (err) {
+    logger.error("Chat client unavailable for hub course content", {
+      error: err instanceof Error ? err.message : String(err),
+      sourceCourseId,
+    });
+    return null;
+  }
 
   const { data, error } = await supabase
     .from("content_collections")
