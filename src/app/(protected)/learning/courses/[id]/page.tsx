@@ -22,6 +22,8 @@ import type { Course, CourseEnrolment, CourseLesson } from "@/types/database.typ
 import { formatDuration } from "@/lib/utils";
 import { getCategoryConfig, getLockedLessonIds, getLockedSectionIds, getDueStatus } from "@/lib/learning";
 import { EnrollButton } from "./enroll-button";
+import { HubCoursePlayer } from "./hub-course-player";
+import { getHubCourseContent } from "@/lib/chat-content/queries";
 import { LessonList } from "./lesson-list";
 import { SectionAccordion } from "@/components/learning/section-accordion";
 import { PreviewModeBanner } from "@/components/learning/preview-mode-banner";
@@ -74,6 +76,99 @@ export default async function CourseDetailPage({
   }
 
   const course = courseData as Course;
+
+  // Hub courses (published from the LMS hub) render the ported course player
+  // against content read live from the Chat project, and track completion
+  // natively. They have no course_sections/course_lessons, so they branch out
+  // of the native section/lesson/quiz flow entirely.
+  if (course.source === "hub") {
+    if (!course.source_course_id) {
+      notFound();
+    }
+
+    const [{ data: hubEnrolment }, { data: hubCertificate }, hubContent] =
+      await Promise.all([
+        supabase
+          .from("course_enrolments")
+          .select("status")
+          .eq("user_id", user.id)
+          .eq("course_id", id)
+          .maybeSingle(),
+        supabase
+          .from("certificates")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("course_id", id)
+          .maybeSingle(),
+        getHubCourseContent(course.source_course_id),
+      ]);
+
+    const hubCategory = getCategoryConfig(course.category);
+    const HubIcon = hubCategory.icon;
+
+    return (
+      <div className="space-y-6">
+        {isPreview && <PreviewModeBanner courseId={id} />}
+
+        <PageHeader
+          title={course.title}
+          subtitle={course.description ?? undefined}
+          breadcrumbs={[
+            { label: "Learning", href: "/learning" },
+            { label: "Courses", href: "/learning/courses" },
+            { label: course.title },
+          ]}
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`rounded-lg p-2 ${hubCategory.bgColor}`}>
+            <HubIcon className={`h-6 w-6 ${hubCategory.color}`} />
+          </div>
+          <Badge variant="outline">{hubCategory.label}</Badge>
+          {course.is_required && <Badge variant="destructive">Required</Badge>}
+          {course.duration_minutes ? (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              {formatDuration(course.duration_minutes)}
+            </span>
+          ) : null}
+        </div>
+
+        {hubCertificate?.id && (
+          <Card className="border-mcr-green/30 bg-mcr-green/5">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <span className="flex items-center gap-2 font-medium text-foreground">
+                <Award className="h-5 w-5 text-mcr-green" />
+                You have completed this course.
+              </span>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/api/certificate/${user.id}`} target="_blank">
+                  <Award />
+                  View certificate
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {hubContent ? (
+          <HubCoursePlayer
+            content={hubContent}
+            courseId={id}
+            initialStatus={hubEnrolment?.status ?? null}
+            isPreview={isPreview}
+          />
+        ) : (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">
+              This course&rsquo;s content is temporarily unavailable. Please try
+              again shortly.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   // Fetch enrolment, lessons, sections, and certificate in parallel
   const [{ data: enrolmentData }, { data: lessonsData }, { data: sectionsData }, { data: certificateData }] =

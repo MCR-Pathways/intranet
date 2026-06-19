@@ -1,5 +1,5 @@
-import "server-only";
-
+// Server-only: holds the Chat project read credential. Never import in a client
+// component or expose CHAT_SUPABASE_READONLY_KEY to the browser.
 import { createClient } from "@supabase/supabase-js";
 import type { ChatDatabase } from "@/types/chat-content";
 

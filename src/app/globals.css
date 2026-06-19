@@ -193,8 +193,8 @@
   /* Registers the mcr-* utility classes the ported learner course player
      relies on (tailwind.config.ts: flat brand colours, mcr-db/lb/or/yl/gn/tl/pk/wn
      scales, shadow-brutal/lift/float/overlay, animate-course-reveal). All tokens
-     are namespaced under mcr-*/course-/tt-commons-pro so nothing collides with
-     the existing intranet tokens above. Flat brand colours reuse the intranet's
+     are namespaced under the mcr-, course- and tt-commons-pro prefixes so nothing
+     collides with the existing intranet tokens above. Flat brand colours reuse the intranet's
      own --mcr-* variables (the WCAG-adjusted ADR-014 values), keeping one source
      of truth; --color-mcr-teal and --color-mcr-ivory are already defined above so
      are not redeclared here. The numbered scales have no intranet equivalent, so
