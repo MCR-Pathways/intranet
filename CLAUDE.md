@@ -150,12 +150,14 @@ Required in `.env.local`:
 Every piece of work follows this loop. It applies to all features and fixes, not one session.
 
 1. **Brainstorm first.** Before writing code, use the brainstorming skill to settle intent and design, and get sign-off. No code before an approved design.
-2. **Build, then `/code-review` before committing.** Run the `/code-review` skill on the diff, address what it finds, then commit. This is hard-enforced: a `PreToolUse(Bash)` hook (`.claude/hooks/require-code-review.mjs`) blocks `git commit` for any code change unless `/code-review` has run since the last commit. Docs-only commits (everything under `docs/` or ending `.md`) pass without a review. A commit message containing `[skip-review]` bypasses the gate for trivial or emergency commits.
+2. **Build, then `/code-review` before committing.** Run the `/code-review` skill on the diff, address what it finds, then commit. This is hard-enforced: a `PreToolUse(Bash)` hook (`.claude/hooks/require-code-review.mjs`) blocks `git commit` (docs as well as code) unless `/code-review` has run since the last commit. A commit message containing `[skip-review]` bypasses the gate for trivial or emergency commits.
 3. **Push, then invoke Gemini.** After the commit lands on the PR, ask Gemini for a review (`/gemini review` as a PR comment) and watch the PR.
-4. **Verify every Gemini comment against the actual code before acting, and reply to each one** — even when declining. Gemini flags valid code, cites old versions, and contradicts itself; never act on a comment you haven't checked.
+4. **Verify every Gemini comment against the actual code before acting, and reply to each one,** even when declining. Gemini flags valid code, cites old versions, and contradicts itself; never act on a comment you haven't checked.
 5. **Right comment → fix it. Not-quite-right comment → find the *better* answer.** The comment is a signal, not a spec. "Better" is the resolution that fixes the real concern underneath it, is verified correct against our runtime, fits our conventions ahead of generic best-practice, stays in scope, and lowers total complexity rather than adding defensive cruft. If the answer is "Gemini's wrong", reply with evidence and change nothing.
 6. **Loop on new feedback, capped at 3 rounds.** A round is one push → invoke Gemini → verify/fix cycle. After the third invocation, stop auto-invoking Gemini (still address comments already posted; say the cap is hit) so we don't spin.
 7. **No new Gemini feedback → stop and wait for explicit approval to merge.** Never merge unprompted.
+
+The humanizer principles (the "### Writing: avoid AI patterns" rules above, full skill `/humanizer`) apply to everything the loop produces: commit messages, PR descriptions, Gemini replies, code comments, docs, and user-facing prose.
 
 Gemini Code Assist reviews cease on 2026-07-17. Steps 3–6 lapse then; the automated-review step needs a replacement before that date.
 
