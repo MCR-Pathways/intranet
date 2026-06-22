@@ -1018,12 +1018,6 @@
     ],
     "inProgress": [
       {
-        "id": "k18",
-        "title": "Home-feed colour rework (ADR-014): ivory canvas + per-post-type accents",
-        "tag": "ui",
-        "note": "Uniform ivory canvas replacing the cool grey, with per-post-type accents: navy weekly round-up banner, sky-blue poll, orange pinned spine, kudos compose + tinted card. P1 surface finish (warm-retuned neutral tokens + tonal badge borders) merged. P2/P3 audit remediation in progress: raw-grey to token sweep, card separation, induction empty-state. PRs 336-343; see docs/colour-rework-audit.md."
-      },
-      {
         "id": "k12",
         "title": "WordPress to Resources content migration (remaining pages)",
         "tag": "content",
@@ -1031,6 +1025,51 @@
       }
     ],
     "done": [
+      {
+        "id": "k23",
+        "title": "Publish LMS-hub courses into the Learning module",
+        "tag": "feature",
+        "note": "A Sparky-authored course in the mcr-resources (Chat) Supabase project can now publish into the intranet Learning catalogue. Hub courses are first-class courses rows (source = hub, source_course_id) with no native sections; their content is read live from the Chat project through a read-only server client gated to destinations @> {intranet} published courses, never copied. The full Sparky player was ported in and intranet certificates are issued on completion.",
+        "completedDate": "2026-06-19",
+        "prNumber": 365,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/365"
+      },
+      {
+        "id": "k24",
+        "title": "Celebration emails to brand green + white-logo regroup",
+        "tag": "ui",
+        "note": "Moved certificate_earned, course_completed and welcome emails from the old lime #B5E046 to brand green #22A34B (--mcr-green, ADR-014 §1.1). The darker green flipped all three from a dark logo to a white logo (Group A) for contrast, resolving a colour decision design-system.md §6 had deliberately deferred.",
+        "completedDate": "2026-06-17",
+        "prNumber": 354,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/354"
+      },
+      {
+        "id": "k22",
+        "title": "Learning getDueStatus extraction + sub-day-overdue fix",
+        "tag": "bug",
+        "note": "Extracted getDueStatus() from the learning dashboard component; fixed a date comparison bug where items due within the same calendar day were incorrectly shown as overdue.",
+        "completedDate": "2026-06-19",
+        "prNumber": 361,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/361"
+      },
+      {
+        "id": "k21",
+        "title": "Sweep transition-all to property-targeted CSS transitions",
+        "tag": "code",
+        "note": "Replaced transition-all with specific property transitions (transition-colors, transition-opacity, etc.) across the UI to avoid animating layout properties on every interaction.",
+        "completedDate": "2026-06-19",
+        "prNumber": 360,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/360"
+      },
+      {
+        "id": "k18",
+        "title": "Home-feed colour rework (ADR-014): ivory canvas + per-post-type accents",
+        "tag": "ui",
+        "note": "Seven PRs replaced the uniform cool-grey canvas with ivory #FDF9EA across all routes and added per-type accents: solid navy block for the weekly round-up, sky-blue spine and graded fills for polls, orange spine and pill for pinned posts, pale-yellow tinted card for kudos. Audit passes (P1-P3) swept 41 bg-background sites to bg-card, corrected raw-grey token drift in HR and sign-in, added a branded induction empty state, and stripped dead resource-module overrides. Kudos compose shipped as part of this work.",
+        "completedDate": "2026-06-14",
+        "prNumber": 348,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/348"
+      },
       {
         "id": "k20",
         "title": "Complete the jsx-a11y warn-to-error sweep (whole recommended set now at error)",
@@ -1130,6 +1169,39 @@
       "decisions": [
         "Applied direct to the Intranet production database (authorised) to close the live hole immediately, with the migration committed to the repo for parity.",
         "No replacement policy: writers are service-role + SECURITY DEFINER, both of which bypass RLS."
+      ]
+    },
+    {
+      "id": "f3",
+      "title": "Home-feed colour rework (ADR-014): ivory canvas + per-post-type accents",
+      "date": "2026-06-14",
+      "summary": "Replaced the uniform cool-grey canvas with ivory #FDF9EA across all routes, then added one accent per post type: solid navy block for the weekly round-up, sky-blue spine and graded fill for polls, orange spine and pill for pinned posts, pale-yellow tinted card for kudos. Kudos shipped as a new post type with two-tier category selection and a sentence-model compose flow. An audit pass corrected 41 bg-background sites to bg-card, swept raw-grey token drift in HR and sign-in, and added a branded induction empty state. Two earlier attempts — the April 2026 contractor design and the module-identity colour system — are both superseded.",
+      "decisions": [
+        "bg-background and bg-card are now semantically distinct: page canvas vs elevated surface. Previously collapsed.",
+        "Kudos categories use a sentence model (category verb + recipient + optional note), not tags.",
+        "Surface tint tokens are light-mode only; dark mode is unaffected (no theme switcher wired)."
+      ]
+    },
+    {
+      "id": "f4",
+      "title": "A11y enforcement: full jsx-a11y recommended set + custom truncate rule",
+      "date": "2026-06-18",
+      "summary": "Foundation (#349) enabled the full eslint-plugin-jsx-a11y recommended set plus a custom AST rule mcr-a11y/no-truncate-without-title for truncated text with no hover title. An initial config bug (Object.keys approach stripped rule options, force-enabled off-by-default rules) was corrected in #352 by spreading the recommended config object directly. Sweep (#355-358) cleared four slices from warn to error: iframe-title / label-association / tabindex, static-element interactions + click-events, autofocus x15, media-has-caption x2. A file-dropzone div became a real button; accordion headers got keyboard activation; mobile menu got Escape-to-close. One gap — captions on author-uploaded video — is logged as a backlog feature rather than faked with an empty track.",
+      "decisions": [
+        "Each rule promotes to error only after its slice clears, not upfront, so the CI stays green through the backlog.",
+        "Capability-first over justified suppression: interactive elements get correct semantics where possible.",
+        "Custom lint rules need RuleTester coverage — a registered-but-broken rule passes silently."
+      ]
+    },
+    {
+      "id": "f5",
+      "title": "LMS-hub course publishing (cross-Supabase, live-read)",
+      "date": "2026-06-19",
+      "summary": "A Sparky-authored course living in the mcr-resources (Chat) Supabase project can be published into the intranet Learning module, mirroring the mcr-mentor-portal pattern but across a separate project. Schema migration 00100 adds courses.source (native | hub) and source_course_id; a hub course is a first-class courses row with no native sections or lessons. Its content is read live from the Chat project through a server-only read-only client (src/lib/chat-content), gated to courses whose destinations @> {intranet} and that are published — bodies are never copied across. The full Sparky course player (~20 components) was ported in to render hub courses, and the intranet issues its own certificate on completion.",
+      "decisions": [
+        "Hub content is read live from the source project, never copied, so the Chat project stays the single source of truth and edits propagate without a sync job.",
+        "Cross-project reads go through a dedicated read-only server client, gated to destinations @> {intranet} published courses, so the intranet can only ever see what was explicitly published to it.",
+        "Hub courses reuse the native courses table (source discriminator) rather than a parallel table, so the catalogue, enrolment and certificate paths stay unified."
       ]
     }
   ],
@@ -1258,7 +1330,7 @@
       "status": "Accepted",
       "context": "Staff feedback was that the app looked dull / 'giving greyscale': the feed rendered every post type on the same white card against a cool-grey #F2F4F7 background, so news, kudos, polls, pinned items and the weekly round-up were indistinguishable at a glance. Two earlier attempts were shelved — a module-identity colour system and a contractor 'Combined Feed' whose off-white background was rejected in April 2026. A new design handoff superseded both.",
       "decision": "Adopt the handoff as the canonical home-feed design: promote ivory #FDF9EA to --background uniformly across every route (consciously reversing the April 2026 background decision); one accent per post type reusing existing brand hues (pinned = orange #F09336 spine + pill, poll = light-blue #5BC6E9 spine + pill + rank-graded fills, kudos = pale-yellow #FEF7E0 card + #F8D45B border, weekly round-up = solid navy #213350 block), with ordinary posts staying plain white; add a light-mode-only surface-tint ramp derived from brand hues, documented in docs/design-system.md. Cards stay pure white; bg-background surfaces that must read as elevated migrate to bg-card.",
-      "consequences": "The feed differentiates post types at a glance without colour-coding data, staying inside the 'brand colour is an accent, not a foundation' doctrine for everything except the background, the one deliberate exception. Knock-on: a bg-background → bg-card sweep (41 sites / 30 files). Dark mode is unaffected (no theme switcher wired) and the new tints are light-only. Supersedes the module-identity colour work and the Direction-C kudos mockup."
+      "consequences": "The feed differentiates post types at a glance without colour-coding data, staying inside the 'brand colour is an accent, not a foundation' doctrine for everything except the background, the one deliberate exception. Knock-on: a bg-background → bg-card sweep (41 sites / 30 files). Dark mode is unaffected (no theme switcher wired) and the new tints are light-only. Supersedes the module-identity colour work and the Direction-C kudos mockup. Follow-through (#354): celebration emails (certificate_earned, course_completed, welcome) moved from the old lime #B5E046 to this --mcr-green #22A34B; the darker green flipped all three to a white logo (Group A) for contrast, resolving a logo-grouping decision design-system.md §6 had deliberately deferred."
     },
     {
       "id": "ADR-015",
@@ -1268,6 +1340,15 @@
       "context": "Next's core-web-vitals config only enabled 6 of eslint-plugin-jsx-a11y's rules, so most a11y regressions (unlabelled controls, autofocus, static-element click handlers, captionless media) shipped unchecked. One gap had no jsx-a11y rule at all: CSS truncation (truncate / line-clamp-N) hides text from sighted users with no title to read the full string on hover. Turning the whole recommended set on as error at once would have failed CI on the existing backlog.",
       "decision": "Enable the full eslint-plugin-jsx-a11y recommended set as a direct devDependency plus a custom AST rule mcr-a11y/no-truncate-without-title for the truncation gap. Build the rules from the recommended config with options preserved (buildA11yRules() in eslint.config.mjs): off-rules stay off, already-clean rules go to error now, each rule with a backlog stays at warn until its slice is swept then promotes. An earlier version mapped Object.keys(recommended.rules) to 'warn', which stripped each rule's options and force-enabled off-by-default rules, inflating the baseline with false positives and silently downgrading two dozen error-rules; corrected to spread the recommended config object rather than map its keys.",
       "consequences": "Backlog cleared to zero in slices, each rule promoted to error as its slice cleared; the whole recommended set is now a hard gate at 0 warnings. Capability-first: a clickable div file-dropzone became a real button, an accordion header got role=button + keyboard activation, the mobile menu got Escape-to-close, with justified suppressions only where an element is genuinely non-interactive or the autofocus is intentional focus-on-open. One real gap has no markup fix and is tracked as a feature backlog: captions on author-uploaded video. Custom rules need RuleTester coverage and a prove-it-fires discipline, since a registered-but-broken rule passes silently."
+    },
+    {
+      "id": "ADR-016",
+      "title": "LMS-hub courses read live from the Chat project (cross-Supabase), never copied",
+      "date": "2026-06-19",
+      "status": "Accepted",
+      "context": "Courses authored in the Sparky tooling live in the mcr-resources (Chat) Supabase project, a separate database from the intranet. Staff need those courses in the intranet Learning catalogue with the intranet's own enrolment and certificates. Copying course bodies across projects on publish would create two sources of truth and a sync problem — every edit in the Chat project would need re-syncing, with drift whenever a sync failed or lagged.",
+      "decision": "Publish only a reference, not the content. Migration 00100 adds courses.source (native | hub) and source_course_id; a hub course is a first-class courses row with no native sections or lessons. Bodies are read live from the Chat project at render time through a server-only read-only client (src/lib/chat-content), gated to courses whose destinations array contains 'intranet' and that are published. The Sparky course player was ported into the intranet to render hub content. Enrolment, progress and certificate issuance reuse the native course paths via the source discriminator.",
+      "consequences": "The Chat project stays the single source of truth — an edit there shows up in the intranet immediately, no sync job, no drift. The intranet can only ever see courses explicitly published to it (destinations gate), so the cross-project boundary doubles as an access boundary. Cost: a live runtime dependency on a second Supabase project for hub-course rendering (a Chat-project outage degrades hub courses, native courses are unaffected), and the Sparky player now exists in two codebases to keep in step."
     }
   ]
 }
