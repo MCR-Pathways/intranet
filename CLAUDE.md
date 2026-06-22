@@ -366,7 +366,7 @@ The mechanics:
 7. Commit the docs change. Either fold it into the PR before merging, or land it as a follow-up `docs: log PR #N in project page` commit on `main`.
 8. **Republish the page** so the hosted copy matches. The board is published to the MCR toolshed HTML host at the slug `intranet-project-board`. Republish with the `mcr-publish` skill in overwrite mode:
    `node ~/.claude/skills/mcr-publish/publish.mjs "docs/project.html" --slug intranet-project-board --overwrite`
-   The published page is **public**. The publish step is a human action — the agent harness blocks it as exfiltration of internal review content, so a maintainer must run the command (or paste it after `!` in a Claude Code session). Keep the page free of live, unpatched security detail before republishing.
+   The published page is **private** by default — only signed-in `@mcrpathways.org` viewers can open it. `--overwrite` keeps the existing visibility; pass `--public` only deliberately, with the user's say-so. This publish runs from the CLI (confirmed 2026-06-22). Keep the page free of live, unpatched security detail before republishing regardless of visibility.
 
 The full data shape, classification rules, and quality bar live in the `mcr-project` skill (`~/.claude/skills/mcr-project/references/`).
 
