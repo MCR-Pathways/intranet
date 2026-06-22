@@ -1029,7 +1029,7 @@
         "id": "k23",
         "title": "Publish LMS-hub courses into the Learning module",
         "tag": "feature",
-        "note": "A Sparky-authored course in the mcr-resources (Chat) Supabase project can now publish into the intranet Learning catalogue. Hub courses are first-class courses rows (source = hub, source_course_id) with no native sections; their content is read live from the Chat project through a read-only server client gated to destinations @> {intranet} published courses, never copied. The full Sparky player was ported in and intranet certificates issue on completion.",
+        "note": "A Sparky-authored course in the mcr-resources (Chat) Supabase project can now publish into the intranet Learning catalogue. Hub courses are first-class courses rows (source = hub, source_course_id) with no native sections; their content is read live from the Chat project through a read-only server client gated to destinations @> {intranet} published courses, never copied. The full Sparky player was ported in and intranet certificates are issued on completion.",
         "completedDate": "2026-06-19",
         "prNumber": 365,
         "prUrl": "https://github.com/MCR-Pathways/intranet/pull/365"
@@ -1197,7 +1197,7 @@
       "id": "f5",
       "title": "LMS-hub course publishing (cross-Supabase, live-read)",
       "date": "2026-06-19",
-      "summary": "A Sparky-authored course living in the mcr-resources (Chat) Supabase project can be published into the intranet Learning module, mirroring the mcr-mentor-portal pattern but across a separate project. Schema migration 00100 adds courses.source (native | hub) and source_course_id; a hub course is a first-class courses row with no native sections or lessons. Its content is read live from the Chat project through a server-only read-only client (src/lib/chat-content), gated to courses whose destinations @> {intranet} and published — bodies are never copied across. The full Sparky course player (~20 components) was ported in to render hub courses, and the intranet issues its own certificate on completion.",
+      "summary": "A Sparky-authored course living in the mcr-resources (Chat) Supabase project can be published into the intranet Learning module, mirroring the mcr-mentor-portal pattern but across a separate project. Schema migration 00100 adds courses.source (native | hub) and source_course_id; a hub course is a first-class courses row with no native sections or lessons. Its content is read live from the Chat project through a server-only read-only client (src/lib/chat-content), gated to courses whose destinations @> {intranet} and that are published — bodies are never copied across. The full Sparky course player (~20 components) was ported in to render hub courses, and the intranet issues its own certificate on completion.",
       "decisions": [
         "Hub content is read live from the source project, never copied, so the Chat project stays the single source of truth and edits propagate without a sync job.",
         "Cross-project reads go through a dedicated read-only server client, gated to destinations @> {intranet} published courses, so the intranet can only ever see what was explicitly published to it.",
