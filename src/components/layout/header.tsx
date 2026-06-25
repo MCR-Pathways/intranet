@@ -114,7 +114,7 @@ export function Header({
             See docs/search-bar-redesign.md. */}
         <div
           className={cn(
-            "hidden min-w-0 flex-1 md:block",
+            "hidden min-w-0 flex-1 transition-[margin] duration-200 md:block",
             isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
         >
