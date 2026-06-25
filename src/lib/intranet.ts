@@ -89,6 +89,18 @@ export const POST_TYPES = {
 
 export type PostType = (typeof POST_TYPES)[keyof typeof POST_TYPES];
 
+/**
+ * Whether a post belongs in the global search index. Only plain news posts
+ * are searchable; kudos and weekly round-ups are excluded. A poll is a news
+ * post with a question, so polls are included.
+ */
+export function shouldIndexPostForSearch(post: {
+  post_type: string;
+  is_weekly_roundup: boolean;
+}): boolean {
+  return post.post_type === POST_TYPES.NEWS && !post.is_weekly_roundup;
+}
+
 // ─── Kudos categories (W4) ───────────────────────────────────────────
 
 /**

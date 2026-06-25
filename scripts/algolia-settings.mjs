@@ -31,6 +31,13 @@ const INDICES = {
     searchableAttributes: ["title", "description", "categoryLabel"],
     attributesToHighlight: ["title", "description"],
   },
+  news_posts: {
+    searchableAttributes: ["excerpt", "content"],
+    attributesToSnippet: ["content:30"],
+    attributesToHighlight: ["excerpt", "content"],
+    // Recency tie-break: equally-relevant posts come back newest-first.
+    customRanking: ["desc(createdAtTimestamp)"],
+  },
 };
 
 for (const [indexName, settings] of Object.entries(INDICES)) {

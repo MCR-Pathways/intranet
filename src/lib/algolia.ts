@@ -8,6 +8,7 @@
  * Indices:
  * - `resources_articles` — one record per section (heading + content)
  * - `learning_courses` — one record per published course
+ * - `news_posts` — one record per news post (excludes kudos + round-ups)
  */
 
 import { algoliasearch } from "algoliasearch";
@@ -21,6 +22,7 @@ const ADMIN_KEY = process.env.ALGOLIA_ADMIN_KEY ?? "";
 
 export const RESOURCES_INDEX = "resources_articles";
 export const COURSES_INDEX = "learning_courses";
+export const NEWS_INDEX = "news_posts";
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -262,6 +264,134 @@ export async function removeCourseFromIndex(courseId: string): Promise<void> {
   } catch (error) {
     logger.warn("Algolia: failed to remove course from index", {
       courseId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ─── News post indexing (server-side) ───────────────────────────────────────
+
+export interface AlgoliaPostRecord {
+  objectID: string;
+  postId: string;
+  /** First line / short lead — posts have no title, so this stands in for one */
+  excerpt: string;
+  /** Post body (plaintext, truncated to the Algolia per-record size cap) */
+  content: string;
+  /** Author display name (no IDs or emails) */
+  authorName: string;
+  /** Created timestamp (ISO) for the "· 3 days ago" line */
+  createdAt: string;
+  /** Created timestamp (ms) — the customRanking tie-break (newest first) */
+  createdAtTimestamp: number;
+  /** Discriminator for global search result grouping */
+  _type: "news";
+}
+
+const POST_EXCERPT_MAX_CHARS = 120;
+
+/** Build a single-line lead from the post body for the result-row title. */
+function buildPostExcerpt(content: string): string {
+  const firstLine =
+    content
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? "";
+  if (firstLine.length <= POST_EXCERPT_MAX_CHARS) return firstLine;
+  const clipped = firstLine.slice(0, POST_EXCERPT_MAX_CHARS);
+  const lastSpace = clipped.lastIndexOf(" ");
+  const trimmed =
+    lastSpace > POST_EXCERPT_MAX_CHARS * 0.6 ? clipped.slice(0, lastSpace) : clipped;
+  return trimmed + " …";
+}
+
+/**
+ * Resolve a display name from the Supabase author join, which the typed client
+ * gives as object-or-array for a to-one relationship. Falls back to the org
+ * name so a record never indexes an empty author.
+ */
+export function resolveSearchAuthorName(
+  join:
+    | { full_name: string | null; preferred_name: string | null }
+    | Array<{ full_name: string | null; preferred_name: string | null }>
+    | null
+    | undefined
+): string {
+  const author = Array.isArray(join) ? join[0] : join;
+  return author?.preferred_name?.trim() || author?.full_name?.trim() || "MCR Pathways";
+}
+
+export interface PostRecordInput {
+  postId: string;
+  content: string;
+  /** Poll question, when the post is a poll — folded into the searchable body */
+  pollQuestion?: string | null;
+  authorName: string;
+  createdAt: string;
+}
+
+/**
+ * Build the Algolia record for a news post. Single source of truth shared by
+ * the runtime indexer (`indexPost`) and the backfill (`scripts/index-posts.ts`)
+ * so the two can't drift. The excerpt is the body's lead (the result-row
+ * title); the poll question is appended to the searchable content so polls are
+ * findable by their question, not just their body.
+ */
+export function buildPostRecord(input: PostRecordInput): AlgoliaPostRecord {
+  const question = input.pollQuestion?.trim();
+  const searchable = question ? `${input.content}\n${question}` : input.content;
+  return {
+    objectID: input.postId,
+    postId: input.postId,
+    excerpt: buildPostExcerpt(input.content),
+    content: truncateForAlgolia(searchable),
+    authorName: input.authorName,
+    createdAt: input.createdAt,
+    createdAtTimestamp: new Date(input.createdAt).getTime(),
+    _type: "news",
+  };
+}
+
+/**
+ * Index a news post into Algolia. Called on create and edit.
+ * Mirrors `indexCourse`: build one record and upsert it.
+ */
+export async function indexPost(input: PostRecordInput): Promise<void> {
+  try {
+    const client = getAdminClient();
+    const record = buildPostRecord(input);
+
+    await client.saveObjects({
+      indexName: NEWS_INDEX,
+      objects: [record as unknown as Record<string, unknown>],
+    });
+
+    logger.info("Algolia: indexed news post", { postId: input.postId });
+  } catch (error) {
+    logger.warn("Algolia: failed to index news post", {
+      postId: input.postId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Remove a news post from Algolia. Called on delete, or when a post no
+ * longer qualifies as news.
+ */
+export async function removePostFromIndex(postId: string): Promise<void> {
+  try {
+    const client = getAdminClient();
+
+    await client.deleteObjects({
+      indexName: NEWS_INDEX,
+      objectIDs: [postId],
+    });
+
+    logger.info("Algolia: removed news post from index", { postId });
+  } catch (error) {
+    logger.warn("Algolia: failed to remove news post from index", {
+      postId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
