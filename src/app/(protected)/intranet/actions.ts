@@ -735,7 +735,7 @@ async function indexPostIfNews(
   postId: string
 ): Promise<void> {
   try {
-    const { data: post } = await supabase
+    const { data: post, error } = await supabase
       .from("posts")
       .select(
         "content, post_type, is_weekly_roundup, poll_question, created_at, author:profiles!author_id(full_name, preferred_name)"
@@ -743,6 +743,16 @@ async function indexPostIfNews(
       .eq("id", postId)
       .single();
 
+    // Supabase returns errors on the channel rather than throwing, so the
+    // outer try/catch wouldn't see a query failure — log it explicitly so a
+    // missing index entry is debuggable rather than silent.
+    if (error) {
+      logger.warn("Failed to fetch post for search indexing", {
+        postId,
+        error: error.message,
+      });
+      return;
+    }
     if (!post) return;
 
     // If the post no longer qualifies as news (e.g. reclassified), drop any
