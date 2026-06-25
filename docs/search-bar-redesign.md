@@ -74,7 +74,7 @@ A new Algolia index, `news_posts` (constant `NEWS_INDEX` in `src/lib/algolia.ts`
 - **Indexing:** an `indexPostIfNews(supabase, postId)` helper gating on `post_type = 'news' AND is_weekly_roundup = false`, mirroring `indexCourseIfPublished`. Wire it into `createPost` (`actions.ts:721`, after insert), `editPost` (`actions.ts:922`, reindex when content changes), and `deletePost` (`actions.ts:1119`, `removePostFromIndex`). `createKudosPost` in `kudos-actions.ts` is **not** wired — kudos stay out.
 - **Content flattening:** extract plaintext from the Tiptap `content_json`; fall back to the stored `content` string. (Exact extractor settled at build — see open items.)
 - **Ranking (the one new ranking decision):** in `scripts/algolia-settings.mjs`, add `news_posts` with `searchableAttributes: ["excerpt", "content"]`, snippet/highlight on `content`, and **`customRanking: ["desc(createdAtTimestamp)"]`** so newer posts win ties. Resources and courses settings are untouched (neither has a custom ranking today; the user is content with both).
-- **Backfill:** `scripts/index-posts.mjs`, mirroring `scripts/index-courses.mjs`, to populate existing news posts once.
+- **Backfill:** `scripts/index-posts.ts`, mirroring `scripts/index-courses.mjs`, run via `tsx` to populate existing news posts once.
 - **Privacy:** only author display name, content and timestamps go to Algolia — no user IDs, no audience data (there is none). Consistent with the existing "no PII to Algolia" rule.
 
 ## 7. Result rows
