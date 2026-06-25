@@ -8,8 +8,45 @@ import {
   kudosSentencePlain,
   kudosNotificationTitle,
   KUDOS_CATEGORIES,
+  shouldIndexPostForSearch,
   type KudosCategory,
 } from "@/lib/intranet";
+
+// =============================================
+// shouldIndexPostForSearch
+// =============================================
+
+describe("shouldIndexPostForSearch", () => {
+  it("indexes a plain news post", () => {
+    expect(
+      shouldIndexPostForSearch({ post_type: "news", is_weekly_roundup: false })
+    ).toBe(true);
+  });
+
+  it("excludes kudos", () => {
+    expect(
+      shouldIndexPostForSearch({ post_type: "kudos", is_weekly_roundup: false })
+    ).toBe(false);
+  });
+
+  it("excludes weekly round-ups even when typed as news", () => {
+    expect(
+      shouldIndexPostForSearch({ post_type: "news", is_weekly_roundup: true })
+    ).toBe(false);
+  });
+
+  it("excludes reserved post types", () => {
+    expect(
+      shouldIndexPostForSearch({ post_type: "announcement", is_weekly_roundup: false })
+    ).toBe(false);
+    expect(
+      shouldIndexPostForSearch({
+        post_type: "tool_shed_postcard",
+        is_weekly_roundup: false,
+      })
+    ).toBe(false);
+  });
+});
 
 // =============================================
 // validateFile

@@ -9,7 +9,13 @@ import {
   ALLOWED_FILE_TYPES,
   isImageType,
   POST_TYPES,
+  shouldIndexPostForSearch,
 } from "@/lib/intranet";
+import {
+  indexPost,
+  removePostFromIndex,
+  resolveSearchAuthorName,
+} from "@/lib/algolia";
 import {
   uploadFileToDrive,
   deleteFileFromDrive,
@@ -718,6 +724,60 @@ export async function fetchRoundupPostsWithClient(
 
 // ─── Post CRUD ───────────────────────────────────────────────────────
 
+/**
+ * Index a post into the global search index when it qualifies as news.
+ * Re-fetches the row so create and edit share one gate; mirrors
+ * `indexCourseIfPublished`. Non-critical: failures are swallowed here and in
+ * `indexPost`, so they never block the post mutation.
+ */
+async function indexPostIfNews(
+  supabase: Awaited<ReturnType<typeof getCurrentUser>>["supabase"],
+  postId: string
+): Promise<void> {
+  try {
+    const { data: post, error } = await supabase
+      .from("posts")
+      .select(
+        "content, post_type, is_weekly_roundup, poll_question, created_at, author:profiles!author_id(full_name, preferred_name)"
+      )
+      .eq("id", postId)
+      .single();
+
+    // Supabase returns errors on the channel rather than throwing, so the
+    // outer try/catch wouldn't see a query failure — log it explicitly so a
+    // missing index entry is debuggable rather than silent.
+    if (error) {
+      logger.warn("Failed to fetch post for search indexing", {
+        postId,
+        error: error.message,
+      });
+      return;
+    }
+    if (!post) return;
+
+    // If the post no longer qualifies as news (e.g. reclassified), drop any
+    // stale record rather than leave it searchable. Mirrors the remove branch
+    // of indexCourseIfPublished.
+    if (!shouldIndexPostForSearch(post)) {
+      await removePostFromIndex(postId);
+      return;
+    }
+
+    await indexPost({
+      postId,
+      content: post.content,
+      pollQuestion: post.poll_question,
+      authorName: resolveSearchAuthorName(post.author),
+      createdAt: post.created_at,
+    });
+  } catch (error) {
+    logger.warn("Failed to index post in Algolia", {
+      postId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function createPost(data: {
   content: string;
   content_json?: TiptapDocument | null;
@@ -781,6 +841,10 @@ export async function createPost(data: {
       error: postError?.message ?? "Failed to create post",
     };
   }
+
+  // Index for global search (news posts only). Content is final at insert,
+  // so this covers every success path below. Non-blocking.
+  await indexPostIfNews(supabase, post.id);
 
   // Insert poll options if this is a poll post
   if (data.poll?.question && data.poll.options.length >= 2 && post) {
@@ -961,6 +1025,9 @@ export async function editPost(
   if (error) {
     return { success: false, error: "Post not found or not authorised to edit" };
   }
+
+  // Re-index for global search (content may have changed). Non-blocking.
+  await indexPostIfNews(supabase, postId);
 
   // Update mentions if content_json is provided
   if (data.content_json) {
@@ -1155,6 +1222,9 @@ export async function deletePost(
     logger.error("Failed to delete post", { error });
     return { success: false, error: "Failed to delete post. Please contact Helpdesk@mcrpathways.org with details of the error if the issue persists." };
   }
+
+  // Drop it from the global search index. Non-blocking.
+  await removePostFromIndex(postId);
 
   // Clean up Drive files after successful DB delete
   if (attachments && attachments.length > 0) {
