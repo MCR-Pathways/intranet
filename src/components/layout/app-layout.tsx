@@ -113,6 +113,7 @@ export function AppLayout({ children, user, profile, initialInboxRows }: AppLayo
         initialInboxRows={initialInboxRows}
         onMenuToggle={toggleMobileMenu}
         onSidebarToggle={toggleSidebar}
+        isCollapsed={isCollapsed}
       />
 
       <div className="flex">

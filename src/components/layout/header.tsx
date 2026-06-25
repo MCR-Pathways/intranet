@@ -23,6 +23,7 @@ import { Settings, LogOut, User, Menu } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database.types";
 import { cn, getInitials, getAvatarColour, filterAvatarUrl } from "@/lib/utils";
+import { CENTRE_COLUMN_WIDTHS } from "@/lib/layout";
 import { logger } from "@/lib/logger";
 import type { InboxRow } from "@/types/notification";
 import { DestructiveMenuItem } from "@/components/ui/destructive-menu-item";
@@ -33,9 +34,20 @@ interface HeaderProps {
   initialInboxRows?: InboxRow[];
   onMenuToggle?: () => void;
   onSidebarToggle?: () => void;
+  // Mirrors AppLayout's sidebar state so the centred search bar tracks the
+  // same offset as <main> and stays lined up over the feed when the sidebar
+  // collapses.
+  isCollapsed?: boolean;
 }
 
-export function Header({ user, profile, initialInboxRows, onMenuToggle, onSidebarToggle }: HeaderProps) {
+export function Header({
+  user,
+  profile,
+  initialInboxRows,
+  onMenuToggle,
+  onSidebarToggle,
+  isCollapsed = false,
+}: HeaderProps) {
   const isInternalStaff = profile?.user_type === "staff" && !profile?.is_external;
 
   const handleSignOut = async () => {
@@ -56,10 +68,10 @@ export function Header({ user, profile, initialInboxRows, onMenuToggle, onSideba
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card">
-      <div className="flex h-16 items-center justify-between">
-        {/* Left side - Hamburger zone (matches sidebar width) + logo */}
-        <div className="flex items-center">
-          {/* Hamburger aligned with sidebar icons — uses same px-3 + px-3 left offset as sidebar items */}
+      <div className="relative flex h-16 items-center">
+        {/* Left — hamburger(s) + logo. Absolute so the centred bar's zone spans
+            the full content width (an in-flow left cluster would shove it). */}
+        <div className="absolute left-0 flex items-center">
           {onSidebarToggle && (
             <Button
               variant="ghost"
@@ -72,7 +84,6 @@ export function Header({ user, profile, initialInboxRows, onMenuToggle, onSideba
               <Menu />
             </Button>
           )}
-          {/* Mobile hamburger */}
           {onMenuToggle && (
             <Button
               variant="ghost"
@@ -85,7 +96,7 @@ export function Header({ user, profile, initialInboxRows, onMenuToggle, onSideba
               <Menu />
             </Button>
           )}
-          <Link href="/intranet" className="flex items-center ml-4 md:ml-4">
+          <Link href="/intranet" className="flex items-center ml-4">
             <Image
               src="/MCR_LOGO-1.svg"
               alt="MCR Pathways"
@@ -96,17 +107,34 @@ export function Header({ user, profile, initialInboxRows, onMenuToggle, onSideba
           </Link>
         </div>
 
-        {/* Right side - Search, notifications, and user menu */}
-        <div className="flex items-center gap-2 pr-4 md:pr-6">
-          {/* Global search */}
-          <GlobalSearch />
+        {/* Centre — search bar. Mirrors <main>'s offset (md:ml-64 / md:ml-16) +
+            container so it centres over the feed column, on every route and in
+            both sidebar states. Hidden below md: the absolute logo + corner
+            clusters would overlap it, and the mobile bar is a deferred pass.
+            See docs/search-bar-redesign.md. */}
+        <div
+          className={cn(
+            "hidden min-w-0 flex-1 md:block",
+            isCollapsed ? "md:ml-16" : "md:ml-64"
+          )}
+        >
+          <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+            <div
+              className="mx-auto"
+              style={{ maxWidth: `${CENTRE_COLUMN_WIDTHS.intranet}px` }}
+            >
+              <GlobalSearch />
+            </div>
+          </div>
+        </div>
 
-          {/* Notifications */}
+        {/* Right — notifications + user menu. Absolute so it doesn't shift the
+            centred bar off the feed's centre. */}
+        <div className="absolute right-0 flex items-center gap-2 pr-4 md:pr-6">
           <div className="relative">
             <NotificationBell initialRows={initialInboxRows} />
           </div>
 
-          {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
