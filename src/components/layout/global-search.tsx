@@ -25,6 +25,7 @@ import type {
 } from "@/lib/algolia";
 import {
   filterResultsByScope,
+  SCOPE_TABS,
   type SearchResults,
   type SearchScope,
 } from "@/lib/search-scope";
@@ -42,13 +43,6 @@ const EMPTY_RESULTS: SearchResults = {
   courses: [],
   news: [],
 };
-
-const SCOPE_TABS: { value: SearchScope; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "resources", label: "Resources" },
-  { value: "courses", label: "Courses" },
-  { value: "news", label: "News" },
-];
 
 // ─── localStorage helpers for recent searches ────────────────────────────────
 
@@ -370,7 +364,12 @@ function GlobalSearchInner() {
                     type="button"
                     // Keep caret focus in the input so arrow-key nav stays live
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setActiveScope(tab.value)}
+                    onClick={() => {
+                      setActiveScope(tab.value);
+                      // Keyboard activation leaves focus on the tab; return it
+                      // to the input so arrow-nav over results resumes.
+                      inputRef.current?.focus();
+                    }}
                     aria-pressed={activeScope === tab.value}
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
