@@ -4,6 +4,10 @@
  * One-off backfill; the runtime keeps the index fresh via the post actions.
  * Shares `buildPostRecord` with the runtime indexer so the two can't drift.
  *
+ * Pages through the table with `.range()` so it indexes every post, not just
+ * the first 1000 PostgREST returns by default. The `.order()` is load-bearing:
+ * range paging without a stable sort can skip or duplicate rows across pages.
+ *
  * Usage (run from project root):
  *   set -a; source .env.local; set +a
  *   npx tsx scripts/index-posts.ts
@@ -34,44 +38,62 @@ if (!ALGOLIA_APP_ID || !ALGOLIA_ADMIN_KEY) {
 const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY);
 const algolia = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY);
 
+// Page size doubles as the Algolia batch size: kept at 500 (well under
+// PostgREST's 1000-row default cap) so a full page of large records stays
+// comfortably under Algolia's per-request size limit.
+const PAGE_SIZE = 500;
+
 async function main() {
-  console.log("Fetching news posts...");
+  console.log("Fetching and indexing news posts...");
 
-  const { data: posts, error } = await supabase
-    .from("posts")
-    .select(
-      "id, content, poll_question, created_at, author:profiles!author_id(full_name, preferred_name)"
-    )
-    .eq("post_type", "news")
-    .eq("is_weekly_roundup", false);
+  let from = 0;
+  let total = 0;
 
-  if (error) {
-    console.error("Failed to fetch posts:", error.message);
-    process.exit(1);
+  for (;;) {
+    const { data: posts, error } = await supabase
+      .from("posts")
+      .select(
+        "id, content, poll_question, created_at, author:profiles!author_id(full_name, preferred_name)"
+      )
+      .eq("post_type", "news")
+      .eq("is_weekly_roundup", false)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("Failed to fetch posts:", error.message);
+      process.exit(1);
+    }
+    if (!posts || posts.length === 0) break;
+
+    const records = posts.map((post) =>
+      buildPostRecord({
+        postId: post.id,
+        content: post.content,
+        pollQuestion: post.poll_question,
+        authorName: resolveSearchAuthorName(post.author),
+        createdAt: post.created_at,
+      })
+    );
+
+    await algolia.saveObjects({
+      indexName: NEWS_INDEX,
+      objects: records as unknown as Record<string, unknown>[],
+    });
+
+    total += records.length;
+    console.log(`Indexed ${records.length} (running total: ${total}).`);
+
+    if (posts.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
-  if (!posts || posts.length === 0) {
+
+  if (total === 0) {
     console.log("No news posts found.");
-    process.exit(0);
+    return;
   }
-
-  console.log(`Found ${posts.length} news posts.`);
-
-  const records = posts.map((post) =>
-    buildPostRecord({
-      postId: post.id,
-      content: post.content ?? "",
-      pollQuestion: post.poll_question,
-      authorName: resolveSearchAuthorName(post.author),
-      createdAt: post.created_at,
-    })
-  );
-
-  console.log(`Indexing ${records.length} posts to Algolia...`);
-  await algolia.saveObjects({
-    indexName: NEWS_INDEX,
-    objects: records as unknown as Record<string, unknown>[],
-  });
-  console.log(`Successfully indexed ${records.length} posts to ${NEWS_INDEX}.`);
+  console.log(`Successfully indexed ${total} posts to ${NEWS_INDEX}.`);
 }
 
 main().catch((err) => {
