@@ -77,6 +77,8 @@ These two docs are only auto-surfaced by a hook when the `frontend-design` skill
 
 **Turbopack aggressively caches CSS custom properties.** After editing `globals.css`, clear `.next/` and restart the dev server. Always hard-refresh (Cmd+Shift+R).
 
+**`100vw` counts the scrollbar — pad `calc()`-based widths that must clear a fixed element.** A `max-width: calc(100vw - Xpx)` on an element that has to clear an absolutely-positioned right-edge cluster (e.g. the centred header search bar clearing the bell/avatar) overshoots on classic, space-taking scrollbars (Windows; some Linux): `100vw` includes the scrollbar, so the element renders ~16px wider than the content box and the gap to the fixed element collapses. A Mac or headless-Chrome harness uses overlay scrollbars (`vw ≈ content`), so it passes locally then collides on a Windows/Chromebook. Two parts: (1) pad the constant for the scrollbar — the header bar uses `calc(100vw - 560px)`, ~20px above the geometric minimum, to absorb it; (2) verify by forcing a classic scrollbar in the spike (`html{overflow-y:scroll} ::-webkit-scrollbar{width:16px}`) and screenshotting the narrow widths, rather than trusting the Mac/headless default. Caught on PR #371 at ~960px, where `calc(100vw - 500px)` collided with the corner cluster by ~3px.
+
 **Use specific sr-only text on row action buttons.** Include the entity name: `Actions for {dept.name}`, not generic "Actions".
 
 ## UI component conventions

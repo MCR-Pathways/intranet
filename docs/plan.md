@@ -74,7 +74,7 @@
 ### Algolia Search
 
 - 3 indices in code: resources_articles, learning_courses, news_posts (#369/#370; tool_shed_entries code references removed with W5)
-- Always-visible global search bar (#370): centred over the feed column, inline cmdk dropdown (the Cmd+K modal is retired), scope tabs (All / Resources / Courses / News), recent searches. Cmd/Ctrl+K focuses the bar; shown at xl+ (narrower-viewport bar deferred).
+- Always-visible global search bar (#370, #371): centred over the feed column, inline cmdk dropdown (the Cmd+K modal is retired), scope tabs (All / Resources / Courses / News), recent searches. Cmd/Ctrl+K focuses the bar. Shrinks to fit from `md` rather than hiding (#371): full feed width when it fits, narrowing once it would reach the corner cluster (the `100vw` calc carries a scrollbar buffer). Sub-768px search and the narrow-width placeholder are deferred to the mobile pass.
 - News posts searchable alongside resources and courses (plain news + polls; kudos and weekly round-ups excluded). Operator backfill pending — see follow-ups below.
 - Faceted course catalogue
 - Deep linking for resources (#sectionSlug)
@@ -128,8 +128,8 @@ These now apply to all future intranet work:
 
   **Open follow-ups (full detail in `memory/search-bar-followups.md`):**
   - **Operator backfill — DONE 2026-06-26:** ran `algolia-settings.mjs` + `index-posts.ts` against prod; the `news_posts` index is configured and backfilled (16 posts, verified searchable). News search is live.
-  - **/resources duplicate search button:** the landing page still renders its own "Search resources..." button, now redundant with the always-visible bar (and inert below xl where the bar is hidden). Reconcile.
-  - **Narrower-viewport search (<xl):** the bar is `xl:block` only — below ~1086px the centred bar collides with the absolute header clusters. Design the mobile/narrow pattern in the deferred responsive pass.
+  - **/resources duplicate search box — DONE #371:** removed the landing page's redundant "Search resources..." box (and its `open-global-search` listener); the page leads with browse-by-category and the header bar owns search.
+  - **Shrink-to-fit instead of hide — DONE #371:** the bar shrinks (`md:block` + `maxWidth: min(590px, calc(100vw - 560px))`) instead of gating to `xl`, so search stays visible across the desktop range. Still deferred to the mobile pass: no search below `md` (768px), and the fixed placeholder clips at 768–900px.
 
 **Adjacent workstreams surfaced during content-migration editorial passes (not yet sequenced):**
 - [ ] **Algolia ranking review: H4 sub-sections outranking H3 parents.** Surfaced during the group-work editorial pass (2026-06-03). A Cmd+K query like "health wellbeing" surfaces the H4 record "Health & Wellbeing Resources" above the H3 theme record "Health & Wellbeing", even though the H3 is the conceptual entry point. Hypothesis: Algolia weights specificity and content length over heading hierarchy. Functionally not broken (H4 takes the user straight to the link list), but a deviation from intuition. Scope: index-settings review in `scripts/algolia-settings.mjs` — tune `customRanking` to weight shorter `sectionHeading` higher, or add an `attributesForRanking` boost for h2/h3 over h4. Small, reversible.

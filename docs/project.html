@@ -1029,7 +1029,7 @@
         "id": "k25",
         "title": "Global search redesign — Gmail-style bar + news posts",
         "tag": "search",
-        "note": "Two PRs: #369 added a news_posts Algolia index plus indexing hooks; #370 replaced the header search icon and modal with an always-visible bar centred over the feed column, surfacing news posts alongside resources and courses with scope tabs. Operator scripts (algolia-settings, index-posts) backfill the index before news appears.",
+        "note": "Two PRs: #369 added a news_posts Algolia index plus indexing hooks; #370 replaced the header search icon and modal with an always-visible bar centred over the feed column, surfacing news posts alongside resources and courses with scope tabs. Operator scripts (algolia-settings, index-posts) backfill the index before news appears. Follow-up #371 shrinks the bar to fit instead of hiding it below xl, and removed a redundant duplicate search box on the /resources landing page.",
         "completedDate": "2026-06-26",
         "prNumber": 370,
         "prUrl": "https://github.com/MCR-Pathways/intranet/pull/370"
@@ -1219,11 +1219,12 @@
       "date": "2026-06-26",
       "prNumber": 370,
       "prUrl": "https://github.com/MCR-Pathways/intranet/pull/370",
-      "summary": "Replaced the header search icon and its Cmd+K modal with an always-visible bar centred over the feed column, dropping results in place. News posts (from #369's news_posts index) now appear alongside resources and courses, narrowable by client-side scope tabs (All / Resources / Courses / News). The cmdk command list moved out of a Radix Dialog into a panel anchored beneath the bar; the bar mirrors main's sidebar offset so it tracks the feed centre in both sidebar states. Shown at xl+ only; below ~1086px the centred bar would collide with the absolutely-positioned header clusters, so narrower-viewport search is a deferred pass.",
+      "summary": "Replaced the header search icon and its Cmd+K modal with an always-visible bar centred over the feed column, dropping results in place. News posts (from #369's news_posts index) now appear alongside resources and courses, narrowable by client-side scope tabs (All / Resources / Courses / News). The cmdk command list moved out of a Radix Dialog into a panel anchored beneath the bar; the bar mirrors main's sidebar offset so it tracks the feed centre in both sidebar states. It shrinks to fit rather than hiding below a breakpoint (#371): full feed width when it fits, narrowing once it would reach the header clusters, shown from md (sub-768px search stays a deferred mobile pass). The same follow-up removed a redundant duplicate search box from the resources landing page.",
       "decisions": [
         "filterResultsByScope is a pure, unit-tested helper; SearchScope derives from a single SCOPE_TABS as-const array so the union can't drift from the tab row.",
         "Dismiss (Esc / click-outside / blur) keeps the typed query; only selecting a result clears it. Empty and loading states key off the active scope, not the total.",
-        "News result HTML is escaped (Algolia highlight via dangerouslySetInnerHTML, raw excerpt as plain text); out-of-order search responses are dropped via a sequence token."
+        "News result HTML is escaped (Algolia highlight via dangerouslySetInnerHTML, raw excerpt as plain text); out-of-order search responses are dropped via a sequence token.",
+        "Shrink-to-fit keeps the bar feed-aligned via a symmetric max-width min(590px, calc(100vw - 560px)); the 560 carries a scrollbar buffer because 100vw counts the scrollbar, which would otherwise let classic Windows scrollbars eat the gap to the corner cluster (#371)."
       ]
     }
   ],
