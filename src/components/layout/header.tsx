@@ -108,13 +108,14 @@ export function Header({
         </div>
 
         {/* Centre — search bar. Mirrors <main>'s offset (md:ml-64 / md:ml-16) +
-            container so it centres over the feed column, on every route and in
-            both sidebar states. Hidden below md: the absolute logo + corner
-            clusters would overlap it, and the mobile bar is a deferred pass.
-            See docs/search-bar-redesign.md. */}
+            container so it centres over the feed column in both sidebar states.
+            Shown at xl+ only: the logo and corner clusters are absolutely
+            positioned (out of flow), so below ~1086px the centred bar collides
+            with them. xl (1280px) clears both with margin; narrower-viewport
+            search is a deferred pass. See docs/search-bar-redesign.md. */}
         <div
           className={cn(
-            "hidden min-w-0 flex-1 transition-[margin] duration-200 md:block",
+            "hidden min-w-0 flex-1 transition-[margin] duration-200 xl:block",
             isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
         >
