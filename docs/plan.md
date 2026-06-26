@@ -73,8 +73,9 @@
 
 ### Algolia Search
 
-- 2 indices in code: resources_articles, learning_courses (tool_shed_entries code references removed with W5; production dashboard deletion is a separate manual step)
-- Global Cmd+K search overlay with recent search management
+- 3 indices in code: resources_articles, learning_courses, news_posts (#369/#370; tool_shed_entries code references removed with W5)
+- Always-visible global search bar (#370): centred over the feed column, inline cmdk dropdown (the Cmd+K modal is retired), scope tabs (All / Resources / Courses / News), recent searches. Cmd/Ctrl+K focuses the bar; shown at xl+ (narrower-viewport bar deferred).
+- News posts searchable alongside resources and courses (plain news + polls; kudos and weekly round-ups excluded). Operator backfill pending — see follow-ups below.
 - Faceted course catalogue
 - Deep linking for resources (#sectionSlug)
 
@@ -123,9 +124,12 @@ These now apply to all future intranet work:
 - [ ] **Digest summary email for pile-up notifications.** Pronto-on-event is already covered by existing Resend triggers. Pile-up scenario (user away for two weeks comes back to N items) needs a separate digest email cadence — single email summarising accumulated items rather than N individual emails. New cron + template work.
 
 **Adjacent workstreams surfaced during W5 planning (not yet sequenced):**
-- [ ] **Unified `intranet_feed` Algolia index** that indexes news posts. Cmd+K now covers `resources_articles` + `learning_courses` only — news posts are not indexed. A unified `intranet_feed` index would extend search to all news posts (Kudos included, and any post types W7 introduces). Scope: new Algolia index + indexing/removal hooks in the intranet actions file + deep-link routing from Cmd+K results. Reversible — easy to add later.
+- [x] **News posts in global search — shipped #369/#370.** A `news_posts` Algolia index (#369) plus indexing/removal hooks in the intranet actions file, surfaced by the always-visible search bar (#370) with a News scope tab and deep-link routing to `/intranet/post/[id]`. Covers plain news + polls; kudos and weekly round-ups are excluded by design. A fully unified `intranet_feed` index (kudos + any W7 post types) stays optional — pick up only if a future post type warrants global findability.
 
-  **Triggers for picking this up:** (1) W7 lands and the composer puts more mixed content in the feed, increasing the surface area Cmd+K should cover; (2) periodic sync after first month of post-launch usage shows search coverage gap matters; (3) we add a third post type that warrants global findability. Until at least one trigger fires, leave Cmd+K covering only resources + courses.
+  **Open follow-ups (full detail in `memory/search-bar-followups.md`):**
+  - **Operator backfill (gates news appearing):** run `node scripts/algolia-settings.mjs` then `npx tsx scripts/index-posts.ts` against prod, or only posts created/edited after the runtime hooks are searchable.
+  - **/resources duplicate search button:** the landing page still renders its own "Search resources..." button, now redundant with the always-visible bar (and inert below xl where the bar is hidden). Reconcile.
+  - **Narrower-viewport search (<xl):** the bar is `xl:block` only — below ~1086px the centred bar collides with the absolute header clusters. Design the mobile/narrow pattern in the deferred responsive pass.
 
 **Adjacent workstreams surfaced during content-migration editorial passes (not yet sequenced):**
 - [ ] **Algolia ranking review: H4 sub-sections outranking H3 parents.** Surfaced during the group-work editorial pass (2026-06-03). A Cmd+K query like "health wellbeing" surfaces the H4 record "Health & Wellbeing Resources" above the H3 theme record "Health & Wellbeing", even though the H3 is the conceptual entry point. Hypothesis: Algolia weights specificity and content length over heading hierarchy. Functionally not broken (H4 takes the user straight to the link list), but a deviation from intuition. Scope: index-settings review in `scripts/algolia-settings.mjs` — tune `customRanking` to weight shorter `sectionHeading` higher, or add an `attributesForRanking` boost for h2/h3 over h4. Small, reversible.

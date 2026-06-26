@@ -1018,12 +1018,6 @@
     ],
     "inProgress": [
       {
-        "id": "k25",
-        "title": "Global search redesign — Gmail-style bar + news posts",
-        "tag": "search",
-        "note": "PR1 (#369) shipped the news_posts Algolia index and indexing hooks; PR2 builds the always-visible centred search bar that surfaces it. Spec: docs/search-bar-redesign.md."
-      },
-      {
         "id": "k12",
         "title": "WordPress to Resources content migration (remaining pages)",
         "tag": "content",
@@ -1031,6 +1025,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k25",
+        "title": "Global search redesign — Gmail-style bar + news posts",
+        "tag": "search",
+        "note": "Two PRs: #369 added a news_posts Algolia index plus indexing hooks; #370 replaced the header search icon and modal with an always-visible bar centred over the feed column, surfacing news posts alongside resources and courses with scope tabs. Operator scripts (algolia-settings, index-posts) backfill the index before news appears.",
+        "completedDate": "2026-06-26",
+        "prNumber": 370,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/370"
+      },
       {
         "id": "k23",
         "title": "Publish LMS-hub courses into the Learning module",
@@ -1209,6 +1212,19 @@
         "Cross-project reads go through a dedicated read-only server client, gated to destinations @> {intranet} published courses, so the intranet can only ever see what was explicitly published to it.",
         "Hub courses reuse the native courses table (source discriminator) rather than a parallel table, so the catalogue, enrolment and certificate paths stay unified."
       ]
+    },
+    {
+      "id": "f6",
+      "title": "Global search bar: always-visible, with news posts and scope tabs",
+      "date": "2026-06-26",
+      "prNumber": 370,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/370",
+      "summary": "Replaced the header search icon and its Cmd+K modal with an always-visible bar centred over the feed column, dropping results in place. News posts (from #369's news_posts index) now appear alongside resources and courses, narrowable by client-side scope tabs (All / Resources / Courses / News). The cmdk command list moved out of a Radix Dialog into a panel anchored beneath the bar; the bar mirrors main's sidebar offset so it tracks the feed centre in both sidebar states. Shown at xl+ only; below ~1086px the centred bar would collide with the absolutely-positioned header clusters, so narrower-viewport search is a deferred pass.",
+      "decisions": [
+        "filterResultsByScope is a pure, unit-tested helper; SearchScope derives from a single SCOPE_TABS as-const array so the union can't drift from the tab row.",
+        "Dismiss (Esc / click-outside / blur) keeps the typed query; only selecting a result clears it. Empty and loading states key off the active scope, not the total.",
+        "News result HTML is escaped (Algolia highlight via dangerouslySetInnerHTML, raw excerpt as plain text); out-of-order search responses are dropped via a sequence token."
+      ]
     }
   ],
   "decisions": [
@@ -1355,6 +1371,15 @@
       "context": "Courses authored in the Sparky tooling live in the mcr-resources (Chat) Supabase project, a separate database from the intranet. Staff need those courses in the intranet Learning catalogue with the intranet's own enrolment and certificates. Copying course bodies across projects on publish would create two sources of truth and a sync problem — every edit in the Chat project would need re-syncing, with drift whenever a sync failed or lagged.",
       "decision": "Publish only a reference, not the content. Migration 00100 adds courses.source (native | hub) and source_course_id; a hub course is a first-class courses row with no native sections or lessons. Bodies are read live from the Chat project at render time through a server-only read-only client (src/lib/chat-content), gated to courses whose destinations array contains 'intranet' and that are published. The Sparky course player was ported into the intranet to render hub content. Enrolment, progress and certificate issuance reuse the native course paths via the source discriminator.",
       "consequences": "The Chat project stays the single source of truth — an edit there shows up in the intranet immediately, no sync job, no drift. The intranet can only ever see courses explicitly published to it (destinations gate), so the cross-project boundary doubles as an access boundary. Cost: a live runtime dependency on a second Supabase project for hub-course rendering (a Chat-project outage degrades hub courses, native courses are unaffected), and the Sparky player now exists in two codebases to keep in step."
+    },
+    {
+      "id": "ADR-017",
+      "title": "Global search is an inline cmdk bar anchored to the content column, not a modal",
+      "date": "2026-06-26",
+      "status": "Accepted",
+      "context": "Global search was a Cmd+K modal (Radix Dialog) hidden behind a header icon, and a directive wanted a Gmail-style always-visible bar. The header is full-width above the sidebar, while the feed it should line up with sits in <main>, offset right by the fixed sidebar and centred within max-w-7xl, so a naive centre in the header lands left of the feed. The absolutely-positioned logo and notification/avatar clusters also leave little room across the top.",
+      "decision": "Retire the Radix Dialog and render cmdk inline: the input is the always-visible bar, the command list a panel anchored beneath it. Centre the bar over the content column by mirroring <main>'s own classes (md:ml-64 / md:ml-16 + container + the 590px centre-column), driven by the same isCollapsed state, rather than centring within the header. Show the bar at xl+ only. A throwaway spike validated the alignment in the real app shell before the component was built.",
+      "consequences": "The bar tracks the feed centre in both sidebar states by construction (it shares the layout tokens rather than eyeballed offsets), and the dropdown overlays the feed. Costs: cmdk hardcodes the input's aria-expanded=true and aria-controls={listId}, so the list stays mounted (hidden when closed) for that reference to resolve and the expanded state can't be corrected; feed-alignment only holds at xl+ because the absolute header clusters collide with the centred bar below ~1086px, so narrower-viewport search is a deferred pass; and the bar's resting fill is bg-muted rather than the inputs-use-bg-card convention, since it sits on the white header where bg-card would be invisible."
     }
   ]
 }
