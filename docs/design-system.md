@@ -56,6 +56,8 @@ Defined in `src/app/globals.css` `:root`:
 
 The surface neutrals (`--secondary`, `--accent`, `--muted`, `--border`/`--input`, `--table-header`) were warmed 2026-06-16 to harmonise with the ivory canvas — an ADR-014 follow-up; they were cool blue-greys from the grey-canvas era, which read cold against warm ivory (docs/colour-rework-audit.md F1). Keep them low-saturation **warm** greys, not beige. Distinct from the Tailwind `gray/*` ramps the status badges (§1.7/1.8) use.
 
+**Header search bar fill.** The global search bar lives on the white (`bg-card`) header, where a `bg-card` fill would read white-on-white. It uses `bg-muted` (#F3F0E7) as a recessed resting fill so it reads as a field, and lifts to `bg-card` on focus with the standard `--ring`. This is a deliberate exception to the "form inputs use `bg-card`" guidance in `.claude/rules/ui-components.md`, which assumes inputs sit on the ivory canvas or inside white cards — the bar sits on white chrome instead. No new token: `--muted` already covers it.
+
 ### 1.3 Semantic Colour Tokens (Dark Mode)
 
 | Token | Value | Notes |

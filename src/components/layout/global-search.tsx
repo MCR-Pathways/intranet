@@ -2,20 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { Command as CommandPrimitive } from "cmdk";
 import {
   Search,
   FileText,
   GraduationCap,
+  Newspaper,
   Clock,
   X,
 } from "lucide-react";
@@ -23,13 +16,20 @@ import {
   getSearchClient,
   RESOURCES_INDEX,
   COURSES_INDEX,
+  NEWS_INDEX,
 } from "@/lib/algolia";
 import type {
   AlgoliaResourceRecord,
   AlgoliaCourseRecord,
+  AlgoliaPostRecord,
 } from "@/lib/algolia";
-import type { Hit } from "@algolia/client-search";
-import { cn, formatDuration } from "@/lib/utils";
+import {
+  filterResultsByScope,
+  SCOPE_TABS,
+  type SearchResults,
+  type SearchScope,
+} from "@/lib/search-scope";
+import { cn, formatDuration, timeAgo } from "@/lib/utils";
 import { getRecentlyViewed } from "@/lib/recently-viewed";
 
 const APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
@@ -38,14 +38,10 @@ const SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY;
 const RECENT_SEARCHES_KEY = "mcr-recent-searches";
 const MAX_RECENT = 5;
 
-interface SearchResults {
-  resources: Hit<AlgoliaResourceRecord>[];
-  courses: Hit<AlgoliaCourseRecord>[];
-}
-
 const EMPTY_RESULTS: SearchResults = {
   resources: [],
   courses: [],
+  news: [],
 };
 
 // ─── localStorage helpers for recent searches ────────────────────────────────
@@ -118,28 +114,44 @@ function GlobalSearchInner() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeScope, setActiveScope] = useState<SearchScope>("all");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<
     Array<{ id: string; title: string; slug: string }>
   >([]);
+  const [isMac, setIsMac] = useState(false);
   const router = useRouter();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Monotonic token guarding against an older in-flight Algolia response
+  // landing after a newer one and overwriting fresher results.
+  const searchSeqRef = useRef(0);
 
-  // Keyboard shortcut: Cmd+K (Mac) / Ctrl+K (Windows/Linux)
+  // Platform-specific shortcut hint (⌘ on Mac, Ctrl elsewhere). Computed after
+  // mount to avoid an SSR/client mismatch; suppressHydrationWarning on the node.
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
+  }, []);
+
+  // Keyboard shortcut: Cmd+K (Mac) / Ctrl+K (Windows/Linux) focuses the bar.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        inputRef.current?.focus();
+        setOpen(true);
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Custom event: allows other components to open search programmatically
+  // Custom event: lets other components open search programmatically
+  // (the resources landing page dispatches it).
   useEffect(() => {
     function handleOpenSearch() {
+      inputRef.current?.focus();
       setOpen(true);
     }
     document.addEventListener("open-global-search", handleOpenSearch);
@@ -147,16 +159,45 @@ function GlobalSearchInner() {
       document.removeEventListener("open-global-search", handleOpenSearch);
   }, []);
 
-  // Load recent searches and recently viewed when dialog opens
+  // While open, close on Escape or a click outside the bar + panel — both keep
+  // the typed query. Document-level so Escape fires wherever focus sits (the
+  // input, a scope tab, a result); cmdk's root keydown has no Escape case.
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        (document.activeElement as HTMLElement | null)?.blur();
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  // Load recent searches + recently viewed, and reset the scope, on open.
   useEffect(() => {
     if (open) {
       setRecentSearches(getRecentSearches());
       setRecentlyViewed(getRecentlyViewed());
+      setActiveScope("all");
     }
   }, [open]);
 
   // Debounced Algolia multi-index search
   useEffect(() => {
+    const seq = ++searchSeqRef.current;
     if (!query || query.length < 2) {
       setResults(EMPTY_RESULTS);
       setIsSearching(false);
@@ -170,17 +211,26 @@ function GlobalSearchInner() {
       try {
         const client = getSearchClient();
         // Query each index individually — if one index doesn't exist yet
-        // (e.g. no courses published), it shouldn't break the others.
-        const [resourcesResult, coursesResult] = await Promise.allSettled([
-          client.searchSingleIndex<AlgoliaResourceRecord>({
-            indexName: RESOURCES_INDEX,
-            searchParams: { query, hitsPerPage: 5 },
-          }),
-          client.searchSingleIndex<AlgoliaCourseRecord>({
-            indexName: COURSES_INDEX,
-            searchParams: { query, hitsPerPage: 5 },
-          }),
-        ]);
+        // (e.g. no courses published, or news not backfilled), it shouldn't
+        // break the others.
+        const [resourcesResult, coursesResult, newsResult] =
+          await Promise.allSettled([
+            client.searchSingleIndex<AlgoliaResourceRecord>({
+              indexName: RESOURCES_INDEX,
+              searchParams: { query, hitsPerPage: 5 },
+            }),
+            client.searchSingleIndex<AlgoliaCourseRecord>({
+              indexName: COURSES_INDEX,
+              searchParams: { query, hitsPerPage: 5 },
+            }),
+            client.searchSingleIndex<AlgoliaPostRecord>({
+              indexName: NEWS_INDEX,
+              searchParams: { query, hitsPerPage: 5 },
+            }),
+          ]);
+        // A newer keystroke superseded this request mid-flight — drop the
+        // stale response rather than overwrite the fresher results.
+        if (seq !== searchSeqRef.current) return;
         setResults({
           resources:
             resourcesResult.status === "fulfilled"
@@ -190,11 +240,12 @@ function GlobalSearchInner() {
             coursesResult.status === "fulfilled"
               ? coursesResult.value.hits
               : [],
+          news: newsResult.status === "fulfilled" ? newsResult.value.hits : [],
         });
       } catch {
-        setResults(EMPTY_RESULTS);
+        if (seq === searchSeqRef.current) setResults(EMPTY_RESULTS);
       } finally {
-        setIsSearching(false);
+        if (seq === searchSeqRef.current) setIsSearching(false);
       }
     }, 200);
 
@@ -210,6 +261,7 @@ function GlobalSearchInner() {
       setOpen(false);
       setQuery("");
       setResults(EMPTY_RESULTS);
+      inputRef.current?.blur();
       // Use window.location.href for hash URLs so the browser scrolls to the target
       if (url.includes("#")) {
         window.location.href = url;
@@ -220,12 +272,10 @@ function GlobalSearchInner() {
     [router, query]
   );
 
-  const handleRecentSelect = useCallback(
-    (search: string) => {
-      setQuery(search);
-    },
-    []
-  );
+  const handleRecentSelect = useCallback((search: string) => {
+    setQuery(search);
+    inputRef.current?.focus();
+  }, []);
 
   const handleClearRecent = useCallback(() => {
     clearRecentSearches();
@@ -237,16 +287,26 @@ function GlobalSearchInner() {
     setRecentSearches((prev) => prev.filter((s) => s !== search));
   }, []);
 
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (!nextOpen) {
-      setQuery("");
-      setResults(EMPTY_RESULTS);
+  // Close when focus leaves the bar + panel entirely (keyboard Tab-out). A
+  // result item isn't focusable, so clicking one blurs the input with a null
+  // relatedTarget — guard on relatedTarget so the click still registers.
+  const handleContainerBlur = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && !containerRef.current?.contains(next)) {
+      setOpen(false);
     }
   }, []);
 
-  const totalResults = results.resources.length + results.courses.length;
+  const shown = filterResultsByScope(results, activeScope);
+  const totalResults =
+    results.resources.length + results.courses.length + results.news.length;
+  // Count within the active scope — the empty/loading states key off this, so
+  // a scope with no matches shows "no results" rather than a blank panel.
+  const shownTotal =
+    shown.resources.length + shown.courses.length + shown.news.length;
   const hasQuery = query.length >= 2;
+  const activeLabel =
+    SCOPE_TABS.find((t) => t.value === activeScope)?.label ?? "All";
 
   // Shared item styles
   const itemClassName =
@@ -257,60 +317,80 @@ function GlobalSearchInner() {
     "px-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground/70";
 
   return (
-    <>
-      {/* Trigger */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setOpen(true)}
-        className="relative"
-      >
-        <Search />
-        <span className="sr-only">Search</span>
-      </Button>
+    <div
+      ref={containerRef}
+      onBlur={handleContainerBlur}
+      className="relative w-full"
+    >
+      <CommandPrimitive shouldFilter={false} className="w-full text-foreground">
+        {/* The bar — recessed warm fill on the white header, lifts to card on focus */}
+        <div className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-input bg-muted px-3.5 transition-colors focus-within:border-ring/40 focus-within:bg-card focus-within:shadow-sm">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <CommandPrimitive.Input
+            ref={inputRef}
+            value={query}
+            onValueChange={setQuery}
+            onFocus={() => setOpen(true)}
+            placeholder="Search resources, courses and news"
+            aria-label="Search resources, courses and news"
+            className="h-full w-full bg-transparent text-sm placeholder:text-muted-foreground !outline-none !ring-0"
+            style={{ outline: "none", boxShadow: "none" }}
+          />
+          {!open && !query && (
+            <kbd
+              suppressHydrationWarning
+              className="pointer-events-none hidden shrink-0 select-none items-center rounded border border-border/70 bg-card px-1.5 font-mono text-[10px] text-muted-foreground/70 sm:inline-flex"
+            >
+              {isMac ? "⌘K" : "Ctrl K"}
+            </kbd>
+          )}
+        </div>
 
-      {/* Dialog */}
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent
+        {/* Anchored dropdown — kept mounted (hidden when closed) so cmdk's
+            aria-controls always resolves to the listbox. cmdk hardcodes the
+            input's aria-expanded; that inline-combobox quirk is unavoidable. */}
+        <div
           className={cn(
-            "overflow-hidden p-0 border-0 max-w-2xl bg-card",
-            "shadow-[0_16px_70px_-12px_rgba(0,0,0,0.3)]",
-            "top-[28%]",
-            "[&>button]:hidden"
+            "absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-border bg-popover shadow-[0_16px_50px_-12px_rgba(0,0,0,0.25)]",
+            !open && "hidden"
           )}
         >
-          <VisuallyHidden.Root>
-            <DialogTitle>Search</DialogTitle>
-            <DialogDescription>
-              Search across resources, courses, and Tool Shed
-            </DialogDescription>
-          </VisuallyHidden.Root>
+            {/* Scope tabs — only when there are results to narrow */}
+            {hasQuery && (
+              <div className="flex items-center gap-1.5 border-b border-border px-3 py-2.5">
+                {SCOPE_TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    // Keep caret focus in the input so arrow-key nav stays live
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setActiveScope(tab.value);
+                      // Keyboard activation leaves focus on the tab; return it
+                      // to the input so arrow-nav over results resumes.
+                      inputRef.current?.focus();
+                    }}
+                    aria-pressed={activeScope === tab.value}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                      activeScope === tab.value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <CommandPrimitive
-            shouldFilter={false}
-            className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-card text-foreground"
-          >
-            {/* Search input */}
-            <div className="flex items-center gap-3 border-b border-border px-4">
-              <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
-              <CommandPrimitive.Input
-                placeholder="Search resources, courses, and insights..."
-                value={query}
-                onValueChange={setQuery}
-                className="flex h-13 w-full bg-transparent py-4 text-[15px] placeholder:text-muted-foreground !outline-none !ring-0"
-                style={{ outline: "none", boxShadow: "none" }}
-              />
-            </div>
-
-            {/* Content */}
-            <CommandPrimitive.List className="max-h-[380px] overflow-y-auto overflow-x-hidden py-1">
+            <CommandPrimitive.List className="max-h-[min(60vh,420px)] overflow-y-auto overflow-x-hidden py-1">
               {/* ─── Initial state: Recent searches or empty ─── */}
               {!hasQuery && !isSearching && (
                 <>
-                  {/* Recently viewed articles (Notion pattern) */}
                   {recentlyViewed.length > 0 && (
                     <CommandPrimitive.Group
-                      heading="Recently Viewed"
+                      heading="Recently viewed"
                       className={groupClassName}
                     >
                       {recentlyViewed.map((item) => (
@@ -336,14 +416,14 @@ function GlobalSearchInner() {
                     </CommandPrimitive.Group>
                   )}
 
-                  {/* Recent search queries */}
                   {recentSearches.length > 0 ? (
                     <CommandPrimitive.Group
                       heading={
                         <span className="flex items-center justify-between">
-                          <span>Recent Searches</span>
+                          <span>Recent searches</span>
                           <button
                             type="button"
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={handleClearRecent}
                             className="text-[11px] font-normal normal-case tracking-normal text-muted-foreground/50 hover:text-foreground transition-colors"
                           >
@@ -366,6 +446,7 @@ function GlobalSearchInner() {
                           </span>
                           <button
                             type="button"
+                            aria-label={`Remove "${search}" from recent searches`}
                             onPointerDown={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -380,27 +461,29 @@ function GlobalSearchInner() {
                     </CommandPrimitive.Group>
                   ) : recentlyViewed.length === 0 ? (
                     <div className="py-10 text-center text-sm text-muted-foreground/50">
-                      Search across resources, courses, and insights
+                      Search across resources, courses and news
                     </div>
                   ) : null}
                 </>
               )}
 
-              {/* ─── Empty results ─── */}
-              {hasQuery && !isSearching && totalResults === 0 && (
-                <CommandPrimitive.Empty className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              {/* ─── Empty results (for the active scope) ─── */}
+              {hasQuery && !isSearching && shownTotal === 0 && (
+                <CommandPrimitive.Empty className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                   <Search className="h-10 w-10 mb-3 opacity-15" />
                   <p className="text-sm font-medium">
                     No results for &ldquo;{query}&rdquo;
                   </p>
                   <p className="text-xs mt-1 text-muted-foreground/60">
-                    Try a different search term
+                    {activeScope !== "all" && totalResults > 0
+                      ? `No matches under ${activeLabel} — try the All tab`
+                      : "Try a different search term"}
                   </p>
                 </CommandPrimitive.Empty>
               )}
 
               {/* ─── Loading ─── */}
-              {hasQuery && isSearching && totalResults === 0 && (
+              {hasQuery && isSearching && shownTotal === 0 && (
                 <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
                   <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
                   Searching...
@@ -408,12 +491,12 @@ function GlobalSearchInner() {
               )}
 
               {/* ─── Resources ─── */}
-              {results.resources.length > 0 && (
+              {shown.resources.length > 0 && (
                 <CommandPrimitive.Group
                   heading="Resources"
                   className={groupClassName}
                 >
-                  {results.resources.map((hit) => (
+                  {shown.resources.map((hit) => (
                     <CommandPrimitive.Item
                       key={hit.objectID}
                       value={hit.objectID}
@@ -469,12 +552,12 @@ function GlobalSearchInner() {
               )}
 
               {/* ─── Courses ─── */}
-              {results.courses.length > 0 && (
+              {shown.courses.length > 0 && (
                 <CommandPrimitive.Group
                   heading="Courses"
                   className={groupClassName}
                 >
-                  {results.courses.map((hit) => (
+                  {shown.courses.map((hit) => (
                     <CommandPrimitive.Item
                       key={hit.objectID}
                       value={hit.objectID}
@@ -515,6 +598,56 @@ function GlobalSearchInner() {
                 </CommandPrimitive.Group>
               )}
 
+              {/* ─── News ─── */}
+              {shown.news.length > 0 && (
+                <CommandPrimitive.Group
+                  heading="News"
+                  className={groupClassName}
+                >
+                  {shown.news.map((hit) => {
+                    const highlighted = (
+                      hit._highlightResult?.excerpt as { value?: string } | undefined
+                    )?.value;
+                    const subtitle = `${hit.authorName} · ${timeAgo(hit.createdAt)}`;
+                    return (
+                      <CommandPrimitive.Item
+                        key={hit.objectID}
+                        value={hit.objectID}
+                        onSelect={() =>
+                          handleSelect(`/intranet/post/${hit.postId}`)
+                        }
+                        className={itemClassName}
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orange-50 text-orange-600">
+                          <Newspaper className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {highlighted ? (
+                            <p
+                              className="truncate font-medium [&_mark]:bg-amber-200/60 [&_mark]:text-foreground [&_mark]:rounded-sm [&_mark]:px-0.5"
+                              title={snippetToPlainText(highlighted)}
+                              dangerouslySetInnerHTML={{ __html: highlighted }}
+                            />
+                          ) : (
+                            <p
+                              className="truncate font-medium"
+                              title={hit.excerpt}
+                            >
+                              {hit.excerpt}
+                            </p>
+                          )}
+                          <p
+                            className="text-xs text-muted-foreground truncate"
+                            title={subtitle}
+                          >
+                            {subtitle}
+                          </p>
+                        </div>
+                      </CommandPrimitive.Item>
+                    );
+                  })}
+                </CommandPrimitive.Group>
+              )}
             </CommandPrimitive.List>
 
             {/* Footer */}
@@ -538,9 +671,8 @@ function GlobalSearchInner() {
                 Close
               </span>
             </div>
-          </CommandPrimitive>
-        </DialogContent>
-      </Dialog>
-    </>
+          </div>
+      </CommandPrimitive>
+    </div>
   );
 }
