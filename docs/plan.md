@@ -127,7 +127,7 @@ These now apply to all future intranet work:
 - [x] **News posts in global search — shipped #369/#370.** A `news_posts` Algolia index (#369) plus indexing/removal hooks in the intranet actions file, surfaced by the always-visible search bar (#370) with a News scope tab and deep-link routing to `/intranet/post/[id]`. Covers plain news + polls; kudos and weekly round-ups are excluded by design. A fully unified `intranet_feed` index (kudos + any W7 post types) stays optional — pick up only if a future post type warrants global findability.
 
   **Open follow-ups (full detail in `memory/search-bar-followups.md`):**
-  - **Operator backfill (gates news appearing):** run `node scripts/algolia-settings.mjs` then `npx tsx scripts/index-posts.ts` against prod, or only posts created/edited after the runtime hooks are searchable.
+  - **Operator backfill — DONE 2026-06-26:** ran `algolia-settings.mjs` + `index-posts.ts` against prod; the `news_posts` index is configured and backfilled (16 posts, verified searchable). News search is live.
   - **/resources duplicate search button:** the landing page still renders its own "Search resources..." button, now redundant with the always-visible bar (and inert below xl where the bar is hidden). Reconcile.
   - **Narrower-viewport search (<xl):** the bar is `xl:block` only — below ~1086px the centred bar collides with the absolute header clusters. Design the mobile/narrow pattern in the deferred responsive pass.
 
