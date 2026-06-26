@@ -147,18 +147,6 @@ function GlobalSearchInner() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Custom event: lets other components open search programmatically
-  // (the resources landing page dispatches it).
-  useEffect(() => {
-    function handleOpenSearch() {
-      inputRef.current?.focus();
-      setOpen(true);
-    }
-    document.addEventListener("open-global-search", handleOpenSearch);
-    return () =>
-      document.removeEventListener("open-global-search", handleOpenSearch);
-  }, []);
-
   // While open, close on Escape or a click outside the bar + panel — both keep
   // the typed query. Document-level so Escape fires wherever focus sits (the
   // input, a scope tab, a result); cmdk's root keydown has no Escape case.

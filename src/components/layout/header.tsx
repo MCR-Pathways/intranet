@@ -109,20 +109,25 @@ export function Header({
 
         {/* Centre — search bar. Mirrors <main>'s offset (md:ml-64 / md:ml-16) +
             container so it centres over the feed column in both sidebar states.
-            Shown at xl+ only: the logo and corner clusters are absolutely
-            positioned (out of flow), so below ~1086px the centred bar collides
-            with them. xl (1280px) clears both with margin; narrower-viewport
-            search is a deferred pass. See docs/search-bar-redesign.md. */}
+            Shrinks to fit instead of hiding: max-width is the feed width (590)
+            whenever that fits, then narrows once the centred bar would reach the
+            absolutely-positioned corner cluster. The 560px in the calc covers the
+            feed offset + corner reserve + gaps, plus a buffer for the scrollbar:
+            100vw counts it, so classic (Windows) scrollbars would otherwise eat
+            the gap to the bell. Shown from md; below that the mobile layout takes
+            over (deferred responsive pass). See docs/search-bar-redesign.md. */}
         <div
           className={cn(
-            "hidden min-w-0 flex-1 transition-[margin] duration-200 xl:block",
+            "hidden min-w-0 flex-1 transition-[margin] duration-200 md:block",
             isCollapsed ? "md:ml-16" : "md:ml-64"
           )}
         >
           <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
             <div
               className="mx-auto"
-              style={{ maxWidth: `${CENTRE_COLUMN_WIDTHS.intranet}px` }}
+              style={{
+                maxWidth: `min(${CENTRE_COLUMN_WIDTHS.intranet}px, calc(100vw - 560px))`,
+              }}
             >
               <GlobalSearch />
             </div>
