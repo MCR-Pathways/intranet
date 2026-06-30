@@ -7,7 +7,7 @@
  * components live in plate-elements.tsx. Media dialogs in media-dialogs.tsx.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PathApi, type Value } from "platejs";
 import {
   Plate,
@@ -278,6 +278,7 @@ function InsertBlockDropdown({
 
 interface EditorToolbarProps {
   editor: NonNullable<ReturnType<typeof usePlateEditor>>;
+  rightSlot?: ReactNode;
   onOpenImageDialog: () => void;
   onOpenEmbedDialog: () => void;
   onOpenFileDialog: () => void;
@@ -286,6 +287,7 @@ interface EditorToolbarProps {
 
 function EditorToolbar({
   editor,
+  rightSlot,
   onOpenImageDialog,
   onOpenEmbedDialog,
   onOpenFileDialog,
@@ -298,7 +300,7 @@ function EditorToolbar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5">
+    <div className="sticky top-16 z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-2 py-1.5">
       {/* Marks */}
       <Toggle size="sm" onMouseDown={prevent(() => editor.tf.bold.toggle())} aria-label="Bold">
         <Bold className="h-4 w-4" />
@@ -372,6 +374,10 @@ function EditorToolbar({
         onOpenFileDialog={onOpenFileDialog}
         onOpenImportHtmlDialog={onOpenImportHtmlDialog}
       />
+
+      {rightSlot && (
+        <div className="ml-auto flex items-center gap-2">{rightSlot}</div>
+      )}
     </div>
   );
 }
@@ -394,6 +400,8 @@ interface PlateEditorProps {
   articleId: string;
   /** Additional className for the editor container */
   className?: string;
+  /** Rendered at the right end of the sticky toolbar (e.g. Save/Publish controls) */
+  rightSlot?: ReactNode;
 }
 
 export function PlateRichEditor({
@@ -401,6 +409,7 @@ export function PlateRichEditor({
   onChange,
   articleId,
   className,
+  rightSlot,
 }: PlateEditorProps) {
   const onChangeRef = useRef(onChange);
   const articleIdRef = useRef(articleId);
@@ -643,10 +652,11 @@ export function PlateRichEditor({
   );
 
   return (
-    <div className={cn("rounded-lg border border-input bg-card overflow-hidden", className)}>
+    <div className={cn("rounded-lg border border-input bg-card overflow-clip", className)}>
       <Plate editor={editor} onValueChange={handleValueChange}>
         <EditorToolbar
           editor={editor}
+          rightSlot={rightSlot}
           onOpenImageDialog={() => setShowImageDialog(true)}
           onOpenEmbedDialog={() => setShowEmbedDialog(true)}
           onOpenFileDialog={() => setShowFileDialog(true)}
