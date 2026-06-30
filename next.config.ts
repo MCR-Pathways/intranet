@@ -64,14 +64,18 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // CSP: Enforcing. unsafe-eval omitted in production (only needed for
-          // React error stack debugging in dev). Remaining roadmap: replace
-          // 'unsafe-inline' with nonce-based CSP via proxy.ts when the performance
-          // trade-off (forced dynamic rendering) is acceptable.
+          // CSP: Enforcing. `'unsafe-eval'` is added in development only —
+          // React's dev runtime needs it (stack reconstruction / debugging) and
+          // without it the dev bundle fails and reloads in a loop. Production
+          // omits it (the string is byte-identical to before). Remaining
+          // roadmap: replace 'unsafe-inline' with nonce-based CSP via proxy.ts
+          // when the performance trade-off (forced dynamic rendering) is acceptable.
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net; img-src 'self' blob: data: https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-src 'self' https://docs.google.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'",
+              `default-src 'self'; script-src 'self' 'unsafe-inline'${
+                process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""
+              }; style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net; img-src 'self' blob: data: https://*.googleusercontent.com; connect-src 'self' https://*.supabase.co https://*.algolia.net https://*.algolianet.com; font-src 'self' https://use.typekit.net https://p.typekit.net; frame-src 'self' https://docs.google.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; frame-ancestors 'none'`,
           },
         ],
       },
