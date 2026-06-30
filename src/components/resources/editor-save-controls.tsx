@@ -59,6 +59,7 @@ export function EditorSaveControls({
           View / Unpublish = outline (navigation / step-back); Publish =
           success (high-stakes positive). */}
       <Button
+        type="button"
         onClick={onSave}
         disabled={saveStatus === "saving" || isPublishPending}
         aria-busy={saveStatus === "saving"}
@@ -71,6 +72,7 @@ export function EditorSaveControls({
       </Button>
       {isPublished ? (
         <Button
+          type="button"
           variant="outline"
           onClick={onPublishToggle}
           disabled={isPublishPending || saveStatus === "saving"}
@@ -81,6 +83,7 @@ export function EditorSaveControls({
         </Button>
       ) : (
         <Button
+          type="button"
           variant="success"
           onClick={onPublishToggle}
           disabled={isPublishPending || saveStatus === "saving"}
