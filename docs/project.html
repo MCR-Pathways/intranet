@@ -1026,6 +1026,22 @@
     ],
     "done": [
       {
+        "id": "k26",
+        "title": "Sticky editor toolbar for resources articles",
+        "tag": "ui",
+        "completedDate": "2026-06-30",
+        "prNumber": 373,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/373"
+      },
+      {
+        "id": "k27",
+        "title": "Dev-only CSP: allow unsafe-eval to fix the dev reload loop",
+        "tag": "infra",
+        "completedDate": "2026-06-30",
+        "prNumber": 372,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/372"
+      },
+      {
         "id": "k25",
         "title": "Global search redesign — Gmail-style bar + news posts",
         "tag": "search",
@@ -1225,6 +1241,19 @@
         "Dismiss (Esc / click-outside / blur) keeps the typed query; only selecting a result clears it. Empty and loading states key off the active scope, not the total.",
         "News result HTML is escaped (Algolia highlight via dangerouslySetInnerHTML, raw excerpt as plain text); out-of-order search responses are dropped via a sequence token.",
         "Shrink-to-fit keeps the bar feed-aligned via a symmetric max-width min(590px, calc(100vw - 560px)); the 560 carries a scrollbar buffer because 100vw counts the scrollbar, which would otherwise let classic Windows scrollbars eat the gap to the corner cluster (#371)."
+      ]
+    },
+    {
+      "id": "f7",
+      "title": "Sticky editor toolbar for native articles",
+      "date": "2026-06-30",
+      "prNumber": 373,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/373",
+      "summary": "Editing a long resources article pushed the Save and Publish controls off the top of the screen, so editors had to scroll back up to save. The native-article editor toolbar is now one bar pinned below the app header: format tools on the left, Save / View / Publish on the right, reachable at any scroll depth. First of five PRs in the resources redesign.",
+      "decisions": [
+        "Save / View / Publish extracted into a presentational EditorSaveControls component fed into a new toolbar rightSlot, so the toolbar stays reusable rather than hard-coding article controls.",
+        "Pinned at top-16, below the 64px app header, not top-0 (which would park it behind the header).",
+        "Editor card uses overflow-clip, not overflow-hidden, to keep the rounded-corner clip without the scroll container that breaks position: sticky."
       ]
     }
   ],
