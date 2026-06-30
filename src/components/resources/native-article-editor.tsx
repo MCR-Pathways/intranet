@@ -11,9 +11,9 @@
 import { createElement, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, AlertTriangle, Save, Send, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { PlateRichEditor, EMPTY_PLATE_VALUE } from "./plate-editor";
+import { EditorSaveControls } from "./editor-save-controls";
 import { PublishConfirmDialog } from "./publish-confirm-dialog";
 import {
   saveNativeArticle,
@@ -165,85 +165,23 @@ export function NativeArticleEditor({
         </div>
       )}
 
-      {/* Header with breadcrumbs + save status */}
-      <div className="flex items-center justify-between">
-        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link
-            href={`/resources/article/${article.slug}`}
-            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to article
-          </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="inline-flex items-center gap-1.5">
-            {createElement(resolveIcon(category.icon), {
-              className: cn("h-3.5 w-3.5", iconFg),
-            })}
-            {category.name}
-          </span>
-        </nav>
-
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {saveStatus === "saving" && (
-            <span className="inline-flex items-center gap-1">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Saving...
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="inline-flex items-center gap-1 text-emerald-600">
-              <Check className="h-3.5 w-3.5" />
-              Saved
-            </span>
-          )}
-          {saveStatus === "error" && (
-            <span className="inline-flex items-center gap-1 text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Failed to save — retrying...
-            </span>
-          )}
-
-          {/* Save: navy `default` per docs/button-system.md
-              ("Save, Submit, Continue, Create, Add..."). Auto-save runs
-              every 5s; the manual button is the explicit-commit affordance. */}
-          <Button
-            onClick={handleManualSave}
-            disabled={saveStatus === "saving"}
-          >
-            <Save />
-            Save
-          </Button>
-          {/* View article: navigation away from the editor — outline. */}
-          <Button variant="outline" asChild>
-            <Link href={`/resources/article/${article.slug}`}>
-              View article
-            </Link>
-          </Button>
-          {/* Publish: green `success` per the doc ("Publish (article,
-              course, post)"). Unpublish is a step-back, not a commit
-              forward, so outline matching View article. */}
-          {isPublished ? (
-            <Button
-              variant="outline"
-              onClick={() => setPublishOpen(true)}
-              disabled={isPublishPending}
-            >
-              <EyeOff />
-              Unpublish
-            </Button>
-          ) : (
-            <Button
-              variant="success"
-              onClick={() => setPublishOpen(true)}
-              disabled={isPublishPending}
-            >
-              <Send />
-              Publish
-            </Button>
-          )}
-        </div>
-      </div>
+      {/* Breadcrumb — scrolls away; the controls live in the sticky toolbar */}
+      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link
+          href={`/resources/article/${article.slug}`}
+          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to article
+        </Link>
+        <span className="text-muted-foreground/50">/</span>
+        <span className="inline-flex items-center gap-1.5">
+          {createElement(resolveIcon(category.icon), {
+            className: cn("h-3.5 w-3.5", iconFg),
+          })}
+          {category.name}
+        </span>
+      </nav>
 
       <PublishConfirmDialog
         open={publishOpen}
@@ -264,6 +202,16 @@ export function NativeArticleEditor({
         initialValue={initialValue}
         onChange={handleChange}
         articleId={article.id}
+        rightSlot={
+          <EditorSaveControls
+            saveStatus={saveStatus}
+            onSave={handleManualSave}
+            viewHref={`/resources/article/${article.slug}`}
+            isPublished={isPublished}
+            onPublishToggle={() => setPublishOpen(true)}
+            isPublishPending={isPublishPending}
+          />
+        }
       />
     </div>
   );
