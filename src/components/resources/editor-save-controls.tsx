@@ -30,25 +30,30 @@ export function EditorSaveControls({
   isPublishPending,
 }: EditorSaveControlsProps) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-      {saveStatus === "saving" && (
-        <span className="inline-flex items-center gap-1">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Saving...
-        </span>
-      )}
-      {saveStatus === "saved" && (
-        <span className="inline-flex items-center gap-1 text-emerald-600">
-          <Check className="h-3.5 w-3.5" />
-          Saved
-        </span>
-      )}
-      {saveStatus === "error" && (
-        <span className="inline-flex items-center gap-1 text-destructive">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          Failed to save — retrying...
-        </span>
-      )}
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      {/* aria-live is scoped to the status messages only, so button-state
+          changes aren't announced. The status icons are decorative (the
+          adjacent text conveys the state), so they're aria-hidden. */}
+      <div aria-live="polite" className="flex items-center gap-2">
+        {saveStatus === "saving" && (
+          <span className="inline-flex items-center gap-1">
+            <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+            Saving...
+          </span>
+        )}
+        {saveStatus === "saved" && (
+          <span className="inline-flex items-center gap-1 text-emerald-600">
+            <Check aria-hidden="true" className="h-3.5 w-3.5" />
+            Saved
+          </span>
+        )}
+        {saveStatus === "error" && (
+          <span className="inline-flex items-center gap-1 text-destructive">
+            <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />
+            Failed to save — retrying...
+          </span>
+        )}
+      </div>
 
       {/* Variants per docs/button-system.md: Save = default (primary commit);
           View / Unpublish = outline (navigation / step-back); Publish =
