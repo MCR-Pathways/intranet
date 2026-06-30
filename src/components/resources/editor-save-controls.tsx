@@ -30,7 +30,7 @@ export function EditorSaveControls({
   isPublishPending,
 }: EditorSaveControlsProps) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
       {saveStatus === "saving" && (
         <span className="inline-flex items-center gap-1">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -53,7 +53,11 @@ export function EditorSaveControls({
       {/* Variants per docs/button-system.md: Save = default (primary commit);
           View / Unpublish = outline (navigation / step-back); Publish =
           success (high-stakes positive). */}
-      <Button onClick={onSave} disabled={saveStatus === "saving"}>
+      <Button
+        onClick={onSave}
+        disabled={saveStatus === "saving" || isPublishPending}
+        aria-busy={saveStatus === "saving"}
+      >
         <Save />
         Save
       </Button>
@@ -61,12 +65,22 @@ export function EditorSaveControls({
         <Link href={viewHref}>View article</Link>
       </Button>
       {isPublished ? (
-        <Button variant="outline" onClick={onPublishToggle} disabled={isPublishPending}>
+        <Button
+          variant="outline"
+          onClick={onPublishToggle}
+          disabled={isPublishPending || saveStatus === "saving"}
+          aria-busy={isPublishPending}
+        >
           <EyeOff />
           Unpublish
         </Button>
       ) : (
-        <Button variant="success" onClick={onPublishToggle} disabled={isPublishPending}>
+        <Button
+          variant="success"
+          onClick={onPublishToggle}
+          disabled={isPublishPending || saveStatus === "saving"}
+          aria-busy={isPublishPending}
+        >
           <Send />
           Publish
         </Button>

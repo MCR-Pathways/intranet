@@ -32,4 +32,16 @@ describe("EditorSaveControls", () => {
     render(<EditorSaveControls {...base} saveStatus="saving" />);
     expect(screen.getByText("Save").closest("button")).toBeDisabled();
   });
+
+  it("shows the error status when saving fails", () => {
+    render(<EditorSaveControls {...base} saveStatus="error" />);
+    expect(screen.getByText("Failed to save — retrying...")).toBeInTheDocument();
+  });
+
+  it("cross-disables Save during a publish and Publish during a save", () => {
+    const { rerender } = render(<EditorSaveControls {...base} isPublishPending />);
+    expect(screen.getByText("Save").closest("button")).toBeDisabled();
+    rerender(<EditorSaveControls {...base} saveStatus="saving" />);
+    expect(screen.getByText("Publish").closest("button")).toBeDisabled();
+  });
 });
