@@ -11,7 +11,9 @@
 import { useCallback, useState } from "react";
 import { FileText, Link as LinkIcon, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -29,8 +31,8 @@ interface ArticleResult {
 }
 
 interface ArticleLinkPopoverProps {
-  /** Called when an article is selected. Receives the intranet URL and title. */
-  onInsertLink: (url: string, title: string) => void;
+  /** Called when an article is selected. Receives the intranet URL, title, and whether to render it as a card. */
+  onInsertLink: (url: string, title: string, displayAsCard: boolean) => void;
 }
 
 export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
@@ -38,6 +40,7 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ArticleResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [asCard, setAsCard] = useState(false);
 
   const search = useDebouncedCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -61,12 +64,13 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
   const handleSelect = useCallback(
     (article: ArticleResult) => {
       const articleUrl = `/resources/article/${article.slug}`;
-      onInsertLink(articleUrl, article.title);
+      onInsertLink(articleUrl, article.title, asCard);
       setOpen(false);
       setQuery("");
       setResults([]);
+      setAsCard(false);
     },
-    [onInsertLink]
+    [onInsertLink, asCard]
   );
 
   return (
@@ -95,6 +99,19 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
               // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the search field when the user opens this popover
               autoFocus
             />
+          </div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <Checkbox
+              id="link-as-card"
+              checked={asCard}
+              onCheckedChange={(v) => setAsCard(v === true)}
+            />
+            <Label
+              htmlFor="link-as-card"
+              className="text-sm font-normal text-muted-foreground cursor-pointer"
+            >
+              Display as a card
+            </Label>
           </div>
         </div>
 

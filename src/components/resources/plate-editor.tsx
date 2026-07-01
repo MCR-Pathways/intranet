@@ -351,12 +351,13 @@ function EditorToolbar({
 
       {/* Article link */}
       <ArticleLinkPopover
-        onInsertLink={(url, title) => {
+        onInsertLink={(url, title, displayAsCard) => {
           editor.tf.insertNodes(
             {
               type: "a",
               url,
               children: [{ text: title }],
+              ...(displayAsCard && { displayAsCard: true }),
             },
             { select: true }
           );
