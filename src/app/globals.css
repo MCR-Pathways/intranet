@@ -1,10 +1,24 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Class-based dark variant. The `.dark` token block below is class-scoped, so
+   `dark:` utilities must be too. Without this, Tailwind v4 defaults the `dark:`
+   variant to the `prefers-color-scheme: dark` media query, which fires dark
+   colours over this light-only page on any dark-OS browser (the tokens stay
+   light because they're gated on `.dark`, which is never set — so only the raw
+   `dark:` utilities leak). Gating the variant on `.dark` keeps every `dark:`
+   utility dormant until a real theme toggle sets the class. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* MCR Pathways Design System */
 /* TT Commons Pro font from Adobe Fonts */
 
 :root {
+  /* Light-only app. Declares light rendering for native controls (scrollbars,
+     <select>, date/time pickers) so they don't adopt dark OS chrome on a
+     dark-mode browser. `.dark` sets `dark` below, ready for a future toggle. */
+  color-scheme: light;
+
   /* MCR Brand Colors */
   --mcr-dark-blue: #213350;
   --mcr-light-blue: #5BC6E9;
@@ -83,6 +97,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: hsl(210, 50%, 8%);
   --foreground: hsl(210, 20%, 95%);
   --card: hsl(210, 50%, 12%);
