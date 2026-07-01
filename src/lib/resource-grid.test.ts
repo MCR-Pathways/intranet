@@ -66,6 +66,11 @@ describe("resolveResourceCell", () => {
     expect(c.newTab).toBe(true);
   });
 
+  it("a link with whitespace-only text falls back to the URL as the name", () => {
+    const c = resolveResourceCell(linkPara("/resources/article/x", "   "))!;
+    expect(c.name).toBe("/resources/article/x");
+  });
+
   it("returns null for a non-cell node", () => {
     expect(resolveResourceCell({ type: "p", children: [{ text: "just prose" }] })).toBeNull();
   });
@@ -86,6 +91,10 @@ describe("isResourceCell", () => {
   it("a link inside a sentence is not a cell", () => {
     const inline = { type: "p", children: [{ text: "see " }, { type: "a", url: "/x", children: [{ text: "here" }] }, { text: " for more" }] };
     expect(isResourceCell(inline)).toBe(false);
+  });
+  it("a paragraph with another inline element beside a link is not a standalone cell", () => {
+    const mixed = { type: "p", children: [{ type: "inline_code", children: [{ text: "x" }] }, { type: "a", url: "/x", children: [{ text: "here" }] }] };
+    expect(isResourceCell(mixed)).toBe(false);
   });
 });
 

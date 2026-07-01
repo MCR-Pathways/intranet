@@ -100,8 +100,10 @@ function plateText(node: Node): string {
 /** The single link inside a standalone-link paragraph, or null. */
 function standaloneLink(node: Node): Node | null {
   if (node.type !== "p") return null;
+  // Keep any element node (so a non-link element disqualifies the paragraph) or
+  // non-blank text; drop the empty text nodes Plate pads inline content with.
   const kids = ((node.children as Node[]) ?? []).filter(
-    (c) => c.type === "a" || (typeof c.text === "string" && c.text.trim() !== ""),
+    (c) => typeof c.type === "string" || (typeof c.text === "string" && c.text.trim() !== ""),
   );
   return kids.length === 1 && kids[0].type === "a" ? kids[0] : null;
 }
@@ -131,7 +133,7 @@ export function resolveResourceCell(
   if (!link) return null;
   const url = (link.url as string) ?? "";
   return {
-    name: plateText(link) || url,
+    name: plateText(link).trim() || url,
     href: url,
     newTab: isProxyDocument(url) || !isInternalUrl(url),
     config: resolveResourceType(node),
@@ -144,15 +146,18 @@ export function isResourceCell(node: Node): boolean {
   return standaloneLink(node) !== null;
 }
 
+/** A run of this many consecutive resource cells renders as a grid. */
+const MIN_GRID_RUN = 4;
+
 /**
- * Wrap runs of 4+ consecutive resource cells in a `resource_grid` node.
+ * Wrap runs of MIN_GRID_RUN+ consecutive resource cells in a `resource_grid` node.
  * Returns a new top-level array; never mutates the input (render-only).
  */
 export function groupResourceGrids(value: Value): Value {
   const out: Value = [];
   let run: Value = [];
   const flush = () => {
-    if (run.length >= 4) {
+    if (run.length >= MIN_GRID_RUN) {
       out.push({ type: "resource_grid", children: run } as unknown as Value[number]);
     } else {
       out.push(...run);
@@ -170,9 +175,19 @@ export function groupResourceGrids(value: Value): Value {
   return out;
 }
 
-/** True if the value contains at least one run that would render as a grid. */
+/**
+ * True if the value contains at least one run that would render as a grid.
+ * O(N) with O(1) memory and an early return — this runs on every keystroke via
+ * the editor hint, so it must not allocate the grouped tree groupResourceGrids builds.
+ */
 export function hasResourceGridRun(value: Value): boolean {
-  return groupResourceGrids(value).some(
-    (n) => (n as Record<string, unknown>).type === "resource_grid",
-  );
+  let run = 0;
+  for (const node of value) {
+    if (isResourceCell(node as Node)) {
+      if (++run >= MIN_GRID_RUN) return true;
+    } else {
+      run = 0;
+    }
+  }
+  return false;
 }
