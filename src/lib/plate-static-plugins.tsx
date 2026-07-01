@@ -9,6 +9,7 @@
  * to avoid duplication between the two consumers.
  */
 
+import { createElement } from "react";
 import type { Value } from "platejs";
 import {
   createStaticEditor,
@@ -39,6 +40,7 @@ import {
   BaseTableCellHeaderPlugin,
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
+import { resolveResourceCell, groupResourceGrids } from "./resource-grid";
 import {
   createSlugDeduplicator,
   slugifyHeading,
@@ -405,6 +407,49 @@ function FileStatic({ children, element, attributes }: SlateElementProps) {
   );
 }
 
+/**
+ * Content-aware resource grid (§2). Render-only: `groupResourceGrids`
+ * (browser path) wraps runs of 4+ `file`/standalone-link cells in a
+ * `resource_grid` node. This reads the raw child nodes and renders each as a
+ * Direction-A card with a Style-C type chip — it deliberately does NOT render
+ * the default `children`, so the file/link nodes become tiles rather than
+ * their inline forms. Never on the Algolia path, so indexing is unaffected.
+ */
+function ResourceGrid({ element, attributes }: SlateElementProps) {
+  const cells = ((element as Record<string, unknown>).children as Record<string, unknown>[]) ?? [];
+  return (
+    // eslint-disable-next-line jsx-a11y/no-redundant-roles -- list-none removes the implicit list role in Safari/VoiceOver; role="list" restores it
+    <ul
+      {...attributes}
+      role="list"
+      className="not-prose my-5 grid list-none grid-cols-2 gap-3 pl-0 lg:grid-cols-3"
+    >
+      {cells.map((cell, i) => {
+        const info = resolveResourceCell(cell);
+        if (!info) return null;
+        const { name, href, newTab, config } = info;
+        const Icon = config.Icon;
+        return (
+          <li key={`${i}-${href}`} className="m-0">
+            <a
+              href={href}
+              {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              className="flex h-full items-center gap-3 rounded-lg border border-border bg-card p-3 no-underline transition-colors hover:border-primary/40 hover:bg-muted/40"
+            >
+              <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                {createElement(Icon, { className: "h-5 w-5" })}
+              </span>
+              <span className="min-w-0 text-sm font-medium leading-snug text-foreground">
+                {name}
+              </span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 // =============================================
 // TOGGLE
 // =============================================
@@ -591,6 +636,11 @@ const BaseToggleV2SummaryPlugin = createSlatePlugin({
   node: { isElement: true },
 });
 
+const BaseResourceGridPlugin = createSlatePlugin({
+  key: "resource_grid",
+  node: { isElement: true },
+});
+
 // Static-only glossary plugins (no editor transforms — the read/Algolia
 // editors don't edit). The interactive transforms live in plate-glossary.ts.
 const BaseGlossaryStaticPlugin = createSlatePlugin({ key: "glossary", node: { isElement: true } });
@@ -621,6 +671,7 @@ const staticPlugins = [
   BaseIndentPlugin,
   BaseToggleV2Plugin,
   BaseToggleV2SummaryPlugin,
+  BaseResourceGridPlugin,
   BaseGlossaryStaticPlugin,
   BaseGlossaryEntryStaticPlugin,
   BaseGlossaryTermStaticPlugin,
@@ -647,6 +698,7 @@ const staticComponents = {
   img: ImageStatic,
   media_embed: MediaEmbedStatic,
   file: FileStatic,
+  resource_grid: ResourceGrid,
   toggle_v2_summary: ToggleSummaryStatic,
   glossary: GlossaryStatic,
   glossary_entry: GlossaryEntryStatic,
@@ -857,7 +909,8 @@ export function prepareNativeArticle(value: Value): {
   headings: ArticleHeading[];
 } {
   const { value: processed, headings } = addHeadingIds(value);
-  const withStableIds = addStableNodeIds(processed);
+  const grouped = groupResourceGrids(processed);
+  const withStableIds = addStableNodeIds(grouped);
 
   const editor = createStaticEditor({
     plugins: staticPlugins,

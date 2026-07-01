@@ -1,7 +1,7 @@
 # Resources redesign — design spec
 
 **Date:** 2026-06-30
-**Status:** Awaiting review. No feature code until this is approved.
+**Status:** Approved and in build. §1 (sticky toolbar) shipped via #373. §2 settled 2026-06-30 — Direction A cell, grids files and standalone links, no lightbox; the chip is a single document treatment, not per-type colour (amended 2026-07-01, see §2 below); accessibility of Workspace links is a parked follow-on; §3–§4 unchanged from the original spec.
 **Visual companion:** the MCR plan page (private): https://zip.mcrpathways.org/resources-redesign-plan.html
 
 ## Goal
@@ -19,10 +19,13 @@ Everything below was verified against the live code (2026-06-29/30). The brief's
 
 - **Render-time guardrail.** We accept render-time transformation of stored content, bounded: every such transform must be presentation-only (it never changes what is stored, indexed, or anchored) and previewable by the editor. We don't add more render magic beyond the grid and promotion without meeting that bar.
 - **§1** One sticky bar (format tools + Save/View/Publish), not two stacked bars. Built via a right-hand slot on the editor toolbar.
-- **§2** The grid is auto-detected (no author opt-out for now). Threshold is 4 consecutive resource cells.
+- **§2** Detector targets **`file` nodes and standalone links** (build-loop decision 2026-06-30; supersedes the earlier files-only call, once we recognised MCR's resources are largely Google Workspace links, not uploaded files). A resource cell is a `file` void node, or a paragraph whose only meaningful child is a single link. A link **inside a sentence** stays inline prose via `LinkStatic`; only a link **on its own line** becomes a tile. A run of 4+ consecutive cells auto-grids.
 - **§2** Collapsible themes are **cut**. The reading rail (§4) handles navigation.
-- **§2** Grid cells are typed by URL, reusing `FileStatic` logic: proxy files (PDF/image/text) open the lightbox; Office docs and external links open a new tab with the ↗.
-- **§2** Lightbox scope = **grid only** (Option A). Prose links and file-attachment blocks keep today's new-tab behaviour.
+- **§2** Cell = **Direction A** with a **uniform document chip**: a white bordered card, a `bg-red-50`/`text-red-700` chip (the file-type document red from `file-types.ts`) holding a per-type Lucide glyph on the left, the name at medium weight (500)/15px with the extension stripped, **no "kind" label**, no `↗` and no "(external)"/"opens here" text. *Amended 2026-07-01: the original per-type chip colour was cut — see the amendment note below.*
+- **§2** Type taxonomy: **PDF / file types** from the filename extension via `resolveFileType`; **Google Doc / Sheet / Slides / Form / Drive** from the link URL; **internal page** from an app-origin or relative URL; **external** otherwise. Glyphs are Lucide-style (no third-party logo art embedded).
+- **§2** Open behaviour: file cells → the Drive proxy (`<a target="_blank">`; PDFs/images inline, others download); link cells → their own href (internal → same tab, external/Google → new tab). **No lightbox** — resources files are service-account-served, so the news-feed's Drive `/preview` model doesn't apply.
+- **§2** Accessibility is **not** §2's job. The grid is a visual re-layout — it neither fixes nor regresses reachability. PDFs (proxy) and internal Google-Doc articles are already accessible to Google-blocked staff; a raw Google/external tile is exactly as reachable as the same link was inline. Serving Workspace docs through the intranet so those tiles open an intranet copy is the **parked** follow-on (see roadmap), not §2.
+- **§2 amendment (2026-07-01): uniform chip, not per-type colour.** The build first tinted each type (Doc blue, Sheet green, PDF red, and so on, mirroring `file-types.ts`). On the real hub pages nearly every resource is the same type, so a full grid rendered as a wall of identical loud chips: colour with nothing to contrast against carries no signal. The chip is now a single muted document treatment (`bg-red-50`/`text-red-700`, the file-type document red), with type conveyed by the Lucide glyph alone. `ResourceTypeConfig` keeps `{ key, label, Icon }` only (no `bgClass`/`fgClass`). Proxied Drive files (`/api/drive-file/…`) classify as a `document` type (FileText glyph, new tab), since they are documents served through the intranet, not page links. A prerequisite fix (#374) landed first: Tailwind v4's `dark:` variant was firing from the OS colour-scheme on dark-mode machines, so the light chip colours were not even visible during tuning.
 - **§3** Promote any folder with exactly one **published** article. Drafts in a promoted folder stay reachable via `/resources/drafts` and the admin audit. No per-folder override.
 - **§4** Active marker = teal text + a 3px teal left bar + bolder weight, with a bold "On this page" label (colour + weight, belt-and-braces).
 - **§4** The rail shows all headings, **H2 + H3 only** (never H4), with scroll-spy. No expand/collapse — matches React.dev and MDN.
@@ -62,22 +65,30 @@ A11y: the toolbar stays keyboard-reachable; the bubble, if built, dismisses on E
 ### Problem
 Article bodies are capped at `max-w-[720px]` (`article-constants.ts:18`, plus inlined in `native-article-view.tsx:243` and `google-doc-article-view.tsx:342`). On resource hub pages the per-theme link lists stack one-per-line, leaving two-thirds of the width empty. Group Work is the worst case (~71 resources across 7 themes).
 
-### Correction to the brief (verified node model)
-The resources are **not** link nodes. The WP migration hoists each PDF/doc into a standalone `file` void block (`html-to-plate.ts:626`), because Plate's static renderer can't render void blocks inside list-styled paragraphs. So a resource run is consecutive `file` nodes, not "list items containing a link." The detector targets `file` nodes (and, optionally, single-link list paragraphs for editor-made link lists).
+### Node model (verified)
+The WP migration hoists each PDF/doc into a standalone `file` void block (`html-to-plate.ts:626`), and Google Workspace / web references are `a` link nodes. So a resource run is a mix of consecutive `file` voids and standalone-link paragraphs — the detector handles both. This supersedes the earlier "files-only" reading: MCR's documents are largely Google Workspace links, so link tiles matter.
 
 ### Design
 
-**Detector (shared).** A `file` node qualifies as a resource cell. Optionally, an indent-list paragraph (`p` with `listStyleType`) whose only non-empty child is a single `a` qualifies too. A run is 4+ consecutive resource cells; a heading or any non-resource block ends a run, so a run at the start or end of the article still qualifies. The same detector drives the read-view grid and the editor hint, so the rule is defined once.
+**Detector (shared).** A resource cell is either (a) a `file` void node, or (b) a paragraph whose only non-whitespace child is a single link (`a`). A link inside a sentence is **not** a cell — it stays inline prose via `LinkStatic`. A run is 4+ consecutive cells; a heading or any other block ends a run, so a run at the start or end of the article still qualifies. The same detector drives the read-view grid and the editor hint, so the rule is defined once.
 
 **Read path (render-only).** In `prepareNativeArticle` (`plate-static-plugins.tsx`), after `addHeadingIds` (so headings come from the flat tree and the TOC is unaffected) and before `createStaticEditor`, a `groupResourceGrids` transform wraps qualifying runs in a `resource_grid` node. A registered `ResourceGrid` static component renders a real `<ul role="list">` as a row-major CSS grid: 3-up at ≥1024px, 2-up below. The Algolia path (`createNativeStaticEditor`) is untouched, so the flat list is indexed exactly as today.
 
-**Cell behaviour, typed by URL (reusing `FileStatic`).** Proxy files (`/api/drive-file/{id}`: PDF, image, text, CSV) open the in-app lightbox. Office docs (a Drive `/preview` URL) and external links open a new tab with the ↗ and an accessible "opens in a new tab" name. Internal intranet links (relative `/…` or an `i.mcrpathways.org` URL) navigate in-app, same tab. The cell shows an extension-based label, not a hardcoded "PDF".
+**Cell — Direction A, uniform document chip.** Each cell is a white bordered card: a single `bg-red-50`/`text-red-700` chip holding a per-type Lucide glyph on the left, then the name at medium weight (500), 15px, **extension stripped**, **no "kind" label** and no `↗`. The whole cell is an `<a>`. *(Per-type chip colour was cut — see the §2 amendment above.)*
 
-**Labels wrap, never truncate.** Long resource names wrap to two lines; cells in a row equalise height (`align-items: stretch`). No ellipsis.
+**Type detection.** A shared `resolveResourceType(node)` returns `{ key, label, Icon }` for the chip (no colour — the chip treatment is uniform):
+- **`file` node** → `resolveFileType(mimeType, name)` (`src/lib/file-types.ts`) → PDF / DOC / XLS / PPT / TXT / FILE. Nodes carry no `mimeType`, so the filename extension is the live signal.
+- **link node** → classify by URL: `docs.google.com/document` → Google Doc; `/spreadsheets` → Sheet; `/presentation` → Slides; `/forms` → Form; `drive.google.com` → Drive; an app-origin or relative URL → internal page; anything else → external.
 
-**Lightbox (scope = grid only).** Reuse the news-feed `DocumentLightbox`, genericised: drop its coupling to the `PostAttachment` type and take plain props (`open`, `onOpenChange`, `title`, `iframeSrc`, `newTabUrl`). The mime branching moves to the news-feed call site; its existing test is updated. Resources passes the proxy URL as `iframeSrc`. The grid is a browser-only node type, so its interactivity never touches the Algolia-shared `LinkStatic`/`FileStatic` serialisers; `LinkStatic` and `FileStatic` stay pure. The read view is already a client component (scroll-spy, realtime, glossary filter), so lightbox open/close state fits with no architecture change.
+File types reuse `file-types.ts`; the Workspace/link types are a new small map alongside the detector. Glyphs are inline Lucide-style SVGs — no third-party logo art.
 
-**Editor hint.** The shared detector flags qualifying runs in the editor with a quiet "displays as a grid when published · Preview" affordance. Authoring stays a flat list, so all ~80 existing native articles upgrade with no re-editing. (Preview opens the read view in a new tab.)
+**Open behaviour.** File cell → `<a href={node.url} target="_blank" rel="noopener noreferrer">` to the Drive proxy (PDFs/images inline, Office/text/CSV download — today's `FileStatic` behaviour). Link cell → `<a href={link.url}>`: internal links navigate in-app (same tab); external / Google links open a new tab with `rel="noopener noreferrer"`. No in-app lightbox.
+
+**Accessibility (out of scope for §2).** The grid is presentation-only — it doesn't change whether a destination is reachable. PDFs (proxy) and internal Google-Doc articles are accessible to Google-blocked staff today; a raw Google/external tile is exactly as reachable as the inline link was. Making Workspace links open intranet-served copies is the parked accessibility follow-on (serve Sheets/Slides, rehost Doc images, the inline document-reference primitive), not §2. §2 must not *claim* a raw Google tile is accessible: the chip states the type honestly (a Google Doc/Sheet link) and it opens Google.
+
+**Labels wrap, never truncate.** Long names wrap to two lines; cells in a row equalise height (`align-items: stretch`). No ellipsis.
+
+**Editor hint.** The shared detector flags qualifying runs in the editor with a quiet "displays as a grid when published · Preview" affordance. Authoring stays a flat list, so existing native articles upgrade with no re-editing. (Preview opens the read view in a new tab.)
 
 **Collapsible themes: cut.** The reading rail navigates long pages; folding the content too is redundant, adds an interactive component plus expand-on-anchor and default-state decisions, and would have risked the `toggle_v2` trap (a toggle summary isn't a heading, so it would strip a theme's Algolia section, anchor, and TOC row).
 
@@ -85,20 +96,24 @@ The resources are **not** link nodes. The WP migration hoists each PDF/doc into 
 Indexing runs server-side from the stored `content_json` via `createNativeStaticEditor`. The grid is a render-only transform on the browser path only. Stored JSON, headings, and anchors are unchanged. This is locked by a regression test (below).
 
 ### Files
-- `src/lib/plate-static-plugins.tsx` — `isResourceCell` detector, `groupResourceGrids` in `prepareNativeArticle`, `BaseResourceGridPlugin` + `ResourceGrid` component, per-type cell rendering, lightbox state hook-up.
-- `src/components/resources/native-article-view.tsx` — host the lightbox open/close state for grid cells.
-- `src/components/news-feed/document-lightbox.tsx` — genericise props (drop `PostAttachment` coupling).
-- `src/components/news-feed/attachment-display.tsx` (+ `document-lightbox.test.tsx`) — pass computed `iframeSrc`/`newTabUrl`; update the test.
+- `src/lib/plate-static-plugins.tsx` — `isResourceCell` (a `file` void **or** a standalone-link paragraph), `resolveResourceType` (file-type via `resolveFileType` + link-type via URL), `groupResourceGrids` in `prepareNativeArticle`, `BaseResourceGridPlugin` + `ResourceGrid` (Direction A / Style C cell rendering an `<a>` per the open-behaviour rules).
+- `src/lib/file-types.ts` — reused as-is for the file-type chips. No change expected.
+- The Workspace/link type map (Doc / Sheet / Slides / Form / Drive / internal / external / document → glyph) lives alongside the detector. One glyph per type; the chip treatment is uniform (no per-type colour).
 - `src/components/resources/plate-editor.tsx` (or the editor element module) — the "displays as a grid · Preview" hint.
 
+(No news-feed files: no lightbox, so `DocumentLightbox` / `attachment-display` are untouched.)
+
 ### Tests
-- Detector: qualifying run of 4+ `file` nodes grids; a prose paragraph containing a link does not; a non-resource item breaks a run; fewer than 4 stays a list; mixed file types classify correctly.
+- Detector: 4+ `file` nodes grid; 4+ standalone-link paragraphs grid; a mix of files and standalone links grids; a link **inside a sentence** does **not** grid (stays inline); a heading breaks a run; fewer than 4 stays a list.
+- Type detection: file extensions → `resolveFileType` (pdf→red … unknown→FILE); `docs.google.com/document`→Doc, `/spreadsheets`→Sheet, `/presentation`→Slides, `/forms`→Form; `drive.google.com`→Drive; app-origin/relative→internal; else→external.
+- Cell rendering: uniform document chip (single glyph, no per-type colour); proxied `/api/drive-file/` links classify as `document` and open in a new tab; the name has the extension stripped; the cell is an `<a>` with the right target (internal same-tab; external/Google `target="_blank" rel="noopener noreferrer"`).
 - Algolia regression (extend `plate-static-plugins.test.tsx`): the grid transform produces the same indexed sections as the flat tree (the "one heading → one section" contract still holds).
-- Lightbox refactor: `document-lightbox.test.tsx` stays green (news-feed not regressed); a resources grid cell opens the lightbox with the proxy URL.
 
 ### Edge cases
 - Row-major preserves document order; an odd count leaves the last row part-filled and left-aligned (never CSS `columns`).
-- A11y: real `<ul role="list">` in DOM order; ↗ has an accessible name; the lightbox traps and restores focus (Radix Dialog).
+- Open behaviour: file cells → proxy (PDF/image inline, others download); internal link → same tab; external/Google link → new tab.
+- A11y: real `<ul role="list">` in DOM order; each cell is a proper `<a>` with the resource name as its accessible name; new-tab links carry `rel="noopener noreferrer"`.
+- A raw Google/external tile opens Google (new tab) — reachable only if the staff member's network allows. §2 doesn't dress it as intranet-served; the parked accessibility work does that.
 
 ---
 
@@ -158,11 +173,10 @@ This supersedes the documented "grey bg-accent pill, no brand colour, weight sta
 
 ## Build order & PR sequencing
 
-1. **§1 Sticky toolbar** — self-contained, ship-first. One sticky bar via the toolbar right-slot, `overflow-clip`, optional bubble.
-2. **Genericise `DocumentLightbox`** — decouple from `PostAttachment`, update the news-feed call site + test. Lands before §2 so the grid can reuse it.
-3. **§2 Resource grid** — detector, `groupResourceGrids`, `ResourceGrid` with per-type cells + lightbox, the editor hint.
-4. **§3 Folder promotion** — shared predicate, server-side promotion, redirect, audit view.
-5. **§4 Reading rail** — `article-outline` rewrite + the docs rule rewrite.
+1. **§1 Sticky toolbar** — shipped (#373).
+2. **§2 Resource grid** — one PR, no prerequisite: detector (files + standalone links), `resolveResourceType`, `groupResourceGrids`, `ResourceGrid` with the Direction A / Style C cell, the editor hint. No lightbox. (Accessibility of Workspace links is a parked follow-on — see the roadmap.)
+3. **§3 Folder promotion** — shared predicate, server-side promotion, redirect, audit view.
+4. **§4 Reading rail** — `article-outline` rewrite + the docs rule rewrite.
 
 ## Phase-0 docs to update (before the code they describe)
 - This spec (committed).
@@ -172,4 +186,5 @@ This supersedes the documented "grey bg-accent pill, no brand colour, weight sta
 
 ## Build-time confirmations (not product decisions)
 - Confirm the grid node model against a real Group Work `content_json` before finalising the detector.
+- Confirm real `file`-node `name` values: the label strips the extension by default, but if migrated names are ugly slugs (e.g. `group-trust-guide-v2.pdf`) decide whether to tidy them at render or leave as-is. (§2 cell.)
 - Decide the audit view's location (extend `/resources/drafts` or a small new view).

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { PlateRichEditor, EMPTY_PLATE_VALUE } from "./plate-editor";
 import { EditorSaveControls } from "./editor-save-controls";
+import { hasResourceGridRun } from "@/lib/resource-grid";
 import { PublishConfirmDialog } from "./publish-confirm-dialog";
 import {
   saveNativeArticle,
@@ -53,6 +54,7 @@ export function NativeArticleEditor({
   const initialValue = ((article as unknown as { content_json?: unknown }).content_json as Value) ?? EMPTY_PLATE_VALUE;
   const isPublished = article.status === "published";
   const lastPublishedAt = article.last_published_at;
+  const [hasGrid, setHasGrid] = useState(() => hasResourceGridRun(initialValue));
 
   const iconFg = resolveIconColour(category.icon_colour).fg;
 
@@ -117,6 +119,7 @@ export function NativeArticleEditor({
   const handleChange = useCallback(
     (value: Value) => {
       currentValueRef.current = value;
+      setHasGrid(hasResourceGridRun(value));
       clearPendingTimers();
       debounceRef.current = setTimeout(() => doSave(value), 5000);
     },
@@ -196,6 +199,20 @@ export function NativeArticleEditor({
       <h1 className="text-[26px] font-bold tracking-tight leading-tight">
         {article.title}
       </h1>
+
+      {hasGrid && (
+        <p className="text-xs text-muted-foreground">
+          Runs of 4 or more files or links display as a grid when published.{" "}
+          <a
+            href={`/resources/article/${article.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Preview
+          </a>
+        </p>
+      )}
 
       {/* Plate editor */}
       <PlateRichEditor

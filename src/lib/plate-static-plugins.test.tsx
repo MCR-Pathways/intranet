@@ -980,3 +980,32 @@ describe("glossary block — dual-map rendering", () => {
     expect(html.toLowerCase()).not.toContain("advocatean");
   });
 });
+
+describe("resource grid (§2)", () => {
+  const fileRun = [
+    { type: "file", name: "a.pdf", url: "/api/drive-file/a", children: [{ text: "" }] },
+    { type: "file", name: "b.pdf", url: "/api/drive-file/b", children: [{ text: "" }] },
+    { type: "file", name: "c.pdf", url: "/api/drive-file/c", children: [{ text: "" }] },
+    { type: "file", name: "d.pdf", url: "/api/drive-file/d", children: [{ text: "" }] },
+  ] as unknown as Value;
+
+  it("prepareNativeArticle wraps a 4+ file run in a resource_grid", () => {
+    const { editor } = prepareNativeArticle(fileRun);
+    expect((editor.children[0] as Record<string, unknown>).type).toBe("resource_grid");
+  });
+
+  it("the Algolia editor never sees a resource_grid (index-safe)", () => {
+    const editor = createNativeStaticEditor(fileRun);
+    const types = editor.children.map((n) => (n as Record<string, unknown>).type);
+    expect(types).not.toContain("resource_grid");
+    expect(types.filter((t) => t === "file")).toHaveLength(4);
+  });
+
+  it("renders the grid to a <ul> of cells on the read path", async () => {
+    const { editor } = prepareNativeArticle(fileRun);
+    const html = await serializeHtml(editor, { stripDataAttributes: true });
+    expect(html).toContain("<ul");
+    expect(html).toContain('role="list"');
+    expect((html.match(/\/api\/drive-file\//g) ?? []).length).toBe(4);
+  });
+});
