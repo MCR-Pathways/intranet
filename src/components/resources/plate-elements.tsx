@@ -128,12 +128,13 @@ export function LinkElement({ children, element, attributes }: PlateElementProps
   const url = el.url as string;
   const asCard = el.displayAsCard === true;
 
-  // The "show as card" toggle only applies to a standalone link (the sole
-  // content of its paragraph) — a card is a block, not an in-sentence link.
-  // Reuse the read-path condition so editor and renderer agree. Only walk the
-  // tree when this link is selected (the toggle renders only then), so we avoid
-  // a findPath search on every link on every keystroke.
-  const path = selected ? editor.api.findPath(element) : undefined;
+  // A link is a card only when it is standalone (the sole content of its
+  // paragraph) — a card is a block, not an in-sentence link. Reuse the
+  // read-path condition so editor and renderer agree. Walk the tree only when
+  // the link is flagged OR selected: the card cue renders only when flagged and
+  // the toggle only when selected, so an unflagged, unselected link never runs
+  // findPath (no per-link tree search on every keystroke across a long article).
+  const path = asCard || selected ? editor.api.findPath(element) : undefined;
   const parent = path ? editor.api.parent(path) : undefined;
   const isStandalone = !!(parent && standaloneLink(parent[0] as Record<string, unknown>));
 
@@ -158,9 +159,11 @@ export function LinkElement({ children, element, attributes }: PlateElementProps
         rel="noopener noreferrer"
         className={cn(
           "text-link underline underline-offset-4 hover:text-link/80",
-          // A flagged link will publish as a card; hint it in the editor without
-          // full card rendering (a link is an inline node — WYSIWYG cards are §2.1 v2).
-          asCard && "decoration-dotted decoration-2",
+          // Hint the card treatment in the editor without full card rendering (a
+          // link is an inline node — WYSIWYG cards are §2.1 v2). Only when the
+          // link is both flagged and standalone, matching the read path, which
+          // drops the flag for a mid-sentence link that won't actually be a card.
+          asCard && isStandalone && "decoration-dotted decoration-2",
         )}
       >
         {children}

@@ -66,16 +66,26 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
     (article: ArticleResult) => {
       const articleUrl = `/resources/article/${article.slug}`;
       onInsertLink(articleUrl, article.title, asCard);
-      setOpen(false);
-      setQuery("");
-      setResults([]);
-      setAsCard(false);
+      setOpen(false); // closing resets transient state via onOpenChange
     },
     [onInsertLink, asCard]
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // Reset transient state whenever the popover closes — select, Escape, or
+        // click-outside — so a ticked "Display as a card" (or a stale query) does
+        // not persist into the next open.
+        if (!next) {
+          setQuery("");
+          setResults([]);
+          setAsCard(false);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
