@@ -91,10 +91,11 @@ function classifyLink(url: string): ResourceTypeConfig {
   return EXTERNAL;
 }
 
-function plateText(node: Node): string {
+function plateText(node: Node | null | undefined): string {
+  if (!node) return "";
   if (typeof node.text === "string") return node.text;
-  const kids = node.children as Node[] | undefined;
-  return kids ? kids.map(plateText).join("") : "";
+  const kids = node.children;
+  return Array.isArray(kids) ? kids.map((k) => plateText(k as Node)).join("") : "";
 }
 
 /** The single link inside a standalone-link paragraph, or null. */
