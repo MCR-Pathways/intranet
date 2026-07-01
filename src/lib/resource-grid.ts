@@ -98,8 +98,9 @@ function plateText(node: Node | null | undefined): string {
   return Array.isArray(kids) ? kids.map((k) => plateText(k as Node)).join("") : "";
 }
 
-/** The single link inside a standalone-link paragraph, or null. */
-function standaloneLink(node: Node): Node | null {
+/** The single link inside a standalone-link paragraph, or null. Exported so the
+ *  editor's LinkElement can gate its "show as card" toggle on the same condition. */
+export function standaloneLink(node: Node): Node | null {
   if (node.type !== "p") return null;
   // Keep any element node (so a non-link element disqualifies the paragraph) or
   // non-blank text; drop the empty text nodes Plate pads inline content with.

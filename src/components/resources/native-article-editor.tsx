@@ -202,7 +202,7 @@ export function NativeArticleEditor({
 
       {hasGrid && (
         <p className="text-xs text-muted-foreground">
-          Runs of 4 or more files or links display as a grid when published.{" "}
+          Cards and runs of 4 or more files or links display as a grid when published.{" "}
           <a
             href={`/resources/article/${article.slug}`}
             target="_blank"

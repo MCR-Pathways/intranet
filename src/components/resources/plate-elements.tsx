@@ -48,10 +48,12 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFileSize } from "@/lib/utils";
+import { standaloneLink } from "@/lib/resource-grid";
 import {
   Tooltip,
   TooltipContent,
@@ -120,22 +122,65 @@ export function HrElement(props: PlateElementProps) {
 }
 
 export function LinkElement({ children, element, attributes }: PlateElementProps) {
-  const url = (element as Record<string, unknown>).url as string;
+  const editor = useEditorRef();
+  const selected = useSelected();
+  const el = element as Record<string, unknown>;
+  const url = el.url as string;
+  const asCard = el.displayAsCard === true;
+
+  // The "show as card" toggle only applies to a standalone link (the sole
+  // content of its paragraph) — a card is a block, not an in-sentence link.
+  // Reuse the read-path condition so editor and renderer agree.
+  const path = editor.api.findPath(element);
+  const parent = path ? editor.api.parent(path) : undefined;
+  const isStandalone = !!(parent && standaloneLink(parent[0] as Record<string, unknown>));
+
+  const toggleCard = () => {
+    if (!path) return;
+    if (asCard) editor.tf.unsetNodes("displayAsCard", { at: path });
+    else editor.tf.setNodes({ displayAsCard: true }, { at: path });
+    editor.tf.focus();
+  };
+
   // Render <a> directly without PlateElement wrapper. The default wrapper
   // emits <div data-slate-inline> around inline elements, which is invalid
   // HTML inside <p>. Spreading `attributes` keeps Slate's per-node ref +
   // data-slate-* attributes on the <a> itself so editor selection still
   // tracks the node. Mirror of the LinkStatic fix in plate-static-plugins.tsx.
   return (
-    <a
-      {...attributes}
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-link underline underline-offset-4 hover:text-link/80"
-    >
-      {children}
-    </a>
+    <>
+      <a
+        {...attributes}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "text-link underline underline-offset-4 hover:text-link/80",
+          // A flagged link will publish as a card; hint it in the editor without
+          // full card rendering (a link is an inline node — WYSIWYG cards are §2.1 v2).
+          asCard && "decoration-dotted decoration-2",
+        )}
+      >
+        {children}
+      </a>
+      {selected && isStandalone && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          contentEditable={false}
+          className={cn("ml-1 align-middle", asCard && "text-primary")}
+          aria-label={asCard ? "Show link inline" : "Show link as a card"}
+          title={asCard ? "Show inline" : "Show as card"}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            toggleCard();
+          }}
+        >
+          <LayoutGrid />
+        </Button>
+      )}
+    </>
   );
 }
 
