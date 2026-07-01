@@ -12,6 +12,7 @@ import {
   fetchUserBookmarkIds,
 } from "../actions";
 import { CategoryContent } from "@/components/resources/category-content";
+import { promotionTargetSlug } from "@/lib/resource-promotion";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string[] }>;
@@ -49,6 +50,16 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       canViewDrafts ? fetchDraftCount(supabase) : Promise.resolve(0),
       fetchUserBookmarkIds(supabase, user.id),
     ]);
+
+  // §3: a folder holding exactly one visible article and no visible subfolders
+  // is redundant nesting, so send the reader straight to the article. Temporary
+  // (307) because the condition is mutable: adding a second published article
+  // must stop promotion. Editors who also see drafts get length > 1 and stay
+  // on the folder page to manage them.
+  const promoteTo = promotionTargetSlug(directArticles, subcategoryGroups);
+  if (promoteTo) {
+    redirect(`/resources/article/${promoteTo}`);
+  }
 
   return (
     <CategoryContent
