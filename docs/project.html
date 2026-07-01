@@ -962,12 +962,6 @@
   "kanban": {
     "todo": [
       {
-        "id": "k30",
-        "title": "Resources §3 — single-item folder promotion",
-        "tag": "ui",
-        "note": "A folder wrapping one published article promotes to a direct link — one less click, no redundant label."
-      },
-      {
         "id": "k31",
         "title": "Resources §4 — reading-rail contents list",
         "tag": "ui",
@@ -1061,6 +1055,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k30",
+        "title": "Resources §3 — single-item folder promotion",
+        "tag": "ui",
+        "note": "A folder resolving to exactly one published article and no subfolders redirects (temporary 307) straight to the article, so a reader clicks through in one step.",
+        "completedDate": "2026-07-01",
+        "prNumber": 377,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/377"
+      },
       {
         "id": "k29",
         "title": "Resources §2 — content-aware resource grid",
@@ -1324,6 +1327,19 @@
         "hasResourceGridRun (the editor hint, which runs on every keystroke) is allocation-free O(N) with an early return, not a call to the tree-building grouper."
       ],
       "mermaid": "flowchart TD\n  A[stored content_json] --> B{render path}\n  B -->|browser| C[prepareNativeArticle adds heading IDs]\n  C --> D[groupResourceGrids wraps runs of 4 or more cells]\n  D --> E[card grid]\n  B -->|Algolia| F[createNativeStaticEditor, no grouping]\n  F --> G[flat sections indexed unchanged]"
+    },
+    {
+      "id": "f9",
+      "title": "Single-item folder promotion (§3)",
+      "date": "2026-07-01",
+      "prNumber": 377,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/377",
+      "summary": "A resources folder that resolves to exactly one visible published article and no visible subfolders is redundant nesting. The catch-all folder page now redirects straight to that article, so a reader clicks through in one step instead of landing on a folder page with a single item. Third of the resources-redesign PRs; only §4 (reading-rail contents list) remains.",
+      "decisions": [
+        "Temporary redirect (307), never permanent: the single-item condition is mutable, so adding a second published article must stop promotion and a cached 308 would break that.",
+        "Promotion runs on the already canViewDrafts-filtered fetch results, so a reader (one published article) is redirected while an editor who also sees drafts gets length > 1 and stays on the folder page to manage the drafts; no new query.",
+        "The rule is a pure, unit-tested predicate (promotionTargetSlug) because the page is a Server Component that is not unit-tested directly."
+      ]
     }
   ],
   "decisions": [
