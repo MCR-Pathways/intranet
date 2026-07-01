@@ -227,8 +227,9 @@ export function hasResourceGridRun(value: Value): boolean {
  * auto-grid. Flagging them makes the grid survive an edit that drops the run
  * below the threshold. Only 4+ runs are touched, so today's rendering is
  * unchanged; file voids in a run are left alone (files-as-cards is v2). Returns
- * a new value (never mutates the input) and the count of links newly flagged
- * this pass — an already-flagged link is left as-is and not re-counted, so the
+ * a new top-level array (never mutates the input; unchanged nodes are shared by
+ * reference, like groupResourceGrids) and the count of links newly flagged this
+ * pass — an already-flagged link is left as-is and not re-counted, so the
  * transform is idempotent.
  */
 export function flagAutoGridCards(value: Value): { value: Value; flaggedCount: number } {
