@@ -968,12 +968,6 @@
         "note": "The “On this page” box becomes a rail with a teal active marker, and stays visible below 1024px."
       },
       {
-        "id": "k37",
-        "title": "Resources §2.1b — flag the existing auto-detected grids",
-        "tag": "code",
-        "note": "One-time migration: set displayAsCard on every link already in a 4+ auto-grid so the flag is the single source of truth and auto-detection can retire. Today, editing a grid below 4 items reverts the rest to inline. Follows §2.1 (k36)."
-      },
-      {
         "id": "k32",
         "title": "Resources accessibility — serve Google Sheets & Slides",
         "tag": "a11y",
@@ -1061,6 +1055,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k37",
+        "title": "Resources §2.1b — flag the existing auto-detected grids",
+        "tag": "code",
+        "note": "One-time migration: set displayAsCard on the 103 links already inside 4+ auto-grids (people-services, group-work, pc-support) so a grid survives an editor deleting a link below 4. Auto-detection stays the default; the flag only pre-populates what it already grids. Pure flagAutoGridCards + a bulk dry-run script; no reindex.",
+        "completedDate": "2026-07-01",
+        "prNumber": 382,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/382"
+      },
       {
         "id": "k36",
         "title": "Resources §2.1 — editor-controlled resource cards",
@@ -1368,6 +1371,20 @@
         "Index-safe: displayAsCard is presentational, so the Algolia serialisation path ignores it and a card-link indexes identically to an inline link. No search change, preserving the §2 index-safety contract.",
         "Files unchanged in v1: the flag applies to standalone links (the resource tiles are links, not uploads); file voids keep today's behaviour. Opt-out (force-inline inside a 4+ run) and files are v2.",
         "No full in-editor card render: a link is a Plate inline node, so the editor shows a dotted cue on a flagged standalone link plus the Preview hint rather than a block card. The cue is gated on the same standalone condition as the read path, so editor and published view agree."
+      ]
+    },
+    {
+      "id": "f11",
+      "title": "Flag existing auto-detected grids (§2.1b)",
+      "date": "2026-07-01",
+      "prNumber": 382,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/382",
+      "summary": "§2.1 added the per-link displayAsCard flag but kept auto-detection, so every existing grid was a grid by the 4+ rule rather than the flag, and deleting a link below 4 reverted the rest to inline mid-edit. A one-off migration set displayAsCard on the 103 links already inside 4+ runs across three published articles (people-services 4, group-work 73, pc-support 26), so those grids now survive a sub-threshold edit. Auto-detection stays the zero-effort default; the flag only pre-populates what it already grids.",
+      "decisions": [
+        "Kept auto-detection rather than retiring it (the f10 aspiration). Retiring would drop the zero-effort default and force editors to tick every link on new content, so §2.1b is purely additive instead.",
+        "Flag only 4+ runs, the load-bearing invariant. Flagging a sub-4 run would turn inline links into a grid (a visible change), so gating on 4+ keeps rendering identical today (asserted by a strip-the-flag equivalence test) and robust tomorrow.",
+        "No reindex. displayAsCard is presentational, the Algolia path never groups and LinkStatic ignores it, so synced_html and the section records are byte-identical. content_json is the single render source, so the migration updates exactly what published pages show.",
+        "One-off bulk script with a loud tripwire (it stops if the fetch ever reaches PostgREST's 1000-row cap) rather than chunked pagination. There are 10 native articles, 100x below the cap, so pagination would be premature machinery."
       ]
     }
   ],
