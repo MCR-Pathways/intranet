@@ -8,7 +8,7 @@
  * Inserts a link node with the article's intranet URL.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { FileText, Link as LinkIcon, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,6 +41,7 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
   const [results, setResults] = useState<ArticleResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [asCard, setAsCard] = useState(false);
+  const checkboxId = useId();
 
   const search = useDebouncedCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -102,12 +103,12 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
           </div>
           <div className="mt-2.5 flex items-center gap-2">
             <Checkbox
-              id="link-as-card"
+              id={checkboxId}
               checked={asCard}
               onCheckedChange={(v) => setAsCard(v === true)}
             />
             <Label
-              htmlFor="link-as-card"
+              htmlFor={checkboxId}
               className="text-sm font-normal text-muted-foreground cursor-pointer"
             >
               Display as a card

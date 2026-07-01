@@ -58,6 +58,7 @@ Auto-detection stays as the default, so every existing 4+ grid keeps rendering u
 
 ## Out of scope (v1)
 
+- **§2.1b — flag the existing auto-detected grids (QUEUED, next after this ships).** Today's 4+ grids are cards via auto-detection, not the flag, so editing one below 4 items reverts the remainder to inline. A one-time migration setting `displayAsCard: true` on every link currently in a 4+ auto-grid would make the flag the single source of truth and let auto-detection retire (the "Model A" fork we deferred).
 - **Opt-out** (`displayAsCard: false` to force a link inline within a 4+ run). A trivial extension of the same flag — turns the checkbox into a three-way "Auto / Card / Inline" control. Ship only if editors ask.
 - Drag-reorder of cards; multi-select bulk-flag. Not needed for the core.
 
