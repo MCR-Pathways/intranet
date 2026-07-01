@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveResourceType, resolveResourceCell, isResourceCell, groupResourceGrids, hasResourceGridRun } from "./resource-grid";
+import { resolveResourceType, resolveResourceCell, isResourceCell, groupResourceGrids, hasResourceGridRun, flagAutoGridCards } from "./resource-grid";
 
 const fileNode = (name: string, url = "/api/drive-file/abc") => ({
   type: "file",
@@ -157,5 +157,80 @@ describe("displayAsCard (§2.1)", () => {
   it("hasResourceGridRun is true for a single flagged link, false for an unflagged lone link", () => {
     expect(hasResourceGridRun([P, LC("/one")] as never)).toBe(true);
     expect(hasResourceGridRun([P, L("/one")] as never)).toBe(false);
+  });
+});
+
+// Recursively drop `displayAsCard` so two trees can be compared for structure
+// alone. The migration adds the flag, so an un-stripped deep-equal would differ
+// by exactly that flag, which is the point.
+const stripFlag = (v: unknown): unknown =>
+  Array.isArray(v)
+    ? v.map(stripFlag)
+    : v && typeof v === "object"
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>)
+            .filter(([k]) => k !== "displayAsCard")
+            .map(([k, val]) => [k, stripFlag(val)]),
+        )
+      : v;
+
+describe("flagAutoGridCards (§2.1b)", () => {
+  it("flags every standalone link in a 4+ run", () => {
+    const { value, flaggedCount } = flagAutoGridCards([L("/1"), L("/2"), L("/3"), L("/4")] as never);
+    expect(flaggedCount).toBe(4);
+    expect(value.every((n) => (n.children as { displayAsCard?: boolean }[])[1].displayAsCard === true)).toBe(true);
+  });
+
+  it("does not flag a run below 4 (the invariant); value is unchanged", () => {
+    const input = [L("/1"), L("/2"), L("/3")];
+    const { value, flaggedCount } = flagAutoGridCards(input as never);
+    expect(flaggedCount).toBe(0);
+    expect(value).toEqual(input);
+  });
+
+  it("flags the links but leaves a file void in the run untouched", () => {
+    const { value, flaggedCount } = flagAutoGridCards([F("a"), L("/2"), L("/3"), L("/4")] as never);
+    expect(flaggedCount).toBe(3);
+    expect(value[0]).toEqual(F("a")); // file node unchanged
+    expect((value[1].children as { displayAsCard?: boolean }[])[1].displayAsCard).toBe(true);
+  });
+
+  it("is idempotent: an already-flagged link stays flagged and is not re-counted", () => {
+    const first = flagAutoGridCards([L("/1"), L("/2"), L("/3"), LC("/4")] as never);
+    expect(first.flaggedCount).toBe(3); // /4 already flagged
+    const second = flagAutoGridCards(first.value);
+    expect(second.flaggedCount).toBe(0);
+    expect(stripFlag(second.value)).toEqual(stripFlag(first.value));
+  });
+
+  it("leaves a lone link outside any 4+ run untouched", () => {
+    const input = [P, L("/one"), P];
+    const { value, flaggedCount } = flagAutoGridCards(input as never);
+    expect(flaggedCount).toBe(0);
+    expect(value).toEqual(input);
+  });
+
+  it("handles two runs split by a heading independently", () => {
+    const { value, flaggedCount } = flagAutoGridCards(
+      [L("/1"), L("/2"), L("/3"), L("/4"), H, L("/5"), L("/6"), L("/7")] as never,
+    );
+    expect(flaggedCount).toBe(4); // first run of 4 flagged; second run of 3 not
+    expect((value[0].children as { displayAsCard?: boolean }[])[1].displayAsCard).toBe(true);
+    expect(value[4]).toBe(H);
+    expect((value[5].children as { displayAsCard?: boolean }[])[1].displayAsCard).toBeUndefined();
+  });
+
+  it("does not change the grid structure: strip the flag and grouping is identical", () => {
+    const input = [P, L("/1"), L("/2"), L("/3"), L("/4"), H, F("x")];
+    const before = groupResourceGrids(input as never);
+    const after = groupResourceGrids(flagAutoGridCards(input as never).value);
+    expect(stripFlag(after)).toEqual(stripFlag(before));
+  });
+
+  it("does not mutate the input", () => {
+    const input = [L("/1"), L("/2"), L("/3"), L("/4")];
+    const copy = JSON.parse(JSON.stringify(input));
+    flagAutoGridCards(input as never);
+    expect(input).toEqual(copy);
   });
 });
