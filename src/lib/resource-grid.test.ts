@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveResourceType, resolveResourceCell, isResourceCell, groupResourceGrids } from "./resource-grid";
+import { resolveResourceType, resolveResourceCell, isResourceCell, groupResourceGrids, hasResourceGridRun } from "./resource-grid";
 
 const fileNode = (name: string, url = "/api/drive-file/abc") => ({
   type: "file",
@@ -97,5 +97,13 @@ describe("groupResourceGrids", () => {
     const copy = JSON.parse(JSON.stringify(input));
     groupResourceGrids(input as never);
     expect(input).toEqual(copy);
+  });
+});
+
+describe("hasResourceGridRun", () => {
+  it("true when a 4+ run exists, false otherwise", () => {
+    expect(hasResourceGridRun([F("1"), F("2"), F("3"), F("4")] as never)).toBe(true);
+    expect(hasResourceGridRun([F("1"), F("2"), F("3")] as never)).toBe(false);
+    expect(hasResourceGridRun([P, H] as never)).toBe(false);
   });
 });

@@ -149,3 +149,10 @@ export function groupResourceGrids(value: Value): Value {
   flush();
   return out;
 }
+
+/** True if the value contains at least one run that would render as a grid. */
+export function hasResourceGridRun(value: Value): boolean {
+  return groupResourceGrids(value).some(
+    (n) => (n as Record<string, unknown>).type === "resource_grid",
+  );
+}
