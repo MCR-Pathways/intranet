@@ -1058,15 +1058,27 @@
         "title": "WordPress to Resources content migration (remaining pages)",
         "tag": "content",
         "note": "Per-page editorial passes landing; jargon/glossary phase shipped 2026-06-05."
-      },
+      }
+    ],
+    "done": [
       {
         "id": "k29",
         "title": "Resources §2 — content-aware resource grid",
         "tag": "ui",
-        "note": "Make a native article's resource list a scannable grid. Direction A cell + Style C colour chips; render-only transform (search untouched). Tiles accessible resources (PDFs, Doc-article links). Design settled; plan next."
-      }
-    ],
-    "done": [
+        "note": "Runs of 4+ files or links in a native article render as a card grid (render-only; Algolia index untouched). Uniform document chip, not per-type colour.",
+        "completedDate": "2026-07-01",
+        "prNumber": 375,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/375"
+      },
+      {
+        "id": "k28",
+        "title": "Class-based dark: variant + light color-scheme",
+        "tag": "bug",
+        "note": "Tailwind v4's dark: default (prefers-color-scheme) leaked dark colours over the light-only page on dark-OS browsers; gated dark: on .dark, declared color-scheme: light.",
+        "completedDate": "2026-07-01",
+        "prNumber": 374,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/374"
+      },
       {
         "id": "k26",
         "title": "Sticky editor toolbar for resources articles",
@@ -1297,6 +1309,21 @@
         "Pinned at top-16, below the 64px app header, not top-0 (which would park it behind the header).",
         "Editor card uses overflow-clip, not overflow-hidden, to keep the rounded-corner clip without the scroll container that breaks position: sticky."
       ]
+    },
+    {
+      "id": "f8",
+      "title": "Content-aware resource grid for native articles (§2)",
+      "date": "2026-07-01",
+      "prNumber": 375,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/375",
+      "summary": "A native resources article that lists many files or links used to render as a long bulleted column. Now a run of four or more consecutive resource cells (a file void node, or a paragraph whose only meaningful child is a single link) is grouped into a card grid, 3-up above 1024px and 2-up below, each cell an anchor with a document chip and the resource name. The grouping is a render-only transform in prepareNativeArticle (browser path) after heading IDs are assigned; the Algolia serialisation path (createNativeStaticEditor) never groups, so stored JSON, headings, anchors and the search index are unchanged. An editor hint flags a qualifying run as 'displays as a grid when published', so authoring stays a flat list and existing articles upgrade with no re-editing. Second of the resources-redesign PRs.",
+      "decisions": [
+        "Uniform document chip (bg-red-50/text-red-700, the file-type document red), not per-type colour: on real hub pages nearly every resource is the same type, so a per-type tint read as a wall of identical loud chips. Type is carried by the Lucide glyph shape.",
+        "Proxied Drive files (/api/drive-file/{id}) classify as documents and open in a new tab; isProxyDocument matches the proxy path, not the substring, so a foreign URL that merely contains the string is not misclassified.",
+        "Index-safety is locked by a regression test: the grid transform yields the same indexed sections as the flat tree (the one-heading-one-section contract holds).",
+        "hasResourceGridRun (the editor hint, which runs on every keystroke) is allocation-free O(N) with an early return, not a call to the tree-building grouper."
+      ],
+      "mermaid": "flowchart TD\n  A[stored content_json] --> B{render path}\n  B -->|browser| C[prepareNativeArticle adds heading IDs]\n  C --> D[groupResourceGrids wraps runs of 4 or more cells]\n  D --> E[card grid]\n  B -->|Algolia| F[createNativeStaticEditor, no grouping]\n  F --> G[flat sections indexed unchanged]"
     }
   ],
   "decisions": [
@@ -1452,6 +1479,15 @@
       "context": "Global search was a Cmd+K modal (Radix Dialog) hidden behind a header icon, and a directive wanted a Gmail-style always-visible bar. The header is full-width above the sidebar, while the feed it should line up with sits in <main>, offset right by the fixed sidebar and centred within max-w-7xl, so a naive centre in the header lands left of the feed. The absolutely-positioned logo and notification/avatar clusters also leave little room across the top.",
       "decision": "Retire the Radix Dialog and render cmdk inline: the input is the always-visible bar, the command list a panel anchored beneath it. Centre the bar over the content column by mirroring <main>'s own classes (md:ml-64 / md:ml-16 + container + the 590px centre-column), driven by the same isCollapsed state, rather than centring within the header. Show the bar at xl+ only. A throwaway spike validated the alignment in the real app shell before the component was built.",
       "consequences": "The bar tracks the feed centre in both sidebar states by construction (it shares the layout tokens rather than eyeballed offsets), and the dropdown overlays the feed. Costs: cmdk hardcodes the input's aria-expanded=true and aria-controls={listId}, so the list stays mounted (hidden when closed) for that reference to resolve and the expanded state can't be corrected; feed-alignment only holds at xl+ because the absolute header clusters collide with the centred bar below ~1086px, so narrower-viewport search is a deferred pass; and the bar's resting fill is bg-muted rather than the inputs-use-bg-card convention, since it sits on the white header where bg-card would be invisible."
+    },
+    {
+      "id": "ADR-018",
+      "title": "Class-based dark: variant for a light-only app",
+      "date": "2026-07-01",
+      "status": "Accepted",
+      "context": "The app is light-only: globals.css defines a .dark token block but nothing ever sets the .dark class (no theme toggle, no next-themes). Tailwind v4 leaves the dark: variant on its default, the prefers-color-scheme: dark media query, unless a @custom-variant overrides it. So on a dark-OS browser, raw dark: colour utilities (file-type chips, the amber/blue editor banners, the new resource-grid chip) fired their dark values over the permanently-light token page, producing muddy mismatched chips. The mismatch surfaced while tuning the §2 chip colour, whose light classes never rendered on a dark-mode machine because the dark: classes were winning from the OS preference.",
+      "decision": "Register @custom-variant dark (&:where(.dark, .dark *)) so dark: applies only under an explicit .dark class, and set color-scheme: light on :root (color-scheme: dark on the dormant .dark block) so native controls render light too. Every dark: utility stays dormant until a real theme toggle sets the class.",
+      "consequences": "The app renders its intended light design on every OS, and the .dark token block becomes real groundwork for a future dark mode instead of half-firing over a light page. Cost: nothing renders differently today (the .dark class is never set), but anyone adding dark: utilities must remember they are class-gated rather than automatic, and a future theme toggle has to set the .dark class for them to take effect."
     }
   ]
 }
