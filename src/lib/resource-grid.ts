@@ -17,6 +17,7 @@ import {
   ExternalLink,
   type LucideIcon,
 } from "lucide-react";
+import type { Value } from "platejs";
 import { resolveFileType } from "./file-types";
 import { APP_ORIGIN } from "./article-constants";
 
@@ -115,4 +116,36 @@ export function resolveResourceCell(
     newTab: !isInternalUrl(url),
     config: classifyLink(url),
   };
+}
+
+/** A resource cell is a `file` void node, or a standalone-link paragraph. */
+export function isResourceCell(node: Node): boolean {
+  if (node.type === "file") return true;
+  return standaloneLink(node) !== null;
+}
+
+/**
+ * Wrap runs of 4+ consecutive resource cells in a `resource_grid` node.
+ * Returns a new top-level array; never mutates the input (render-only).
+ */
+export function groupResourceGrids(value: Value): Value {
+  const out: Value = [];
+  let run: Value = [];
+  const flush = () => {
+    if (run.length >= 4) {
+      out.push({ type: "resource_grid", children: run } as unknown as Value[number]);
+    } else {
+      out.push(...run);
+    }
+    run = [];
+  };
+  for (const node of value) {
+    if (isResourceCell(node as Node)) run.push(node);
+    else {
+      flush();
+      out.push(node);
+    }
+  }
+  flush();
+  return out;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveResourceType, resolveResourceCell } from "./resource-grid";
+import { resolveResourceType, resolveResourceCell, isResourceCell, groupResourceGrids } from "./resource-grid";
 
 const fileNode = (name: string, url = "/api/drive-file/abc") => ({
   type: "file",
@@ -54,5 +54,48 @@ describe("resolveResourceCell", () => {
 
   it("returns null for a non-cell node", () => {
     expect(resolveResourceCell({ type: "p", children: [{ text: "just prose" }] })).toBeNull();
+  });
+});
+
+const H = { type: "h2", children: [{ text: "Heading" }] };
+const P = { type: "p", children: [{ text: "prose" }] };
+const F = (n: string) => ({ type: "file", name: n, url: `/api/drive-file/${n}`, children: [{ text: "" }] });
+const L = (u: string) => ({ type: "p", children: [{ text: "" }, { type: "a", url: u, children: [{ text: u }] }] });
+
+describe("isResourceCell", () => {
+  it("file and standalone-link paragraph are cells; prose and headings are not", () => {
+    expect(isResourceCell(F("a.pdf"))).toBe(true);
+    expect(isResourceCell(L("/x"))).toBe(true);
+    expect(isResourceCell(P)).toBe(false);
+    expect(isResourceCell(H)).toBe(false);
+  });
+  it("a link inside a sentence is not a cell", () => {
+    const inline = { type: "p", children: [{ text: "see " }, { type: "a", url: "/x", children: [{ text: "here" }] }, { text: " for more" }] };
+    expect(isResourceCell(inline)).toBe(false);
+  });
+});
+
+describe("groupResourceGrids", () => {
+  it("wraps a run of 4+ cells, leaves <4 alone", () => {
+    const four = groupResourceGrids([F("1"), F("2"), F("3"), F("4")] as never);
+    expect(four).toHaveLength(1);
+    expect(four[0].type).toBe("resource_grid");
+    expect(four[0].children as unknown[]).toHaveLength(4);
+
+    const three = groupResourceGrids([F("1"), F("2"), F("3")] as never);
+    expect(three.every((n) => n.type === "file")).toBe(true);
+  });
+  it("a heading breaks a run; files + standalone links mix in one grid", () => {
+    const out = groupResourceGrids([F("1"), L("/2"), F("3"), L("/4"), H, F("5")] as never);
+    expect(out[0].type).toBe("resource_grid");
+    expect(out[0].children as unknown[]).toHaveLength(4);
+    expect(out[1]).toBe(H);
+    expect(out[2].type).toBe("file");
+  });
+  it("does not mutate the input", () => {
+    const input = [F("1"), F("2"), F("3"), F("4")];
+    const copy = JSON.parse(JSON.stringify(input));
+    groupResourceGrids(input as never);
+    expect(input).toEqual(copy);
   });
 });
