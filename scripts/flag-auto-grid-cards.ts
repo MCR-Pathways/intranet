@@ -43,10 +43,26 @@ async function main() {
     process.exit(1);
   }
 
+  // This one-off migration fetches every native article in a single page. There
+  // are ~10 today, far below PostgREST's default 1000-row cap, so chunked
+  // pagination would be premature. Guard the assumption rather than truncate
+  // silently: if the count ever reaches the cap, stop loudly so a future run
+  // adds .range() pagination before relying on the result.
+  const articles = data ?? [];
+  const PAGE_CAP = 1000;
+  if (articles.length >= PAGE_CAP) {
+    console.error(
+      `Fetched ${articles.length} native articles — at PostgREST's default ${PAGE_CAP}-row page. ` +
+        "Some articles may be unprocessed; add .range() pagination before running.",
+    );
+    process.exit(1);
+  }
+  console.log(`${dryRun ? "[dry-run] " : ""}Scanned ${articles.length} native article(s).`);
+
   let articlesChanged = 0;
   let totalFlagged = 0;
 
-  for (const article of data ?? []) {
+  for (const article of articles) {
     if (!Array.isArray(article.content_json)) continue;
     const { value: newValue, flaggedCount } = flagAutoGridCards(article.content_json as Value);
     if (flaggedCount === 0) continue;
