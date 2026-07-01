@@ -104,7 +104,7 @@ export function resolveResourceCell(
       name: rawName.replace(/\.[^.]+$/, ""),
       href: (node.url as string) ?? "",
       newTab: true,
-      config: resolveFileType(node.mimeType as string | undefined, rawName),
+      config: resolveResourceType(node),
     };
   }
   const link = standaloneLink(node);
@@ -114,7 +114,7 @@ export function resolveResourceCell(
     name: plateText(link) || url,
     href: url,
     newTab: !isInternalUrl(url),
-    config: classifyLink(url),
+    config: resolveResourceType(node),
   };
 }
 
