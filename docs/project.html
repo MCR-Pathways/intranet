@@ -968,10 +968,10 @@
         "note": "The “On this page” box becomes a rail with a teal active marker, and stays visible below 1024px."
       },
       {
-        "id": "k36",
-        "title": "Resources §2.1 — editor-controlled resource cards",
-        "tag": "ui",
-        "note": "Per-link 'Display as a card' tickbox so a lone or sub-threshold link can be a card; auto-grid-at-4+ stays the default. Additive, no migration. Design settled (spec 2026-07-01)."
+        "id": "k37",
+        "title": "Resources §2.1b — flag the existing auto-detected grids",
+        "tag": "code",
+        "note": "One-time migration: set displayAsCard on every link already in a 4+ auto-grid so the flag is the single source of truth and auto-detection can retire. Today, editing a grid below 4 items reverts the rest to inline. Follows §2.1 (k36)."
       },
       {
         "id": "k32",
@@ -1061,6 +1061,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k36",
+        "title": "Resources §2.1 — editor-controlled resource cards",
+        "tag": "ui",
+        "note": "Per-link 'Display as a card' flag so a lone or sub-threshold link can be a card, while auto-grid-at-4+ stays the zero-effort default. Set by a tickbox in the article-link popover or a toggle on a selected standalone link. Additive and index-safe (Algolia ignores the flag); no content migration.",
+        "completedDate": "2026-07-01",
+        "prNumber": 380,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/380"
+      },
       {
         "id": "k30",
         "title": "Resources §3 — single-item folder promotion",
@@ -1345,6 +1354,20 @@
         "Temporary redirect (307), never permanent: the single-item condition is mutable, so adding a second published article must stop promotion and a cached 308 would break that.",
         "Promotion runs on the already canViewDrafts-filtered fetch results, so a reader (one published article) is redirected while an editor who also sees drafts gets length > 1 and stays on the folder page to manage the drafts; no new query.",
         "The rule is a pure, unit-tested predicate (promotionTargetSlug) because the page is a Server Component that is not unit-tested directly."
+      ]
+    },
+    {
+      "id": "f10",
+      "title": "Editor-controlled resource cards (§2.1)",
+      "date": "2026-07-01",
+      "prNumber": 380,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/380",
+      "summary": "§2 groups a run of 4+ files or links into a card grid automatically, but anything below that threshold stayed an inline link, so a lone tile an author wanted as a card could not be one. Authors can now flag a standalone link as a card explicitly, via a tickbox in the article-link insert popover or a toggle on a selected standalone link, and it renders as a card whatever its neighbour count. Auto-grid-at-4+ stays the default, so existing articles are untouched. Fourth of the resources-redesign PRs; §4 (reading rail) and a §2.1b migration remain.",
+      "decisions": [
+        "Both mechanisms kept: auto-detect-at-4+ stays the default and the flag is an additive per-link override, so existing grids render unchanged with no content migration. §2.1b (queued) will flag those existing auto-grids so the flag can become the single source of truth and auto-detection can retire.",
+        "Index-safe: displayAsCard is presentational, so the Algolia serialisation path ignores it and a card-link indexes identically to an inline link. No search change, preserving the §2 index-safety contract.",
+        "Files unchanged in v1: the flag applies to standalone links (the resource tiles are links, not uploads); file voids keep today's behaviour. Opt-out (force-inline inside a 4+ run) and files are v2.",
+        "No full in-editor card render: a link is a Plate inline node, so the editor shows a dotted cue on a flagged standalone link plus the Preview hint rather than a block card. The cue is gated on the same standalone condition as the read path, so editor and published view agree."
       ]
     }
   ],
