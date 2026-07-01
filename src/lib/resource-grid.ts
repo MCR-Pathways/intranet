@@ -220,3 +220,48 @@ export function hasResourceGridRun(value: Value): boolean {
   }
   return false;
 }
+
+/**
+ * §2.1b — set `displayAsCard` on the standalone-link cells inside runs of
+ * MIN_GRID_RUN+ consecutive resource cells: the links that already render as an
+ * auto-grid. Flagging them makes the grid survive an edit that drops the run
+ * below the threshold. Only 4+ runs are touched, so today's rendering is
+ * unchanged; file voids in a run are left alone (files-as-cards is v2). Returns
+ * a new value (never mutates the input) and the count of links newly flagged
+ * this pass — an already-flagged link is left as-is and not re-counted, so the
+ * transform is idempotent.
+ */
+export function flagAutoGridCards(value: Value): { value: Value; flaggedCount: number } {
+  let flaggedCount = 0;
+
+  const flagCell = (node: Node): Node => {
+    const link = standaloneLink(node);
+    if (!link || (link as Node).displayAsCard === true) return node;
+    flaggedCount++;
+    return {
+      ...node,
+      children: (node.children as Node[]).map((child) =>
+        child.type === "a" ? { ...child, displayAsCard: true } : child,
+      ),
+    };
+  };
+
+  const out: Value = [];
+  let run: Node[] = [];
+  const flush = () => {
+    const isGrid = run.length >= MIN_GRID_RUN;
+    for (const node of run) {
+      out.push((isGrid ? flagCell(node) : node) as unknown as Value[number]);
+    }
+    run = [];
+  };
+  for (const node of value) {
+    if (isResourceCell(node as Node)) run.push(node as Node);
+    else {
+      flush();
+      out.push(node);
+    }
+  }
+  flush();
+  return { value: out, flaggedCount };
+}
