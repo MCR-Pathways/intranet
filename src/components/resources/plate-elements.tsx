@@ -130,8 +130,10 @@ export function LinkElement({ children, element, attributes }: PlateElementProps
 
   // The "show as card" toggle only applies to a standalone link (the sole
   // content of its paragraph) — a card is a block, not an in-sentence link.
-  // Reuse the read-path condition so editor and renderer agree.
-  const path = editor.api.findPath(element);
+  // Reuse the read-path condition so editor and renderer agree. Only walk the
+  // tree when this link is selected (the toggle renders only then), so we avoid
+  // a findPath search on every link on every keystroke.
+  const path = selected ? editor.api.findPath(element) : undefined;
   const parent = path ? editor.api.parent(path) : undefined;
   const isStandalone = !!(parent && standaloneLink(parent[0] as Record<string, unknown>));
 
