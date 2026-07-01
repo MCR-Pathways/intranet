@@ -30,6 +30,14 @@ describe("resolveResourceType", () => {
     expect(resolveResourceType(linkPara("/resources/article/x").children[1]).key).toBe("internal");
     expect(resolveResourceType(linkPara("https://example.com/x").children[1]).key).toBe("external");
   });
+
+  it("proxied Drive files classify as documents (not page links)", () => {
+    expect(resolveResourceType(linkPara("/api/drive-file/abc123").children[1]).key).toBe("document");
+  });
+
+  it("a foreign URL merely containing the proxy path is external, not a document", () => {
+    expect(resolveResourceType(linkPara("https://example.com/x?f=/api/drive-file/abc").children[1]).key).toBe("external");
+  });
 });
 
 describe("resolveResourceCell", () => {
@@ -49,6 +57,12 @@ describe("resolveResourceCell", () => {
 
   it("external/Google link cell: new tab", () => {
     const c = resolveResourceCell(linkPara("https://docs.google.com/document/d/x/edit", "Policy"))!;
+    expect(c.newTab).toBe(true);
+  });
+
+  it("proxied-document link: document type, opens in a new tab", () => {
+    const c = resolveResourceCell(linkPara("/api/drive-file/abc123", "Session plan"))!;
+    expect(c.config.key).toBe("document");
     expect(c.newTab).toBe(true);
   });
 

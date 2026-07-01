@@ -25,20 +25,20 @@ export interface ResourceTypeConfig {
   key: string;
   label: string;
   Icon: LucideIcon;
-  bgClass: string;
-  fgClass: string;
 }
 
-// Link type configs. This is the Tailwind type-colour convention — file-types.ts
-// already uses non-brand red/blue/green/orange/slate for file types, so the chip
-// palette is an established convention, not app chrome.
-const GDOC: ResourceTypeConfig = { key: "gdoc", label: "Google Doc", Icon: FileText, bgClass: "bg-blue-50 dark:bg-blue-950/30", fgClass: "text-blue-700 dark:text-blue-400" };
-const GSHEET: ResourceTypeConfig = { key: "gsheet", label: "Google Sheet", Icon: Table2, bgClass: "bg-green-50 dark:bg-green-950/30", fgClass: "text-green-700 dark:text-green-400" };
-const GSLIDES: ResourceTypeConfig = { key: "gslides", label: "Google Slides", Icon: Presentation, bgClass: "bg-amber-50 dark:bg-amber-950/30", fgClass: "text-amber-700 dark:text-amber-400" };
-const GFORM: ResourceTypeConfig = { key: "gform", label: "Google Form", Icon: ClipboardList, bgClass: "bg-purple-50 dark:bg-purple-950/30", fgClass: "text-purple-700 dark:text-purple-400" };
-const GDRIVE: ResourceTypeConfig = { key: "gdrive", label: "Google Drive", Icon: HardDrive, bgClass: "bg-sky-50 dark:bg-sky-950/30", fgClass: "text-sky-700 dark:text-sky-400" };
-const INTERNAL: ResourceTypeConfig = { key: "internal", label: "Page", Icon: Link2, bgClass: "bg-cyan-50 dark:bg-cyan-950/30", fgClass: "text-cyan-700 dark:text-cyan-400" };
-const EXTERNAL: ResourceTypeConfig = { key: "external", label: "Link", Icon: ExternalLink, bgClass: "bg-slate-100 dark:bg-slate-800/40", fgClass: "text-slate-600 dark:text-slate-400" };
+// One icon per type. The chip renders a uniform muted treatment (see ResourceGrid),
+// so type is signalled by the glyph shape, not colour. Per-type colour was tried and
+// pulled: on real hub pages nearly every resource is the same type, so it read as a
+// wall of identical loud chips rather than useful signal.
+const GDOC: ResourceTypeConfig = { key: "gdoc", label: "Google Doc", Icon: FileText };
+const GSHEET: ResourceTypeConfig = { key: "gsheet", label: "Google Sheet", Icon: Table2 };
+const GSLIDES: ResourceTypeConfig = { key: "gslides", label: "Google Slides", Icon: Presentation };
+const GFORM: ResourceTypeConfig = { key: "gform", label: "Google Form", Icon: ClipboardList };
+const GDRIVE: ResourceTypeConfig = { key: "gdrive", label: "Google Drive", Icon: HardDrive };
+const INTERNAL: ResourceTypeConfig = { key: "internal", label: "Page", Icon: Link2 };
+const EXTERNAL: ResourceTypeConfig = { key: "external", label: "Link", Icon: ExternalLink };
+const DOCUMENT: ResourceTypeConfig = { key: "document", label: "Document", Icon: FileText };
 
 type Node = Record<string, unknown>;
 
@@ -55,7 +55,26 @@ function isInternalUrl(url: string): boolean {
   return false;
 }
 
+/**
+ * Proxied Drive files (`/api/drive-file/{id}`) are documents, not page links.
+ * Matches the proxy PATH, not the substring anywhere — a foreign URL that merely
+ * contains `/api/drive-file/` (e.g. `https://x.com/?f=/api/drive-file/…`) is not ours.
+ */
+function isProxyDocument(url: string): boolean {
+  if (url.startsWith("/api/drive-file/")) return true;
+  if (APP_ORIGIN) {
+    try {
+      const u = new URL(url);
+      return u.origin === APP_ORIGIN && u.pathname.startsWith("/api/drive-file/");
+    } catch {
+      /* not an absolute URL */
+    }
+  }
+  return false;
+}
+
 function classifyLink(url: string): ResourceTypeConfig {
+  if (isProxyDocument(url)) return DOCUMENT;
   if (isInternalUrl(url)) return INTERNAL;
   try {
     const u = new URL(url);
@@ -101,7 +120,8 @@ export function resolveResourceCell(
   if (node.type === "file") {
     const rawName = (node.name as string) || "Document";
     return {
-      name: rawName.replace(/\.[^.]+$/, ""),
+      // Strip the extension, but never end up empty (a dotfile like ".env" strips to "").
+      name: rawName.replace(/\.[^.]+$/, "") || rawName,
       href: (node.url as string) ?? "",
       newTab: true,
       config: resolveResourceType(node),
@@ -113,7 +133,7 @@ export function resolveResourceCell(
   return {
     name: plateText(link) || url,
     href: url,
-    newTab: !isInternalUrl(url),
+    newTab: isProxyDocument(url) || !isInternalUrl(url),
     config: resolveResourceType(node),
   };
 }

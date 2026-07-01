@@ -39,7 +39,6 @@ import {
   BaseTableCellHeaderPlugin,
 } from "@platejs/table";
 import type { SlateElementProps, SlateLeafProps } from "platejs/static";
-import { cn } from "@/lib/utils";
 import { resolveResourceCell, groupResourceGrids } from "./resource-grid";
 import {
   createSlugDeduplicator,
@@ -436,13 +435,8 @@ function ResourceGrid({ element, attributes }: SlateElementProps) {
               {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="flex h-full items-center gap-3 rounded-lg border border-border bg-card p-3 no-underline transition-colors hover:border-primary/40 hover:bg-muted/40"
             >
-              <span
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
-                  config.bgClass,
-                )}
-              >
-                <Icon className={cn("h-5 w-5", config.fgClass)} />
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                <Icon className="h-5 w-5" />
               </span>
               <span className="min-w-0 text-sm font-medium leading-snug text-foreground">
                 {name}

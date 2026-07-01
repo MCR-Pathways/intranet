@@ -1,7 +1,7 @@
 # Resources redesign — design spec
 
 **Date:** 2026-06-30
-**Status:** Approved and in build. §1 (sticky toolbar) shipped via #373. §2 settled 2026-06-30 — Direction A cell + Style C chips, grids files and standalone links, no lightbox; accessibility of Workspace links is a parked follow-on; §3–§4 unchanged from the original spec.
+**Status:** Approved and in build. §1 (sticky toolbar) shipped via #373. §2 settled 2026-06-30 — Direction A cell, grids files and standalone links, no lightbox; the chip is a single document treatment, not per-type colour (amended 2026-07-01, see §2 below); accessibility of Workspace links is a parked follow-on; §3–§4 unchanged from the original spec.
 **Visual companion:** the MCR plan page (private): https://zip.mcrpathways.org/resources-redesign-plan.html
 
 ## Goal
@@ -21,10 +21,11 @@ Everything below was verified against the live code (2026-06-29/30). The brief's
 - **§1** One sticky bar (format tools + Save/View/Publish), not two stacked bars. Built via a right-hand slot on the editor toolbar.
 - **§2** Detector targets **`file` nodes and standalone links** (build-loop decision 2026-06-30; supersedes the earlier files-only call, once we recognised MCR's resources are largely Google Workspace links, not uploaded files). A resource cell is a `file` void node, or a paragraph whose only meaningful child is a single link. A link **inside a sentence** stays inline prose via `LinkStatic`; only a link **on its own line** becomes a tile. A run of 4+ consecutive cells auto-grids.
 - **§2** Collapsible themes are **cut**. The reading rail (§4) handles navigation.
-- **§2** Cell = **Direction A** with a **Style C chip**: a white bordered card, a full colour-tinted type chip + Lucide-style glyph on the left, the name at medium weight (500)/15px with the extension stripped, **no "kind" label** (the chip carries the type), no `↗` and no "(external)"/"opens here" text.
+- **§2** Cell = **Direction A** with a **uniform document chip**: a white bordered card, a `bg-red-50`/`text-red-700` chip (the file-type document red from `file-types.ts`) holding a per-type Lucide glyph on the left, the name at medium weight (500)/15px with the extension stripped, **no "kind" label**, no `↗` and no "(external)"/"opens here" text. *Amended 2026-07-01: the original per-type chip colour was cut — see the amendment note below.*
 - **§2** Type taxonomy: **PDF / file types** from the filename extension via `resolveFileType`; **Google Doc / Sheet / Slides / Form / Drive** from the link URL; **internal page** from an app-origin or relative URL; **external** otherwise. Glyphs are Lucide-style (no third-party logo art embedded).
 - **§2** Open behaviour: file cells → the Drive proxy (`<a target="_blank">`; PDFs/images inline, others download); link cells → their own href (internal → same tab, external/Google → new tab). **No lightbox** — resources files are service-account-served, so the news-feed's Drive `/preview` model doesn't apply.
 - **§2** Accessibility is **not** §2's job. The grid is a visual re-layout — it neither fixes nor regresses reachability. PDFs (proxy) and internal Google-Doc articles are already accessible to Google-blocked staff; a raw Google/external tile is exactly as reachable as the same link was inline. Serving Workspace docs through the intranet so those tiles open an intranet copy is the **parked** follow-on (see roadmap), not §2.
+- **§2 amendment (2026-07-01): uniform chip, not per-type colour.** The build first tinted each type (Doc blue, Sheet green, PDF red, and so on, mirroring `file-types.ts`). On the real hub pages nearly every resource is the same type, so a full grid rendered as a wall of identical loud chips: colour with nothing to contrast against carries no signal. The chip is now a single muted document treatment (`bg-red-50`/`text-red-700`, the file-type document red), with type conveyed by the Lucide glyph alone. `ResourceTypeConfig` keeps `{ key, label, Icon }` only (no `bgClass`/`fgClass`). Proxied Drive files (`/api/drive-file/…`) classify as a `document` type (FileText glyph, new tab), since they are documents served through the intranet, not page links. A prerequisite fix (#374) landed first: Tailwind v4's `dark:` variant was firing from the OS colour-scheme on dark-mode machines, so the light chip colours were not even visible during tuning.
 - **§3** Promote any folder with exactly one **published** article. Drafts in a promoted folder stay reachable via `/resources/drafts` and the admin audit. No per-folder override.
 - **§4** Active marker = teal text + a 3px teal left bar + bolder weight, with a bold "On this page" label (colour + weight, belt-and-braces).
 - **§4** The rail shows all headings, **H2 + H3 only** (never H4), with scroll-spy. No expand/collapse — matches React.dev and MDN.
@@ -73,9 +74,9 @@ The WP migration hoists each PDF/doc into a standalone `file` void block (`html-
 
 **Read path (render-only).** In `prepareNativeArticle` (`plate-static-plugins.tsx`), after `addHeadingIds` (so headings come from the flat tree and the TOC is unaffected) and before `createStaticEditor`, a `groupResourceGrids` transform wraps qualifying runs in a `resource_grid` node. A registered `ResourceGrid` static component renders a real `<ul role="list">` as a row-major CSS grid: 3-up at ≥1024px, 2-up below. The Algolia path (`createNativeStaticEditor`) is untouched, so the flat list is indexed exactly as today.
 
-**Cell — Direction A, Style C chip.** Each cell is a white bordered card: a full colour-tinted type chip with a Lucide-style glyph on the left, then the name at medium weight (500), 15px, **extension stripped**, **no "kind" label** (the chip carries the type) and no `↗`. The whole cell is an `<a>`.
+**Cell — Direction A, uniform document chip.** Each cell is a white bordered card: a single `bg-red-50`/`text-red-700` chip holding a per-type Lucide glyph on the left, then the name at medium weight (500), 15px, **extension stripped**, **no "kind" label** and no `↗`. The whole cell is an `<a>`. *(Per-type chip colour was cut — see the §2 amendment above.)*
 
-**Type detection.** A shared `resolveResourceType(node)` returns `{ key, label, icon, colour }` for the chip:
+**Type detection.** A shared `resolveResourceType(node)` returns `{ key, label, Icon }` for the chip (no colour — the chip treatment is uniform):
 - **`file` node** → `resolveFileType(mimeType, name)` (`src/lib/file-types.ts`) → PDF / DOC / XLS / PPT / TXT / FILE. Nodes carry no `mimeType`, so the filename extension is the live signal.
 - **link node** → classify by URL: `docs.google.com/document` → Google Doc; `/spreadsheets` → Sheet; `/presentation` → Slides; `/forms` → Form; `drive.google.com` → Drive; an app-origin or relative URL → internal page; anything else → external.
 
@@ -97,7 +98,7 @@ Indexing runs server-side from the stored `content_json` via `createNativeStatic
 ### Files
 - `src/lib/plate-static-plugins.tsx` — `isResourceCell` (a `file` void **or** a standalone-link paragraph), `resolveResourceType` (file-type via `resolveFileType` + link-type via URL), `groupResourceGrids` in `prepareNativeArticle`, `BaseResourceGridPlugin` + `ResourceGrid` (Direction A / Style C cell rendering an `<a>` per the open-behaviour rules).
 - `src/lib/file-types.ts` — reused as-is for the file-type chips. No change expected.
-- The Workspace/link chip map (Doc / Sheet / Slides / Form / Drive / internal / external → glyph + colour) lives alongside the detector.
+- The Workspace/link type map (Doc / Sheet / Slides / Form / Drive / internal / external / document → glyph) lives alongside the detector. One glyph per type; the chip treatment is uniform (no per-type colour).
 - `src/components/resources/plate-editor.tsx` (or the editor element module) — the "displays as a grid · Preview" hint.
 
 (No news-feed files: no lightbox, so `DocumentLightbox` / `attachment-display` are untouched.)
@@ -105,7 +106,7 @@ Indexing runs server-side from the stored `content_json` via `createNativeStatic
 ### Tests
 - Detector: 4+ `file` nodes grid; 4+ standalone-link paragraphs grid; a mix of files and standalone links grids; a link **inside a sentence** does **not** grid (stays inline); a heading breaks a run; fewer than 4 stays a list.
 - Type detection: file extensions → `resolveFileType` (pdf→red … unknown→FILE); `docs.google.com/document`→Doc, `/spreadsheets`→Sheet, `/presentation`→Slides, `/forms`→Form; `drive.google.com`→Drive; app-origin/relative→internal; else→external.
-- Cell rendering: Style C chip (colour + glyph) per type; the name has the extension stripped; the cell is an `<a>` with the right target (internal same-tab; external/Google `target="_blank" rel="noopener noreferrer"`).
+- Cell rendering: uniform document chip (single glyph, no per-type colour); proxied `/api/drive-file/` links classify as `document` and open in a new tab; the name has the extension stripped; the cell is an `<a>` with the right target (internal same-tab; external/Google `target="_blank" rel="noopener noreferrer"`).
 - Algolia regression (extend `plate-static-plugins.test.tsx`): the grid transform produces the same indexed sections as the flat tree (the "one heading → one section" contract still holds).
 
 ### Edge cases
