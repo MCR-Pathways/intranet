@@ -8,10 +8,12 @@
  * Inserts a link node with the article's intranet URL.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { FileText, Link as LinkIcon, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -29,8 +31,8 @@ interface ArticleResult {
 }
 
 interface ArticleLinkPopoverProps {
-  /** Called when an article is selected. Receives the intranet URL and title. */
-  onInsertLink: (url: string, title: string) => void;
+  /** Called when an article is selected. Receives the intranet URL, title, and whether to render it as a card. */
+  onInsertLink: (url: string, title: string, displayAsCard: boolean) => void;
 }
 
 export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
@@ -38,6 +40,8 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ArticleResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [asCard, setAsCard] = useState(false);
+  const checkboxId = useId();
 
   const search = useDebouncedCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -61,16 +65,27 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
   const handleSelect = useCallback(
     (article: ArticleResult) => {
       const articleUrl = `/resources/article/${article.slug}`;
-      onInsertLink(articleUrl, article.title);
-      setOpen(false);
-      setQuery("");
-      setResults([]);
+      onInsertLink(articleUrl, article.title, asCard);
+      setOpen(false); // closing resets transient state via onOpenChange
     },
-    [onInsertLink]
+    [onInsertLink, asCard]
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // Reset transient state whenever the popover closes — select, Escape, or
+        // click-outside — so a ticked "Display as a card" (or a stale query) does
+        // not persist into the next open.
+        if (!next) {
+          setQuery("");
+          setResults([]);
+          setAsCard(false);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -95,6 +110,19 @@ export function ArticleLinkPopover({ onInsertLink }: ArticleLinkPopoverProps) {
               // eslint-disable-next-line jsx-a11y/no-autofocus -- focus the search field when the user opens this popover
               autoFocus
             />
+          </div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <Checkbox
+              id={checkboxId}
+              checked={asCard}
+              onCheckedChange={(v) => setAsCard(v === true)}
+            />
+            <Label
+              htmlFor={checkboxId}
+              className="text-sm font-normal text-muted-foreground cursor-pointer"
+            >
+              Display as a card
+            </Label>
           </div>
         </div>
 

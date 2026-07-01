@@ -98,8 +98,9 @@ function plateText(node: Node | null | undefined): string {
   return Array.isArray(kids) ? kids.map((k) => plateText(k as Node)).join("") : "";
 }
 
-/** The single link inside a standalone-link paragraph, or null. */
-function standaloneLink(node: Node): Node | null {
+/** The single link inside a standalone-link paragraph, or null. Exported so the
+ *  editor's LinkElement can gate its "show as card" toggle on the same condition. */
+export function standaloneLink(node: Node): Node | null {
   if (node.type !== "p") return null;
   // Keep any element node (so a non-link element disqualifies the paragraph) or
   // non-blank text; drop the empty text nodes Plate pads inline content with.
@@ -107,6 +108,12 @@ function standaloneLink(node: Node): Node | null {
     (c) => typeof c.type === "string" || (typeof c.text === "string" && c.text.trim() !== ""),
   );
   return kids.length === 1 && kids[0].type === "a" ? kids[0] : null;
+}
+
+/** A standalone-link paragraph whose inner link is explicitly flagged as a card (§2.1). */
+function isFlaggedCard(node: Node): boolean {
+  const link = standaloneLink(node);
+  return !!link && (link as Node).displayAsCard === true;
 }
 
 export function resolveResourceType(node: Node): ResourceTypeConfig {
@@ -152,16 +159,36 @@ const MIN_GRID_RUN = 4;
 
 /**
  * Wrap runs of MIN_GRID_RUN+ consecutive resource cells in a `resource_grid` node.
- * Returns a new top-level array; never mutates the input (render-only).
+ * Below that threshold, adjacent flagged standalone links (`displayAsCard`) still
+ * promote to a grid so a lone or sub-threshold card renders (§2.1). Returns a new
+ * top-level array; never mutates the input (render-only).
  */
 export function groupResourceGrids(value: Value): Value {
   const out: Value = [];
   let run: Value = [];
   const flush = () => {
+    if (run.length === 0) return;
     if (run.length >= MIN_GRID_RUN) {
+      // 4+ consecutive candidates: the whole run is a grid (auto, unchanged).
       out.push({ type: "resource_grid", children: run } as unknown as Value[number]);
     } else {
-      out.push(...run);
+      // Below threshold: promote runs of adjacent flagged cards; emit the rest
+      // as-is (an unflagged link stays inline; a file stays its own block).
+      let cards: Value = [];
+      const flushCards = () => {
+        if (cards.length > 0) {
+          out.push({ type: "resource_grid", children: cards } as unknown as Value[number]);
+          cards = [];
+        }
+      };
+      for (const node of run) {
+        if (isFlaggedCard(node as Node)) cards.push(node);
+        else {
+          flushCards();
+          out.push(node);
+        }
+      }
+      flushCards();
     }
     run = [];
   };
@@ -185,7 +212,8 @@ export function hasResourceGridRun(value: Value): boolean {
   let run = 0;
   for (const node of value) {
     if (isResourceCell(node as Node)) {
-      if (++run >= MIN_GRID_RUN) return true;
+      run++;
+      if (run >= MIN_GRID_RUN || isFlaggedCard(node as Node)) return true;
     } else {
       run = 0;
     }

@@ -9,6 +9,11 @@
 
 ## Design
 
+> **Grounding refinement (2026-07-01, pre-planning)** — three scope calls confirmed against the editor code:
+> 1. **Links only in v1.** The resource tiles are links (to `/api/drive-file/…`), not uploaded files, and defaulting a lone uploaded file to a card would change how it renders today. File voids are left exactly as they are; the flag applies to standalone links. Files can get it in a follow-up.
+> 2. **Two control surfaces; no link-edit popover exists today.** Links are insert-only. So the flag is set by a "Display as a card" tickbox in the article-link insert popover (`ArticleLinkPopover`) **and** a floating "Show as card" toggle on a selected standalone link (mirroring the `useSelected` pattern on `FileElement`). The toggle is what converts an existing link (the Activity Plans case) and works for any link source.
+> 3. **No full in-editor card render.** A link is a Plate *inline* node, so rendering it as a block card in the editor is deferred. Matching §2, the editor shows the flagged state + the "displays as … when published · Preview" hint; Preview shows the real card. Save-path check confirmed the flag survives (no sanitisation), and the Algolia path ignores it, so both are index-safe.
+
 Keep auto-detection **and** add an explicit per-link override. Both coexist under one precedence rule.
 
 - **Stored flag.** Each candidate (a file void, or a link alone on its line) carries an optional `displayAsCard` boolean on its node. Unset by default.
@@ -53,6 +58,7 @@ Auto-detection stays as the default, so every existing 4+ grid keeps rendering u
 
 ## Out of scope (v1)
 
+- **§2.1b — flag the existing auto-detected grids (QUEUED, next after this ships).** Today's 4+ grids are cards via auto-detection, not the flag, so editing one below 4 items reverts the remainder to inline. A one-time migration setting `displayAsCard: true` on every link currently in a 4+ auto-grid would make the flag the single source of truth and let auto-detection retire (the "Model A" fork we deferred).
 - **Opt-out** (`displayAsCard: false` to force a link inline within a 4+ run). A trivial extension of the same flag — turns the checkbox into a three-way "Auto / Card / Inline" control. Ship only if editors ask.
 - Drag-reorder of cards; multi-select bulk-flag. Not needed for the core.
 

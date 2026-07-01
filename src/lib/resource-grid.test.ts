@@ -130,3 +130,32 @@ describe("hasResourceGridRun", () => {
     expect(hasResourceGridRun([P, H] as never)).toBe(false);
   });
 });
+
+// A standalone-link paragraph whose inner link is flagged as a card (§2.1).
+const LC = (u: string) => ({ type: "p", children: [{ text: "" }, { type: "a", url: u, displayAsCard: true, children: [{ text: u }] }] });
+
+describe("displayAsCard (§2.1)", () => {
+  it("a single flagged link becomes a grid of one, below the 4+ threshold", () => {
+    const out = groupResourceGrids([P, LC("/one"), P] as never);
+    expect(out[1].type).toBe("resource_grid");
+    expect((out[1].children as unknown[]).length).toBe(1);
+  });
+
+  it("adjacent flagged links group into one grid; an unflagged sub-run link stays inline", () => {
+    const out = groupResourceGrids([LC("/a"), LC("/b"), L("/c")] as never);
+    expect(out[0].type).toBe("resource_grid");
+    expect((out[0].children as unknown[]).length).toBe(2);
+    expect(out[1].type).toBe("p");
+  });
+
+  it("a 4+ run still grids regardless of flags (auto unchanged)", () => {
+    const four = groupResourceGrids([L("/1"), L("/2"), L("/3"), L("/4")] as never);
+    expect(four).toHaveLength(1);
+    expect(four[0].type).toBe("resource_grid");
+  });
+
+  it("hasResourceGridRun is true for a single flagged link, false for an unflagged lone link", () => {
+    expect(hasResourceGridRun([P, LC("/one")] as never)).toBe(true);
+    expect(hasResourceGridRun([P, L("/one")] as never)).toBe(false);
+  });
+});
