@@ -169,8 +169,10 @@ export function GlossaryFilter({
   return (
     <>
       {/* Pinned bar — stays in reach while scrolling a long list. top-20 matches
-          the sticky TOC. bg-card hides entries scrolling underneath. */}
-      <div className="not-prose sticky top-20 z-20 -mt-2 bg-card pb-3 pt-2">
+          the sticky TOC. bg-card hides entries scrolling underneath. max-w
+          matches the article's reading measure (ARTICLE_PROSE_CLASSES) so the
+          filter shares the content's right edge. */}
+      <div className="not-prose sticky top-20 z-20 -mt-2 max-w-[90ch] bg-card pb-3 pt-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input

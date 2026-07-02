@@ -13,9 +13,21 @@
 export const ARTICLE_CONTENT_MODIFIERS =
   "prose-headings:font-semibold prose-headings:tracking-tight prose-headings:scroll-mt-24 prose-p:text-foreground/85 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-link prose-a:underline-offset-4 hover:prose-a:text-link/80 prose-img:rounded-lg prose-hr:border-border";
 
-/** Full prose class string for article content areas. */
+/** Full prose class string for article content areas.
+ *
+ * `max-w-[90ch]` is the §4 reading measure (decided 2026-07-02 after live
+ * comparison of fill / prose-only-cap / column-cap on real articles): the
+ * whole column of text, grids and tables caps together at ~90ch of the
+ * prose-sm font, so there's one uniform right edge and no ragged "text stops
+ * midway". Wider than prose's 65ch default (which the `ch` value overrides)
+ * and the old 720px cap; narrower than the full card, whose leftover becomes
+ * a quiet gutter before the borderless rail. On a 1366px Chromebook the
+ * column is naturally narrower than the cap, so nothing changes there; only
+ * ~1920px externals see the measure. Paired constant: the resource grid's
+ * 210px tile minimum (ResourceGrid in plate-static-plugins.tsx) is tuned to
+ * give 3-up tiles inside this measure. Retune the two together. */
 export const ARTICLE_PROSE_CLASSES =
-  `prose prose-sm max-w-[720px] ${ARTICLE_CONTENT_MODIFIERS}`;
+  `prose prose-sm max-w-[90ch] ${ARTICLE_CONTENT_MODIFIERS}`;
 
 /** Card wrapper classes for article detail views.
  *
@@ -86,3 +98,54 @@ export interface ArticleHeading {
   slug: string;
   level: number;
 }
+
+/**
+ * The headings the reading rail lists and scroll-spies: the top two heading
+ * levels present in the document.
+ *
+ * On well-formed content (bodies start at H2, per the Plate editor and the
+ * WP-migration convention) that is exactly H2 + H3. The general rule exists
+ * for synced Google Docs and irregular authoring: an H1-sectioned Doc (Docs'
+ * default heading style, and the sanitiser does not demote levels) rails
+ * H1 + H2, and an article that skips H3 rails H2 + H4. A hardcoded 2|3 filter
+ * would silently delete the whole rail for those shapes. Deeper levels keep
+ * their anchors (deep links, search, `scroll-mt`); they just aren't listed.
+ *
+ * Feed this filtered list to `useScrollSpy` (not the full list) and the
+ * ancestor-fallback marker comes for free: reading inside an unlisted deeper
+ * section, the hook's gap-state branch lands on the last listed heading above
+ * the fold, which is its nearest listed ancestor. See `resources/CLAUDE.md`
+ * and `use-scroll-spy.ts`.
+ */
+export function filterRailHeadings(headings: ArticleHeading[]): ArticleHeading[] {
+  const levels = [...new Set(headings.map((h) => h.level))].sort((a, b) => a - b);
+  const kept = new Set(levels.slice(0, 2));
+  return headings.filter((h) => kept.has(h.level));
+}
+
+// ─── Article layout ─────────────────────────────────────────────────────
+
+/** Article layout grid (§4): three children in DOM order, header block, then
+ *  ArticleOutline, then the content block. Below `lg` they stack in that
+ *  order, which puts the "On this page" disclosure between the title and the
+ *  content. From `lg` the rail places itself in column 2 spanning both rows
+ *  (classes on ArticleOutline's nav), giving header-over-content on the left
+ *  with the sticky rail alongside. Shared by the native and Google Doc views
+ *  so the two layouts cannot drift. */
+export const ARTICLE_LAYOUT_CLASSES =
+  "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-8 lg:gap-y-5";
+
+/** The header block (title + actions + meta) inside ARTICLE_LAYOUT_CLASSES.
+ *  `lg:col-start-1` is load-bearing: ArticleOutline returns null for articles
+ *  with fewer than 2 rail headings, and without explicit placement grid
+ *  auto-placement would flow the content block into the vacated second
+ *  column, rendering it beside the header at rail width. */
+export const ARTICLE_HEADER_CLASSES = "min-w-0 lg:col-start-1";
+
+/** The content block inside ARTICLE_LAYOUT_CLASSES. `lg:col-start-1` pins it
+ *  under the header when the rail is absent (see ARTICLE_HEADER_CLASSES).
+ *  No width cap of its own, the reading measure lives on
+ *  ARTICLE_PROSE_CLASSES; siblings of the article inside this block
+ *  (controls, empty states) carry `max-w-[90ch]` themselves so nothing runs
+ *  past the measure's right edge. */
+export const ARTICLE_COLUMN_CLASSES = "min-w-0 space-y-5 lg:col-start-1";

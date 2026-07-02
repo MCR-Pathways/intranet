@@ -2,9 +2,13 @@ import { describe, it, expect } from "vitest";
 import {
   slugifyHeading,
   createSlugDeduplicator,
+  filterRailHeadings,
   ARTICLE_PROSE_CLASSES,
   ARTICLE_CONTENT_MODIFIERS,
   ARTICLE_CARD_CLASSES,
+  ARTICLE_HEADER_CLASSES,
+  ARTICLE_COLUMN_CLASSES,
+  type ArticleHeading,
 } from "./article-constants";
 
 describe("slugifyHeading", () => {
@@ -59,10 +63,71 @@ describe("createSlugDeduplicator", () => {
   });
 });
 
+describe("filterRailHeadings", () => {
+  const h = (level: number, text: string): ArticleHeading => ({
+    level,
+    text,
+    slug: text.toLowerCase().replace(/\s+/g, "-"),
+  });
+
+  it("keeps H2 and H3 on well-formed content, dropping H4+", () => {
+    const input = [h(2, "Section"), h(3, "Sub"), h(4, "Detail"), h(3, "Sub 2")];
+    expect(filterRailHeadings(input).map((x) => x.text)).toEqual([
+      "Section",
+      "Sub",
+      "Sub 2",
+    ]);
+  });
+
+  it("rails H1 + H2 for an H1-sectioned document (synced Google Docs)", () => {
+    const input = [h(1, "Intro"), h(2, "Detail"), h(1, "Policy"), h(3, "Deep")];
+    expect(filterRailHeadings(input).map((x) => x.text)).toEqual([
+      "Intro",
+      "Detail",
+      "Policy",
+    ]);
+  });
+
+  it("rails H2 + H4 when a document skips H3", () => {
+    const input = [h(2, "Section"), h(4, "Sub"), h(4, "Sub 2")];
+    expect(filterRailHeadings(input).map((x) => x.text)).toEqual([
+      "Section",
+      "Sub",
+      "Sub 2",
+    ]);
+  });
+
+  it("keeps a single-level document intact", () => {
+    const input = [h(2, "A"), h(2, "B"), h(2, "C")];
+    expect(filterRailHeadings(input).map((x) => x.text)).toEqual([
+      "A",
+      "B",
+      "C",
+    ]);
+  });
+
+  it("preserves document order", () => {
+    const input = [h(2, "A"), h(3, "B"), h(2, "C"), h(3, "D")];
+    expect(filterRailHeadings(input).map((x) => x.text)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+    ]);
+  });
+
+  it("returns [] for empty input", () => {
+    expect(filterRailHeadings([])).toEqual([]);
+  });
+});
+
 describe("shared constants", () => {
-  it("ARTICLE_PROSE_CLASSES includes prose-sm and max-width", () => {
+  it("ARTICLE_PROSE_CLASSES caps the column at the 90ch reading measure (§4)", () => {
     expect(ARTICLE_PROSE_CLASSES).toContain("prose prose-sm");
-    expect(ARTICLE_PROSE_CLASSES).toContain("max-w-[720px]");
+    // One measure for everything: text, grids and tables cap together.
+    // 90ch beats prose's built-in 65ch default and replaces the old 720px cap.
+    expect(ARTICLE_PROSE_CLASSES).toContain("max-w-[90ch]");
+    expect(ARTICLE_PROSE_CLASSES).not.toContain("max-w-none");
   });
 
   it("ARTICLE_PROSE_CLASSES includes all content modifiers", () => {
@@ -83,5 +148,13 @@ describe("shared constants", () => {
 
   it("ARTICLE_CARD_CLASSES drops the heavy shadow (soft-retreat shape)", () => {
     expect(ARTICLE_CARD_CLASSES).not.toContain("shadow-md");
+  });
+
+  it("header and content pin to grid column 1 (rail-less articles)", () => {
+    // ArticleOutline returns null under 2 rail headings; without explicit
+    // placement, grid auto-placement would flow the content block into the
+    // vacated rail column, beside the header at rail width.
+    expect(ARTICLE_HEADER_CLASSES).toContain("lg:col-start-1");
+    expect(ARTICLE_COLUMN_CLASSES).toContain("lg:col-start-1");
   });
 });

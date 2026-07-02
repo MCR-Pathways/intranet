@@ -34,7 +34,16 @@ import { ArticleBreadcrumb } from "./article-breadcrumb";
 import { BookmarkToggle } from "./bookmark-toggle";
 import { recordArticleView } from "@/lib/recently-viewed";
 import { useScrollSpy } from "@/lib/use-scroll-spy";
-import { createSlugDeduplicator, ARTICLE_PROSE_CLASSES, ARTICLE_CARD_CLASSES, APP_ORIGIN } from "@/lib/article-constants";
+import {
+  createSlugDeduplicator,
+  ARTICLE_PROSE_CLASSES,
+  ARTICLE_CARD_CLASSES,
+  ARTICLE_LAYOUT_CLASSES,
+  ARTICLE_HEADER_CLASSES,
+  ARTICLE_COLUMN_CLASSES,
+  APP_ORIGIN,
+  filterRailHeadings,
+} from "@/lib/article-constants";
 import { extractDocId, unwrapGoogleRedirect } from "@/lib/google-doc-url";
 import { toast } from "sonner";
 import type { ArticleWithAuthor, ResourceCategory } from "@/types/database.types";
@@ -208,7 +217,12 @@ export function GoogleDocArticleView({
 
   // ─── Scroll-spy: highlight active heading in TOC ───────────────────────────
 
-  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(headings);
+  // Rail lists H2/H3 only. Feeding this filtered list to the scroll-spy (not
+  // the full set) gives the ancestor-fallback marker for free — see
+  // filterRailHeadings.
+  const railHeadings = useMemo(() => filterRailHeadings(headings), [headings]);
+
+  const [activeHeadingId, setActiveHeadingId] = useScrollSpy(railHeadings);
 
   // ─── Supabase Realtime: live updates when synced_html changes ──────────────
 
@@ -335,11 +349,13 @@ export function GoogleDocArticleView({
         parentCategory={parentCategory}
       />
 
-      {/* Article body: title + actions + meta + content all in the left
-          column, TOC on the right. Keeps the kebab dropdown within the
-          article column so it never reaches the TOC. */}
-      <div className="flex gap-8">
-        <div className="flex-1 min-w-0 max-w-[720px] space-y-5">
+      {/* Article layout (§4): header, reading rail, content — in that DOM
+          order so the stacked (below-lg) view reads title, then the "On this
+          page" disclosure, then the content. From lg the rail places itself
+          in the second grid column, beside header + content. The kebab
+          dropdown stays in the header cell, so it never reaches the rail. */}
+      <div className={ARTICLE_LAYOUT_CLASSES}>
+        <div className={ARTICLE_HEADER_CLASSES}>
           <div>
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3 flex-wrap min-w-0">
@@ -485,21 +501,23 @@ export function GoogleDocArticleView({
               </span>
             </div>
           </div>
+        </div>
 
+        <ArticleOutline
+          headings={railHeadings}
+          activeHeadingId={activeHeadingId}
+          onHeadingClick={setActiveHeadingId}
+        />
+
+        <div className={ARTICLE_COLUMN_CLASSES}>
           {article.synced_html ? (
             <article className={ARTICLE_PROSE_CLASSES}>{parsedContent}</article>
           ) : (
-            <div className="text-sm text-muted-foreground italic py-8">
+            <div className="max-w-[90ch] text-sm text-muted-foreground italic py-8">
               This document has no content yet. Use the actions menu to sync from Google Docs.
             </div>
           )}
         </div>
-
-        <ArticleOutline
-          headings={headings}
-          activeHeadingId={activeHeadingId}
-          onHeadingClick={setActiveHeadingId}
-        />
       </div>
 
       {/* More in [folder] — sibling article navigation */}

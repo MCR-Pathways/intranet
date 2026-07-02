@@ -111,6 +111,9 @@ The surface neutrals (`--secondary`, `--accent`, `--muted`, `--border`/`--input`
 | Links | `text-link underline hover:text-link/80` — teal light mode, light blue dark mode. Underlines mandatory (link-to-body 1.83:1 fails 3:1 without underline) |
 | Avatar fallbacks | `getAvatarColour(name)` from `src/lib/utils.ts` — deterministic Navy/Teal/Wine hash. Org chart excluded (uses department colours) |
 | Icon swatches | `bg-mcr-{colour}/15` background + `text-icon-fg-{colour}` foreground. 8 preset swatches via `ICON_COLOURS` in `src/lib/resource-icons.ts` |
+| Reading rail (article TOC) | Borderless list on a 2px track line. Active item = `text-link` (teal) + `font-medium` + a 3px teal left bar; inactive = muted, no fill. Lists the top two heading levels present (H2/H3 on well-formed bodies). The teal marker is the column's only chrome, no `bg-accent` pill (§4, supersedes the earlier pill; see `resources/CLAUDE.md`) |
+
+**Article reading layout (§4 reading measure).** The article detail view is a three-child grid (`ARTICLE_LAYOUT_CLASSES` in `article-constants.ts`): header block, reading rail, content block. Below `lg` they stack in DOM order, so the "On this page" disclosure sits between the title and the content; from `lg` the rail occupies the second grid column, sticky, spanning both rows. The reading measure is carried by `ARTICLE_PROSE_CLASSES` (`max-w-[90ch]`, ~829px at prose-sm): text, grids and tables cap together on one uniform right edge, and the card's leftover width is a deliberate gutter before the rail, not a void. Chosen 2026-07-02 after live comparison: uncapped text measured 151ch/line on real policy prose, and a prose-only cap re-opened the void on prose-only pages. On a 1366px Chromebook the column sits under the cap naturally, so nothing changes; wide externals get readable lines plus the gutter.
 
 ### 1.7 Status Colour Conventions
 
