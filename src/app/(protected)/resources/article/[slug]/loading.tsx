@@ -1,3 +1,5 @@
+import { ARTICLE_LAYOUT_CLASSES, ARTICLE_HEADER_CLASSES, ARTICLE_COLUMN_CLASSES } from "@/lib/article-constants";
+
 export default function ArticleLoading() {
   return (
     <div className="space-y-5 animate-pulse">
@@ -12,11 +14,11 @@ export default function ArticleLoading() {
         <div className="h-4 w-40 rounded bg-muted" />
       </div>
 
-      {/* Two-column article layout (§4): content column + reading rail */}
-      <div className="flex gap-8">
-        <div className="min-w-0 flex-1 space-y-5">
+      {/* Article layout skeleton — mirrors the shared §4 grid: header, rail, content */}
+      <div className={ARTICLE_LAYOUT_CLASSES}>
+        <div className={`${ARTICLE_HEADER_CLASSES} space-y-5`}>
           {/* Article title skeleton */}
-          <div className="h-7 w-80 rounded bg-muted" />
+          <div className="h-7 w-80 max-w-full rounded bg-muted" />
 
           {/* Article meta skeleton */}
           <div className="flex items-center gap-2">
@@ -24,8 +26,23 @@ export default function ArticleLoading() {
             <div className="h-4 w-4 rounded bg-muted" />
             <div className="h-4 w-28 rounded bg-muted" />
           </div>
+        </div>
 
-          {/* Article body skeleton — mirrors the 90ch reading measure */}
+        {/* Rail slot — placement mirrors ArticleOutline's nav: a disclosure row
+            below lg, the side rail from lg */}
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:w-56 lg:self-start xl:w-64">
+          <div className="h-8 w-full rounded bg-muted lg:hidden" />
+          <div className="hidden space-y-2.5 lg:block">
+            <div className="h-3 w-24 rounded bg-muted" />
+            <div className="h-4 w-40 rounded bg-muted" />
+            <div className="h-4 w-32 rounded bg-muted" />
+            <div className="h-4 w-36 rounded bg-muted" />
+            <div className="h-4 w-28 rounded bg-muted" />
+          </div>
+        </div>
+
+        {/* Article body skeleton — mirrors the 90ch reading measure */}
+        <div className={ARTICLE_COLUMN_CLASSES}>
           <div className="space-y-3 max-w-[90ch]">
             <div className="h-4 w-full rounded bg-muted" />
             <div className="h-4 w-5/6 rounded bg-muted" />
@@ -36,15 +53,6 @@ export default function ArticleLoading() {
             <div className="h-4 w-5/6 rounded bg-muted" />
             <div className="h-4 w-3/4 rounded bg-muted" />
           </div>
-        </div>
-
-        {/* Reading-rail skeleton — hidden where the disclosure takes over */}
-        <div className="hidden w-56 shrink-0 space-y-2.5 lg:block xl:w-64">
-          <div className="h-3 w-24 rounded bg-muted" />
-          <div className="h-4 w-40 rounded bg-muted" />
-          <div className="h-4 w-32 rounded bg-muted" />
-          <div className="h-4 w-36 rounded bg-muted" />
-          <div className="h-4 w-28 rounded bg-muted" />
         </div>
       </div>
     </div>

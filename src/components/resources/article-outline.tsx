@@ -44,6 +44,9 @@ export function ArticleOutline({
   const minLevel = Math.min(...headings.map((h) => h.level));
 
   const goToHeading = (slug: string) => {
+    // Keep the section anchor shareable: preventDefault suppresses the
+    // browser's hash update, so write it ourselves (pushState doesn't scroll).
+    window.history.pushState(null, "", `#${slug}`);
     // Collapse the narrow disclosure first, then scroll on the next frame:
     // the list sits above the content when stacked, so collapsing after the
     // scroll starts would shift the target mid-animation and overshoot it.

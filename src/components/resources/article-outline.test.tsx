@@ -80,7 +80,7 @@ describe("ArticleOutline", () => {
     expect(list!.className).not.toContain("max-lg:hidden");
   });
 
-  it("collapses the disclosure after a heading is picked", () => {
+  it("collapses the disclosure and updates the URL hash when a heading is picked", () => {
     render(<ArticleOutline headings={HEADINGS} activeHeadingId="" />);
 
     const button = screen.getByRole("button", { name: /on this page/i });
@@ -89,5 +89,8 @@ describe("ArticleOutline", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Section B" }));
     expect(button).toHaveAttribute("aria-expanded", "false");
+    // preventDefault suppresses the browser's own hash update; goToHeading
+    // pushes it so the section link stays shareable.
+    expect(window.location.hash).toBe("#section-b");
   });
 });
