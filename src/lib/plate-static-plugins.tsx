@@ -422,7 +422,11 @@ function ResourceGrid({ element, attributes }: SlateElementProps) {
     <ul
       {...attributes}
       role="list"
-      className="not-prose my-5 grid list-none grid-cols-2 gap-3 pl-0 lg:grid-cols-3"
+      // Tile columns follow the container: min(210px,100%) gives 3-up inside
+      // the 90ch article measure (ARTICLE_PROSE_CLASSES, retune together) and
+      // shrinks below 210px instead of overflowing when zoom/reflow narrows
+      // the column past a single tile's minimum.
+      className="not-prose my-5 grid list-none grid-cols-[repeat(auto-fill,minmax(min(210px,100%),1fr))] gap-3 pl-0"
     >
       {cells.map((cell, i) => {
         const info = resolveResourceCell(cell);
