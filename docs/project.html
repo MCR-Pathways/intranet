@@ -962,12 +962,6 @@
   "kanban": {
     "todo": [
       {
-        "id": "k31",
-        "title": "Resources §4 — reading-rail contents list",
-        "tag": "ui",
-        "note": "The “On this page” box becomes a rail with a teal active marker, and stays visible below 1024px."
-      },
-      {
         "id": "k32",
         "title": "Resources accessibility — serve Google Sheets & Slides",
         "tag": "a11y",
@@ -1055,6 +1049,15 @@
       }
     ],
     "done": [
+      {
+        "id": "k31",
+        "title": "Resources §4 — reading-rail contents list",
+        "tag": "ui",
+        "note": "The boxed TOC is now a borderless rail (teal active marker, top two heading levels, named landmark), articles read at a 90ch measure, and below 1024px the rail becomes an “On this page” disclosure between title and content instead of vanishing. Completes the §1–§4 redesign.",
+        "completedDate": "2026-07-02",
+        "prNumber": 384,
+        "prUrl": "https://github.com/MCR-Pathways/intranet/pull/384"
+      },
       {
         "id": "k37",
         "title": "Resources §2.1b — flag the existing auto-detected grids",
@@ -1385,6 +1388,20 @@
         "Flag only 4+ runs, the load-bearing invariant. Flagging a sub-4 run would turn inline links into a grid (a visible change), so gating on 4+ keeps rendering identical today (asserted by a strip-the-flag equivalence test) and robust tomorrow.",
         "No reindex. displayAsCard is presentational, the Algolia path never groups and LinkStatic ignores it, so synced_html and the section records are byte-identical. content_json is the single render source, so the migration updates exactly what published pages show.",
         "One-off bulk script with a loud tripwire (it stops if the fetch ever reaches PostgREST's 1000-row cap) rather than chunked pagination. There are 10 native articles, 100x below the cap, so pagination would be premature machinery."
+      ]
+    },
+    {
+      "id": "f12",
+      "title": "Reading rail + the 90ch measure (§4)",
+      "date": "2026-07-02",
+      "prNumber": 384,
+      "prUrl": "https://github.com/MCR-Pathways/intranet/pull/384",
+      "summary": "The last of the four resources fixes. The boxed “On this page” TOC becomes a borderless reading rail: bold label, track line, one teal active marker, listing the top two heading levels present with scroll-spy and an ancestor fallback. Below 1024px the rail renders as a collapsed disclosure between the title and the content rather than disappearing, closing a WCAG reflow gap for zoomed-in readers. Article width was settled by measurement rather than taste: the old 720px cap left a ~246px dead band beside the rail on wide screens, a full-width spread measured 151 characters per line on real policy prose, and the chosen 90ch column cap keeps text, grids and tables on one uniform right edge with the leftover reading as a deliberate gutter. Both article views share the layout through constants, so the native and Google Doc reading experiences cannot drift.",
+      "decisions": [
+        "Rail lists the top two heading levels present, not a hardcoded H2+H3: H1-sectioned Google Docs and H3-skipping articles keep their rail instead of losing it.",
+        "90ch column cap over full spread (151ch lines unreadable) and over a prose-only cap (re-opened the whitespace void on prose-only pages). Decided from live three-way comparison on real articles.",
+        "Narrow/desktop split is pure CSS on always-rendered elements; a matchMedia state was reviewed out for flashing the wrong control on the exact zoomed viewports the disclosure serves.",
+        "A default-to-first marker was built and cut: it asserted aria-current on a section the reader had not reached."
       ]
     }
   ],
