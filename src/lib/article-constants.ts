@@ -135,11 +135,17 @@ export function filterRailHeadings(headings: ArticleHeading[]): ArticleHeading[]
 export const ARTICLE_LAYOUT_CLASSES =
   "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-8 lg:gap-y-5";
 
-/** The header block (title + actions + meta) inside ARTICLE_LAYOUT_CLASSES. */
-export const ARTICLE_HEADER_CLASSES = "min-w-0";
+/** The header block (title + actions + meta) inside ARTICLE_LAYOUT_CLASSES.
+ *  `lg:col-start-1` is load-bearing: ArticleOutline returns null for articles
+ *  with fewer than 2 rail headings, and without explicit placement grid
+ *  auto-placement would flow the content block into the vacated second
+ *  column, rendering it beside the header at rail width. */
+export const ARTICLE_HEADER_CLASSES = "min-w-0 lg:col-start-1";
 
-/** The content block inside ARTICLE_LAYOUT_CLASSES. No width cap of its own,
- *  the reading measure lives on ARTICLE_PROSE_CLASSES; siblings of the
- *  article inside this block (controls, empty states) carry `max-w-[90ch]`
- *  themselves so nothing runs past the measure's right edge. */
-export const ARTICLE_COLUMN_CLASSES = "min-w-0 space-y-5";
+/** The content block inside ARTICLE_LAYOUT_CLASSES. `lg:col-start-1` pins it
+ *  under the header when the rail is absent (see ARTICLE_HEADER_CLASSES).
+ *  No width cap of its own, the reading measure lives on
+ *  ARTICLE_PROSE_CLASSES; siblings of the article inside this block
+ *  (controls, empty states) carry `max-w-[90ch]` themselves so nothing runs
+ *  past the measure's right edge. */
+export const ARTICLE_COLUMN_CLASSES = "min-w-0 space-y-5 lg:col-start-1";

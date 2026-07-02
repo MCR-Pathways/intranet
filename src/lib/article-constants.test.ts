@@ -6,6 +6,8 @@ import {
   ARTICLE_PROSE_CLASSES,
   ARTICLE_CONTENT_MODIFIERS,
   ARTICLE_CARD_CLASSES,
+  ARTICLE_HEADER_CLASSES,
+  ARTICLE_COLUMN_CLASSES,
   type ArticleHeading,
 } from "./article-constants";
 
@@ -146,5 +148,13 @@ describe("shared constants", () => {
 
   it("ARTICLE_CARD_CLASSES drops the heavy shadow (soft-retreat shape)", () => {
     expect(ARTICLE_CARD_CLASSES).not.toContain("shadow-md");
+  });
+
+  it("header and content pin to grid column 1 (rail-less articles)", () => {
+    // ArticleOutline returns null under 2 rail headings; without explicit
+    // placement, grid auto-placement would flow the content block into the
+    // vacated rail column, beside the header at rail width.
+    expect(ARTICLE_HEADER_CLASSES).toContain("lg:col-start-1");
+    expect(ARTICLE_COLUMN_CLASSES).toContain("lg:col-start-1");
   });
 });
