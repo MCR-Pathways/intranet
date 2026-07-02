@@ -28,7 +28,8 @@ Everything below was verified against the live code (2026-06-29/30). The brief's
 - **§2 amendment (2026-07-01): uniform chip, not per-type colour.** The build first tinted each type (Doc blue, Sheet green, PDF red, and so on, mirroring `file-types.ts`). On the real hub pages nearly every resource is the same type, so a full grid rendered as a wall of identical loud chips: colour with nothing to contrast against carries no signal. The chip is now a single muted document treatment (`bg-red-50`/`text-red-700`, the file-type document red), with type conveyed by the Lucide glyph alone. `ResourceTypeConfig` keeps `{ key, label, Icon }` only (no `bgClass`/`fgClass`). Proxied Drive files (`/api/drive-file/…`) classify as a `document` type (FileText glyph, new tab), since they are documents served through the intranet, not page links. A prerequisite fix (#374) landed first: Tailwind v4's `dark:` variant was firing from the OS colour-scheme on dark-mode machines, so the light chip colours were not even visible during tuning.
 - **§3** Promote any folder with exactly one **published** article. Drafts in a promoted folder stay reachable via `/resources/drafts` and the admin audit. No per-folder override.
 - **§4** Active marker = teal text + a 3px teal left bar + bolder weight, with a bold "On this page" label (colour + weight, belt-and-braces).
-- **§4** The rail shows all headings, **H2 + H3 only** (never H4), with scroll-spy. No expand/collapse — matches React.dev and MDN.
+- **§4** The rail shows all headings, **H2 + H3 only** (never H4), with scroll-spy. No expand/collapse **on the desktop rail** — matches React.dev and MDN. (Below `lg` the rail becomes a collapsed disclosure, a separate reflow/zoom concern — see the §4 body.)
+- **§4 spread layout (added 2026-07-02, from the live design sessions).** On wide screens the article content column **fills the card to the rail** rather than sitting in a capped 720px measure beside a whitespace void. Text is uncapped too (`ARTICLE_PROSE_CLASSES` drops `max-w-[720px]`), so the column has one uniform right edge — a capped measure next to full-width grids read as a ragged "text stops midway" edge, which the user rejected across four mockup rounds (box → void → centred → spread). The `max-w-7xl` shell still caps the whole card, so a 1366px Chromebook is unchanged and only ~1920px externals widen (body ≈1000px). The one-standard-width rule (every page shares the shell width; only the home feed is exempt) ruled out capping the card. The `resource_grid` moves to `auto-fill` columns so it uses the wider column (4-up spread, 3-up with the rail on a Chromebook).
 
 ## Workflow
 
@@ -160,14 +161,23 @@ Below 1024px the rail collapses to a real `<button aria-expanded>` "On this page
 
 This supersedes the documented "grey bg-accent pill, no brand colour, weight stays identical" note in `resources/CLAUDE.md`; that line is rewritten so a future pass doesn't revert it.
 
+**Marker is never blank.** Feed the filtered H2+H3 list (`filterRailHeadings`) to `useScrollSpy`, not the full heading list: the hook's existing "last heading above the fold" gap-state branch then lands on the nearest listed ancestor when the reader is inside an unlisted H4 section — ancestor fallback for free, no hook change. When the hook returns `""` (reader above the first heading), the rail marks the first item.
+
+### Spread layout (added 2026-07-02)
+Rebuilding the rail exposed the wide-screen whitespace problem (`memory/resources-toc-widescreen-whitespace.md`): the capped 720px body left a ~246px dead band beside the rail on a 1920px screen. The fix, settled through live mockups, is to let the content **spread**: drop the body column's `max-w-[720px]` (it becomes `min-w-0 lg:flex-1`) and drop the `max-w-[720px]` in `ARTICLE_PROSE_CLASSES`, so content and text both fill to the rail with one uniform right edge. The two-column container becomes `flex flex-col gap-6 lg:flex-row lg:gap-8` (stacks below `lg` for the disclosure). The header (breadcrumb + title) lives inside the body column, so it spreads with the content and stays anchored to the card's top-left. The `resource_grid` switches to `grid-cols-[repeat(auto-fill,minmax(210px,1fr))]` so tile count follows the column width. This resolves and retires the whitespace memo.
+
 ### Files
-- `src/components/resources/article-outline.tsx` — rail, weight-by-level, teal marker (Option B), all-headings (H2+H3) with scroll-spy, narrow-screen disclosure.
-- `src/app/(protected)/resources/CLAUDE.md` — rewrite the TOC-marker rule.
-- `docs/design-system.md` — note the active-marker treatment.
+- `src/components/resources/article-outline.tsx` — rail, weight-by-level, teal marker (Option B), H2+H3 with scroll-spy, default-to-first, narrow-screen disclosure.
+- `src/lib/article-constants.ts` — `filterRailHeadings` helper; drop `max-w-[720px]` from `ARTICLE_PROSE_CLASSES`.
+- `src/components/resources/native-article-view.tsx`, `google-doc-article-view.tsx` — `railHeadings` for hook + outline; spread container + uncapped body column.
+- `src/lib/plate-static-plugins.tsx` — `ResourceGrid` `auto-fill` columns.
+- `src/app/(protected)/resources/CLAUDE.md` — rewrite the TOC-marker rule; note the disclosure + spread.
+- `docs/design-system.md` — note the active-marker treatment + spread layout.
 
 ### Tests
-- Component: renders only H2+H3; active item has the marker and `aria-current`; below 1024px renders the disclosure button.
-- Manual: scroll-spy marks the right section; glossary filter still hides emptied sections.
+- Unit: `filterRailHeadings` keeps H2/H3, drops H1/H4+, preserves order. `article-constants.test.ts` updated for the uncapped prose class.
+- Component: renders only H2+H3; active item has the marker and `aria-current`; default-to-first when nothing active; below `lg` renders the disclosure button with `aria-expanded`.
+- Manual (build-time visual checks): scroll-spy + ancestor fallback on a real article; prose-heavy article at 1920px; ~1600px mid-width; 1366px regression; resize sweep 4→3→2→1 with no slivers; narrow disclosure expand/collapse + keyboard.
 
 ---
 

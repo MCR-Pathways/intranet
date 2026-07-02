@@ -111,6 +111,9 @@ The surface neutrals (`--secondary`, `--accent`, `--muted`, `--border`/`--input`
 | Links | `text-link underline hover:text-link/80` — teal light mode, light blue dark mode. Underlines mandatory (link-to-body 1.83:1 fails 3:1 without underline) |
 | Avatar fallbacks | `getAvatarColour(name)` from `src/lib/utils.ts` — deterministic Navy/Teal/Wine hash. Org chart excluded (uses department colours) |
 | Icon swatches | `bg-mcr-{colour}/15` background + `text-icon-fg-{colour}` foreground. 8 preset swatches via `ICON_COLOURS` in `src/lib/resource-icons.ts` |
+| Reading rail (article TOC) | Borderless list on a 2px track line. Active item = `text-link` (teal) + `font-medium` + a 3px teal left bar; inactive = muted, no fill. H2/H3 only. The teal marker is the column's only chrome — no `bg-accent` pill (§4, supersedes the earlier pill; see `resources/CLAUDE.md`) |
+
+**Article reading layout (§4 spread).** The article detail view is a two-column flex (`flex flex-col gap-6 lg:flex-row lg:gap-8`): a fluid content column (no `max-w` — it fills to the rail) and the reading rail flush at the card's right edge. Text is uncapped so the column has one uniform right edge, rather than a capped measure that leaves a ragged edge and a whitespace void beside the rail. The `max-w-7xl` shell still caps the card, so this only widens the column on ~1920px externals (to ~1000px, ≈107ch — acceptable for the grid-heavy resources content); a 1366px Chromebook is unchanged. Below `lg` the rail collapses to a disclosure and the column stacks full-width.
 
 ### 1.7 Status Colour Conventions
 
